@@ -1,0 +1,15 @@
+[Unit]
+Description=VJ Static Server (Port 8000)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sumof2
+WorkingDirectory=/home/sumof2/vj
+ExecStart=/home/sumof2/vj/start.sh --server-only
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

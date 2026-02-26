@@ -1,0 +1,69 @@
+{
+    "lead": {
+        "pos_x": [
+            0,
+            255
+        ],
+        "pos_y": [
+            0,
+            255
+        ],
+        "zoom": [
+            0,
+            255
+        ],
+        "rot_z": [
+            0,
+            255
+        ]
+    },
+    "rythm": {
+        "boots": {
+            "shapes": [
+                "circle",
+                "bullseye",
+                "square",
+                "octagon"
+            ],
+            "colors": [
+                "Blue",
+                "Red",
+                "Green"
+            ]
+        },
+        "cats": {
+            "shapes": [
+                "line",
+                "caret",
+                "line_x2",
+                "triangle"
+            ],
+            "colors": [
+                "Original",
+                "Cyan",
+                "Yellow"
+            ]
+        },
+        "cha": {
+            "shapes": [
+                "star",
+                "circle_of_cir",
+                "circle_2up1down",
+                "diamond"
+            ],
+            "colors": [
+                "Pink",
+                "Original",
+                "Pink 2"
+            ]
+        }
+    },
+    "bass_texture": {
+        "presets": [
+            "drawing ",
+            "twist",
+            "big rotate ",
+            "big rotate b1"
+        ]
+    }
+}

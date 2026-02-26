@@ -1,0 +1,2273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>RaveBox Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #debug {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #0f0;
+            font-family: monospace;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+</head>
+
+<body>
+    <div id="debug">Initializing...</div>
+
+    <!-- SHARED VERTEX SHADER -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    </script>
+
+    <!-- BASE: VOXEL MAZE SHADER -->
+    <script id="voxelFragment" type="x-shader/x-fragment">
+        uniform float u_time;
+        uniform vec2 u_resolution;
+        uniform float u_bass;
+        uniform float u_flux;
+        uniform float u_vol;
+
+        // Optimized Rotation
+        void rot(inout vec2 p, float a) {
+            float s = sin(a), c = cos(a);
+            p = mat2(c, -s, s, c) * p;
+        }
+
+        // Faster Box Approximation (Fastest bound)
+        float sdBox(vec3 p, float b) {
+            vec3 d = abs(p) - b;
+            return max(d.x, max(d.y, d.z));
+        }
+
+        float map(vec3 p) {
+            float clampedFlux = min(u_flux, 0.6);
+            float clampedBass = min(u_bass, 0.8);
+            float clampedVol = min(u_vol, 0.8);
+            
+            p.z += u_time * (0.5 + clampedFlux * 0.5);
+            
+            // Combine rotations into one call where possible
+            float rotAngle = u_time * 0.1 + p.z * 0.03 * (1.0 + clampedBass * 0.2);
+            rot(p.xy, rotAngle);
+            
+            float size = 4.0;
+            p = mod(p + size*0.5, size) - size*0.5;
+            
+            if (clampedFlux > 0.3) {
+                rot(p.xy, 0.785);
+                p = abs(p) - (0.3 * clampedFlux);
+            }
+
+            float d = sdBox(p, 1.0);
+            
+            // Performance: Cap fractal iterations at 1 for voxel look
+            float s = 1.0;
+            for(int m=0; m<1; m++) {
+                vec3 a = mod(p * s, 2.0) - 1.0;
+                s *= 3.0; 
+                vec3 r = abs(1.0 - 3.0 * abs(a));
+                float c = (min(max(r.x, r.y), min(max(r.y, r.z), max(r.z, r.x))) - 1.0) / s;
+                d = max(d, c);
+            }
+            return d;
+        }
+
+        void main() {
+            if (u_resolution.y < 1.0) { gl_FragColor = vec4(0.0); return; }
+            vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+            vec3 ro = vec3(0.0, 0.0, -4.0); 
+            vec3 rd = normalize(vec3(uv, 1.0)); 
+            
+            float t = 0.0; 
+            int steps = 0;
+            // PERFORMANCE: Reduced steps to 24 for smoother Pi 5 playback
+            for(int i=0; i<24; i++) {
+                float d = map(ro + rd * t);
+                t += d * 0.85; // Slightly larger step
+                if(d < 0.01 || t > 60.0) break;
+                steps = i;
+            }
+            
+            vec3 col = vec3(0.0);
+            if(t < 60.0) {
+                vec3 p = ro + rd * t;
+                float ao = 1.0 - float(steps) / 24.0;
+                float hue = p.z * 0.05 + u_time * 0.1;
+                
+                // Optimized color mixing
+                col = 0.4 + 0.4 * cos(6.28 * (hue + vec3(0.0, 0.33, 0.67)));
+                col *= ao;
+                
+                // Simple linear fog
+                float fog = smoothstep(60.0, 10.0, t);
+                col *= fog;
+                
+                col += vec3(0.1, 0.3, 0.5) * u_bass * ao; 
+            }
+            gl_FragColor = vec4(col, 1.0);
+        }
+    </script>
+
+    <!-- BASE: TUNNEL SHADER -->
+    <script id="tunnelFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time; 
+        uniform float u_bass; 
+        uniform float u_flux;
+        uniform float u_vol;
+        
+        vec3 hslToRgb(float h, float s, float l) { l = min(0.6, l); vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); return vec3(l) + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0)); }
+        float rand(vec2 n) { return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453); }
+        float noise(vec2 p){ vec2 ip = floor(p); vec2 u = fract(p); u = u*u*(3.0-2.0*u); float res = mix(mix(rand(ip), rand(ip+vec2(1.0,0.0)), u.x), mix(rand(ip+vec2(0.0,1.0)), rand(ip+vec2(1.0,1.0)), u.x), u.y); return res*res; }
+
+        void main() {
+            // TUNING: Slower time base (0.5 -> 0.2)
+            float time = u_time * (0.2 + u_bass * 0.2);
+            vec2 distortedUv = vUv;
+            distortedUv.y += sin(vUv.x * 10.0 + time * 2.0) * 0.05 * (1.0 + u_flux * 4.0);
+            distortedUv.x += cos(vUv.y * 10.0 + time * 1.5) * 0.05 * (1.0 + u_flux * 4.0 + u_bass * 2.0);
+            
+            float clampedBass = min(u_bass, 0.7);
+            float clampedFlux = min(u_flux, 0.7);
+            float clampedVol = min(u_vol, 0.7);
+
+            float tunnelPos = fract(distortedUv.y * (4.0 + clampedBass * 3.0) - time * (1.0 + clampedVol * 2.0));
+            float anglePos = distortedUv.x + time * 0.1;
+            
+            float pattern1 = step(0.5, fract(tunnelPos * 2.0 + anglePos * 3.0 + clampedBass * 2.0));
+            float pattern2 = step(0.5, fract(distortedUv.y * 10.0 + clampedFlux * 10.0));
+            
+            float finalPattern = mix(pattern1, pattern2, clampedBass * 1.5);
+            
+            float hue = fract(time * 0.1 + vUv.y * 0.3 + u_bass * 0.6);
+            // PROJECTOR BOOST: Increased base lightness from 0.3 to 0.5, saturation to 1.0
+            float light = 0.5 + finalPattern * 0.4 + u_vol * 0.4;
+            vec3 color = hslToRgb(hue, 1.0, min(0.6, light));
+            
+            float maskNoise = noise(vUv * 4.0 + vec2(time * 0.3, time * 0.2) + u_bass * 2.0); 
+            float holes = smoothstep(0.3 - u_vol * 0.2, 0.5, maskNoise); 
+            
+            float alpha = holes * (0.7 + u_vol * 0.3);
+            gl_FragColor = vec4(color, alpha);
+        }
+    </script>
+
+    <!-- BASE: MANDALA REPLACEMENT (OldX Modes) -->
+
+    <script id="fullscreenVertex" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = vec4(position, 1.0);
+        }
+    </script>
+
+    <script id="shootingLinesVertex" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        varying vec3 vColor;
+        void main() {
+            vUv = uv;
+            vColor = instanceColor; 
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        }
+    </script>
+
+    <script id="shootingLinesFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        varying vec3 vColor;
+        uniform float u_audioLevel;
+        void main() {
+            float alpha = 0.6 + u_audioLevel * 0.4;
+            gl_FragColor = vec4(vColor, alpha);
+        }
+    </script>
+
+    <script id="gearsFragmentShader" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time; uniform float u_speed; uniform float u_intensity; uniform float u_audioLevel; uniform float u_bass; uniform float u_mids; uniform vec2 u_resolution;
+        vec3 hslToRgb(float h, float s, float l) { l = min(0.6, l); vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); return l + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0)); }
+        mat2 rotate2d(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+        float sdGear(vec2 p, float r, float teeth) { float angle = atan(p.y, p.x); float radius = length(p); float tooth = cos(angle * teeth) * 0.1 * r; return abs(radius - r + tooth) - 0.02; }
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0; uv.x *= u_resolution.x / u_resolution.y; uv *= 5.0; 
+            float time = u_time * 0.2 * u_speed;
+            vec3 finalColor = vec3(0.0);
+            vec2 grid = fract(uv) - 0.5;
+            vec2 gridID = floor(uv);
+            float spin = (mod(gridID.x + gridID.y, 2.0) * 2.0 - 1.0) * time; 
+            // Dampen u_intensity and u_bass coupling to prevent "wild" gears
+            spin += min(1.0, u_bass * u_intensity * 0.8) * (mod(gridID.x, 2.0) * 2.0 - 1.0); 
+            grid = rotate2d(spin) * grid;
+            float gear = sdGear(grid, 0.4, 8.0 + min(1.0, u_mids) * 8.0);
+            gear = 1.0 - smoothstep(0.0, 0.02 + min(0.5, u_audioLevel) * 0.1, gear);
+            float alpha = (gear > 0.1) ? 0.85 : 0.0;
+            if (gear > 0.1) { float hue = fract(gridID.x * 0.1 + gridID.y * 0.05 + time * 0.1); finalColor = hslToRgb(hue, 0.8, 0.6); }
+            gl_FragColor = vec4(finalColor, alpha);
+        }
+    </script>
+
+    <script id="oldXKaleidoscopeFragment" type="x-shader/x-fragment">
+        varying vec2 vUv; uniform sampler2D tDiffuse; uniform float u_segments; uniform float u_rotation; uniform float u_bass; uniform float u_intensity; uniform vec2 u_resolution;
+        const float PI = 3.14159265359;
+        void main() {
+            vec2 uv = vUv - 0.5; uv.x *= u_resolution.x / u_resolution.y; float zoom = 1.0 - u_bass * u_intensity * 0.2; uv *= zoom;
+            float radius = length(uv); float angle = atan(uv.y, uv.x); angle += u_rotation; float segmentAngle = PI * 2.0 / u_segments; angle = mod(angle, segmentAngle); angle = abs(angle - (segmentAngle / 2.0));
+            vec2 newUv = vec2(cos(angle), sin(angle)) * radius; newUv.x /= u_resolution.x / u_resolution.y; newUv += 0.5;
+            if (newUv.x < 0.0 || newUv.x > 1.0 || newUv.y < 0.0 || newUv.y > 1.0) { newUv = clamp(newUv, 0.0, 1.0); }
+            gl_FragColor = texture2D(tDiffuse, newUv);
+        }
+    </script>
+
+    <!-- BASE 2: MANDALA (from old2x.html) -->
+    <script id="base2MandalaFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time; uniform float u_audioLevel; uniform float u_bass; uniform float u_mids; uniform float u_highs; uniform float u_intensity; uniform float u_speed; uniform vec2 u_resolution;
+        
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; } 
+        vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; } 
+        vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); } 
+        vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+        float snoise(vec3 v) { const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0); vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx); vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy); vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy; i = mod289(i); vec4 p = permute(permute(permute( i.z + vec4(0.0, i1.z, i2.z, 1.0 )) + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) + i.x + vec4(0.0, i1.x, i2.x, 1.0 )); float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx; vec4 j = p - 49.0 * floor(p * ns.z * ns.z); vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_); vec4 x = x_ * ns.x + ns.yyyy; vec4 y = y_ * ns.x + ns.yyyy; vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw); vec4 s0 = floor(b0) * 2.0 + 1.0; vec4 s1 = floor(b1) * 2.0 + 1.0; vec4 sh = -step(h, vec4(0.0)); vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww; vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y); vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w); vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3))); p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w; vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0); m = m * m; return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3))); }
+        vec3 hslToRgb(float h, float s, float l) { l = min(0.6, l); vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); return vec3(l) + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0)); }
+        const float PI = 3.14159265359;
+        
+        void main() {
+            vec2 uv = vUv - 0.5; uv.x *= u_resolution.x / u_resolution.y;
+            // SPEED SCALED IN JS
+            float time = u_time * 0.4;
+            
+            // BOOSTED REACTIVITY (Clamped)
+            float clampedBass = min(u_bass, 0.7);
+            float zoomVar = clampedBass * u_intensity * 0.12;
+            float zoom = 1.0 - min(0.4, zoomVar); 
+            float radius = length(uv) * (2.0 - zoomVar * 2.0);
+            
+            float angle = atan(uv.y, uv.x);
+            float segments = 6.0 + floor(min(1.0, u_mids) * 6.0);
+            angle = mod(angle, PI * 2.0 / segments);
+            angle = abs(angle - PI / segments); // Now in range [0, PI/segments]
+            
+            // EXPLICIT SEGMENTATION BORDERS (GUTTERS)
+            // Creating larger, darker lines between segments to allow more dark/light contrast
+            float gutterWidth = 0.1 + u_bass * 0.05; // Larger gutters reactive to bass
+            float gutter = smoothstep(0.0, gutterWidth, angle) * 
+                           smoothstep(PI / segments, PI / segments - gutterWidth, angle);
+
+            // MORE NOISE MOVEMENT
+            vec3 noiseCoord = vec3(uv * (1.0 + u_audioLevel * 1.5), time * 0.8);
+            float noiseVal = snoise(noiseCoord * 2.0);
+            
+            float pattern = 0.0;
+            // FASTER PATTERN MOVEMENT
+            pattern += sin(radius * 12.0 - time * 8.0 + noiseVal * 4.0);
+            pattern += cos(angle * segments * 2.0 + time * 5.0);
+            
+            pattern *= smoothstep(0.1, 0.6, radius);
+            pattern = fract(pattern * 1.5); // Slightly lowered multiplier for cleaner lines
+            
+            // CRUSH PATTERN for extreme contrast
+            pattern = pow(pattern, 2.5);
+            
+            float hue = fract(time * 0.2 + radius * 0.5 - angle*0.1 + u_bass * 0.4);
+            
+            // Lightness logic: Lowered base and applied gutter for pure blacks at segment lines
+            float light = (pattern * 0.8 + u_highs * u_intensity * 0.2) * gutter;
+            light = min(0.7, light); 
+            
+            vec3 color = hslToRgb(hue, 0.8 + u_mids * 0.2, light);
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <!-- BASE 2: GEO PATTERNS (from old2x.html) -->
+    <script id="base2GeoFragment" type="x-shader/x-fragment">
+        varying vec2 vUv; uniform float u_time; uniform float u_speed; uniform float u_intensity; uniform float u_audioLevel; uniform float u_bass; uniform float u_mids; uniform float u_highs; uniform vec2 u_resolution; uniform float u_dmxRot;
+        mat2 rotate2d(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+        float sdBox(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
+        float sdCircle(vec2 p, float r) { return length(p) - r; }
+        float sdTriangle(vec2 p, float r) { const float k = sqrt(3.0); p.x = abs(p.x) - r; p.y = p.y + r/k; if( p.x+k*p.y > 0.0 ) p = vec2(p.x-k*p.y,-k*p.x-p.y)/2.0; p.x -= clamp( p.x, -2.0*r, 0.0 ); return -length(p)*sign(p.y); }
+        float sdHexagon(vec2 p, float r) { const vec3 k = vec3(-0.866025404,0.5,0.577350269); p = abs(p); p -= 2.0*min(dot(k.xy, p), 0.0)*k.xy; p -= vec2(clamp(p.x, -k.z*r, k.z*r), r); return length(p)*sign(p.y); }
+        vec3 hslToRgb(float h, float s, float l) { l = min(0.6, l); vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); return vec3(l) + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0)); }
+        float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123); }
+
+        void main() {
+            // SPEED SCALED IN JS
+            float time = u_time * 0.6;
+            vec2 uv = (vUv - 0.5) * 2.0; uv.x *= u_resolution.x / u_resolution.y;
+            
+            // HARD-SYNC: Direct DMX Laser Rotation
+            uv *= rotate2d(u_dmxRot);
+            
+            // MORE SCALE VARIATION
+            float scale = 4.0 + u_mids * 10.0 + sin(time)*2.0;
+            
+            vec2 gridUv = fract(uv * scale) - 0.5;
+            vec2 gridId = floor(uv * scale);
+            float shapeIndex = mod(floor(time * 0.5), 4.0);
+            
+            // PULSING SIZE
+            float size = 0.3 + u_highs * 0.25 + u_bass * 0.1; 
+            
+            float dist = 0.0;
+            if (shapeIndex < 1.0) dist = sdBox(gridUv, vec2(size));
+            else if (shapeIndex < 2.0) dist = sdCircle(gridUv, size);
+            else if (shapeIndex < 3.0) dist = sdTriangle(gridUv, size * 0.8);
+            else dist = sdHexagon(gridUv, size * 0.9);
+            vec3 finalColor;
+            float colorMode = mod(floor(time * 0.5), 2.0); 
+            float contrastDirection = sin(time * 2.5 + random(gridId));
+            
+            // MORE CONTRAST (Clamped to prevent whiteout)
+            float contrastAmount = min(0.3, u_audioLevel * u_intensity * 0.6);
+            
+            if (colorMode < 1.0) {
+                float bright = 0.5 + (contrastDirection * contrastAmount);
+                finalColor = vec3(min(0.8, bright));
+            } else {
+                float hue = random(gridId) + time * 0.1;
+                float lightness = 0.5 + (contrastDirection * contrastAmount); 
+                finalColor = hslToRgb(hue, 0.9, min(0.6, lightness));
+            }
+            gl_FragColor = vec4(finalColor, 1.0 - step(0.0, dist));
+        }
+    </script>
+
+    <!-- BASE 2: FRACTAL FOLD (from old2x.html) -->
+    <script id="base2FractalFoldFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform sampler2D tDiffuse;
+        uniform float u_time;
+        uniform float u_audioLevel;
+        uniform float u_bass;
+        uniform float u_intensity;
+        uniform float u_speed;
+        uniform vec2 u_resolution;
+        mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+        void main() {
+            vec2 uv = vUv - 0.5;
+            uv.x *= u_resolution.x / u_resolution.y;
+            float time = u_time * 0.1;
+            float zoom = 1.0 - (u_bass * 0.2 * u_intensity);
+            uv *= zoom;
+            float angle = time + u_audioLevel * 0.5;
+            for(int i = 0; i < 3; i++) {
+                uv = abs(uv); 
+                uv -= 0.25 * u_intensity; 
+                uv *= rot(angle * 0.5); 
+            }
+            uv.x /= u_resolution.x / u_resolution.y; 
+            vec2 finalUv = uv + 0.5;
+            finalUv = abs(fract(finalUv * 0.5) * 2.0 - 1.0); 
+            vec4 color = texture2D(tDiffuse, finalUv);
+            float dist = length(vUv - 0.5);
+            if(dist > 0.3) {
+                 float offset = 0.005 * u_intensity * u_bass;
+                 color.r = texture2D(tDiffuse, finalUv + offset).r;
+                 color.b = texture2D(tDiffuse, finalUv - offset).b;
+            }
+            gl_FragColor = color;
+        }
+    </script>
+
+    <script id="bgFloatingCubesFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time; uniform float u_speed; uniform float u_intensity; uniform float u_audioLevel; uniform float u_bass; uniform vec2 u_resolution;
+        mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+        float sdBox(vec3 p, vec3 b) { vec3 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0); }
+        float map(vec3 p) {
+            p.z -= u_time * 1.5 * u_speed; // Slightly faster movement
+            p.xy *= rot(p.z * 0.1); // More twist
+            vec3 q = p;
+            q.xy = mod(p.xy, 3.0) - 1.5; // Tighter grid for more cubes
+            q.z = mod(p.z, 3.0) - 1.5;
+            return sdBox(q, vec3(0.5 + u_bass * 0.4 * u_intensity));
+        }
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            vec3 ro = vec3(0.0, 0.0, 1.0); // Move camera forward to be inside the movement
+            vec3 rd = normalize(vec3(uv, 1.0));
+            float t = 0.0;
+            for(int i = 0; i < 30; i++) { // More steps for better range
+                float d = map(ro + rd * t);
+                if(d < 0.001 || t > 30.0) break;
+                t += d;
+            }
+            vec3 col = vec3(0.0); float alpha = 0.0;
+            if(t < 30.0) { 
+                vec3 p = ro + rd * t; 
+                float fog = 1.0 / (1.0 + t * t * 0.01); // Softer fog for better visibility
+                // VIVID COLORS
+                col = 0.5 + 0.5 * cos(p.z * 0.2 + vec3(0, 2, 4) + u_time * 0.5); 
+                col *= fog * (0.6 + u_audioLevel * 0.4); 
+                alpha = fog; 
+            }
+            gl_FragColor = vec4(col, alpha);
+        }
+    </script>
+
+    <script id="bgNeonWebFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_audioLevel;
+        uniform float u_bass;
+        uniform float u_flux;
+        uniform vec2 u_resolution;
+        
+        uniform float u_speed; // ADDED SPEED UNIFORM
+
+        mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            
+            // FASTER TIME BASE + CONSTANT MOVEMENT
+            float t = u_time * 0.5; 
+            
+            // IDLE ANIMATION: Breathing
+            float idle = sin(t * 2.0) * 0.1;
+
+            // REACTIVITY: Scale and Rotate
+            float clampedBass = min(u_bass, 0.7);
+            uv *= 1.0 - clampedBass * 0.2 + idle;
+            uv *= rot(t * 0.3 + clampedBass * 0.2); // Constant rotation
+
+            float r = length(uv);
+            float a = atan(uv.y, uv.x);
+
+            // AUTO-FLUX: Ensure movement even when silent
+            float clampedFlux = min(u_flux, 0.6);
+            float effectiveFlux = clampedFlux + 0.2 * sin(t); 
+
+            // MORE MOVEMENT: Warping
+            float warp = sin(r * 5.0 - t * 3.0) * effectiveFlux * 0.5;
+            a += warp;
+
+            float web = sin(a * 10.0 + t) * sin(r * 10.0 - t * 2.0);
+            web += sin(a * 20.0 - t * 2.0) * 0.5;
+
+            // Sharpness/Contrast boost
+            float intensity = 1.0 - smoothstep(0.01, 0.08, abs(web) * 0.1);
+            
+            vec3 lineCol = vec3(0.1 + u_bass * 0.5, 0.5, 1.0); // Blue-ish
+            if (uv.y > 0.0) lineCol = vec3(1.0, 0.2 + u_bass * 0.5, 0.8); // Pink-ish top
+
+            vec3 color = intensity * lineCol;
+            color += lineCol * intensity * 0.5; // INCREASED GLOW
+
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <script id="bgCrystalBurstFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time; uniform float u_speed; uniform float u_intensity;
+        uniform float u_bass; uniform float u_vol; uniform float u_high; uniform float u_flux;
+        uniform vec2 u_resolution; uniform float u_dmxRot;
+
+        const float PI = 3.14159265359;
+
+        vec3 hslToRgb(float h, float s, float l) {
+            l = min(0.6, l);
+            vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+            return vec3(l) + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0));
+        }
+
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            // FASTER TIME
+            float time = u_time * 0.4;
+
+            float r = length(uv);
+            float clampedBass = min(u_bass, 0.8);
+            
+            // TWIST & DISTORTION (User Request)
+            float twist = sin(r * 3.0 - time * 2.0) * (0.2 + clampedBass * 0.4);
+            float ca = cos(twist); float sa = sin(twist);
+            uv = mat2(ca, -sa, sa, ca) * uv;
+            
+            float a = atan(uv.y, uv.x);
+
+            // Kaleidoscope mirror
+            float segments = 8.0;
+            float segAngle = PI * 2.0 / segments;
+            a = mod(a + PI + u_dmxRot, segAngle); // HARD-SYNC: Direct DMX Laser Rotation
+            a = abs(a - segAngle * 0.5);
+            vec2 kuv = vec2(cos(a), sin(a)) * r;
+
+            // Jagged crystalline layers
+            float crystal = 0.0;
+            for (float i = 0.0; i < 4.0; i++) {
+                float scale = 3.0 + i * 2.0;
+                vec2 p = kuv * scale + time * (0.5 + i * 0.3);
+                // More aggressive jagged movement
+                float jag = abs(sin(p.x * 5.0 + sin(p.y * 3.0 + time)) * cos(p.y * 4.0 + sin(p.x * 2.5 - time)));
+                jag = pow(jag, 0.5 + u_bass * 0.5);
+                crystal += jag * (1.0 / (1.0 + i));
+            }
+            crystal *= 0.5;
+
+            // Edge glow along crystal planes
+            float edge = abs(sin(kuv.x * 10.0 - time * 2.0) * cos(kuv.y * 8.0 + time));
+            edge = smoothstep(0.9, 1.0, edge) * 2.0;
+
+            float pattern = crystal + edge * 0.5;
+
+            // Center glow (Red/Yellow pulsing core)
+            float center = 0.1 / (r * r + 0.05);
+            pattern += center * (0.3 + u_bass * 0.5);
+
+            // Color: Dynamic shifting
+            // Cyan/Teal base, but shifting to Yellow/Red on bass
+            vec3 baseCol = hslToRgb(0.5 + sin(time)*0.1, 1.0, 0.5);
+            vec3 warmCol = vec3(1.0, 0.8, 0.2); // Golden Yellow
+            
+            vec3 finalCol = mix(baseCol, warmCol, u_bass * 0.8 * pattern);
+            finalCol += edge * vec3(1.0, 0.0, 1.0) * u_high; // Magenta edges on high
+
+            vec3 color = finalCol * pattern * (0.6 + u_vol * 0.6);
+
+            // Dark vignette at edges
+            color *= smoothstep(1.8, 0.3, r);
+
+            float alpha = smoothstep(0.02, 0.15, pattern);
+            gl_FragColor = vec4(color, alpha);
+        }
+    </script>
+
+    <script id="bgStainedGlassFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time; uniform float u_speed; uniform float u_intensity;
+        uniform float u_bass; uniform float u_vol; uniform float u_high; uniform float u_flux;
+        uniform vec2 u_resolution; uniform float u_dmxRot;
+
+        vec3 hslToRgb(float h, float s, float l) {
+            l = min(0.6, l);
+            vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+            return l + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0));
+        }
+
+        vec2 hash2(vec2 p) {
+            p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+            return fract(sin(p) * 43758.5453);
+        }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            float time = u_time * 0.15;
+
+            // 4-fold mirror symmetry
+            uv = abs(uv);
+
+            // HARD-SYNC: Direct DMX Laser Rotation
+            float ca = cos(u_dmxRot); float sa = sin(u_dmxRot);
+            uv = mat2(ca, -sa, sa, ca) * uv;
+
+            // Voronoi cells
+            float clampedFlux = min(u_flux, 0.7);
+            float scale = 4.0 + clampedFlux * 2.0;
+            vec2 cell = floor(uv * scale);
+            vec2 frac = fract(uv * scale);
+
+            float minDist = 1.0;
+            float secondDist = 1.0;
+            vec2 closestCell = vec2(0.0);
+
+            for (float j = -1.0; j <= 1.0; j++) {
+                for (float i = -1.0; i <= 1.0; i++) {
+                    vec2 neighbor = vec2(i, j);
+                    vec2 point = hash2(cell + neighbor);
+                    point = 0.5 + 0.4 * sin(time * 0.5 + 6.2831 * point);
+                    float d = length(frac - neighbor - point);
+                    if (d < minDist) {
+                        secondDist = minDist;
+                        minDist = d;
+                        closestCell = cell + neighbor;
+                    } else if (d < secondDist) {
+                        secondDist = d;
+                    }
+                }
+            }
+
+            // Border line (thick leading between glass panes)
+            float border = smoothstep(0.02, 0.06 + u_bass * 0.02, secondDist - minDist);
+
+            // Glass color per cell - ANIMATED HUE
+            float cellHash = fract(sin(dot(closestCell, vec2(12.9898, 78.233))) * 43758.5453);
+            
+            // ANIMATED COLOR (User Request)
+            // Rotate hue over time base on cell hash
+            float hue = mod(cellHash * 0.3 + 0.55 + time * 0.1 + u_bass * 0.1, 1.0); 
+            
+            float sat = 0.7 + cellHash * 0.3;
+            float light = 0.35 + 0.2 * sin(time * 0.3 + cellHash * 6.28);
+            light += u_vol * 0.15;
+
+            vec3 glassColor = hslToRgb(hue, sat, light);
+
+            // Border color (dark lead between panes)
+            vec3 borderColor = vec3(0.05, 0.04, 0.03);
+
+            vec3 color = mix(borderColor, glassColor, border);
+
+            // Subtle texture/grain
+            float grain = fract(sin(dot(uv * 100.0, vec2(12.9898, 78.233))) * 43758.5453);
+            color += (grain - 0.5) * 0.04;
+
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <script id="bgFractalTunnelFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time; uniform float u_speed; uniform float u_intensity;
+        uniform float u_bass; uniform float u_vol; uniform float u_high; uniform float u_flux;
+        uniform vec2 u_resolution;
+
+        const float PI = 3.14159265359;
+
+        vec3 hslToRgb(float h, float s, float l) {
+            l = min(0.6, l);
+            vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+            return l + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0));
+        }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            float time = u_time * 0.2;
+
+            float r = length(uv);
+            float a = atan(uv.y, uv.x);
+
+            // Tunnel depth via log-polar mapping
+            float tunnel_r = 1.0 / (r + 0.1);
+            float tunnel_a = a / PI;
+
+            // Repeating pattern layers
+            float pattern = 0.0;
+            float clampedFlux = min(u_flux, 1.0);
+            float clampedHigh = min(u_high, 1.0);
+            float clampedBass = min(u_bass, 1.0);
+            float segments = 6.0 + floor(clampedFlux * 4.0);
+
+            // Layer 1: radial petals
+            float petal = sin(a * segments + time * 2.0) * 0.5 + 0.5;
+            petal *= sin(tunnel_r * (8.0 + clampedBass * 6.0) - time * 4.0) * 0.5 + 0.5;
+            pattern += petal;
+
+            // Layer 2: concentric modulation
+            float rings = sin(tunnel_r * (15.0 + clampedHigh * 10.0) - time * 3.0);
+            rings = rings * 0.5 + 0.5;
+            rings *= sin(a * (segments * 2.0) + time) * 0.5 + 0.5;
+            pattern += rings * 0.6;
+
+            // Layer 3: fine detail
+            float detail = sin(tunnel_r * 25.0 - time * 6.0 + sin(a * 12.0) * 2.0);
+            detail = max(0.0, detail);
+            pattern += detail * 0.3;
+
+            pattern = clamp(pattern * 0.5, 0.0, 1.0);
+
+            // Color: deep red base with green/gold pattern
+            float hue = mix(0.0, 0.1, pattern) + sin(tunnel_r * 0.5) * 0.05;
+            float sat = 0.8;
+            float light = pattern * (0.4 + u_vol * 0.3);
+
+            vec3 color = hslToRgb(hue, sat, light);
+
+            // Add green/gold highlights
+            vec3 highlight = hslToRgb(0.25, 0.9, 0.6) * pow(pattern, 2.0) * 0.5;
+            color += highlight;
+
+            // Darken center for depth
+            color *= smoothstep(0.0, 0.15, r);
+            // Vignette
+            color *= smoothstep(2.0, 0.5, r);
+
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <script id="bgLissajousFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_bass;
+        uniform float u_flux;
+        uniform float u_vol;
+        uniform vec2 u_resolution;
+        uniform float u_dmxRot;
+
+        vec3 hslToRgb(float h, float s, float l) {
+            l = min(0.6, l);
+            vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+            return l + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0));
+        }
+
+        void main() {
+            // 4 Zones mirroring the hardware laser array
+            float clampedFlux = min(u_flux, 0.6);
+            float clampedBass = min(u_bass, 0.8);
+            float clampedVol = min(u_vol, 0.8);
+
+            for(float z_idx = 0.0; z_idx < 4.0; z_idx++) {
+                float phase = z_idx * 1.570796; // PI/2 phase shift per zone
+                
+                // Draw a glowing trail for each zone
+                for(float i = 0.0; i < 30.0; i++) {
+                    // Time offset for the trail effect
+                    float t = (u_time * 0.4) - (i * 0.015);
+                    
+                    // Mirror backend Lissajous math exactly
+                    float speed_mult = 1.0 + clampedFlux * 1.5;
+                    float freq_x = 3.0 * speed_mult;
+                    float freq_y = 2.0 * speed_mult;
+                    float freq_z = 2.5 * speed_mult; // 3rd axis for depth
+                    
+                    float radius_x = 0.6 + clampedBass * 0.4;
+                    float radius_y = 0.5 + clampedBass * 0.3;
+                    float radius_z = 0.4 + clampedBass * 0.3;
+                    
+                    // ... (rest of the loop) ...
+                    vec3 pos = vec3(
+                        sin(t * freq_x + phase) * radius_x,
+                        sin(t * freq_y) * radius_y,
+                        sin(t * freq_z + phase * 0.5) * radius_z
+                    );
+                    
+                    // HARD-SYNC: Direct DMX Laser Rotation
+                    float ca = cos(u_dmxRot);
+                    float sa = sin(u_dmxRot);
+                    pos.xy = mat2(ca, -sa, sa, ca) * pos.xy;
+                    
+                    // 3D to 2D Perspective Projection
+                    float z = pos.z + 1.2; 
+                    vec2 p2d = pos.xy / z;
+                    
+                    float dist = length(uv - p2d);
+                    
+                    // Dynamic Hue: shifts with time, zone, and depth
+                    float hue = fract(u_time * 0.1 + z_idx * 0.25 + pos.z * 0.2);
+                    vec3 col = hslToRgb(hue, 1.0, 0.5);
+                    
+                    // Glow falloff
+                    float intensity = (0.003 + clampedFlux * 0.005) / (dist + 0.002);
+                    float fade = 1.0 - (i / 30.0);
+                    
+                    color += col * intensity * fade * (0.4 + clampedVol * 0.6);
+                }
+            }
+            
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <script id="sacredGeoVertexShader" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = vec4(position, 1.0);
+        }
+    </script>
+
+    <script id="sacredGeoFragmentShader" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_audioLevel;
+        uniform float u_bass;
+        uniform float u_mids;
+        uniform float u_highs;
+        uniform float u_intensity;
+        uniform float u_speed;
+        uniform vec2 u_resolution;
+        uniform float u_dmxRot;
+        
+        const float PI = 3.14159265359;
+
+        vec3 hslToRgb(float h, float s, float l) {
+            l = min(0.6, l);
+            vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+            return l + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0));
+        }
+        
+        mat2 rotate2d(float angle) { return mat2(cos(angle), -sin(angle), sin(angle), cos(angle)); }
+
+        // SDF Functions
+        float flowerOfLife(vec2 uv, float scale) {
+            uv *= scale;
+            vec2 r = vec2(1.0, 1.7320508);
+            vec2 h = r * 0.5;
+            vec2 a = mod(uv, r) - h;
+            vec2 b = mod(uv - h, r) - h;
+            vec2 gv = dot(a, a) < dot(b, b) ? a : b;
+            float d = length(gv);
+            return smoothstep(0.05, 0.0, abs(d - 0.5) - 0.02);
+        }
+        
+        float fibSpiral(vec2 uv, float time) {
+            float r = length(uv);
+            float a = atan(uv.y, uv.x);
+            float spiral = sin(a * 5.0 - log(r) * 10.0 + time);
+            return smoothstep(0.4, 0.6, spiral) * smoothstep(0.0, 0.5, r);
+        }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            
+            float time = u_time * 0.2 * u_speed;
+            
+            // HARD-SYNC: Direct DMX Laser Rotation
+            uv *= rotate2d(u_dmxRot);
+            
+            // 1. Flower of Life
+            float flower = flowerOfLife(uv, 3.0 + u_bass * 2.0);
+            
+            // 2. Spiral
+            float spiral = fibSpiral(uv, time * 2.0);
+            
+            // 3. Seed of Life (Center)
+            float seed = 0.0;
+            for(float i=0.0; i<6.0; i++) {
+                float ang = i * PI / 3.0;
+                vec2 offset = vec2(cos(ang), sin(ang)) * 0.25;
+                seed += smoothstep(0.02, 0.0, abs(length(uv - offset) - 0.25) - 0.005);
+            }
+            seed += smoothstep(0.02, 0.0, abs(length(uv) - 0.25) - 0.005);
+            
+            float cycleSpeed = 0.2; 
+            float shapeIndex = mod(time * cycleSpeed * 10.0, 3.0);
+            float fade = smoothstep(0.7, 1.0, fract(time * cycleSpeed * 10.0));
+            
+            float pattern = 0.0;
+            
+            if (shapeIndex < 1.0) {
+                pattern = mix(flower, spiral, fade);
+            } else if (shapeIndex < 2.0) {
+                pattern = mix(spiral, seed, fade);
+            } else {
+                pattern = mix(seed, flower, fade);
+            }
+            
+            pattern *= (0.5 + u_mids * 0.5);
+
+            float hue = 0.55 + 0.1 * sin(time * 0.2 + length(uv));
+            float lightness = pattern * (min(0.6, 0.4 + u_intensity * 0.4)); 
+            vec3 color = hslToRgb(hue, 0.8, lightness);
+            float alpha = smoothstep(0.1, 0.8, pattern + 0.1); 
+            
+            gl_FragColor = vec4(color, alpha);
+        }
+    </script>
+
+
+    <!-- FOREGROUND: WIREFRAME DNA -->
+    <script id="fgWireframeDNAFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_audioLevel;
+        uniform float u_bass;
+        uniform vec2 u_resolution;
+        uniform float u_dmxRot;
+
+        mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            
+            float time = u_time * 0.8; 
+            
+            // HARD-SYNC: Direct DMX Laser Rotation
+            uv *= rot(u_dmxRot); 
+            
+            // Stabilized Wave Parameters
+            float waveAmp = 0.4 + u_audioLevel * 0.2; // Reduced range
+            float freq = 4.0 + u_bass * 1.5; // More stable frequency
+            
+            float wave = sin(uv.x * freq + time * 1.5) * waveAmp;
+            float wave2 = sin(uv.x * freq + time * 1.5 + 3.14159) * waveAmp;
+            
+            float d1 = abs(uv.y - wave);
+            float d2 = abs(uv.y - wave2);
+
+            // Stable Thickness
+            float thickness = 0.04 + u_audioLevel * 0.02; 
+            float line = smoothstep(thickness, 0.0, d1) + smoothstep(thickness, 0.0, d2);
+            
+            // Subtle Grid (reduced intensity)
+            float stepX = 0.3; 
+            if (fract(uv.x / stepX) < 0.05) { line += 0.2; }
+            
+            // Clamped Brightness Boost
+            float boost = 0.7 + u_audioLevel * 0.3;
+            line *= boost; 
+            
+            // Fade at edges to prevent harsh cutoffs
+            float dist = length(uv);
+            line *= smoothstep(1.5, 0.5, dist);
+
+            vec3 col = mix(vec3(0.0, 1.0, 1.0), vec3(1.0, 0.0, 1.0), sin(uv.x * 1.5 + time) * 0.5 + 0.5);
+            
+            // Alpha clamping for Additive Blending safety
+            float finalAlpha = min(0.6, line * 0.8);
+            gl_FragColor = vec4(col * line * 0.8, finalAlpha);
+        }
+    </script>
+
+    <!-- FOREGROUND: WIREFRAME TERRAIN -->
+    <script id="fgWireframeTerrainFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_audioLevel;
+        uniform vec2 u_resolution;
+        uniform float u_dmxRot;
+
+        mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+        float noise(vec2 p) {
+            vec2 i = floor(p); vec2 f = fract(p);
+            vec2 u = f * f * (3.0 - 2.0 * f);
+            return mix(mix(hash(i + vec2(0.0,0.0)), hash(i + vec2(1.0,0.0)), u.x),
+                       mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0,1.0)), u.x), u.y);
+        }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            
+            // HARD-SYNC: Camera Barrel Roll locked to DMX Rotation
+            uv *= rot(u_dmxRot);
+            
+            // SIGNIFICANTLY REDUCED SPEED (Slow Glide)
+            float speed = 0.04 + u_audioLevel * 0.06;
+            vec3 ro = vec3(0.0, 1.8 - u_audioLevel * 0.2, u_time * speed);
+            vec3 rd = normalize(vec3(uv.x, uv.y - 0.5, 1.0));
+            
+            float alpha = 0.0;
+            vec3 col = vec3(0.0);
+            
+            if (rd.y < 0.0) {
+                float t = (-1.0 - ro.y) / rd.y;
+                if (t > 0.0 && t < 40.0) {
+                    vec3 pos = ro + rd * t;
+                    vec2 p = pos.xz;
+                    float n = noise(p * 0.15 + u_time * 0.05); // Slower noise
+                    p += n * (0.8 + u_audioLevel * 0.4); // Much less distortion
+                    vec2 grid = abs(fract(p) - 0.5);
+                    float lineWidth = 0.04 + u_audioLevel * 0.01; // Stable lines
+                    float line = min(grid.x, grid.y);
+                    float val = smoothstep(lineWidth, 0.0, line);
+                    float fog = 1.0 - smoothstep(0.0, 35.0, t);
+                    
+                    // REFINED ALPHA: More stable brightness
+                    alpha = val * fog * (0.7 + u_audioLevel * 0.2);
+                    alpha = min(0.9, alpha);
+                    
+                    col = mix(vec3(0.0, 1.0, 1.0), vec3(1.0, 0.0, 1.0), n + u_audioLevel * 0.1);
+                    
+                    // STEADY BRIGHTNESS
+                    col *= 1.0 + u_audioLevel * 0.05; 
+                }
+            }
+            gl_FragColor = vec4(col, alpha);
+        }
+    </script>
+
+    <!-- FOREGROUND: NEON HEX PULSE -->
+    <script id="fgHexPulseFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_audioLevel; // Smoothed volume/intensity
+        uniform float u_bass;
+        uniform vec2 u_resolution;
+        uniform float u_dmxRot;
+
+        vec3 hslToRgb(float h, float s, float l) {
+            vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+            return l + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0));
+        }
+
+        // Hexagon Grid Math
+        float hexDist(vec2 p) {
+            p = abs(p);
+            float c = dot(p, normalize(vec2(1.0, 1.732)));
+            return max(c, p.x);
+        }
+
+        vec4 hexCoords(vec2 uv) {
+            vec2 r = vec2(1.0, 1.732);
+            vec2 h = r * 0.5;
+            vec2 a = mod(uv, r) - h;
+            vec2 b = mod(uv - h, r) - h;
+            vec2 gv = dot(a, a) < dot(b, b) ? a : b;
+            vec2 id = uv - gv;
+            return vec4(gv, id);
+        }
+
+        mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+
+            // Audio Reactivity: Zoom pulse on beat
+            // TUNING: Zoomed out per user request (5.0 -> 12.0)
+            float zoom = 12.0 - u_bass * 2.0; 
+            uv *= zoom;
+            
+            // HARD-SYNC: Direct DMX Laser Rotation
+            uv *= rot(u_dmxRot);
+
+            vec4 hc = hexCoords(uv);
+            float d = hexDist(hc.xy);
+            
+            // Edge Glow
+            float edgeWidth = 0.05 + u_audioLevel * 0.05;
+            float glow = smoothstep(0.5 - edgeWidth, 0.5, d);
+            
+            // Inner Pulse Pattern
+            // Calculate distance from center of screen to hex center
+            float distToCenter = length(hc.zw);
+            
+            // MIDDLE vs OUTER REACTIVITY
+            // Center reacts to BASS, Outer reacts to FLUX/AudioLevel
+            float centerMask = 1.0 - smoothstep(0.0, 3.0, distToCenter); // 1.0 at center, 0.0 at edge
+            
+            // CLAMP REACTION to prevent whiteout
+            float rawReaction = mix(u_bass, u_audioLevel, 1.0 - centerMask); 
+            float reaction = min(1.5, rawReaction); 
+            
+            float pulseWave = sin(distToCenter * 2.0 - u_time * 2.0 + reaction * 5.0);
+            
+            // Color Logic
+            // Color Logic: Dynamic HSL
+            float hue = u_time * 0.1 + distToCenter * 0.2 + u_bass * 0.2;
+            vec3 col = hslToRgb(hue, 1.0, 0.5); // Full saturation, normal lightness
+            
+            // Final Intensity (Clamped)
+            float brightness = glow * (0.5 + 0.5 * pulseWave + reaction * 2.0);
+            brightness = min(2.0, brightness);
+            
+            // Alpha for blending
+            float alpha = brightness * min(1.0, (0.6 + u_audioLevel * 0.8));
+
+            gl_FragColor = vec4(col * brightness * 1.0, alpha);
+        }
+    </script>
+
+    <!-- EFFECT: MATRIX RAIN -->
+
+
+
+
+    <!-- EFFECT: KALEIDOSCOPE -->
+    <script id="fxKaleidoscopeFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform sampler2D tDiffuse;
+        uniform float u_segments;
+        uniform float u_time;
+        uniform float u_bass;
+        uniform vec2 u_resolution;
+        uniform float u_dmxRot;
+        const float PI = 3.14159265359;
+
+        void main() {
+            vec2 uv = vUv - 0.5;
+            uv.x *= u_resolution.x / u_resolution.y;
+            
+            float zoom = 1.0 - u_bass * 0.25;
+            uv *= zoom;
+
+            float radius = length(uv) * (1.0 + u_bass * 0.2);
+            float angle = atan(uv.y, uv.x);
+            
+            // HARD-SYNC: Direct DMX Laser Rotation
+            angle += u_dmxRot; 
+            
+            float segmentAngle = PI * 2.0 / u_segments;
+            angle = mod(angle, segmentAngle);
+            angle = abs(angle - (segmentAngle / 2.0));
+            
+            vec2 newUv = vec2(cos(angle), sin(angle)) * radius;
+            newUv.x /= u_resolution.x / u_resolution.y;
+            newUv += 0.5;
+            
+            newUv = clamp(newUv, 0.001, 0.999);
+            
+            gl_FragColor = texture2D(tDiffuse, newUv);
+        }
+    </script>
+
+    <!-- BLACK POINT (Post-processing) -->
+    <script id="blackPointFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform sampler2D tDiffuse;
+        uniform float u_blackPoint; 
+        void main() {
+            vec4 color = texture2D(tDiffuse, vUv);
+            
+            // "Levels" Algorithm: (Value - Black) / (White - Black)
+            // Crushes darks and stretches remaining range
+            
+            float denominator = 1.0 - u_blackPoint;
+            if(denominator < 0.05) denominator = 0.05; 
+            
+            color.rgb = (color.rgb - u_blackPoint) / denominator;
+            color.rgb = clamp(color.rgb, 0.0, 0.9); // FINAL SAFETY: No pure white 
+            
+            gl_FragColor = color;
+        }
+    </script>
+
+
+    <script>
+        // --- GLOBALS ---
+        let currentVibe = "chill";
+        let previousVibe = "";
+        let currentTransient = "steady";
+        let dmxState = {};
+        let targetMods = { flux: 0, bass: 0, high: 0, vol: 0 };
+        let smoothedMods = { flux: 0, bass: 0, high: 0, vol: 0 };
+        let rotState = "IDLE"; // NEW: Track rotation state (IDLE, ROTX, ROTY)
+        let isBeat = false; // Capture raw instant beat
+        let visualBeatPulse = 0.0; // Sharp decay envelope for shapes
+
+        // Ring State (visual 3.html inspired)
+        let ringMesh;
+        const RING_COUNT = 64;
+        const RING_RADIUS = 12.0; // Reduced from 30 to fit on screen
+        let ringDummy = new THREE.Object3D();
+        let ringColor = new THREE.Color();
+        let currentBaseLayer = 0;
+        let currentFxLayer = 6;
+        let serverBaseLayer = 0;
+        let serverFxLayer = 6;
+        let serverFgLayer = -1;
+        const BASE_CYCLE_INTERVAL = 20;
+
+        // --- BASE 2 (old2x) ---
+        let base2Group;
+        let base2MandalaMesh, base2GeoMesh;
+        let base2FractalPass;
+        let base2Mode = 0; // 0: Mandala, 1: Geo
+        let base2SwitchTimer = 0;
+        const BASE2_SWITCH_INTERVAL = 5.0;
+
+        // --- OLDX MANDALA STATE (Base 3) ---
+        let oldXGroup;
+        let gearsMesh, gearsMat;
+        let goLMesh, goLGrid, goLTimer = 0, goLDummy = new THREE.Object3D(), goLColor = new THREE.Color();
+        let shootingMesh, shootingData = [], shootingDummy = new THREE.Object3D();
+        let oldXKaleidPass;
+
+        let oldXMode = 0;
+        let oldXSwitchTimer = 0;
+        const OLDX_SWITCH_INTERVAL = 5.0;
+
+        let bgFloatingCubesMesh;
+        let bgNeonWebMesh, bgCrystalBurstMesh, bgStainedGlassMesh, bgFractalTunnelMesh, bgLissajousMesh;
+        let sacredGeoMesh;
+
+        // --- THREE.JS ---
+        function getWebGLErrorMessage() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (!window.WebGLRenderingContext) return "Your browser does not support WebGL.";
+            if (!gl) {
+                if (canvas.getContext('webgl2')) return "WebGL 1 is disabled/unavailable, but WebGL 2 is available.";
+                return "WebGL context creation failed. This is often due to GPU driver issues or insufficient GPU memory (CMA).";
+            }
+            return null;
+        }
+
+        const webglError = getWebGLErrorMessage();
+        if (webglError) {
+            document.getElementById('debug').innerHTML = `<div style="color: #ff4444; background: rgba(0,0,0,0.9); padding: 25px; border: 3px solid #ff4444; border-radius: 10px; font-family: sans-serif; position: absolute; top: 10%; left: 10%; right: 10%; z-index: 9999;">
+                <h1 style="margin-top: 0;">❌ WebGL Initialization Failed</h1>
+                <p style="font-size: 1.2em;">${webglError}</p>
+                <hr style="border: 1px solid #444;">
+                <p><b>Diagnostics:</b></p>
+                <ul style="text-align: left; display: inline-block;">
+                    <li>User Agent: ${navigator.userAgent}</li>
+                    <li>Hardware Accel: Likely Disabled or Blocked</li>
+                    <li>Device: Raspberry Pi 5 (V3D Driver)</li>
+                </ul>
+                <p style="margin-top: 20px; font-weight: bold; color: #ffaa00;">Action Required: Increase CMA allocation in /boot/firmware/config.txt and reboot.</p>
+            </div>`;
+            throw new Error("WebGL Error: " + webglError);
+        }
+
+        let renderer;
+        try {
+            // First attempt: Optimal settings for Pi 5
+            renderer = new THREE.WebGLRenderer({
+                antialias: false,
+                alpha: true,
+                powerPreference: "high-performance",
+                precision: "mediump" // Better for Pi 5 performance
+            });
+        } catch (e) {
+            console.error("Primary WebGL initialization failed:", e);
+            try {
+                // Second attempt: Fallback to defaults
+                renderer = new THREE.WebGLRenderer();
+            } catch (e2) {
+                console.error("Fallback WebGL initialization failed:", e2);
+                location.reload(); // Last ditch effort
+            }
+        }
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(0.5); // Reduced for Pi 5 performance
+        document.body.appendChild(renderer.domElement);
+
+        // --- COMPOSER ---
+        const composer = new THREE.EffectComposer(renderer);
+        const renderPass = new THREE.RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        // --- UNIFORMS ---
+        const pixelRatio = 0.5; // Forced for Pi 5 performance
+        const uniforms = {
+            u_time: { value: 0 },
+            u_resolution: { value: new THREE.Vector2(window.innerWidth * pixelRatio, window.innerHeight * pixelRatio) },
+            u_bass: { value: 0 },
+            u_flux: { value: 0 },
+            u_vol: { value: 0 },
+            u_high: { value: 0 },
+            u_audioLevel: { value: 0 },
+            u_speed: { value: 1.0 },
+            u_dmxRot: { value: 0 }
+        };
+
+        // ========== BASE LAYERS ==========
+        let beatCount = null;
+
+        // 1. VOXEL (Full Screen Quad)
+        const voxelMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('voxelFragment').textContent,
+            uniforms: uniforms,
+            depthWrite: false
+        });
+        const voxelMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), voxelMat);
+        voxelMesh.position.z = -10;
+        voxelMesh.renderOrder = -100; // Force to background
+        voxelMesh.visible = false;
+        scene.add(voxelMesh);
+
+        // Resize Handler
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const pixelRatio = 0.5; // Forced for Pi 5 performance
+            const resX = w * pixelRatio;
+            const resY = h * pixelRatio;
+
+            renderer.setSize(w, h); // Sets logical size
+            renderer.setPixelRatio(pixelRatio); // Sets internal buffer scaling
+            composer.setSize(w, h);
+
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+
+            // Update shared uniforms
+            uniforms.u_resolution.value.set(resX, resY);
+
+            // Explicit updates for safety
+            if (kaleidPass) kaleidPass.uniforms.u_resolution.value.set(resX, resY);
+
+            if (gearsMat) gearsMat.uniforms.u_resolution.value.set(resX, resY);
+            if (oldXKaleidPass) oldXKaleidPass.uniforms.u_resolution.value.set(resX, resY);
+            if (base2GeoMat) base2GeoMat.uniforms.u_resolution.value.set(resX, resY);
+            if (base2FractalPass) base2FractalPass.uniforms.u_resolution.value.set(resX, resY);
+        });
+
+        // 2. TUNNEL (Cylinder)
+        const tunnelMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('tunnelFragment').textContent,
+            uniforms: uniforms,
+            side: THREE.BackSide,
+            depthWrite: false,
+            transparent: true
+        });
+        const tunnelMesh = new THREE.Mesh(new THREE.CylinderGeometry(20, 20, 150, 64, 1, true), tunnelMat);
+        tunnelMesh.rotation.x = Math.PI / 2;
+        tunnelMesh.position.z = -75;
+        tunnelMesh.renderOrder = -100; // Force to background
+        tunnelMesh.visible = false;
+        scene.add(tunnelMesh);
+
+        // 3. BASE 2: COMPOSITE (from old2x.html)
+        base2Group = new THREE.Group();
+        base2Group.visible = false;
+        scene.add(base2Group);
+
+        const base2MandalaMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('fullscreenVertex').textContent,
+            fragmentShader: document.getElementById('base2MandalaFragment').textContent,
+            uniforms: {
+                u_time: uniforms.u_time,
+                u_speed: { value: 1.0 },
+                u_intensity: { value: 1.5 },
+                u_audioLevel: uniforms.u_vol,
+                u_bass: uniforms.u_bass,
+                u_mids: uniforms.u_flux,
+                u_highs: uniforms.u_high,
+                u_resolution: uniforms.u_resolution
+            },
+            depthWrite: false, depthTest: false
+        });
+        base2MandalaMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), base2MandalaMat);
+        base2MandalaMesh.renderOrder = -100;
+        base2Group.add(base2MandalaMesh);
+
+        const base2GeoMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('fullscreenVertex').textContent,
+            fragmentShader: document.getElementById('base2GeoFragment').textContent,
+            uniforms: {
+                u_time: uniforms.u_time,
+                u_speed: { value: 1.0 },
+                u_intensity: { value: 1.5 },
+                u_audioLevel: uniforms.u_vol,
+                u_bass: uniforms.u_bass,
+                u_mids: uniforms.u_flux,
+                u_highs: uniforms.u_high,
+                u_resolution: uniforms.u_resolution
+            },
+            depthWrite: false, depthTest: false
+        });
+        base2GeoMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), base2GeoMat);
+        base2GeoMesh.renderOrder = -100;
+        base2GeoMesh.visible = false;
+        base2Group.add(base2GeoMesh);
+
+        // 4. MANDALA REPLACEMENT (OldX Combined)
+        oldXGroup = new THREE.Group();
+        oldXGroup.visible = false;
+        scene.add(oldXGroup);
+
+        function initOldXLayer() {
+            // Gears
+            const gearsGeo = new THREE.PlaneGeometry(2, 2);
+            gearsMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('fullscreenVertex').textContent,
+                fragmentShader: document.getElementById('gearsFragmentShader').textContent,
+                uniforms: {
+                    u_time: { value: 0 },
+                    u_speed: { value: 1.0 },
+                    u_intensity: { value: 1.5 },
+                    u_audioLevel: { value: 0 },
+                    u_bass: { value: 0 },
+                    u_mids: { value: 0 },
+                    u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+                },
+                transparent: true,
+                depthWrite: false
+            });
+            gearsMesh = new THREE.Mesh(gearsGeo, gearsMat);
+            oldXGroup.add(gearsMesh);
+
+            // Game of Life
+            const gridW = 60, gridH = 35, size = 0.5;
+            const golGeo = new THREE.PlaneGeometry(size, size);
+            const golMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            goLMesh = new THREE.InstancedMesh(golGeo, golMat, gridW * gridH);
+            goLGrid = Array(gridH).fill(0).map(() => Array(gridW).fill(0).map(() => Math.random() > 0.8 ? 1 : 0));
+            let i = 0;
+            for (let y = 0; y < gridH; y++) {
+                for (let x = 0; x < gridW; x++) {
+                    goLDummy.position.set((x - gridW / 2) * size, (y - gridH / 2) * size, -5);
+                    goLDummy.updateMatrix();
+                    goLMesh.setMatrixAt(i++, goLDummy.matrix);
+                }
+            }
+            goLMesh.renderOrder = -100; // Fix: Behind everything
+            goLMesh.visible = false;
+            oldXGroup.add(goLMesh);
+
+            // Shooting Lines
+            const shootGeo = new THREE.PlaneGeometry(1, 1);
+            const shootMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('shootingLinesVertex').textContent,
+                fragmentShader: document.getElementById('shootingLinesFragment').textContent,
+                uniforms: { u_audioLevel: { value: 0 } },
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+            shootingMesh = new THREE.InstancedMesh(shootGeo, shootMat, 50);
+            shootingMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            const colors = new Float32Array(50 * 3).fill(1.0);
+            shootingMesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+            shootingMesh.visible = false;
+            oldXGroup.add(shootingMesh);
+        }
+        initOldXLayer();
+
+        // 5. BASE 4: VISUAL3 (Sonic Visualizer Port)
+        // Groups
+        const visual3Group = new THREE.Group();
+        visual3Group.visible = false;
+        visual3Group.position.z = -25; // Adjusted closer for better scaling
+        visual3Group.rotation.x = -0.8; // Angle looking "down" at the ring
+        scene.add(visual3Group);
+
+        // Visual3 Objects
+        let v3Sphere, v3Core, v3Particles;
+        const v3Bars = [];
+        const V3_BAR_COUNT = 64;
+        const V3_RADIUS = 15.0; // Scaled down slightly for view
+
+        function initVisual3Layer() {
+            // 1. Central Sphere
+            const sphereGeo = new THREE.IcosahedronGeometry(6, 4); // Radius 6
+            const sphereMat = new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.6 // Reduced from 1.0
+            });
+            v3Sphere = new THREE.Mesh(sphereGeo, sphereMat);
+            // Store original positions for deformation
+            v3Sphere.userData.originalPositions = sphereGeo.attributes.position.array.slice();
+            visual3Group.add(v3Sphere);
+
+            // Inner Core
+            const coreGeo = new THREE.IcosahedronGeometry(3, 2);
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            v3Core = new THREE.Mesh(coreGeo, coreMat);
+            v3Sphere.add(v3Core);
+
+            // 2. Frequency Ring (Bars)
+            const barGeo = new THREE.BoxGeometry(0.5, 1, 0.5);
+            for (let i = 0; i < V3_BAR_COUNT; i++) {
+                const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+                const bar = new THREE.Mesh(barGeo, mat);
+
+                const angle = (i / V3_BAR_COUNT) * Math.PI * 2;
+                bar.position.x = Math.cos(angle) * V3_RADIUS;
+                bar.position.z = Math.sin(angle) * V3_RADIUS;
+                bar.rotation.y = -angle;
+
+                bar.userData = { index: i, angle: angle };
+                visual3Group.add(bar);
+                v3Bars.push(bar);
+            }
+
+            // 3. Background Particles
+            const pCount = 800;
+            const pGeo = new THREE.BufferGeometry();
+            const pPos = new Float32Array(pCount * 3);
+            const pCol = new Float32Array(pCount * 3);
+
+            for (let i = 0; i < pCount; i++) {
+                pPos[i * 3] = (Math.random() - 0.5) * 150;
+                pPos[i * 3 + 1] = (Math.random() - 0.5) * 80;
+                pPos[i * 3 + 2] = (Math.random() - 0.5) * 150;
+
+                pCol[i * 3] = Math.random();
+                pCol[i * 3 + 1] = Math.random();
+                pCol[i * 3 + 2] = 1;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+            const pMat = new THREE.PointsMaterial({
+                size: 0.5,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.3 // Reduced from 0.6 to prevent whiteout w/ kaleidoscope
+            });
+            v3Particles = new THREE.Points(pGeo, pMat);
+            visual3Group.add(v3Particles);
+        }
+        initVisual3Layer();
+
+        function initNewLayers() {
+            // 3. Floating Cubes
+            const bgCubesMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('fullscreenVertex').textContent,
+                fragmentShader: document.getElementById('bgFloatingCubesFragment').textContent,
+                uniforms: uniforms,
+                depthWrite: false
+            });
+            bgFloatingCubesMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgCubesMat);
+            bgFloatingCubesMesh.visible = false;
+            bgFloatingCubesMesh.renderOrder = -1;
+            scene.add(bgFloatingCubesMesh);
+
+            // Neon Web
+            const bgNeonWebMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('fullscreenVertex').textContent,
+                fragmentShader: document.getElementById('bgNeonWebFragment').textContent,
+                uniforms: uniforms,
+                depthWrite: false
+            });
+            bgNeonWebMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgNeonWebMat);
+            bgNeonWebMesh.visible = false;
+            bgNeonWebMesh.renderOrder = -1;
+            scene.add(bgNeonWebMesh);
+
+            // Crystal Burst
+            const bgCrystalBurstMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('fullscreenVertex').textContent,
+                fragmentShader: document.getElementById('bgCrystalBurstFragment').textContent,
+                uniforms: uniforms,
+                depthWrite: false
+            });
+            bgCrystalBurstMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgCrystalBurstMat);
+            bgCrystalBurstMesh.visible = false;
+            bgCrystalBurstMesh.renderOrder = -1;
+            scene.add(bgCrystalBurstMesh);
+
+            // Stained Glass
+            const bgStainedGlassMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('fullscreenVertex').textContent,
+                fragmentShader: document.getElementById('bgStainedGlassFragment').textContent,
+                uniforms: uniforms,
+                depthWrite: false
+            });
+            bgStainedGlassMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgStainedGlassMat);
+            bgStainedGlassMesh.visible = false;
+            bgStainedGlassMesh.renderOrder = -1;
+            scene.add(bgStainedGlassMesh);
+
+            // Fractal Tunnel
+            const bgFractalTunnelMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('fullscreenVertex').textContent,
+                fragmentShader: document.getElementById('bgFractalTunnelFragment').textContent,
+                uniforms: uniforms,
+                depthWrite: false
+            });
+            bgFractalTunnelMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgFractalTunnelMat);
+            bgFractalTunnelMesh.visible = false;
+            bgFractalTunnelMesh.renderOrder = -1;
+            scene.add(bgFractalTunnelMesh);
+
+            // 3D Lissajous
+            const bgLissajousMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('fullscreenVertex').textContent,
+                fragmentShader: document.getElementById('bgLissajousFragment').textContent,
+                uniforms: uniforms,
+                depthWrite: false
+            });
+            bgLissajousMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgLissajousMat);
+            bgLissajousMesh.visible = false;
+            bgLissajousMesh.renderOrder = -1;
+            scene.add(bgLissajousMesh);
+
+
+            // --- FOREGROUNDS ---
+            // 1. Sacred Geo
+            const sacredGeoMat = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('sacredGeoVertexShader').textContent,
+                fragmentShader: document.getElementById('sacredGeoFragmentShader').textContent,
+                uniforms: uniforms,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            sacredGeoMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), sacredGeoMat);
+            sacredGeoMesh.visible = false;
+            sacredGeoMesh.renderOrder = 0;
+            scene.add(sacredGeoMesh);
+
+        }
+        initNewLayers();
+
+        function updateVisual3(time, bass, flux, high, amp) {
+            if (!visual3Group.visible) return;
+
+            // 1. Bars (Simulated Spectrum)
+            // We simulate spectrum using flux + sine waves phase shifted
+            const step = Math.floor(64 / V3_BAR_COUNT);
+
+            v3Bars.forEach((bar, i) => {
+                // Simulate frequency value
+                // Low index = Bass, Mid = Flux, High = Treble
+                let val = 0;
+                if (i < 10) val = bass;
+                else if (i < 40) val = flux;
+                else val = high;
+
+                // Add wave movement
+                val *= (0.5 + 0.5 * Math.sin(time * 10.0 + i * 0.5));
+
+                // Scale height: Power function for peaks
+                // Scale height: Power function for peaks + increased range
+                const scaleY = Math.max(0.1, Math.pow(val, 1.2) * 20.0 * amp);
+
+                bar.scale.y += (scaleY - bar.scale.y) * 0.3; // Smooth lerp
+                bar.position.y = bar.scale.y / 2;
+
+                // Color shift
+                const hue = (i / V3_BAR_COUNT) + (time * 0.1);
+                bar.material.color.setHSL(hue % 1, 1.0, 0.5);
+            });
+
+            // 2. Sphere (Bass)
+            const targetScale = 1.0 + bass * 0.5 * amp;
+            v3Sphere.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.2);
+
+            // Deform
+            const pos = v3Sphere.geometry.attributes.position;
+            const orig = v3Sphere.userData.originalPositions;
+            for (let i = 0; i < pos.count; i++) {
+                const ix = i * 3;
+                const x = orig[ix];
+                const y = orig[ix + 1];
+                const z = orig[ix + 2];
+
+                // Simple sine noise deformation
+                const offset = 1.0 + Math.sin(x * 0.5 + time * 5.0) * bass * 0.2 * amp;
+                pos.setXYZ(i, x * offset, y * offset, z * offset);
+            }
+            pos.needsUpdate = true;
+
+            v3Sphere.rotation.y += 0.005;
+            v3Sphere.rotation.z += 0.002;
+
+            // 3. Dynamic "Camera" Movement (Group transformation)
+            // Gently oscillate the view angle and depth with music
+            visual3Group.rotation.x = -0.8 + Math.sin(time * 0.5) * 0.1 + flux * 0.2 * amp;
+            visual3Group.rotation.y = time * 0.05 + bass * 0.1 * amp;
+            visual3Group.position.z = -25 + bass * 5.0 * amp;
+        }
+
+        // OldX Specific Helper Update Functions
+        function updateGameOfLife(delta, bass) {
+            if (!goLMesh.visible) return;
+            const gridW = 60, gridH = 35;
+            if (Math.random() < 0.1 * bass) {
+                const x = Math.floor(Math.random() * gridW);
+                const y = Math.floor(Math.random() * gridH);
+                goLGrid[y][x] = 1;
+            }
+            goLTimer += delta;
+            if (goLTimer > 0.1) {
+                goLTimer = 0;
+                const newGrid = goLGrid.map(row => [...row]);
+                for (let y = 0; y < gridH; y++) {
+                    for (let x = 0; x < gridW; x++) {
+                        let n = 0;
+                        for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+                            if (i === 0 && j === 0) continue;
+                            const ry = (y + i + gridH) % gridH;
+                            const rx = (x + j + gridW) % gridW;
+                            n += goLGrid[ry][rx];
+                        }
+                        if (goLGrid[y][x] && (n < 2 || n > 3)) newGrid[y][x] = 0;
+                        else if (!goLGrid[y][x] && n === 3) newGrid[y][x] = 1;
+                    }
+                }
+                goLGrid = newGrid;
+            }
+            let i = 0;
+            const time = clock.getElapsedTime();
+            for (let y = 0; y < gridH; y++) {
+                for (let x = 0; x < gridW; x++) {
+                    goLColor.setHSL((time * 0.2 + (x / gridW)) % 1, 0.8, 0.5);
+                    goLMesh.setColorAt(i, goLColor);
+                    // Update positions if needed (here static)
+                    goLDummy.position.set((x - gridW / 2) * 0.5, (y - gridH / 2) * 0.5, -5);
+                    goLDummy.scale.setScalar(goLGrid[y][x] ? 1 : 0);
+                    goLDummy.updateMatrix();
+                    goLMesh.setMatrixAt(i++, goLDummy.matrix);
+                }
+            }
+            goLMesh.instanceMatrix.needsUpdate = true;
+            if (goLMesh.instanceColor) goLMesh.instanceColor.needsUpdate = true;
+        }
+
+        function updateShootingLines(delta, bass) {
+            if (!shootingMesh.visible) return;
+            if (shootingData.length < 20 && Math.random() < 0.1) {
+                const side = Math.floor(Math.random() * 4);
+                const angle = Math.random() * Math.PI * 2;
+                shootingData.push({
+                    x: (Math.random() - 0.5) * 20, y: (Math.random() - 0.5) * 20,
+                    vx: Math.cos(angle) * 15, vy: Math.sin(angle) * 15,
+                    angle: angle, life: 1.0,
+                    color: new THREE.Color().setHSL(Math.random(), 1.0, 0.5)
+                });
+            }
+            let idx = 0;
+            for (let i = shootingData.length - 1; i >= 0; i--) {
+                const p = shootingData[i];
+                p.x += p.vx * delta;
+                p.y += p.vy * delta;
+                p.life -= delta * 0.5;
+                if (p.life <= 0) {
+                    shootingData.splice(i, 1);
+                } else {
+                    shootingDummy.position.set(p.x, p.y, -10);
+                    shootingDummy.rotation.z = p.angle;
+                    shootingDummy.scale.set(4.0, 0.2 + bass, 1);
+                    shootingDummy.updateMatrix();
+                    shootingMesh.setMatrixAt(idx, shootingDummy.matrix);
+                    shootingMesh.setColorAt(idx, p.color);
+                    idx++;
+                }
+            }
+            for (let j = idx; j < 50; j++) {
+                shootingDummy.scale.set(0, 0, 0);
+                shootingDummy.updateMatrix();
+                shootingMesh.setMatrixAt(j, shootingDummy.matrix);
+            }
+            shootingMesh.instanceMatrix.needsUpdate = true;
+            if (shootingMesh.instanceColor) shootingMesh.instanceColor.needsUpdate = true;
+        }
+
+        const baseLayers = [
+            voxelMesh, tunnelMesh, base2Group, oldXGroup, visual3Group,
+            bgFloatingCubesMesh, bgNeonWebMesh, bgCrystalBurstMesh, bgStainedGlassMesh,
+            bgFractalTunnelMesh, bgLissajousMesh
+        ];
+
+        // ========== EFFECT LAYERS ==========
+        // Consolidated List:
+        // 0: Wireframe DNA (Mesh)
+        // 1: Wireframe Terrain (Mesh)
+        // 2: Neon Hex Pulse (Mesh)
+        // 3: Kaleidoscope (Post-FX)
+        // 4: None (Hologram Removed)
+        // 5: Fractal Fold (Post-FX)
+
+        // FX 0: Wireframe DNA (Was FG 1)
+        const fxDNAMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('fullscreenVertex').textContent,
+            fragmentShader: document.getElementById('fgWireframeDNAFragment').textContent,
+            uniforms: uniforms,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const fxDNAMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fxDNAMat);
+        fxDNAMesh.renderOrder = 0;
+        fxDNAMesh.visible = false;
+        scene.add(fxDNAMesh);
+
+        // FX 1: Wireframe Terrain (Was FG 2)
+        const fxTerrainMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('fullscreenVertex').textContent,
+            fragmentShader: document.getElementById('fgWireframeTerrainFragment').textContent,
+            uniforms: uniforms,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const fxTerrainMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fxTerrainMat);
+        fxTerrainMesh.renderOrder = 0;
+        fxTerrainMesh.visible = false;
+        scene.add(fxTerrainMesh);
+
+        // FX 2: Neon Hex Pulse (Was FG 3)
+        const fxHexMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('fullscreenVertex').textContent,
+            fragmentShader: document.getElementById('fgHexPulseFragment').textContent,
+            uniforms: uniforms,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const fxHexMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fxHexMat);
+        fxHexMesh.renderOrder = 0;
+        fxHexMesh.visible = false;
+        scene.add(fxHexMesh);
+
+        // FX 3: Kaleidoscope (Post-processing)
+        const kaleidShader = {
+            uniforms: {
+                tDiffuse: { value: null },
+                u_segments: { value: 6.0 },
+                u_time: { value: 0 },
+                u_bass: { value: 0 },
+                u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+            },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fxKaleidoscopeFragment').textContent
+        };
+        const kaleidPass = new THREE.ShaderPass(kaleidShader);
+        kaleidPass.enabled = false;
+        composer.addPass(kaleidPass);
+
+        // FX 3b: OldX Kaleidoscope (Internal for Mandala Replacement)
+        const oldXKaleidShader = {
+            uniforms: {
+                "tDiffuse": { value: null },
+                "u_segments": { value: 8.0 },
+                "u_rotation": { value: 0.0 },
+                "u_bass": { value: 0.0 },
+                "u_intensity": { value: 1.5 },
+                "u_resolution": { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+            },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('oldXKaleidoscopeFragment').textContent
+        };
+        oldXKaleidPass = new THREE.ShaderPass(oldXKaleidShader);
+        oldXKaleidPass.enabled = false;
+        composer.addPass(oldXKaleidPass);
+
+
+
+        // FX 5 (Base 2 Specific): Fractal Fold
+        const base2FractalShader = {
+            uniforms: {
+                "tDiffuse": { value: null },
+                "u_time": uniforms.u_time,
+                "u_audioLevel": uniforms.u_vol,
+                "u_bass": uniforms.u_bass,
+                "u_intensity": { value: 1.5 },
+                "u_speed": { value: 1.0 },
+                "u_resolution": { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+            },
+            vertexShader: document.getElementById('fullscreenVertex').textContent,
+            fragmentShader: document.getElementById('base2FractalFoldFragment').textContent
+        };
+        base2FractalPass = new THREE.ShaderPass(base2FractalShader);
+        base2FractalPass.enabled = false;
+        composer.addPass(base2FractalPass);
+
+        // BLACK POINT (Post-processing - always on, applied last)
+        const blackPointShader = {
+            uniforms: {
+                tDiffuse: { value: null },
+                u_blackPoint: { value: 0.2 } // TUNING: Lowered from 0.5 to prevent dark screen
+            },
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('blackPointFragment').textContent
+        };
+        const blackPointPass = new THREE.ShaderPass(blackPointShader);
+        composer.addPass(blackPointPass);
+
+
+
+
+        // ========== WEBSOCKET ==========
+        // Remote Control State
+        let remoteParams = {
+            speed: 0.6,
+            amplitude: 3.5,
+            sensitivity: 1.0,
+            layerFreq: 2,  // 0=slow, 1=normal, 2=fast, 3=frantic
+            baseLayer: 'auto',
+            effect: 'auto'
+        };
+        const LAYER_CHANGE_INTERVALS = [40, 20, 10, 5]; // seconds per freq level
+
+        // Remote Sync Support: Allow ?server=IP query param
+        const urlParams = new URLSearchParams(window.location.search);
+        let serverIP = urlParams.get('server');
+
+        // If no server param, use the current hostname (works for both local and remote)
+        if (!serverIP) {
+            serverIP = window.location.hostname || 'localhost';
+        }
+
+        console.log(`🔌 Connecting to WebSocket at ${serverIP}:8765`);
+        const ws = new WebSocket(`ws://${serverIP}:8765`);
+        ws.onopen = () => {
+            console.log("✅ WebSocket Connected");
+            ws.send(JSON.stringify({ type: "get_params" }));
+        };
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === "current_params") {
+                if (msg.visual) {
+                    const v = msg.visual;
+                    if (v.speed !== undefined) remoteParams.speed = v.speed;
+                    if (v.amplitude !== undefined) remoteParams.amplitude = v.amplitude;
+                    if (v.sensitivity !== undefined) remoteParams.sensitivity = v.sensitivity;
+                    if (v.layerFreq !== undefined) remoteParams.layerFreq = v.layerFreq;
+                    if (v.baseLayer !== undefined) remoteParams.baseLayer = v.baseLayer;
+                    if (v.effect !== undefined) remoteParams.effect = v.effect;
+                    console.log("📥 Loaded Persisted Visual Params:", remoteParams);
+                }
+            }
+
+            else if (msg.type === "audio") {
+                if (msg.dmx) dmxState = msg.dmx; // Capture incoming DMX state
+                const data = msg.data;
+                if (data.vibe) currentVibe = data.vibe;
+                if (data.transient) currentTransient = data.transient;
+                if (data.mods) {
+                    targetMods.flux = data.mods.flux || 0;
+                    targetMods.bass = data.mods.bass || 0;
+                    targetMods.high = data.mods.high || 0;
+                    targetMods.vol = data.mods.vol || 0;
+                }
+                // Capture the instant transient trigger, bypassing smoothed mods
+                if (data.beat !== undefined) {
+                    if (data.beat === true) isBeat = true;
+                }
+
+
+
+                // Track rotation state for visual sync
+                if (data.rot_state) rotState = data.rot_state;
+                if (msg.rot_state) rotState = msg.rot_state; // Handle if sent at root level
+                if (msg.base_layer !== undefined) serverBaseLayer = msg.base_layer;
+                if (msg.fx_layer !== undefined) serverFxLayer = msg.fx_layer;
+                if (msg.fg_layer !== undefined) serverFgLayer = msg.fg_layer;
+                if (data.beat_count !== undefined) beatCount = data.beat_count;
+            }
+
+            // Handle visual params from remote control
+            else if (msg.type === "visual_params") {
+                if (msg.speed !== undefined) remoteParams.speed = msg.speed;
+                if (msg.amplitude !== undefined) remoteParams.amplitude = msg.amplitude;
+                if (msg.sensitivity !== undefined) remoteParams.sensitivity = msg.sensitivity;
+                if (msg.layerFreq !== undefined) remoteParams.layerFreq = msg.layerFreq;
+                if (msg.baseLayer !== undefined) remoteParams.baseLayer = msg.baseLayer;
+                if (msg.effect !== undefined) remoteParams.effect = msg.effect;
+                if (msg.rot_state) rotState = msg.rot_state;
+                if (msg.base_layer !== undefined) serverBaseLayer = msg.base_layer;
+            }
+            else if (msg.type === "force_refresh") {
+                window.location.reload();
+            }
+        };
+
+        // ========== HELPER FUNCTIONS ==========
+        function randomInt(max) {
+            return Math.floor(Math.random() * max);
+        }
+
+        function setBaseLayer(index) {
+            baseLayers.forEach((layer, i) => {
+                layer.visible = (i === index);
+            });
+        }
+
+        const fxMeshes = [
+            fxDNAMesh, fxTerrainMesh, fxHexMesh
+        ];
+
+
+        function setFxLayer(index) {
+            // 0=DNA, 1=Terrain, 2=Hex, 3=Kaleid, 4=None, 5=Fractal, 6=None
+
+            // 1. Force all meshes hidden first (Double-safety)
+            fxDNAMesh.visible = false;
+            fxTerrainMesh.visible = false;
+            fxHexMesh.visible = false;
+
+            // 2. Set active layer using loose equality (Number or String)
+            if (index == 0) fxDNAMesh.visible = true;
+            else if (index == 1) fxTerrainMesh.visible = true;
+            else if (index == 2) fxHexMesh.visible = true;
+
+            // 3. Manage Post-FX
+            kaleidPass.enabled = (index == 3);
+            base2FractalPass.enabled = (index == 5);
+        }
+
+        // ========== ANIMATION LOOP ==========
+        const clock = new THREE.Clock();
+
+        // Helper to get trigger-based audio value
+
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const rawTime = clock.getElapsedTime();
+            const time = rawTime * remoteParams.speed;
+
+            // --- HYBRID TRANSIENT LOGIC ---
+            let smoothFactor = 0.12;
+            let amp = remoteParams.amplitude;
+            let currentSpeed = remoteParams.speed;
+
+            if (currentTransient === "tension") {
+                smoothFactor = 0.02; // Float slowly
+                amp *= 0.3;          // Constrain movement
+                currentSpeed *= 0.2; // Freeze rotation
+            } else if (currentTransient === "dropping") {
+                smoothFactor = 0.8;  // Instant snap to audio peaks
+                amp *= 2.0;          // Exaggerate displacement
+                currentSpeed *= 3.0; // Accelerate rotation
+            }
+
+            smoothedMods.flux += (targetMods.flux - smoothedMods.flux) * smoothFactor;
+            smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * smoothFactor;
+            smoothedMods.high += (targetMods.high - smoothedMods.high) * smoothFactor;
+            smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * smoothFactor;
+
+            // --- DECOUPLED VISUAL GAIN ---
+            // Since main.py now sends clean 0.0-1.0 data, we apply a base multiplier here 
+            // to make the shaders "pop", scaling it further with your UI Amplitude slider.
+            // We completely ignore the Master Sensitivity slider to decouple from the lasers.
+            const VISUAL_BASE_GAIN = 2.0;
+            const visualPower = VISUAL_BASE_GAIN * amp;
+
+            // --- DMX HARDWARE SYNC ---
+            const rawZoom = dmxState["L1_zoom"] !== undefined ? dmxState["L1_zoom"] : 127;
+            const dmxZoomMod = (1.0 - (rawZoom / 255.0)) * visualPower;
+
+            const rawRotZ = dmxState["L1_rot_z"] !== undefined ? dmxState["L1_rot_z"] : 0;
+            const dmxRotRad = (rawRotZ / 255.0) * Math.PI * 2.0;
+
+            // Audio Modulators (Reactivity)
+            // Clamped at 1.5 to prevent the shaders from blowing out to pure white
+            let modFlux = Math.min(1.5, smoothedMods.flux * visualPower);
+            let modBass = Math.min(1.5, smoothedMods.bass * visualPower);
+            let modHigh = Math.min(1.5, smoothedMods.high * visualPower);
+            let modVol = Math.min(1.5, smoothedMods.vol * visualPower);
+
+            // TENSION BLACKOUT: Force all audio reactivity to zero for a clean dark build
+            if (currentTransient === "tension") {
+                modFlux = 0.0;
+                modBass = 0.0;
+                modHigh = 0.0;
+                modVol = 0.0;
+            }
+
+            // Triggers
+            const zoomMod = dmxZoomMod;
+            const rotMod = smoothedMods.flux * visualPower;
+            const intensityMod = smoothedMods.vol * visualPower;
+
+            // --- INSTANT BEAT ENVELOPE ---
+            // Replicate the exact same decay math used in dmx_engine.py
+            if (isBeat && visualBeatPulse < 0.2) {
+                visualBeatPulse = 1.0;
+            } else {
+                // Assuming standard 60fps (~0.016 dt)
+                visualBeatPulse = Math.max(0.0, visualBeatPulse - 4.0 * 0.016);
+            }
+            isBeat = false; // Reset trigger
+
+            // PULSING CALCULATIONS
+            // Combine the sharp instantaneous beat hit with the sustained bass glow
+            const bassPulse = 1.0 + (visualBeatPulse * 0.4 + smoothedMods.bass * 0.1) * visualPower;
+            const fluxPulse = 1.0 + (visualBeatPulse * 0.3 + smoothedMods.flux * 0.1) * visualPower;
+
+            // Update uniforms - apply sensitivity boost
+            uniforms.u_time.value = time;
+
+            // Brightness/Color Uniforms: Use CLAMPED modulators
+            // This prevents the "washed out" white screen
+            uniforms.u_flux.value = modFlux;
+            uniforms.u_bass.value = modBass;
+            uniforms.u_high.value = modHigh;
+            uniforms.u_vol.value = modVol;
+
+            uniforms.u_audioLevel.value = intensityMod; // Intensity trigger
+            uniforms.u_speed.value = remoteParams.speed;
+            uniforms.u_dmxRot.value = dmxRotRad; // Hard-sync shader rotation
+
+            // Update effect pass uniforms
+            kaleidPass.uniforms.u_time.value = time;
+            kaleidPass.uniforms.u_bass.value = zoomMod;
+            kaleidPass.uniforms.u_segments.value = 6.0 + Math.floor(modFlux * 4.0);
+
+
+
+            // === BASE LAYER CONTROL ===
+            // === FX LAYER CONTROL (Consolidated) ===
+            // 0=DNA, 1=Terrain, 2=Hex, 3=Kaleid, 4=None, 5=Fractal, 6=None
+
+            if (remoteParams.effect !== 'auto') {
+                currentFxLayer = parseInt(remoteParams.effect) || 6;
+            } else {
+                currentFxLayer = serverFxLayer;
+            }
+            setFxLayer(currentFxLayer);
+            if (remoteParams.baseLayer !== 'auto') {
+                currentBaseLayer = parseInt(remoteParams.baseLayer) || 0;
+            } else {
+                // SERVER CONTROLLED: Backend sends exact ID based on vibe pool
+                currentBaseLayer = serverBaseLayer;
+            }
+            setBaseLayer(currentBaseLayer);
+
+            // Update Debug UI (Throttled for performance)
+            if (Math.floor(rawTime * 10) % 2 === 0) {
+                document.getElementById('debug').innerText =
+                    `Vibe: ${currentVibe.toUpperCase()} | Base: ${currentBaseLayer} | FX: ${currentFxLayer}`;
+            }
+
+            // Update Base 2 (old2x) when visible
+            if (currentBaseLayer === 2) {
+                base2FractalPass.enabled = true;
+                // PULSING: Scale whole group with bass
+                base2Group.scale.setScalar(bassPulse);
+            } else {
+                // Fix: Only disable if not acting as effect overlay
+                if (currentFxLayer != 5) base2FractalPass.enabled = false;
+            }
+
+            // Update mandala (OldX) when visible
+            if (currentBaseLayer === 3) {
+                // PULSING: Scale whole group with bass/audio level
+                oldXGroup.scale.setScalar(1.0 + smoothedMods.vol * 0.2 * amp);
+
+                // Deterministic mode switching logic follows
+                // Update Mandala Sub-Mode based on Server Beat Count (Deterministic Sync)
+                if (beatCount !== null) {
+                    // Switch mode every 16 beats (approx 8 seconds at 120bpm)
+                    oldXMode = Math.floor(beatCount / 16) % 3;
+                } else {
+                    // Fallback to time-based if server is old
+                    const delta = clock.getDelta();
+                    oldXSwitchTimer += 0.016;
+                    if (oldXSwitchTimer > OLDX_SWITCH_INTERVAL) {
+                        oldXSwitchTimer = 0;
+                        oldXMode = (oldXMode + 1) % 3;
+                    }
+                }
+
+                // Update Visibility of sub-modes
+                gearsMesh.visible = (oldXMode === 0);
+                goLMesh.visible = (oldXMode === 1);
+                shootingMesh.visible = (oldXMode === 2);
+
+                if (oldXMode === 0) {
+                    gearsMat.uniforms.u_time.value = time;
+                    gearsMat.uniforms.u_audioLevel.value = smoothedMods.vol * amp;
+                    gearsMat.uniforms.u_bass.value = smoothedMods.bass * amp;
+                    gearsMat.uniforms.u_mids.value = smoothedMods.flux * amp;
+                    gearsMat.uniforms.u_speed.value = remoteParams.speed;
+                }
+                else if (oldXMode === 1) {
+                    updateGameOfLife(0.016, smoothedMods.bass * amp);
+                }
+                else if (oldXMode === 2) {
+                    updateShootingLines(0.016, smoothedMods.bass * amp);
+                }
+
+                // Update Internal Kaleid
+                oldXKaleidPass.enabled = true;
+                oldXKaleidPass.uniforms.u_rotation.value = dmxRotRad; // Locked to DMX L1_rot_z
+                oldXKaleidPass.uniforms.u_bass.value = smoothedMods.bass * amp;
+            } else {
+                oldXKaleidPass.enabled = false;
+                // Disable internal sub-modes when not showing oldX
+                if (gearsMesh) gearsMesh.visible = false;
+                if (goLMesh) goLMesh.visible = false;
+                if (shootingMesh) shootingMesh.visible = false;
+            }
+
+            // Update visual3 when visible
+            if (currentBaseLayer === 4) {
+                updateVisual3(time, smoothedMods.bass, smoothedMods.flux, smoothedMods.high, amp);
+            }
+
+            // Update tunnel when visible
+            // Update tunnel when visible
+            if (currentBaseLayer === 1) {
+                // PULSING: Scale tunnel depth/width with bass/flux
+                // Reactive Zoom (simulated by scale Z)
+                tunnelMesh.scale.z = 1.0 + smoothedMods.flux * 2.0 * remoteParams.amplitude;
+                tunnelMesh.scale.x = 1.0 + smoothedMods.bass * 0.1 * remoteParams.amplitude;
+                tunnelMesh.scale.y = 1.0 + smoothedMods.bass * 0.1 * remoteParams.amplitude;
+
+                tunnelMesh.rotation.z = dmxRotRad; // Hard-locked to DMX rotation
+            }
+
+            // Update new BG visuals when visible
+            // HYBRID ROTATION: Added base speed (0.002) to reactive component
+
+            // Neon Web (6)
+            if (currentBaseLayer === 6 && bgNeonWebMesh) {
+                bgNeonWebMesh.scale.setScalar(bassPulse);
+                bgNeonWebMesh.rotation.z = dmxRotRad; // Hard-locked to DMX rotation
+            }
+            // Crystal Burst (7)
+            if (currentBaseLayer === 7 && bgCrystalBurstMesh) {
+                const breath = Math.sin(time * 0.5) * 0.3;
+                bgCrystalBurstMesh.scale.setScalar(1.0 + breath + smoothedMods.bass * 0.5 * amp);
+                bgCrystalBurstMesh.rotation.z = dmxRotRad;
+            }
+            // Stained Glass (8)
+            if (currentBaseLayer === 8 && bgStainedGlassMesh) {
+                bgStainedGlassMesh.scale.setScalar(1.0 + smoothedMods.flux * 0.15 * amp);
+                bgStainedGlassMesh.rotation.z = dmxRotRad;
+            }
+            // Fractal Tunnel (9)
+            if (currentBaseLayer === 9 && bgFractalTunnelMesh) {
+                bgFractalTunnelMesh.scale.setScalar(1.0 + smoothedMods.bass * 0.35 * amp);
+                bgFractalTunnelMesh.rotation.z = dmxRotRad;
+            }
+
+            // Floating Cubes (5)
+            if (currentBaseLayer === 5 && bgFloatingCubesMesh) {
+                bgFloatingCubesMesh.scale.setScalar(fluxPulse);
+                bgFloatingCubesMesh.rotation.z = dmxRotRad;
+            }
+
+            // 3D Lissajous (10)
+            if (currentBaseLayer === 10 && bgLissajousMesh) {
+                bgLissajousMesh.scale.setScalar(1.0 + smoothedMods.bass * 0.2 * amp);
+                // Note: DMX rotation is handled natively inside the shader matrix
+            }
+
+
+
+            // Animate Active FX Meshes
+
+            // FX 0: DNA
+            // FX 1: Terrain
+            // FX 2: Hex Pulse
+            // (These shaders use uniforms updated above: u_time, u_audioLevel, u_bass)
+
+            // No specific JS animation needed for FX 0-2 beyond uniforms, 
+            // unless we want to manually rotate meshes (which the shaders handle mostly)
+
+            // TENSION BLACKOUT OVERRIDE: Skip rendering or force clear if in tension
+            if (currentTransient === "tension") {
+                renderer.setClearColor(0x000000, 1);
+                renderer.clear();
+                // We still want to see the debug info if it's visible, but the 3D scene should be black
+            } else {
+                composer.render();
+            }
+        }
+        animate();
+
+
+
+    </script>
+</body>
+
+</html>

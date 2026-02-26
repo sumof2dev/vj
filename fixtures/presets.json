@@ -1,0 +1,19 @@
+{
+    "dot mltiply": {
+        "vibe": "machine_gun",
+        "target_category": "laser",
+        "channels": {
+            "boundary": 0,
+            "pattern": 96,
+            "rot_z": 0,
+            "pos_x": 0,
+            "rot_y": 125,
+            "color_multi": 87,
+            "dots": 163,
+            "drawing_delay": 0,
+            "drawing": 255,
+            "twist": 178,
+            "grating": 255
+        }
+    }
+}

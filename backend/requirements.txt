@@ -1,0 +1,6 @@
+sounddevice
+numpy>=1.26.0
+pyserial
+websockets
+pulsectl
+python-kasa

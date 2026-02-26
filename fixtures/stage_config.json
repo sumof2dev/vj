@@ -1,0 +1,78 @@
+{
+    "devices": {
+        "R1": {
+            "type": "ehaho_laser",
+            "address": 1,
+            "offset": 0,
+            "location": "left",
+            "invert_x": false,
+            "invert_y": false,
+            "invert_rot": false,
+            "category": "laser",
+            "ip_address": "192.168.1.100"
+        },
+        "R2": {
+            "type": "ehaho_laser",
+            "address": 1,
+            "offset": 17,
+            "location": "left",
+            "invert_x": false,
+            "invert_y": false,
+            "invert_rot": false,
+            "category": "laser",
+            "behavior": "rhythm"
+        },
+        "L1": {
+            "type": "ehaho_laser",
+            "address": 35,
+            "offset": 0,
+            "location": "right",
+            "invert_x": false,
+            "invert_y": false,
+            "invert_rot": false,
+            "category": "laser"
+        },
+        "L2": {
+            "type": "ehaho_laser",
+            "address": 35,
+            "offset": 17,
+            "location": "right",
+            "invert_x": false,
+            "invert_y": false,
+            "invert_rot": false,
+            "category": "laser",
+            "behavior": "rhythm"
+        },
+        "B1": {
+            "type": "ehaho_laser",
+            "address": 75,
+            "offset": 0,
+            "location": "bottom",
+            "invert_x": false,
+            "invert_y": false,
+            "invert_rot": false,
+            "category": "laser",
+            "behavior": "lead"
+        },
+        "B2": {
+            "type": "ehaho_laser",
+            "address": 75,
+            "offset": 17,
+            "location": "bottom",
+            "invert_x": false,
+            "invert_y": false,
+            "invert_rot": false,
+            "category": "laser",
+            "behavior": "lead"
+        }
+    },
+    "global": {
+        "local_center": 64
+    },
+    "outlets/switches": {
+        "switch": {
+            "ip": "192.168.86.31",
+            "toggle_behavior": "manager"
+        }
+    }
+}

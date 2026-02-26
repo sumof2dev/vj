@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaveBox | Remote Manager</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RaveBox Manager">
+    <link rel="apple-touch-icon" href="icon.png">
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --surface: #16161a;
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --success: #00ff88;
+            --error: #ff3366;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('background.png') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(22, 22, 26, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        h1 {
+            margin: 0 0 0.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .status-badge.active {
+            color: var(--success);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .status-badge.inactive {
+            color: var(--error);
+            background: rgba(255, 51, 102, 0.1);
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-start {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+        }
+
+        .btn-stop {
+            background: var(--error);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
+        }
+
+        .btn-restart {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .links {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+        }
+
+        .links a {
+            color: var(--primary);
+            text-decoration: none;
+            margin: 0 10px;
+            opacity: 0.7;
+        }
+
+        .links a:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>RaveBox Control</h1>
+        <p>Remote Engine Manager</p>
+
+        <div id="status" class="status-badge inactive">Checking Status...</div>
+
+        <button id="btnStart" class="btn btn-start" onclick="doAction('start')">Launch Engine</button>
+        <button id="btnStop" class="btn btn-stop" onclick="doAction('stop')">Kill Engine</button>
+        <button id="btnRestart" class="btn btn-restart" onclick="doAction('restart')">Restart</button>
+
+        <div id="smart-controls" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
+            <!-- Dynamic Kasa Buttons -->
+        </div>
+
+
+
+        <div id="loader" class="loading-spinner"></div>
+
+        <div class="links">
+            <a id="link-visual" href="#">Visualizer</a>
+            <a id="link-remote" href="#">Remote</a>
+            <a id="link-setup" href="#">Setup</a>
+        </div>
+    </div>
+
+    <script>
+        const host = window.location.hostname;
+        const LAUNCHER_API = '';
+
+        // Point links within the same origin (Port Independent)
+        document.getElementById('link-visual').href = `/visualdmx.html`;
+        document.getElementById('link-remote').href = `/remote.html`;
+        document.getElementById('link-setup').href = `/setup.html`;
+
+        async function updateStatus() {
+            try {
+                const res = await fetch(`${LAUNCHER_API}/status`);
+                const data = await res.json();
+                const badge = document.getElementById('status');
+                badge.innerText = `Engine: ${data.status}`;
+                badge.className = `status-badge ${data.active ? 'active' : 'inactive'}`;
+
+                document.getElementById('btnStart').disabled = data.active;
+                document.getElementById('btnStop').disabled = !data.active;
+            } catch (e) {
+                console.error("Status check failed", e);
+            }
+        }
+
+        async function doAction(action) {
+            const loader = document.getElementById('loader');
+            loader.style.display = 'block';
+
+            try {
+                const res = await fetch(`${LAUNCHER_API}/${action}`);
+                const data = await res.json();
+                console.log(action, data);
+
+                if (action === 'start' && data.success) {
+                    // Give the engine a moment to start the web server on 8000 (Legacy comment, keeping 8001)
+                    const badge = document.getElementById('status');
+                    badge.innerText = "Launching Visualizer...";
+                    badge.className = "status-badge active";
+
+                    setTimeout(() => {
+                        // Redirect to the visualizer on the same port
+                        window.location.href = `/visualdmx.html`;
+                    }, 5000);
+                    return; // Don't hide loader yet
+                }
+            } catch (e) {
+                alert(`Error: ${e.message}`);
+            } finally {
+                if (action !== 'start') {
+                    loader.style.display = 'none';
+                    setTimeout(updateStatus, 1000);
+                }
+            }
+        }
+
+        async function loadSmartControls() {
+            try {
+                const res = await fetch('/api/fixtures/stage_config.json');
+                const config = await res.json();
+                const container = document.getElementById('smart-controls');
+                container.innerHTML = '';
+
+                for (const [name, dev] of Object.entries(config.devices)) {
+                    if (dev.category === 'outlet/switch' && (dev.on_action === 'manager' || dev.off_action === 'manager')) {
+                        const alias = dev.kasa_alias;
+                        if (!alias) continue;
+
+                        const row = document.createElement('div');
+                        row.style.display = 'flex';
+                        row.style.gap = '10px';
+                        row.innerHTML = `
+                            <button class="btn btn-restart" style="flex:1; margin:0; padding:0.8rem; font-size:0.8rem" 
+                                    onclick="controlSmart('${alias}', 'on')">ON: ${alias}</button>
+                            <button class="btn btn-restart" style="flex:1; margin:0; padding:0.8rem; font-size:0.8rem; background: rgba(255,51,102,0.1); color: var(--error)" 
+                                    onclick="controlSmart('${alias}', 'off')">OFF</button>
+                        `;
+                        container.appendChild(row);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load smart controls", e);
+            }
+        }
+
+        async function controlSmart(alias, state) {
+            try {
+                const res = await fetch(`/api/smart/control?alias=${encodeURIComponent(alias)}&state=${state}`);
+                const data = await res.json();
+                if (!data.success) alert(`Failed to control ${alias}`);
+            } catch (e) {
+                alert(`Error: ${e.message}`);
+            }
+        }
+
+        // Poll every 3 seconds
+        setInterval(updateStatus, 3000);
+        updateStatus();
+        loadSmartControls();
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW Registered', reg.scope))
+                    .catch(err => console.log('SW Failed', err));
+            });
+        }
+    </script>
+</body>
+
+</html>

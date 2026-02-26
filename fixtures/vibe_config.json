@@ -1,0 +1,41 @@
+{
+    "chill": {
+        "shapes": [
+            "circle",
+            "line",
+            "arch",
+            "bullseye",
+            "dot3",
+            "circle_of_cir"
+        ],
+        "zoom_base": 0.1,
+        "rot_speed": 0.1
+    },
+    "mid": {
+        "shapes": [
+            "octagon",
+            "line",
+            "line_x2",
+            "line_dotted",
+            "diag_cir",
+            "square",
+            "diamond"
+        ],
+        "zoom_base": 0.1,
+        "rot_speed": 0.1
+    },
+    "high": {
+        "shapes": [
+            "triangle",
+            "spiral",
+            "sine",
+            "caret",
+            "star",
+            "dot_x3",
+            "star_x4",
+            "circle_2up1down"
+        ],
+        "zoom_base": 0.1,
+        "rot_speed": 0.1
+    }
+}

@@ -1,0 +1,19 @@
+[Unit]
+Description=Hybrid VJ Engine (Python Backend + Frontend)
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Nice=-10
+Type=simple
+User=sumof2
+# CRITICAL: Allow service to access User Audio (PulseAudio/Pipewire)
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=PULSE_RUNTIME_PATH=/run/user/1000/pulse
+WorkingDirectory=/home/sumof2/vj
+ExecStart=/home/sumof2/vj/start.sh --engine-only
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

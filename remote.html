@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Remote Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RaveBox">
+    <link rel="apple-touch-icon" href="icon.png">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --panel-laser: #1a1520;
+            --panel-visual: #151a20;
+            --border: #333;
+            --accent-laser: #ff6b9d;
+            --accent-visual: #6bffdb;
+            --accent-global: #a29bfe;
+            --text: #eee;
+            --text-dim: #888;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #1a1520, #151a20);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .vol-meter {
+            width: 60px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+
+        .vol-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4AE290, #ffeb3b, #ff4757);
+            width: 0%;
+            transition: width 0.05s ease-out;
+        }
+
+        .status-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #555;
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: #4AE290;
+            box-shadow: 0 0 8px #4AE290;
+        }
+
+        .vibe-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            background: #333;
+        }
+
+        .vibe-badge.chill {
+            background: #2a5a8a;
+            color: #8ad4ff;
+        }
+
+        .vibe-badge.mid {
+            background: #5a5a2a;
+            color: #ffdd8a;
+        }
+
+        .vibe-badge.high {
+            background: #8a2a5a;
+            color: #ff8add;
+        }
+
+        .control-panel {
+            padding: 8px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .section {
+            background: #111;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section.global {
+            border-color: var(--accent-global);
+            background: linear-gradient(135deg, rgba(162, 155, 254, 0.05), rgba(0, 0, 0, 0));
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slider-group {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: #ddd;
+        }
+
+        .slider-value {
+            font-family: monospace;
+            color: var(--accent-global);
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent-global);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(162, 155, 254, 0.3);
+            border: 2px solid #fff;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: transform 0.1s, opacity 0.2s;
+            text-align: center;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: var(--accent-global);
+            color: #000;
+        }
+
+        .btn-danger {
+            background: #ff4757;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+        }
+
+        .btn-secondary {
+            background: #333;
+            color: #ccc;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            background: #222;
+            color: var(--text);
+            border: 1px solid #444;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+
+        .monitor-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            height: 180px;
+            overflow-y: auto;
+            border: 1px solid #222;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .monitor-group {
+            margin-bottom: 4px;
+        }
+
+        .monitor-header {
+            font-size: 0.6rem;
+            color: var(--accent-visual);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+            font-weight: bold;
+            border-bottom: 1px solid #222;
+            padding-bottom: 2px;
+        }
+
+        .group-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 4px;
+        }
+
+        .dmx-item {
+            background: #151515;
+            padding: 4px 6px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            color: #888;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.1s;
+        }
+
+        .dmx-item:hover {
+            background: #222;
+            border-color: #444;
+        }
+
+        .dmx-val {
+            color: var(--accent-visual);
+            font-weight: bold;
+        }
+
+        .dmx-val.changed {
+            color: #fff;
+        }
+
+        .hidden-channels-title {
+            font-size: 0.6rem;
+            color: #444;
+            text-transform: uppercase;
+            margin-top: 8px;
+            padding-top: 4px;
+            border-top: 1px dashed #222;
+        }
+
+        .hidden-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px 0;
+        }
+
+        .hidden-tag {
+            font-size: 0.6rem;
+            background: #111;
+            color: #555;
+            padding: 1px 6px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid #222;
+        }
+
+        .hidden-tag:hover {
+            color: #aaa;
+            border-color: #444;
+        }
+
+        .details-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        @media(max-width: 600px) {
+            .details-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .detail-card {
+            background: #151515;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .detail-title {
+            color: #888;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        /* --- ENGINE THINKING PANEL --- */
+        .thinking-panel {
+            background: linear-gradient(135deg, #111, #080808);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            display: grid;
+            grid-template-columns: 100px 1fr 150px;
+            gap: 15px;
+            align-items: center;
+        }
+
+        @media(max-width: 600px) {
+            .thinking-panel {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+        }
+
+        .transient-display {
+            text-align: center;
+            padding: 8px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            border: 1px solid #222;
+        }
+
+        .transient-label {
+            font-size: 0.6rem;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .transient-value {
+            font-weight: 900;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            color: #888;
+        }
+
+        .transient-value.steady {
+            color: #888;
+        }
+
+        .transient-value.building {
+            color: #a29bfe;
+            text-shadow: 0 0 10px rgba(162, 155, 254, 0.4);
+        }
+
+        .transient-value.tension {
+            color: #f9ca24;
+            text-shadow: 0 0 10px rgba(249, 202, 36, 0.4);
+        }
+
+        .transient-value.dropping {
+            color: #eb4d4b;
+            text-shadow: 0 0 10px rgba(235, 77, 75, 0.6);
+        }
+
+        .bin-viz {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #222;
+        }
+
+        .bin-bar {
+            flex: 1;
+            background: #444;
+            min-height: 2px;
+            border-radius: 1px 1px 0 0;
+            transition: height 0.05s ease-out, background 0.1s;
+        }
+
+        .stats-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            font-size: 0.75rem;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #222;
+        }
+
+        .stat-label {
+            color: #555;
+            font-size: 0.6rem;
+            text-transform: uppercase;
+        }
+
+        .stat-val {
+            color: var(--accent-visual);
+            font-family: monospace;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>
+            🎮 Remote
+            <div class="vol-meter" title="Input Volume">
+                <div id="vol-bar" class="vol-bar"></div>
+            </div>
+        </h1>
+
+        <div class="status-row">
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <span class="vibe-badge" id="vibeBadge">--</span>
+        </div>
+    </div>
+
+    <div class="control-panel">
+
+        <!-- SYSTEM CONTROLS -->
+        <div class="section global">
+            <div class="section-title">
+                ⚡ System Controls
+                <span id="bpmDisplay" style="color:var(--accent-visual); font-size:0.8rem;">-- BPM</span>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Gain (Input Volume)</span>
+                    <span class="slider-value" id="masterSensVal">1.0</span>
+                </div>
+                <input type="range" id="masterSens" min="0.0" max="2.0" step="0.05" value="1.0">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Audio Sensitivity (Reactivity)</span>
+                    <span class="slider-value" id="masterFluxVal">0.7</span>
+                </div>
+                <input type="range" id="masterFlux" min="0.0" max="1.5" step="0.05" value="0.7">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Vibe Probability (Mid Bias)</span>
+                    <span class="slider-value" id="masterBiasVal">0.5</span>
+                </div>
+                <input type="range" id="masterBias" min="0.0" max="1.0" step="0.05" value="0.5">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Master Speed</span>
+                    <span class="slider-value" id="masterSpeedVal">1.0x</span>
+                </div>
+                <input type="range" id="masterSpeed" min="0.0" max="2.0" step="0.05" value="1.0">
+            </div>
+
+            <div class="btn-grid">
+                <button id="saveDefaultsBtn" class="btn btn-primary">💾 Save Defaults</button>
+                <button id="refreshAllBtn" class="btn btn-secondary">🔄 Refresh Clients</button>
+                <button id="btnEngineStart" class="btn btn-success">🚀 Start Engine</button>
+                <button id="btnEngineRestart" class="btn btn-danger">♻️ Restart Engine</button>
+            </div>
+        </div>
+
+        <!-- DETAILS SELECTION -->
+        <div class="details-row">
+            <!-- LASER -->
+            <div class="detail-card">
+                <div class="detail-title">🔦 Laser Config</div>
+                <label style="font-size:0.8rem; color:#888;">Pattern Mode</label>
+                <select id="laserPattern">
+                    <option value="auto">Auto (Vibe)</option>
+                    <option value="geometric">Geometric</option>
+                    <option value="lines">Lines</option>
+                    <option value="dots">Dots</option>
+                    <option value="spirals">Spirals</option>
+                </select>
+
+                <label style="font-size:0.8rem; color:#888;">Color Mode</label>
+                <select id="laserColor">
+                    <option value="auto">Auto (Vibe)</option>
+                    <option value="multi">Multi-Color</option>
+                    <option value="solid">Solid Cycle</option>
+                </select>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Ptn Freq</span>
+                        <span class="slider-value" id="laserPatternFreqVal">Normal</span>
+                    </div>
+                    <input type="range" id="laserPatternFreq" min="0" max="3" step="1" value="1">
+                </div>
+            </div>
+
+            <!-- VISUAL -->
+            <div class="detail-card">
+                <div class="detail-title">🎆 Visual Config</div>
+                <label style="font-size:0.8rem; color:#888;">Base Layer</label>
+                <select id="visualBase">
+                    <option value="auto">Auto (Cycling)</option>
+                    <option value="0">Voxel Maze</option>
+                    <option value="1">Tunnel</option>
+                    <option value="2">Mandala</option>
+                    <option value="3">Game of Lines</option>
+                    <option value="4">Sonic Ring</option>
+                    <option value="5">Floating Cubes</option>
+                    <option value="6">Neon Web</option>
+                    <option value="7">Crystal Burst</option>
+                    <option value="8">Stained Glass</option>
+                    <option value="9">Fractal Tunnel</option>
+                    <option value="10">3D Lissajous</option>
+                </select>
+
+                <label style="font-size:0.8rem; color:#888;">Effect Overlay</label>
+                <select id="visualEffect">
+                    <option value="auto">Auto (Cycling)</option>
+                    <option value="0">DNA</option>
+                    <option value="1">Terrain</option>
+                    <option value="2">Hex Pulse</option>
+                    <option value="3">Kaleido</option>
+                    <option value="5">Fractal Fold</option>
+                    <option value="-1">None</option>
+                </select>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Layer Freq</span>
+                        <span class="slider-value" id="visualLayerFreqVal">Normal</span>
+                    </div>
+                    <input type="range" id="visualLayerFreq" min="0" max="3" step="1" value="1">
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ENGINE THINKING DASHBOARD -->
+        <div class="thinking-panel">
+            <div class="transient-display">
+                <div class="transient-label">AI Logic</div>
+                <div id="transientVal" class="transient-value steady">STEADY</div>
+            </div>
+
+            <div class="bin-viz" id="binViz">
+                <!-- 11 Bins -->
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+                <div class="bin-bar"></div>
+            </div>
+
+            <div class="stats-display">
+                <div class="stat-item">
+                    <span class="stat-label">System BPM</span>
+                    <span class="stat-val" id="statsBpm">--</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Confidence</span>
+                    <span class="stat-val" id="statsConf">--%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">IQ (Isolation)</span>
+                    <span class="stat-val" id="statsIso">--%</span>
+                </div>
+                <div class="stat-item" id="beatTrigger" style="transition: background 0.1s;">
+                    <span class="stat-label">Grid Sync</span>
+                    <span class="stat-val" style="color:white; font-size:0.55rem;">PULSE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MONITOR -->
+        <div class="section" style="margin-top:16px;">
+            <div class="section-title">📊 Live Monitor</div>
+            <div id="activeSceneTag" style="font-size:0.8rem; margin-bottom:5px; color:#aaa;">Scene: --</div>
+            <div class="monitor-grid" id="dmxGrid"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- STATE ---
+        const state = {
+            speed: 1.0,
+            sensitivity: 1.0,     // Flux sensibility
+            gain: 1.0,            // Input gain
+            vibe_bias: 0.5,
+
+            laser: {
+                pattern: 'auto',
+                color: 'auto',
+                patternFreq: 1
+            },
+            visual: {
+                baseLayer: 'auto',
+                effect: 'auto',
+                layerFreq: 1
+            }
+        };
+
+        const FREQ_LABELS = ['Slow', 'Normal', 'Fast', 'Frantic'];
+        let ws = null;
+        let reconnectTimeout = null;
+
+        function connect() {
+            const host = window.location.hostname || 'localhost';
+            ws = new WebSocket(`ws://${host}:8765`);
+
+            ws.onopen = () => {
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('statusText').textContent = 'Connected';
+                ws.send(JSON.stringify({ type: 'get_params' }));
+            };
+
+            ws.onclose = () => {
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').textContent = 'Disconnected';
+                reconnectTimeout = setTimeout(connect, 2000);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+
+                    if (msg.type === 'current_params') syncUI(msg);
+
+                    if (msg.type === 'audio') {
+                        const data = msg.data;
+                        if (data.vol !== undefined) {
+                            document.getElementById('vol-bar').style.width = Math.min(100, data.vol * 100) + '%';
+                        }
+                        if (data.vibe) {
+                            const badge = document.getElementById('vibeBadge');
+                            badge.textContent = data.vibe;
+                            badge.className = 'vibe-badge ' + data.vibe;
+                        }
+
+                        // Update Engine Thinking Panels
+                        if (data.transient) {
+                            const tVal = document.getElementById('transientVal');
+                            const tStr = data.transient.toUpperCase();
+                            tVal.textContent = tStr;
+                            tVal.className = 'transient-value ' + data.transient;
+                        }
+
+                        if (data.bins) {
+                            const bars = document.querySelectorAll('.bin-bar');
+                            data.bins.forEach((val, i) => {
+                                if (bars[i]) {
+                                    const h = Math.max(2, val * 45); // Max panel height ~50px
+                                    bars[i].style.height = h + 'px';
+
+                                    // Dynamic coloring based on energy
+                                    if (val > 0.8) bars[i].style.background = 'var(--accent-laser)';
+                                    else if (val > 0.4) bars[i].style.background = 'var(--accent-visual)';
+                                    else bars[i].style.background = '#444';
+                                }
+                            });
+                        }
+
+                        if (data.bpm) {
+                            const bpm = Math.round(data.bpm);
+                            document.getElementById('bpmDisplay').textContent = bpm + ' BPM';
+                            document.getElementById('statsBpm').textContent = bpm;
+                        }
+
+                        if (data.confidence !== undefined) {
+                            document.getElementById('statsConf').textContent = Math.round(data.confidence * 100) + '%';
+                        }
+                        if (data.isolation !== undefined) {
+                            document.getElementById('statsIso').textContent = Math.round(data.isolation * 100) + '%';
+                        }
+
+                        if (data.beat) {
+                            const bt = document.getElementById('beatTrigger');
+                            bt.style.background = 'rgba(162, 155, 254, 0.4)';
+                            setTimeout(() => bt.style.background = '#1a1a1a', 100);
+                        }
+
+                        if (msg.dmx) updateDMXMonitor(msg.dmx);
+                        if (msg.active_scene) document.getElementById('activeSceneTag').innerHTML = `Scene: <b style="color:white">${msg.active_scene.toUpperCase()}</b>`;
+                    }
+                    else if (msg.type === 'force_refresh') {
+                        window.location.reload();
+                    }
+                } catch (e) { }
+            };
+        }
+
+        function sendParams() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+            // 1. MASTER PARAMS (Backend Logic)
+            ws.send(JSON.stringify({
+                type: 'master_params',
+                speed: state.speed,
+                sensitivity: state.gain,          // Backend Analyzer Gain
+                flux_sensitivity: state.sensitivity, // Backend Flux Sens
+                vibe_bias: state.vibe_bias
+            }));
+
+            // 2. LASER PARAMS (Targeted)
+            ws.send(JSON.stringify({
+                type: 'remote_params',
+                target: 'laser',
+                // Propagate global values to laser engine
+                speed: state.speed,
+                audioSensitivity: state.sensitivity,
+                // Specifics
+                pattern: state.laser.pattern,
+                color: state.laser.color,
+                patternFreq: state.laser.patternFreq
+            }));
+
+            // 3. VISUAL PARAMS (Targeted)
+            ws.send(JSON.stringify({
+                type: 'remote_params',
+                target: 'visual',
+                // Propagate global values to visual engine
+                speed: state.speed,
+                amplitude: state.amplitude,
+                sensitivity: state.sensitivity, // visual.sensitivity = flux sens
+                // Specifics
+                baseLayer: state.visual.baseLayer,
+                effect: state.visual.effect,
+                layerFreq: state.visual.layerFreq
+            }));
+        }
+
+        function syncUI(params) {
+            if (params.master) {
+                const m = params.master;
+                state.speed = m.speed || 1.0;
+                state.gain = m.sensitivity || 1.0; // Analyzer Gain
+                state.sensitivity = m.flux_sensitivity || 0.7; // Flux Sens
+                state.vibe_bias = m.vibe_bias || 0.5;
+
+                updateSlider('masterSpeed', state.speed, 'x');
+                updateSlider('masterSens', state.gain);
+                updateSlider('masterFlux', state.sensitivity);
+                updateSlider('masterBias', state.vibe_bias);
+            }
+
+            if (params.laser) {
+                state.laser.pattern = params.laser.pattern;
+                state.laser.color = params.laser.color;
+                state.laser.patternFreq = params.laser.patternFreq;
+
+                document.getElementById('laserPattern').value = state.laser.pattern;
+                document.getElementById('laserColor').value = state.laser.color;
+                updateSlider('laserPatternFreq', state.laser.patternFreq, '', true);
+            }
+
+            if (params.visual) {
+                state.visual.baseLayer = params.visual.baseLayer;
+                state.visual.effect = params.visual.effect;
+                state.visual.layerFreq = params.visual.layerFreq;
+
+                document.getElementById('visualBase').value = state.visual.baseLayer;
+                document.getElementById('visualEffect').value = state.visual.effect;
+                updateSlider('visualLayerFreq', state.visual.layerFreq, '', true);
+            }
+        }
+
+        function updateSlider(id, val, suffix = '', isFreq = false) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = val;
+                const disp = document.getElementById(id + 'Val');
+                if (disp) {
+                    if (isFreq) disp.textContent = FREQ_LABELS[val] || val;
+                    else disp.textContent = val.toFixed(1) + suffix;
+                }
+            }
+        }
+
+        // --- LISTENERS ---
+        // Sliders
+        const sliders = [
+            { id: 'masterSpeed', key: 'speed', obj: state },
+            { id: 'masterSens', key: 'gain', obj: state },
+            { id: 'masterFlux', key: 'sensitivity', obj: state },
+            { id: 'masterBias', key: 'vibe_bias', obj: state },
+            { id: 'laserPatternFreq', key: 'patternFreq', obj: state.laser },
+            { id: 'visualLayerFreq', key: 'layerFreq', obj: state.visual },
+        ];
+
+        sliders.forEach(def => {
+            document.getElementById(def.id).addEventListener('input', (e) => {
+                def.obj[def.key] = parseFloat(e.target.value);
+                // Update display immediately for responsiveness
+                updateSlider(def.id, def.obj[def.key], def.id.includes('Speed') ? 'x' : '', def.key.includes('Freq'));
+                sendParams();
+            });
+        });
+
+        // Dropdowns
+        ['laserPattern', 'laserColor'].forEach(id => {
+            document.getElementById(id).addEventListener('change', (e) => {
+                state.laser[id.replace('laser', '').toLowerCase()] = e.target.value;
+                sendParams();
+            });
+        });
+
+        ['visualBase', 'visualEffect'].forEach(id => {
+            document.getElementById(id).addEventListener('change', (e) => {
+                state.visual[id.replace('visual', '').replace('Base', 'baseLayer').replace('Effect', 'effect')] = e.target.value;
+                sendParams();
+            });
+        });
+
+        // Buttons
+        document.getElementById('saveDefaultsBtn').addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'save_defaults' }));
+                alert("Defaults Saved!");
+            }
+        });
+
+        document.getElementById('refreshAllBtn').addEventListener('click', () => {
+            if (confirm("Force refresh all screens?")) {
+                ws.send(JSON.stringify({ type: 'force_refresh' }));
+            }
+        });
+
+        async function engineAction(action) {
+            if (!confirm(`Are you sure you want to ${action} the engine?`)) return;
+            try {
+                await fetch(`/${action}`);
+            } catch (e) { alert(e.message); }
+        }
+        document.getElementById('btnEngineStart').addEventListener('click', () => engineAction('start'));
+        document.getElementById('btnEngineRestart').addEventListener('click', () => engineAction('restart'));
+
+        // Monitor
+        const lastDMX = {};
+        let hiddenChannels = new Set(JSON.parse(localStorage.getItem('hiddenChannels') || '[]'));
+
+        function toggleChannel(key) {
+            if (hiddenChannels.has(key)) hiddenChannels.delete(key);
+            else hiddenChannels.add(key);
+            localStorage.setItem('hiddenChannels', JSON.stringify([...hiddenChannels]));
+            updateDMXMonitor(lastDMX, true); // Force re-render
+        }
+
+        function updateDMXMonitor(dmx, force = false) {
+            const grid = document.getElementById('dmxGrid');
+            const keys = Object.keys(dmx).sort();
+
+            // Check if we need to re-structure groups
+            const dmxCount = keys.length;
+            if (grid.dataset.count != dmxCount || force) {
+                grid.innerHTML = '';
+                grid.dataset.count = dmxCount;
+
+                // Group by zone prefix (e.g., L1, R2, B1)
+                const groups = {};
+                keys.forEach(key => {
+                    const zone = key.split('_')[0];
+                    if (!groups[zone]) groups[zone] = [];
+                    groups[zone].push(key);
+                });
+
+                Object.entries(groups).forEach(([zone, zKeys]) => {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'monitor-group';
+                    groupDiv.innerHTML = `<div class="monitor-header">${zone}</div>`;
+
+                    const itemsDiv = document.createElement('div');
+                    itemsDiv.className = 'group-items';
+
+                    zKeys.forEach(key => {
+                        if (hiddenChannels.has(key)) return;
+                        const item = document.createElement('div');
+                        item.className = 'dmx-item';
+                        item.id = `dmx_${key}`;
+                        item.onclick = () => toggleChannel(key);
+                        const label = key.replace(/^[A-Z0-9]+_/, '');
+                        item.innerHTML = `<span>${label}</span><span class="dmx-val">0</span>`;
+                        itemsDiv.appendChild(item);
+                    });
+
+                    if (itemsDiv.children.length > 0) {
+                        groupDiv.appendChild(itemsDiv);
+                        grid.appendChild(groupDiv);
+                    }
+                });
+
+                // Hidden Channels Section
+                if (hiddenChannels.size > 0) {
+                    const hiddenTitle = document.createElement('div');
+                    hiddenTitle.className = 'hidden-channels-title';
+                    hiddenTitle.textContent = 'Hidden Channels';
+                    grid.appendChild(hiddenTitle);
+
+                    const hiddenList = document.createElement('div');
+                    hiddenList.className = 'hidden-list';
+                    [...hiddenChannels].sort().forEach(key => {
+                        const tag = document.createElement('span');
+                        tag.className = 'hidden-tag';
+                        tag.textContent = key;
+                        tag.onclick = () => toggleChannel(key);
+                        hiddenList.appendChild(tag);
+                    });
+                    grid.appendChild(hiddenList);
+                }
+            }
+
+            // Update values
+            for (const [key, val] of Object.entries(dmx)) {
+                if (hiddenChannels.has(key)) continue;
+                const el = document.getElementById(`dmx_${key}`);
+                if (el) {
+                    const valEl = el.querySelector('.dmx-val');
+                    if (lastDMX[key] !== val || force) {
+                        valEl.textContent = val;
+                        if (!force) {
+                            valEl.classList.add('changed');
+                            setTimeout(() => valEl.classList.remove('changed'), 100);
+                        }
+                        lastDMX[key] = val;
+                    }
+                }
+            }
+        }
+
+        connect();
+    </script>
+</body>
+
+</html>
