@@ -1175,7 +1175,7 @@
             const container = document.getElementById('lead-ranges-ui');
             container.innerHTML = '';
 
-            const channels = ['pos_x', 'pos_y', 'zoom', 'rot_z'];
+            const channels = ['pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y'];
             channels.forEach(ch => {
                 const range = rolesConfig.lead[ch] || [0, 255];
                 const row = document.createElement('div');
@@ -1485,27 +1485,19 @@
             pos_y: ['manual', 'wave'],
             zoom: ['manual', 'oscillation'],
             rot_z: ['manual', 'distortion'],
+            rot_x: ['manual', 'distortion'],
+            rot_y: ['manual', 'distortion'],
             color_solid: ['individual', 'cycle']
         };
 
         // Role → which dynamics group applies
         const ROLE_DYNAMICS = {
-            pos_x: 'pan_tilt', pos_y: 'pan_tilt',
-            zoom: 'zoom',
-            rot_z: 'rotation', rot_x: 'rotation', rot_y: 'rotation',
-            beam_fx: 'beam_fx',
-            grating: 'grating',
-            drawing: 'drawing', drawing_delay: 'drawing'
+            beam_fx: 'beam_fx'
         };
 
         // Dynamics group → known parameter names
         const DYNAMICS_PARAMS = {
-            pan_tilt: ['base_offset', 'zoom_offset_mult', 'beat_punch', 'flux_boost', 'energy_threshold_high', 'energy_threshold_mid'],
-            zoom: ['bass_mult', 'treble_mult', 'flux_mult', 'energy_threshold', 'overdrive_threshold'],
-            rotation: ['mod_base', 'mod_mult', 'energy_threshold', 'confidence_threshold'],
-            beam_fx: ['high_threshold', 'base', 'mult'],
-            grating: ['mid_threshold', 'mid_val', 'high_threshold_a', 'high_val_a', 'high_threshold_b', 'high_base', 'high_mult'],
-            drawing: ['energy_threshold', 'delay_base', 'delay_mult', 'val_base', 'val_mult']
+            beam_fx: ['high_threshold', 'base', 'mult']
         };
 
         // Known macro names the engine references
@@ -1519,7 +1511,15 @@
         const ROLE_CALIBRATION = {
             pos_x: ['center', 'left', 'right'],
             pos_y: ['center', 'top', 'bottom'],
-            zoom: ['min_dmx', 'max_dmx', 'center']
+            zoom: ['min_dmx', 'max_dmx', 'center'],
+            rot_z: ['min_dmx', 'max_dmx', 'degree_min', 'degree_max'],
+            rot_x: ['min_dmx', 'max_dmx', 'degree_min', 'degree_max'],
+            rot_y: ['min_dmx', 'max_dmx', 'degree_min', 'degree_max'],
+            beam_fx: ['base', 'max'],
+            grating: ['base', 'max'],
+            drawing: ['steps'],
+            drawing_delay: ['steps'],
+            dots: ['steps']
         };
 
         // Roles that use shapes
@@ -1531,24 +1531,16 @@
         function profileHasRolesFor(section) {
             const roles = Object.keys(currentProfile.channels || {});
             switch (section) {
-                case 'modes': return roles.some(r => ROLE_MODES[r]);
-                case 'calibration': return roles.some(r => ROLE_CALIBRATION[r]);
-                case 'shapes': return roles.some(r => ROLES_WITH_SHAPES.includes(r));
-                case 'dynamics': return roles.some(r => ROLE_DYNAMICS[r]);
                 case 'macros': return roles.some(r => ROLE_MODES[r] && ROLE_MODES[r].length > 1);
-                case 'defaults': return roles.length > 0;
-                case 'ranges': return roles.some(r => ROLE_MODES[r]);
-                case 'generics': return roles.some(r => r === 'generic' || r.startsWith('generic'));
-                case 'strobes': return roles.some(r => r === 'strobe');
-                case 'dimmers': return roles.some(r => r === 'dimmer');
                 default: return true;
             }
         }
 
         // Track which sections are open
-        let openSections = { channels: true, modes: false, defaults: false, calibration: false, shapes: false, ranges: false, dynamics: false, macros: false, generics: false, strobes: false, dimmers: false };
+        let openSections = { shapes: false };
 
         function toggleSection(key) {
+            if (openSections[key] === undefined) openSections[key] = false;
             openSections[key] = !openSections[key];
             renderProfileUi();
         }
@@ -1576,80 +1568,279 @@
             if (!p.defaults) p.defaults = {};
             if (!p.calibration) p.calibration = {};
             if (!p.shapes) p.shapes = {};
-            if (!p.ranges) p.ranges = {};
-            if (!p.dynamics) p.dynamics = {};
             if (!p.macros) p.macros = {};
 
             let html = '';
-            html += makeSectionCard('channels', '📡 Channels', renderChannelsSection());
 
-            // Only show sections relevant to current channel roles
-            if (profileHasRolesFor('modes'))
-                html += makeSectionCard('modes', '🎛 Modes', renderModesSection());
-            if (profileHasRolesFor('defaults'))
-                html += makeSectionCard('defaults', '⚙️ Defaults', renderDefaultsSection());
-            if (profileHasRolesFor('calibration'))
-                html += makeSectionCard('calibration', '🎯 Calibration', renderCalibrationSection());
-            if (profileHasRolesFor('shapes'))
-                html += makeSectionCard('shapes', '🔷 Shapes', renderShapesSection());
-            if (profileHasRolesFor('ranges'))
-                html += makeSectionCard('ranges', '📏 Ranges', renderRangesSection());
-            if (profileHasRolesFor('dynamics'))
-                html += makeSectionCard('dynamics', '🎚 Dynamics', renderDynamicsSection());
-            if (profileHasRolesFor('macros'))
-                html += makeSectionCard('macros', '⚡ Macros', renderMacrosSection());
-            if (profileHasRolesFor('generics'))
-                html += makeSectionCard('generics', '🎛 Generics', renderGenericsSection());
-            if (profileHasRolesFor('strobes'))
-                html += makeSectionCard('strobes', '💥 Strobes', renderStrobesSection());
-            if (profileHasRolesFor('dimmers'))
-                html += makeSectionCard('dimmers', '🌑 Dimmers', renderDimmersSection());
+            // Unified Channels Block (Contains Defaults, Calibration, Modes, etc.)
+            html += `<div class="card" style="padding:15px; margin-bottom:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                            <h3 style="margin:0; color:var(--accent);">📡 Channels & Behaviors</h3>
+                        </div>
+                        ${renderChannelsSection()}
+                     </div>`;
 
             container.innerHTML = html;
         }
 
         // ==================== CHANNELS ====================
+        // ==================== CHANNELS (UNIFIED UI) ====================
         function renderChannelsSection() {
             const ch = currentProfile.channels;
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Map physical DMX channels to logical roles.</div>';
+            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:15px">Map physical DMX channels and configure their specific behaviors.</div>';
 
             // Sort by offset so they appear in physical channel order
             const sortedChannels = Object.entries(ch).sort((a, b) => a[1] - b[1]);
 
             sortedChannels.forEach(([role, offset]) => {
                 const chNum = offset + 1; // 1-based display
-                html += `<div class="kv-row" style="background:rgba(255,255,255,0.02); padding:8px; border-radius:4px; margin-bottom:4px; flex-wrap:wrap;">`;
-                html += `<div style="width:130px; font-weight:bold; color:var(--accent);">CH ${chNum} <span style="font-size:10px; color:#666">(Offs ${offset})</span></div>`;
-
                 const isGeneric = role === 'generic' || role.startsWith('generic_');
 
-                // Get available roles (allow generic to be used infinitely)
+                html += `<div class="card" style="margin-bottom: 15px; padding: 12px; border-left: 4px solid var(--accent); background:rgba(255,255,255,0.01);">`;
+
+                // --- HEADER ROW ---
+                html += `<div class="kv-row" style="margin-bottom: 10px;">`;
+                html += `<div style="width:100px; font-weight:bold; color:var(--accent); font-size:14px;">CH ${chNum} <div style="font-size:10px; color:#666; font-weight:normal;">(Offs ${offset})</div></div>`;
+
                 const usedRoles = Object.keys(ch).filter(r => !r.startsWith('generic'));
                 const availableRoles = KNOWN_ROLES.filter(r => !usedRoles.includes(r) || r === role || r === 'generic');
 
-                html += `<select class="kv-wide" onchange="handleRoleChange('${role}', this.value)" style="margin-right:10px; min-width:120px;">`;
-                if (isGeneric) {
-                    html += `<option value="${role}" selected>Generic / Unassigned</option>`;
-                }
+                html += `<select class="kv-wide" onchange="handleRoleChange('${role}', this.value)" style="margin-right:10px;">`;
+                if (isGeneric) html += `<option value="${role}" selected>Generic / Unassigned</option>`;
                 availableRoles.forEach(r => {
-                    if (r === 'generic') {
-                        html += `<option value="generic">Generic...</option>`;
-                    } else {
-                        html += `<option value="${r}" ${r === role && !isGeneric ? 'selected' : ''}>${r}</option>`;
-                    }
+                    if (r === 'generic') html += `<option value="generic">Generic...</option>`;
+                    else html += `<option value="${r}" ${r === role && !isGeneric ? 'selected' : ''}>${r}</option>`;
                 });
                 html += `</select>`;
 
-                // Keep offset editable just in case, but de-emphasized
-                html += `<input type="number" value="${offset}" min="0" max="512" style="width:55px; font-size:11px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Manual Offset Adjust">`;
-                html += `<button class="kv-remove" style="margin-left:8px;" onclick="removeProfileChannel('${role}')">×</button>`;
+                html += `<input type="number" value="${offset}" min="0" max="512" style="width:60px; font-size:11px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Manual Offset Adjust">`;
+                html += `<button class="kv-remove" style="margin-left:8px; width:36px; height:36px;" onclick="removeProfileChannel('${role}')">×</button>`;
+                html += `</div>`; // End Header Row
+
+                // --- BODY ROW (Nested Configurations) ---
+                html += `<div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">`;
+
+                // 1. Default Value
+                const defVal = currentProfile.defaults[role] !== undefined ? currentProfile.defaults[role] : 0;
+                html += `<div class="kv-row" style="margin-bottom:10px;">
+                            <label style="width:100px; margin:0; color:var(--text-dim);">Default Val</label>
+                            <input class="kv-val" type="number" value="${defVal}" min="0" max="255" onchange="updateProfileDefault('${role}', parseInt(this.value))">
+                         </div>`;
+
+                // 2. Specific Configurations
+                if (role.startsWith('dimmer')) html += getDimmerHtml(role);
+                else if (role === 'strobe') html += getStrobeHtml(role);
+                else if (role.startsWith('generic')) html += getGenericHtml(role);
+
+                // 3. Calibration
+                if (ROLE_CALIBRATION[role]) html += getCalibrationHtml(role);
+
+                // 4. Modes & Macros
+                if (ROLE_MODES[role]) html += getModesHtml(role);
+
+                // 5. Shapes Dictionary (specifically for pattern roles)
+                if (role === 'pattern') html += getShapesHtml(role);
+
+                html += `</div></div>`; // End Body, End Card
+            });
+
+            html += `<button class="add-row-btn" style="padding:12px; font-weight:bold;" onclick="appendNewChannel()">+ Append Extra Channel</button>`;
+            return html;
+        }
+
+        // --- SUB-GENERATORS FOR NESTED UI ---
+        function getDimmerHtml(role) {
+            const dim = currentProfile.dimmers || {};
+            const cfg = dim[role] || { mode: 'binary', logic: 'normally_off', min: 0, max: 255, on_val: 255, off_val: 0 };
+            let html = `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
+                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Dimmer Config</h4>
+                <div class="row">
+                    <label>Mode:</label>
+                    <select style="width:100px" onchange="updateDimmerParam('${role}', 'mode', this.value)">
+                        <option value="binary" ${cfg.mode === 'binary' ? 'selected' : ''}>Binary</option>
+                        <option value="range" ${cfg.mode === 'range' ? 'selected' : ''}>Range</option>
+                    </select>
+                    <label>Logic:</label>
+                    <select style="width:120px" onchange="updateDimmerParam('${role}', 'logic', this.value)">
+                        <option value="normally_off" ${cfg.logic === 'normally_off' ? 'selected' : ''}>Normally Off</option>
+                        <option value="normally_on" ${cfg.logic === 'normally_on' ? 'selected' : ''}>Normally On</option>
+                    </select>
+                </div>`;
+            if (cfg.mode === 'binary') {
+                html += `<div class="row" style="margin-top:8px">
+                    <label>On Value:</label>
+                    <input class="kv-val" type="number" value="${cfg.on_val}" style="width:60px" onchange="updateDimmerParam('${role}', 'on_val', parseInt(this.value))">
+                    <label>Off Value:</label>
+                    <input class="kv-val" type="number" value="${cfg.off_val}" style="width:60px" onchange="updateDimmerParam('${role}', 'off_val', parseInt(this.value))">
+                </div>`;
+            } else {
+                html += `<div class="row" style="margin-top:8px">
+                    <label>Range:</label>
+                    <input class="kv-val" type="number" value="${cfg.min}" style="width:60px" onchange="updateDimmerParam('${role}', 'min', parseInt(this.value))">
+                    <span style="color:var(--text-dim)">–</span>
+                    <input class="kv-val" type="number" value="${cfg.max}" style="width:60px" onchange="updateDimmerParam('${role}', 'max', parseInt(this.value))">
+                </div>`;
+            }
+            return html + '</div>';
+        }
+
+        function getStrobeHtml(role) {
+            const strb = currentProfile.strobe || {};
+            const cfg = strb[role] || { min: 0, max: 255 };
+            return `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
+                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Strobe Range</h4>
+                <div class="row">
+                    <input class="kv-val" type="number" value="${cfg.min}" style="width:60px" onchange="updateStrobeParam('${role}', 'min', parseInt(this.value))">
+                    <span style="color:var(--text-dim)">–</span>
+                    <input class="kv-val" type="number" value="${cfg.max}" style="width:60px" onchange="updateStrobeParam('${role}', 'max', parseInt(this.value))">
+                </div></div>`;
+        }
+
+        function getGenericHtml(role) {
+            const gen = currentProfile.generic || {};
+            const cfg = gen[role] || { min: 0, max: 255, default: 0, modifier: 'intensity' };
+            return `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
+                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Generic Bounds</h4>
+                <div class="device-row" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:5px; background:none; padding:0; border:none;">
+                    <div><label>Min</label><input type="number" value="${cfg.min}" onchange="updateGenericParam('${role}', 'min', parseInt(this.value))"></div>
+                    <div><label>Max</label><input type="number" value="${cfg.max}" onchange="updateGenericParam('${role}', 'max', parseInt(this.value))"></div>
+                    <div><label>Modifier</label>
+                        <select onchange="updateGenericParam('${role}', 'modifier', this.value)">
+                            <option value="intensity" ${cfg.modifier === 'intensity' ? 'selected' : ''}>Intensity</option>
+                            <option value="flux" ${cfg.modifier === 'flux' ? 'selected' : ''}>Flux</option>
+                            <option value="bass" ${cfg.modifier === 'bass' ? 'selected' : ''}>Bass</option>
+                            <option value="treble" ${cfg.modifier === 'treble' ? 'selected' : ''}>Treble</option>
+                            <option value="crosstalk" ${cfg.modifier === 'crosstalk' ? 'selected' : ''}>Crosstalk</option>
+                            <option value="none" ${cfg.modifier === 'none' ? 'selected' : ''}>None</option>
+                        </select>
+                    </div>
+                </div></div>`;
+        }
+
+        function getCalibrationHtml(chName) {
+            const cal = currentProfile.calibration || {};
+            const params = cal[chName] || {};
+            const knownParams = ROLE_CALIBRATION[chName] || [];
+
+            let html = `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
+                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Calibration</h4>`;
+
+            knownParams.forEach(paramName => {
+                const paramVal = params[paramName] !== undefined ? params[paramName] : 0;
+                const isStepped = paramName === 'steps';
+
+                html += `<div class="kv-row" style="margin-bottom:4px;">
+                    <label style="width:100px; margin:0; color:var(--text-dim); font-family:monospace;">${paramName}</label>`;
+
+                if (isStepped) {
+                    html += `<input class="kv-wide" type="text" value="${paramVal}" onchange="updateCalibrationParam('${chName}', '${paramName}', this.value)" placeholder="e.g. 63, 127">`;
+                } else {
+                    html += `<input class="kv-val" type="number" value="${paramVal}" onchange="updateCalibrationParam('${chName}', '${paramName}', parseFloat(this.value))">`;
+                }
+
+                html += `</div>`;
+            });
+            return html + '</div>';
+        }
+
+        function getModesHtml(chName) {
+            const modeDefs = currentProfile.modes[chName] || {};
+            const availableModes = ROLE_MODES[chName] || [];
+            let html = `<div style="margin-top:15px; border-top:1px dashed #333; padding-top:10px;">
+                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Modes & Triggers</h4>`;
+
+            Object.entries(modeDefs).forEach(([modeName, modeData]) => {
+                const rangeMin = modeData.range ? modeData.range[0] : 0;
+                const rangeMax = modeData.range ? modeData.range[1] : 255;
+
+                const modeOpts = availableModes.map(m => {
+                    const disp = m === 'manual' ? 'calibration' : m;
+                    return `<option value="${m}" ${m === modeName ? 'selected' : ''}>${disp}</option>`;
+                }).join('');
+
+                html += `<div style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 4px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05);">`;
+                html += `<div class="kv-row">
+                    <select class="kv-name" style="width:120px;" onchange="renameProfileMode('${chName}', '${modeName}', this.value)">${modeOpts}</select>
+                    <span style="color:var(--text-dim); font-size:11px">Range:</span>
+                    <input class="kv-val" type="number" value="${rangeMin}" style="width:55px" onchange="updateProfileModeRange('${chName}', '${modeName}', 0, parseInt(this.value))">
+                    <span style="color:var(--text-dim)">–</span>
+                    <input class="kv-val" type="number" value="${rangeMax}" style="width:55px" onchange="updateProfileModeRange('${chName}', '${modeName}', 1, parseInt(this.value))">
+                    <button class="kv-remove" onclick="removeProfileMode('${chName}', '${modeName}')">×</button>
+                </div>`;
+
+                // Clean Macro List Dropdown Logic
+                if (modeData.macros !== undefined) {
+                    const activeMacros = modeData.macros || [];
+                    html += `<div style="margin-top:8px; padding-left:5px; font-size:11px;">
+                        <div style="color:var(--text-dim); margin-bottom:4px;">Macros:</div>`;
+
+                    if (activeMacros.length > 0) {
+                        html += `<div style="display:flex; flex-wrap:wrap; gap:5px;">`;
+                        html += activeMacros.map(m =>
+                            `<span style="background:rgba(124,77,255,0.2); color:var(--accent); border:1px solid var(--accent); padding:2px 8px; border-radius:12px; display:flex; align-items:center; gap:5px;">
+                                ${m} <span style="cursor:pointer; font-weight:bold; color:var(--danger);" onclick="removeModeMacro('${chName}', '${modeName}', '${m}')">×</span>
+                            </span>`
+                        ).join('');
+                        html += `</div>`;
+                    } else {
+                        html += `<span style="color:#666; font-style:italic;">None active</span>`;
+                    }
+
+                    const availableMacros = KNOWN_MACROS.filter(m => !activeMacros.includes(m));
+                    if (availableMacros.length > 0) {
+                        html += `<div style="margin-top:8px; display:flex; gap:5px; align-items:center;">
+                            <select id="add-macro-${chName}-${modeName}" style="flex:1; background:#222; border:1px solid #444; color:white; border-radius:4px; padding:4px;">
+                                <option value="">-- Add Macro --</option>
+                                ${availableMacros.map(m => `<option value="${m}">${m}</option>`).join('')}
+                            </select>
+                            <button class="btn primary" style="padding:4px 10px; font-size:11px;" onclick="addModeMacro('${chName}', '${modeName}')">+ Add</button>
+                        </div>`;
+                    }
+                    html += `</div>`;
+                }
                 html += `</div>`;
             });
 
-            html += `<div style="margin-top:10px;">
-                <button class="add-row-btn" onclick="appendNewChannel()">+ Append Extra Channel</button>
-            </div>`;
-            return html;
+            // Add missing modes button
+            const definedModes = Object.keys(modeDefs);
+            const missingModes = availableModes.filter(m => !definedModes.includes(m));
+            if (missingModes.length > 0) {
+                html += `<div style="display:flex; gap:8px; margin-top:6px">
+                     <select id="add-mode-${chName}" style="flex:1; background:#222; border:1px solid #444; color:white; border-radius:4px; padding:4px;">
+                         ${missingModes.map(m => `<option value="${m}">${m === 'manual' ? 'calibrated' : m}</option>`).join('')}
+                     </select>
+                     <button class="btn" style="padding:4px 10px; font-size:11px;" onclick="addProfileMode('${chName}')">+ Add Mode</button>
+                 </div>`;
+            }
+            return html + `</div>`;
+        }
+        function getShapesHtml(role) {
+            const shapes = currentProfile.shapes || {};
+            const isOpen = openSections.shapes;
+
+            let html = `<div style="margin-top:15px; border-top:1px dashed #333; padding-top:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('shapes')">
+                    <h4 style="margin:0; color:var(--accent); font-size:12px;">🔷 Shapes Dictionary</h4>
+                    <span style="font-size:10px; color:var(--text-dim); transition: transform 0.2s; transform: ${isOpen ? 'rotate(90deg)' : 'none'};">▶</span>
+                </div>`;
+
+            if (isOpen) {
+                html += `<div style="margin-top:10px;">
+                    <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Shape name → DMX pattern value</div>`;
+
+                Object.entries(shapes).forEach(([name, val]) => {
+                    html += `<div class="kv-row" style="margin-bottom:4px;">
+                        <input class="kv-name" type="text" value="${name}" style="flex:1;" onchange="renameProfileShape('${name}', this.value)">
+                        <input class="kv-val" type="number" value="${val}" min="0" max="255" style="width:60px;" onchange="updateProfileShape('${name}', parseInt(this.value))">
+                        <button class="kv-remove" onclick="removeProfileShape('${name}')">×</button>
+                    </div>`;
+                });
+
+                html += `<button class="add-row-btn" style="margin-top:5px; padding:4px 8px; font-size:11px;" onclick="addProfileShape()">+ Add Shape</button>
+                </div>`;
+            }
+
+            return html + '</div>';
         }
 
         function handleRoleChange(oldRole, newValue) {
@@ -1752,75 +1943,6 @@
         }
 
         // ==================== MODES ====================
-        function renderModesSection() {
-            const modes = currentProfile.modes;
-            const rolesWithModes = Object.keys(currentProfile.channels).filter(r => ROLE_MODES[r]);
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Per-channel behavior modes (auto-populated from role)</div>';
-
-            rolesWithModes.forEach(chName => {
-                const modeDefs = modes[chName] || {};
-                const availableModes = ROLE_MODES[chName] || [];
-
-                html += `<div class="sub-card"><h4>${chName}</h4>`;
-
-                Object.entries(modeDefs).forEach(([modeName, modeData]) => {
-                    const rangeMin = modeData.range ? modeData.range[0] : 0;
-                    const rangeMax = modeData.range ? modeData.range[1] : 255;
-
-                    // Mode name as dropdown
-                    const modeOpts = availableModes.map(m =>
-                        `<option value="${m}" ${m === modeName ? 'selected' : ''}>${m}</option>`
-                    ).join('');
-
-                    html += `<div class="kv-row" style="flex-wrap:wrap">
-                        <select class="kv-name" style="max-width:130px" onchange="renameProfileMode('${chName}', '${modeName}', this.value)">${modeOpts}</select>
-                        <span style="color:var(--text-dim); font-size:11px">Range:</span>
-                        <input class="kv-val" type="number" value="${rangeMin}" style="width:55px" onchange="updateProfileModeRange('${chName}', '${modeName}', 0, parseInt(this.value))">
-                        <span style="color:var(--text-dim)">–</span>
-                        <input class="kv-val" type="number" value="${rangeMax}" style="width:55px" onchange="updateProfileModeRange('${chName}', '${modeName}', 1, parseInt(this.value))">
-                        <button class="kv-remove" onclick="removeProfileMode('${chName}', '${modeName}')">×</button>`;
-
-                    // Macros as multi-select checkboxes (only for modes that reference macros)
-                    if (modeData.macros) {
-                        const activeMacros = modeData.macros || [];
-                        html += `<div style="flex-basis:100%; margin-top:4px">
-                            <span style="font-size:11px; color:var(--text-dim)">Macros:</span>
-                            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px">`;
-                        KNOWN_MACROS.forEach(m => {
-                            const checked = activeMacros.includes(m);
-                            html += `<label class="custom-checkbox small ${checked ? 'checked' : ''}" style="gap:4px">
-                                <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleModeMacro('${chName}', '${modeName}', '${m}', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> ${m}
-                            </label>`;
-                        });
-                        html += `</div></div>`;
-                    }
-
-                    // Colors (for color_solid individual mode)
-                    if (modeData.colors) {
-                        const colorsJson = JSON.stringify(modeData.colors);
-                        html += `<div style="flex-basis:100%; margin-top:4px">
-                            <span style="font-size:11px; color:var(--text-dim)">Colors JSON:</span>
-                            <input type="text" value='${colorsJson.replace(/'/g, "&#39;")}' style="flex:1; font-size:11px; font-family:monospace" onchange="updateProfileModeColors('${chName}', '${modeName}', this.value)">
-                        </div>`;
-                    }
-
-                    html += `</div>`;
-                });
-
-                // Add missing modes for this role
-                const definedModes = Object.keys(modeDefs);
-                const missingModes = availableModes.filter(m => !definedModes.includes(m));
-                if (missingModes.length > 0) {
-                    html += `<div style="display:flex; gap:8px; margin-top:6px">
-                        <select id="add-mode-${chName}" style="width:130px">${missingModes.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
-                        <button class="btn" onclick="addProfileMode('${chName}')">+ Add Mode</button>
-                    </div>`;
-                }
-                html += `</div>`;
-            });
-
-            return html;
-        }
 
         function addProfileMode(chName) {
             const sel = document.getElementById('add-mode-' + chName);
@@ -1863,15 +1985,24 @@
             syncUiToJson();
         }
 
-        function toggleModeMacro(chName, modeName, macroName, checked) {
+        function addModeMacro(chName, modeName) {
+            const sel = document.getElementById(`add-macro-${chName}-${modeName}`);
+            if (!sel || !sel.value) return;
+            const macro = sel.value;
             const mode = currentProfile.modes[chName][modeName];
             if (!mode.macros) mode.macros = [];
-            if (checked && !mode.macros.includes(macroName)) {
-                mode.macros.push(macroName);
-            } else if (!checked) {
-                mode.macros = mode.macros.filter(m => m !== macroName);
+            if (!mode.macros.includes(macro)) mode.macros.push(macro);
+            syncUiToJson();
+            renderProfileUi(); // Re-render to show new pill
+        }
+
+        function removeModeMacro(chName, modeName, macro) {
+            const mode = currentProfile.modes[chName][modeName];
+            if (mode.macros) {
+                mode.macros = mode.macros.filter(m => m !== macro);
             }
             syncUiToJson();
+            renderProfileUi(); // Re-render to remove pill
         }
 
         function updateProfileModeColors(chName, modeName, val) {
@@ -1883,47 +2014,10 @@
             }
         }
 
-        // ==================== DEFAULTS ====================
-        function renderDefaultsSection() {
-            const defs = currentProfile.defaults;
-            const channelNames = Object.keys(currentProfile.channels);
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Default DMX value (0–255) for each channel at startup</div>';
-            channelNames.forEach(role => {
-                const val = defs[role] !== undefined ? defs[role] : 0;
-                html += `<div class="kv-row">
-                    <span class="kv-name" style="font-family:monospace; color:var(--accent)">${role}</span>
-                    <input class="kv-val" type="number" value="${val}" min="0" max="255" onchange="updateProfileDefault('${role}', parseInt(this.value))">
-                </div>`;
-            });
-            return html;
-        }
 
         function updateProfileDefault(role, val) {
             currentProfile.defaults[role] = val;
             syncUiToJson();
-        }
-
-        // ==================== CALIBRATION ====================
-        function renderCalibrationSection() {
-            const cal = currentProfile.calibration || {};
-            const rolesWithCal = Object.keys(currentProfile.channels).filter(r => ROLE_CALIBRATION[r]);
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Per-channel calibration (auto-populated from role)</div>';
-
-            rolesWithCal.forEach(chName => {
-                const params = cal[chName] || {};
-                const knownParams = ROLE_CALIBRATION[chName] || [];
-
-                html += `<div class="sub-card"><h4>${chName}</h4>`;
-                knownParams.forEach(paramName => {
-                    const paramVal = params[paramName] !== undefined ? params[paramName] : 0;
-                    html += `<div class="kv-row">
-                        <span class="kv-name" style="font-family:monospace; color:var(--accent)">${paramName}</span>
-                        <input class="kv-val" type="number" value="${paramVal}" onchange="updateCalibrationParam('${chName}', '${paramName}', parseFloat(this.value))">
-                    </div>`;
-                });
-                html += `</div>`;
-            });
-            return html;
         }
 
         function updateCalibrationParam(chName, paramName, val) {
@@ -1932,20 +2026,6 @@
             syncUiToJson();
         }
 
-        // ==================== SHAPES ====================
-        function renderShapesSection() {
-            const shapes = currentProfile.shapes || {};
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Shape name → DMX pattern value</div>';
-            Object.entries(shapes).forEach(([name, val]) => {
-                html += `<div class="kv-row">
-                    <input class="kv-name" type="text" value="${name}" onchange="renameProfileShape('${name}', this.value)">
-                    <input class="kv-val" type="number" value="${val}" min="0" max="255" onchange="updateProfileShape('${name}', parseInt(this.value))">
-                    <button class="kv-remove" onclick="removeProfileShape('${name}')">×</button>
-                </div>`;
-            });
-            html += `<button class="add-row-btn" onclick="addProfileShape()">+ Add Shape</button>`;
-            return html;
-        }
 
         function addProfileShape() {
             const name = prompt("Shape name (e.g. circle, star, dot1):");
@@ -1971,79 +2051,6 @@
 
         function updateProfileShape(name, val) {
             currentProfile.shapes[name] = val;
-            syncUiToJson();
-        }
-
-        // ==================== RANGES ====================
-        function renderRangesSection() {
-            const ranges = currentProfile.ranges || {};
-            const channels = currentProfile.channels || {};
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">DMX value ranges [min, max]</div>';
-
-            // Sort roles by their DMX offset
-            const sortedRoles = Object.keys(ranges).sort((a, b) => {
-                const offsetA = channels[a] !== undefined ? channels[a] : 999;
-                const offsetB = channels[b] !== undefined ? channels[b] : 999;
-                return offsetA - offsetB;
-            });
-
-            sortedRoles.forEach(name => {
-                const arr = ranges[name];
-                const min = Array.isArray(arr) ? arr[0] : 0;
-                const max = Array.isArray(arr) ? arr[1] : 255;
-                const offset = channels[name] !== undefined ? channels[name] : '?';
-                const chNum = typeof offset === 'number' ? offset + 1 : '?';
-
-                html += `<div class="kv-row">
-                    <span class="kv-name" style="font-family:monospace; color:var(--accent); min-width:120px;">
-                        <span style="color:var(--text-dim); font-size:10px; margin-right:8px;">CH ${chNum}</span>
-                        ${name}
-                    </span>
-                    <input class="kv-val" type="number" value="${min}" style="width:55px" onchange="updateProfileRange('${name}', 0, parseInt(this.value))">
-                    <span style="color:var(--text-dim)">–</span>
-                    <input class="kv-val" type="number" value="${max}" style="width:55px" onchange="updateProfileRange('${name}', 1, parseInt(this.value))">
-                </div>`;
-            });
-            return html;
-        }
-
-        function updateProfileRange(name, idx, val) {
-            if (!Array.isArray(currentProfile.ranges[name])) currentProfile.ranges[name] = [0, 255];
-            currentProfile.ranges[name][idx] = val;
-            syncUiToJson();
-        }
-
-        // ==================== DYNAMICS ====================
-        function renderDynamicsSection() {
-            const dyn = currentProfile.dynamics || {};
-            // Only show groups that are relevant to current roles
-            const activeGroups = new Set();
-            Object.keys(currentProfile.channels).forEach(r => {
-                if (ROLE_DYNAMICS[r]) activeGroups.add(ROLE_DYNAMICS[r]);
-            });
-
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Audio-reactive engine tuning (auto-populated from roles)</div>';
-
-            activeGroups.forEach(groupName => {
-                const params = dyn[groupName] || {};
-                const knownParams = DYNAMICS_PARAMS[groupName] || [];
-
-                html += `<div class="sub-card"><h4>${groupName}</h4>`;
-                knownParams.forEach(paramName => {
-                    const paramVal = params[paramName] !== undefined ? params[paramName] : 0;
-                    html += `<div class="kv-row">
-                        <span class="kv-name" style="font-family:monospace; color:var(--accent)">${paramName}</span>
-                        <input class="kv-val" type="number" value="${paramVal}" step="0.01" onchange="updateDynamicsParam('${groupName}', '${paramName}', parseFloat(this.value))">
-                    </div>`;
-                });
-                html += `</div>`;
-            });
-            return html;
-        }
-
-        function updateDynamicsParam(groupName, paramName, val) {
-            if (!currentProfile.dynamics[groupName]) currentProfile.dynamics[groupName] = {};
-            currentProfile.dynamics[groupName][paramName] = val;
             syncUiToJson();
         }
 
@@ -2082,77 +2089,11 @@
             syncUiToJson();
         }
 
-        // ==================== GENERICS ====================
-        function renderGenericsSection() {
-            const gen = currentProfile.generic || {};
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Configure generic linear channels</div>';
-
-            // Find all channels with role 'generic'
-            const roles = Object.keys(currentProfile.channels).filter(r => r === 'generic' || r.startsWith('generic'));
-
-            if (roles.length === 0) return html + '<div style="color:var(--text-dim)">No generic channels found. Add a channel with role "generic".</div>';
-
-            roles.forEach(role => {
-                const cfg = gen[role] || { min: 0, max: 255, default: 0, modifier: 'intensity' };
-                html += `<div class="sub-card"><h4>${role}</h4>
-                    <div class="device-row" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:5px; background:none; padding:0">
-                        <div>
-                            <label>Min</label>
-                            <input type="number" value="${cfg.min}" onchange="updateGenericParam('${role}', 'min', parseInt(this.value))">
-                        </div>
-                        <div>
-                            <label>Max</label>
-                            <input type="number" value="${cfg.max}" onchange="updateGenericParam('${role}', 'max', parseInt(this.value))">
-                        </div>
-                        <div>
-                            <label>Default</label>
-                            <input type="number" value="${cfg.default}" onchange="updateGenericParam('${role}', 'default', parseInt(this.value))">
-                        </div>
-                        <div>
-                            <label>Modifier</label>
-                            <select onchange="updateGenericParam('${role}', 'modifier', this.value)">
-                                <option value="intensity" ${cfg.modifier === 'intensity' ? 'selected' : ''}>Intensity</option>
-                                <option value="flux" ${cfg.modifier === 'flux' ? 'selected' : ''}>Flux</option>
-                                <option value="bass" ${cfg.modifier === 'bass' ? 'selected' : ''}>Bass</option>
-                                <option value="treble" ${cfg.modifier === 'treble' ? 'selected' : ''}>Treble</option>
-                                <option value="crosstalk" ${cfg.modifier === 'crosstalk' ? 'selected' : ''} title="Inverse of Modifier">Crosstalk</option>
-                                <option value="none" ${cfg.modifier === 'none' ? 'selected' : ''}>None</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>`;
-            });
-            return html;
-        }
-
         function updateGenericParam(role, param, val) {
             if (!currentProfile.generic) currentProfile.generic = {};
             if (!currentProfile.generic[role]) currentProfile.generic[role] = { min: 0, max: 255, default: 0, modifier: 'intensity' };
             currentProfile.generic[role][param] = val;
             syncUiToJson();
-        }
-
-        // ==================== STROBES ====================
-        function renderStrobesSection() {
-            const strb = currentProfile.strobe || {};
-            const roles = Object.keys(currentProfile.channels).filter(r => r === 'strobe');
-
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Configure strobe channel range. Activates on high intensity + treble.</div>';
-
-            if (roles.length === 0) return html + '<div style="color:var(--text-dim)">No strobe channels found. Add a channel with role "strobe".</div>';
-
-            roles.forEach(role => {
-                const cfg = strb[role] || { min: 0, max: 255 };
-                html += `<div class="sub-card"><h4>${role}</h4>
-                     <div class="row">
-                        <label>Range:</label>
-                        <input class="kv-val" type="number" value="${cfg.min}" style="width:60px" onchange="updateStrobeParam('${role}', 'min', parseInt(this.value))">
-                        <span style="color:var(--text-dim)">–</span>
-                        <input class="kv-val" type="number" value="${cfg.max}" style="width:60px" onchange="updateStrobeParam('${role}', 'max', parseInt(this.value))">
-                    </div>
-                </div>`;
-            });
-            return html;
         }
 
         function updateStrobeParam(role, param, val) {
@@ -2162,55 +2103,6 @@
             syncUiToJson();
         }
 
-        // ==================== DIMMERS ====================
-        function renderDimmersSection() {
-            const dim = currentProfile.dimmers || {};
-            const roles = Object.keys(currentProfile.channels).filter(r => r === 'dimmer');
-
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Configure master intensity or power channels.</div>';
-
-            if (roles.length === 0) return html + '<div style="color:var(--text-dim)">No dimmer channels found. Add a channel with role "dimmer".</div>';
-
-            roles.forEach((role, idx) => {
-                // Use unique key if multiple dimmer channels exist
-                const key = idx === 0 ? 'dimmer' : `dimmer_${idx}`;
-                const cfg = dim[key] || { mode: 'binary', logic: 'normally_off', min: 0, max: 255, on_val: 255, off_val: 0 };
-
-                html += `<div class="sub-card"><h4>${role} (Instance ${idx + 1})</h4>
-                    <div class="row">
-                        <label>Mode:</label>
-                        <select style="width:100px" onchange="updateDimmerParam('${key}', 'mode', this.value)">
-                            <option value="binary" ${cfg.mode === 'binary' ? 'selected' : ''}>Binary</option>
-                            <option value="range" ${cfg.mode === 'range' ? 'selected' : ''}>Range</option>
-                        </select>
-                        
-                        <label>Logic:</label>
-                        <select style="width:120px" onchange="updateDimmerParam('${key}', 'logic', this.value)">
-                            <option value="normally_off" ${cfg.logic === 'normally_off' ? 'selected' : ''}>Normally Off</option>
-                            <option value="normally_on" ${cfg.logic === 'normally_on' ? 'selected' : ''}>Normally On</option>
-                        </select>
-                    </div>
-
-                    ${cfg.mode === 'binary' ? `
-                    <div class="row" style="margin-top:8px">
-                        <label>On Value:</label>
-                        <input class="kv-val" type="number" value="${cfg.on_val}" style="width:60px" onchange="updateDimmerParam('${key}', 'on_val', parseInt(this.value))">
-                        <label>Off Value:</label>
-                        <input class="kv-val" type="number" value="${cfg.off_val}" style="width:60px" onchange="updateDimmerParam('${key}', 'off_val', parseInt(this.value))">
-                    </div>
-                    ` : `
-                    <div class="row" style="margin-top:8px">
-                        <label>Range:</label>
-                        <input class="kv-val" type="number" value="${cfg.min}" style="width:60px" onchange="updateDimmerParam('${key}', 'min', parseInt(this.value))">
-                        <span style="color:var(--text-dim)">–</span>
-                        <input class="kv-val" type="number" value="${cfg.max}" style="width:60px" onchange="updateDimmerParam('${key}', 'max', parseInt(this.value))">
-                    </div>
-                    `}
-                </div>`;
-            });
-            return html;
-        }
-
         function updateDimmerParam(key, param, val) {
             if (!currentProfile.dimmers) currentProfile.dimmers = {};
             if (!currentProfile.dimmers[key]) {
@@ -2218,7 +2110,7 @@
             }
             currentProfile.dimmers[key][param] = val;
             syncUiToJson();
-            renderProfileUi(); // Re-render to show binary vs range specific rows
+            renderProfileUi();
         }
 
 

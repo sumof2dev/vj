@@ -67,14 +67,14 @@ class Lissajous:
         bins = audio.get('bins', [0.0] * 11)
         
         # DYNAMIC Frequency Shift: Lower baseline, higher reactive "kick"
-        speed_mult = 0.5 + (flux * 2.5) 
+        speed_mult = 0.8 + (flux * 0.7) 
         
         freq_x = 1.5 * speed_mult
         freq_y = 1.0 * speed_mult
         
-        # Radius driven by Bass
-        radius_x = 0.5 + bass * 0.5
-        radius_y = 0.4 + bass * 0.4
+        # Radius driven by Bass (Restored dynamic range: small when quiet, large when loud)
+        radius_x = 0.4 + bass * 0.6
+        radius_y = 0.3 + bass * 0.7
         
         x = math.sin(t * freq_x + phase) * radius_x
         y = math.sin(t * freq_y) * radius_y

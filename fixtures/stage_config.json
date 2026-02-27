@@ -20,7 +20,7 @@
             "invert_y": false,
             "invert_rot": false,
             "category": "laser",
-            "behavior": "rhythm"
+            "behavior": "lead"
         },
         "L1": {
             "type": "ehaho_laser",
@@ -41,7 +41,7 @@
             "invert_y": false,
             "invert_rot": false,
             "category": "laser",
-            "behavior": "rhythm"
+            "behavior": "lead"
         },
         "B1": {
             "type": "ehaho_laser",
@@ -52,7 +52,7 @@
             "invert_y": false,
             "invert_rot": false,
             "category": "laser",
-            "behavior": "lead"
+            "behavior": "rhythm"
         },
         "B2": {
             "type": "ehaho_laser",
@@ -63,7 +63,7 @@
             "invert_y": false,
             "invert_rot": false,
             "category": "laser",
-            "behavior": "lead"
+            "behavior": "rhythm"
         }
     },
     "global": {
