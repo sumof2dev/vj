@@ -535,6 +535,15 @@
                 <input type="range" id="masterSpeed" min="0.0" max="2.0" step="0.05" value="1.0">
             </div>
 
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>Scene Change Rate (Phrase Length)</span>
+                    <span class="slider-value" id="masterSceneFreqVal">Normal</span>
+                </div>
+                <input type="range" id="masterSceneFreq" min="0" max="3" step="1" value="1"
+                    title="0=Slow(32b), 1=Norm(16b), 2=Fast(8b), 3=Frantic(4b)">
+            </div>
+
             <div class="btn-grid">
                 <button id="saveDefaultsBtn" class="btn btn-primary">💾 Save Defaults</button>
                 <button id="refreshAllBtn" class="btn btn-secondary">🔄 Refresh Clients</button>
@@ -564,13 +573,6 @@
                     <option value="solid">Solid Cycle</option>
                 </select>
 
-                <div class="slider-group">
-                    <div class="slider-label">
-                        <span>Ptn Freq</span>
-                        <span class="slider-value" id="laserPatternFreqVal">Normal</span>
-                    </div>
-                    <input type="range" id="laserPatternFreq" min="0" max="3" step="1" value="1">
-                </div>
             </div>
 
             <!-- VISUAL -->
@@ -603,13 +605,6 @@
                     <option value="-1">None</option>
                 </select>
 
-                <div class="slider-group">
-                    <div class="slider-label">
-                        <span>Layer Freq</span>
-                        <span class="slider-value" id="visualLayerFreqVal">Normal</span>
-                    </div>
-                    <input type="range" id="visualLayerFreq" min="0" max="3" step="1" value="1">
-                </div>
             </div>
         </div>
 
@@ -672,16 +667,15 @@
             sensitivity: 1.0,     // Flux sensibility
             gain: 1.0,            // Input gain
             vibe_bias: 0.5,
+            sceneFreq: 1,         // Master phrasing
 
             laser: {
                 pattern: 'auto',
-                color: 'auto',
-                patternFreq: 1
+                color: 'auto'
             },
             visual: {
                 baseLayer: 'auto',
-                effect: 'auto',
-                layerFreq: 1
+                effect: 'auto'
             }
         };
 
@@ -783,7 +777,8 @@
                 speed: state.speed,
                 sensitivity: state.gain,          // Backend Analyzer Gain
                 flux_sensitivity: state.sensitivity, // Backend Flux Sens
-                vibe_bias: state.vibe_bias
+                vibe_bias: state.vibe_bias,
+                sceneFreq: state.sceneFreq
             }));
 
             // 2. LASER PARAMS (Targeted)
@@ -795,8 +790,7 @@
                 audioSensitivity: state.sensitivity,
                 // Specifics
                 pattern: state.laser.pattern,
-                color: state.laser.color,
-                patternFreq: state.laser.patternFreq
+                color: state.laser.color
             }));
 
             // 3. VISUAL PARAMS (Targeted)
@@ -809,8 +803,7 @@
                 sensitivity: state.sensitivity, // visual.sensitivity = flux sens
                 // Specifics
                 baseLayer: state.visual.baseLayer,
-                effect: state.visual.effect,
-                layerFreq: state.visual.layerFreq
+                effect: state.visual.effect
             }));
         }
 
@@ -821,31 +814,29 @@
                 state.gain = m.sensitivity || 1.0; // Analyzer Gain
                 state.sensitivity = m.flux_sensitivity || 0.7; // Flux Sens
                 state.vibe_bias = m.vibe_bias || 0.5;
+                state.sceneFreq = m.sceneFreq !== undefined ? m.sceneFreq : 1;
 
                 updateSlider('masterSpeed', state.speed, 'x');
                 updateSlider('masterSens', state.gain);
                 updateSlider('masterFlux', state.sensitivity);
                 updateSlider('masterBias', state.vibe_bias);
+                updateSlider('masterSceneFreq', state.sceneFreq, '', true);
             }
 
             if (params.laser) {
                 state.laser.pattern = params.laser.pattern;
                 state.laser.color = params.laser.color;
-                state.laser.patternFreq = params.laser.patternFreq;
 
                 document.getElementById('laserPattern').value = state.laser.pattern;
                 document.getElementById('laserColor').value = state.laser.color;
-                updateSlider('laserPatternFreq', state.laser.patternFreq, '', true);
             }
 
             if (params.visual) {
                 state.visual.baseLayer = params.visual.baseLayer;
                 state.visual.effect = params.visual.effect;
-                state.visual.layerFreq = params.visual.layerFreq;
 
                 document.getElementById('visualBase').value = state.visual.baseLayer;
                 document.getElementById('visualEffect').value = state.visual.effect;
-                updateSlider('visualLayerFreq', state.visual.layerFreq, '', true);
             }
         }
 
@@ -868,8 +859,7 @@
             { id: 'masterSens', key: 'gain', obj: state },
             { id: 'masterFlux', key: 'sensitivity', obj: state },
             { id: 'masterBias', key: 'vibe_bias', obj: state },
-            { id: 'laserPatternFreq', key: 'patternFreq', obj: state.laser },
-            { id: 'visualLayerFreq', key: 'layerFreq', obj: state.visual },
+            { id: 'masterSceneFreq', key: 'sceneFreq', obj: state }
         ];
 
         sliders.forEach(def => {

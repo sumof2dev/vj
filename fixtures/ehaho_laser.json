@@ -64,8 +64,8 @@
         "zoom": {
             "manual": {
                 "range": [
-                    0,
-                    127
+                    127,
+                    0
                 ]
             },
             "oscillation": {
@@ -73,12 +73,7 @@
                     128,
                     255
                 ],
-                "macros": [
-                    "zoom_out_a",
-                    "zoom_out_b",
-                    "zoom_in_out",
-                    "zoom_rot"
-                ]
+                "macros": []
             }
         },
         "rot_z": {
@@ -156,12 +151,41 @@
                     255
                 ]
             }
+        },
+        "rot_y": {
+            "manual": {
+                "range": [
+                    0,
+                    127
+                ]
+            },
+            "distortion": {
+                "range": [
+                    128,
+                    255
+                ],
+                "macros": []
+            }
+        },
+        "rot_x": {
+            "distortion": {
+                "range": [
+                    128,
+                    255
+                ]
+            },
+            "manual": {
+                "range": [
+                    0,
+                    127
+                ]
+            }
         }
     },
     "defaults": {
         "group": 250,
         "pattern": 0,
-        "zoom": 60,
+        "zoom": 40,
         "pos_x": 64,
         "pos_y": 64,
         "rot_z": 0,
@@ -180,20 +204,45 @@
     "calibration": {
         "zoom": {
             "min_dmx": 0,
-            "max_dmx": 255,
-            "center": 60
+            "max_dmx": 127,
+            "center": 90,
+            "pos_limit_range": [
+                80,
+                180
+            ]
         },
         "pos_x": {
             "center": 64,
             "range": 32,
-            "left": 96,
-            "right": 32
+            "left": 127,
+            "right": 0
         },
         "pos_y": {
             "center": 64,
             "range": 32,
-            "top": 32,
-            "bottom": 96
+            "top": 0,
+            "bottom": 127
+        },
+        "rot_z": {
+            "max_dmx": 127,
+            "degree_max": 255
+        },
+        "rot_x": {
+            "max_dmx": 127,
+            "degree_max": 255
+        },
+        "rot_y": {
+            "max_dmx": 127,
+            "degree_max": 255
+        },
+        "dots": {
+            "steps": "63,127-255"
+        },
+        "drawing": {
+            "steps": "0-127"
+        },
+        "grating": {
+            "max": 50
         }
     },
     "shapes": {
@@ -240,11 +289,11 @@
             "energy_threshold_mid": 0.8
         },
         "zoom": {
-            "bass_mult": 0.5,
-            "treble_mult": 0.4,
+            "bass_mult": 0.2,
+            "treble_mult": 0.2,
             "flux_mult": 0.1,
-            "energy_threshold": 0.5,
-            "overdrive_threshold": 0.9
+            "energy_threshold": 0.3,
+            "overdrive_threshold": 0.4
         },
         "rotation": {
             "mod_base": 0.2,
@@ -282,7 +331,11 @@
         "distort_down": 160,
         "rot_fast": 192,
         "rot_frantic": 224,
-        "zoom_out_a": 128
+        "zoom_out_a": 128,
+        "wave_up": 128,
+        "wave_left": 127,
+        "wave_right": 127,
+        "wave_down": 128
     },
     "dimmers": {
         "dimmer": {

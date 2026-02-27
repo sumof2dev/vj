@@ -86,8 +86,8 @@ class DMXEngine:
         
         # Remote Control State
         # Triggers removed per user request for unified baseline
-
-        self.pattern_freq = 2  
+        
+        self.scene_freq = 1 # 0=Slow, 1=Normal, 2=Fast, 3=Frantic
         self.pattern_mode = 'auto'  
         self.color_mode = 'auto'  
         self.color_multi = 0.0
@@ -278,7 +278,15 @@ class DMXEngine:
             # Determine Scene Duration based on Vibe
             # High: 8 beats, Mid: 16 beats, Chill: 32 beats
             duration_map = {'high': 8, 'mid': 16, 'chill': 32}
-            target_duration = duration_map.get(vibe, 16)
+            base_duration = duration_map.get(vibe, 16)
+            
+            # Apply Master Scene Frequency Multiplier
+            # 0=Slow (x2), 1=Normal (x1), 2=Fast (/2), 3=Frantic (/4)
+            mults = [2.0, 1.0, 0.5, 0.25]
+            mult = mults[self.scene_freq] if 0 <= self.scene_freq < 4 else 1.0
+            
+            target_duration = int(base_duration * mult)
+            target_duration = max(4, target_duration) # Don't switch faster than every 4 beats
             
             # Check if it's time for a normal rhythmic switch
             beats_since_switch = self.rot_state_timer - self._last_scene_switch_beat
@@ -306,21 +314,21 @@ class DMXEngine:
                 self.current_scene_name = random.choice(candidates)
                 print(f"[DMX] Rhythmic switch to {self.current_scene_name} ({vibe})")
 
-             # --- EDM DROP SCENE TRIGGER ---
+            # --- EDM DROP SCENE TRIGGER ---
             # Trust the Vibe Engine's immediate transient impact detector.
             if self.transient == 'dropping' and not self._one_shot_active:
-                 # Debounce: Ensure we don't spam drops (wait at least 8 seconds between them)
-                 if time.time() - self._last_drop_time > 8.0:
-                     # 1. Snap Lasers (Handled by drone blend logic in update())
-                     self._one_shot_active = True
-                     self._last_drop_time = time.time()
-                     
-                     # 2. Snap Visuals
-                     vibe = self._get_vibe_name(audio)
-                     self._randomize_visual_layers(vibe)
-                     self.base_layer_timer = 0 # Reset rhythmic timer
-                     
-                     print(f"[DMX] EDM DROP DETECTED! Lasers & Visuals synced.")
+                # Debounce: Ensure we don't spam drops (wait at least 8 seconds between them)
+                if time.time() - self._last_drop_time > 8.0:
+                    # 1. Snap Lasers (Handled by drone blend logic in update())
+                    self._one_shot_active = True
+                    self._last_drop_time = time.time()
+                    
+                    # 2. Snap Visuals
+                    vibe = self._get_vibe_name(audio)
+                    self._randomize_visual_layers(vibe)
+                    self.base_layer_timer = 0 # Reset rhythmic timer
+                    
+                    print(f"[DMX] EDM DROP DETECTED! Lasers & Visuals synced.")
 
 
             # --- PATTERN LOGIC ---
@@ -329,7 +337,7 @@ class DMXEngine:
             if self.rot_state != 'IDLE':
                 # Only rotate on even beats (50% speed)
                 if self.rot_state_timer % 2 != 0:
-                     should_rotate_pattern = False
+                    should_rotate_pattern = False
             
             if should_rotate_pattern:
                 self._pattern_rotate_counter = (self._pattern_rotate_counter + 1) % 100
@@ -558,9 +566,9 @@ class DMXEngine:
 
                 # Dynamic Playhead (Exponential authority for more dramatic slider impact)
                 # At 1.0 = normal. At 0.5 = 0.35x. At 2.0 = 2.8x.
-                playhead_speed = self.speed ** 1.5
+                playhead_speed = self.speed ** 0.5
                 if self.transient == 'dropping':
-                    playhead_speed = -self.speed * 2.0
+                    playhead_speed = -self.speed * 1.0
                 elif self.transient == 'tension':
                     playhead_speed = self.speed * 0.1
 
@@ -651,49 +659,49 @@ class DMXEngine:
         try:
             # Watch vibe_config.json
             if hasattr(self, '_vibe_config_path') and os.path.exists(self._vibe_config_path):
-                 mtime = os.path.getmtime(self._vibe_config_path)
-                 if mtime > self._last_vibe_mtime:
-                     print(f"\n[DMX] Vibe config change detected! Reloading {self._vibe_config_path}...")
-                     with open(self._vibe_config_path, 'r') as f:
-                         self.vibe_config = json.load(f)
-                     self._last_vibe_mtime = mtime
-                     
+                mtime = os.path.getmtime(self._vibe_config_path)
+                if mtime > self._last_vibe_mtime:
+                    print(f"\n[DMX] Vibe config change detected! Reloading {self._vibe_config_path}...")
+                    with open(self._vibe_config_path, 'r') as f:
+                        self.vibe_config = json.load(f)
+                    self._last_vibe_mtime = mtime
+                    
             # Watch stage_config.json
             if hasattr(self, '_stage_config_path') and os.path.exists(self._stage_config_path):
-                 m_stage = os.path.getmtime(self._stage_config_path)
-                 if m_stage > self._last_stage_mtime:
-                     print(f"\n[DMX] ♻️ Stage config change detected! Reloading {self._stage_config_path}...")
-                     with open(self._stage_config_path, 'r') as f:
-                         new_stage = json.load(f)
-                         if 'lasers' in new_stage:
-                             if 'devices' not in new_stage:
-                                 new_stage['devices'] = {}
-                             new_stage['devices'].update(new_stage['lasers'])
-                         if 'devices' in new_stage:
-                             self.stage_config = new_stage
-                             self.zone_map = list(self.stage_config.get('devices', {}).keys())
-                             print(f"✅ Reloaded {len(self.zone_map)} devices.")
-                         else:
-                             print("⚠️ Stage config reload failed: 'devices'/'lasers' key missing.")
-                     self._last_stage_mtime = m_stage
+                m_stage = os.path.getmtime(self._stage_config_path)
+                if m_stage > self._last_stage_mtime:
+                    print(f"\n[DMX] ♻️ Stage config change detected! Reloading {self._stage_config_path}...")
+                    with open(self._stage_config_path, 'r') as f:
+                        new_stage = json.load(f)
+                        if 'lasers' in new_stage:
+                            if 'devices' not in new_stage:
+                                new_stage['devices'] = {}
+                            new_stage['devices'].update(new_stage['lasers'])
+                        if 'devices' in new_stage:
+                            self.stage_config = new_stage
+                            self.zone_map = list(self.stage_config.get('devices', {}).keys())
+                            print(f"✅ Reloaded {len(self.zone_map)} devices.")
+                        else:
+                            print("⚠️ Stage config reload failed: 'devices'/'lasers' key missing.")
+                    self._last_stage_mtime = m_stage
             # Watch presets.json
             if hasattr(self, '_presets_config_path') and os.path.exists(self._presets_config_path):
-                 m_presets = os.path.getmtime(self._presets_config_path)
-                 if m_presets > self._last_presets_mtime:
-                     print(f"\n[DMX] 💾 Presets change detected! Reloading {self._presets_config_path}...")
-                     with open(self._presets_config_path, 'r') as f:
-                         self.presets = json.load(f)
-                         print(f"✅ Reloaded {len(self.presets)} presets.")
-                     self._last_presets_mtime = m_presets
+                m_presets = os.path.getmtime(self._presets_config_path)
+                if m_presets > self._last_presets_mtime:
+                    print(f"\n[DMX] 💾 Presets change detected! Reloading {self._presets_config_path}...")
+                    with open(self._presets_config_path, 'r') as f:
+                        self.presets = json.load(f)
+                        print(f"✅ Reloaded {len(self.presets)} presets.")
+                    self._last_presets_mtime = m_presets
             
             # Watch roles.json
             if hasattr(self, '_roles_config_path') and os.path.exists(self._roles_config_path):
-                 m_roles = os.path.getmtime(self._roles_config_path)
-                 if m_roles > self._last_roles_mtime:
-                     print(f"\n[DMX] 🎭 Roles change detected! Reloading {self._roles_config_path}...")
-                     self._load_roles()
-                     self._last_roles_mtime = m_roles
-                     
+                m_roles = os.path.getmtime(self._roles_config_path)
+                if m_roles > self._last_roles_mtime:
+                    print(f"\n[DMX] 🎭 Roles change detected! Reloading {self._roles_config_path}...")
+                    self._load_roles()
+                    self._last_roles_mtime = m_roles
+                    
         except Exception as e:
             print(f"\n[DMX] Error reloading config: {e}")
 
@@ -776,7 +784,7 @@ class DMXEngine:
                 # Pulsing with Dynamic Energy scaling
                 # Lower DMX = Wider. env 1.0 -> 0 (Wide), env 0 -> 127 (Tight)
                 # peak_energy scales how far it opens (e.g. 0.4 = small open, 1.0 = full open)
-                peak_energy = st.get('hit_energy', 1.0)
+                peak_energy = st.get('hit_energy', 0.4)
                 val = 127 - (st.get('env', 0.0) * peak_energy * 127)
                 return int(max(0, min(127, val)))
             if role == 'pattern':
@@ -857,49 +865,50 @@ class DMXEngine:
             shape_key = shapes[(self._pattern_rotate_counter + zone_idx) % len(shapes)]
             return fixture.get('shapes', {}).get(shape_key, 0)
 
-        # 1.5 ZOOM (Size Scaling)
-        if role == 'zoom':
-             # Fetch calibration bounds
-             entry = cal.get('zoom', {})
-             min_dmx = entry.get('min_dmx', 0)     # Widest
-             max_dmx = entry.get('max_dmx', 127)   # Tightest
-             center  = entry.get('center', 64)     # Normal size
+        # 1.5 ZOOM / MOVEMENT SIZE
+        # Calculate pure logical size (No baseline - silence is a Dot, audio grows it)
+        size_pct = (self.smoothed_vol * 0.6 + self.smoothed_bass * 0.8 - self.smoothed_flux * 0.6)
+        size_pct = max(0.0, min(1.0, size_pct))
 
-             # Calculate pure logical size
-             # Vol dictates baseline. Bass expands it. Flux violently shrinks it.
-             size_pct = (self.smoothed_vol + (self.smoothed_bass * 0.6) - (self.smoothed_flux * 0.8))
-             
-             # HOLD SCENE OVERRIDE: Modulate size with the 'hold_effect' (the third Lissajous axis)
-             if self.current_scene_name == 'hold':
-                 hold_mod = getattr(self.drones.get(zone_idx, {}), 'get', lambda x, y: 0.0)('hold_effect', 0.0)
-                 # Add the oscillating lissajous axis to the size calculation
-                 size_pct += hold_mod * 0.3 # Subtle 30% modulation
-             
-             size_pct = max(0.0, min(1.0, size_pct))
-             
-             # Save globally so Pos X/Y can read it to constrain travel distance
-             self.current_size_pct = size_pct 
-             
-             # TENSION STATE: Force absolute tightest zoom (Center Dot)
-             if self.transient == 'tension':
-                 size_pct = 0.0
-             
-             # Map sizes based on calibration limits
-             # Normal (center) size maps to ~0.5 size_pct
-             if size_pct >= 0.5:
-                 # Expand from center towards min_dmx (widest)
-                 # Map 0.5->1.0 to center->min_dmx
-                 expand_ratio = (size_pct - 0.5) * 2.0
-                 val = center + (min_dmx - center) * expand_ratio
-             else:
-                 # Shrink from center towards max_dmx (tightest)
-                 # Map 0.0->0.5 to max_dmx->center
-                 shrink_ratio = size_pct * 2.0
-                 val = max_dmx + (center - max_dmx) * shrink_ratio
-             
-             safe_min = min(min_dmx, max_dmx)
-             safe_max = max(min_dmx, max_dmx)
-             return int(max(safe_min, min(safe_max, val)))
+        if role == 'zoom':
+            # Fetch calibration bounds
+            entry = cal.get('zoom', {})
+            min_dmx = entry.get('min_dmx', 0)
+            max_dmx = entry.get('max_dmx', 127)
+            center  = entry.get('center', 64)
+            
+                # SCENE OVERRIDES
+            if self.current_scene_name == 'hold':
+                hold_mod = getattr(self.drones.get(zone_idx, {}), 'get', lambda x, y: 0.0)('hold_effect', 0.0)
+                # Add the oscillating lissajous axis to the size calculation
+                size_pct += hold_mod * 0.3 # Subtle 30% modulation
+            elif self.current_scene_name == 'lissajous':
+                # User request: lissajous requires a smaller, tighter zoom size
+                size_pct *= 0.6
+            
+            # Save globally so Pos X/Y can read it to constrain travel distance
+            self.current_size_pct = size_pct 
+            
+            # TENSION STATE: Force absolute tightest zoom (Center Dot)
+            if self.transient == 'tension':
+                size_pct = 0.0
+            
+            # Map sizes based on calibration limits
+            # Normal (center) size maps to ~0.5 size_pct
+            if size_pct >= 0.5:
+                # Expand from center towards min_dmx (widest)
+                # Map 0.5->1.0 to center->min_dmx
+                expand_ratio = (size_pct - 0.5) * 2.0
+                val = center + (min_dmx - center) * expand_ratio
+            else:
+                # Shrink from center towards max_dmx (tightest)
+                # Map 0.0->0.5 to max_dmx->center
+                shrink_ratio = size_pct * 2.0
+                val = max_dmx + (center - max_dmx) * shrink_ratio
+            
+            safe_min = min(min_dmx, max_dmx)
+            safe_max = max(min_dmx, max_dmx)
+            return int(max(safe_min, min(safe_max, val)))
 
         # 2. HARDWARE COLOR LOGIC (Bass vs Treble Dominance)
         if role in ['color_multi', 'color_solid']:
@@ -981,7 +990,7 @@ class DMXEngine:
             scene_x, scene_y, scene_z = self.scene_manager.get_position(
                 zone_idx, drone['t'], self._dt, 
                 audio, shape_key, vibe, 
-                side=side, move_trigger=0.5, 
+                side=side, move_trigger=0.1, 
                 target_scene=self.current_scene_name
             )
             
@@ -1053,44 +1062,52 @@ class DMXEngine:
             self.drones[zone_idx]['curr_rot_y'] = output_rot_y
 
             # --- PURE PATH CALCULATIONS ---
-            size_pct = getattr(self, 'current_size_pct', 0.5)
-            mobility_factor = max(0.2, 1.0 - (size_pct * 0.8))
+            # The smaller the size_pct (tighter dot), the higher the mobility allowance.
+            # Wide lasers move 50% less to prevent clipping, Dots move 100%.
+            mobility_factor = 0.5 + (1.0 - size_pct) * 0.5
+            
+            # Check for optional zoom-based position limitation range
+            zoom_cal = cal.get('zoom', {})
+            limit_range = zoom_cal.get('pos_limit_range', [0, 255])
+            if zoom_dmx_val < limit_range[0] or zoom_dmx_val > limit_range[1]:
+                mobility_factor = 1.0
+            
+            # Ensure we use bounds safely inside the hardware's manual mapping (usually 0-127)
+            # This mathematically guarantees we NEVER accidentally trigger a hardware macro
+            manual_range = fixture.get('modes', {}).get(role, {}).get('manual', {}).get('range', [0, 127])
+            man_min, man_max = manual_range[0], manual_range[1]
+            
+            # Use roles.json limits, but hard-clamp them to the manual range
+            safe_min = max(man_min, min(c_min, c_max))
+            safe_max = min(man_max, max(c_min, c_max))
+            
+            # Dynamically calculate how far we can travel from the center without clipping
+            max_travel_pos = safe_max - center
+            max_travel_neg = center - safe_min
+            
+            # Find the largest symmetric swing we can do safely
+            max_phys_deviation = max(0.0, min(max_travel_pos, max_travel_neg))
+            min_phys_deviation = max_phys_deviation * 0.25 # Don't go completely still when large
+            
+            # Base amplitude constrained by size
             allowed_deviation = min_phys_deviation + (max_phys_deviation - min_phys_deviation) * mobility_factor
-            # Movement is now strictly determined by the setup ranges
+            
+            # Scale sweeping scenes to use the full safe physical deviation, ignoring mobility clamp
+            if self.current_scene_name in ['scroll', 'chase', 'lissajous']:
+                allowed_deviation = max_phys_deviation 
+            
             offset_factor = allowed_deviation
 
+            # Use Universal Router output for proper axis locking
             if self.transient == 'tension':
                 raw_val = center
             elif role == 'pos_x':
                 raw_val = center + (output_pos_x * offset_factor)
             else:
                 raw_val = center + (output_pos_y * offset_factor)
-            
-            # --- DMX RANGE MAPPING & CLAMPING ---
-            
-            # Constrain to Calibrated Limits
-            safe_min = min(c_min, c_max)
-            safe_max = max(c_min, c_max)
-            
-            # SCENE-AWARE RANGE OVERRIDE: Full 0-255 for Scroll/Chase Macros
-            if self.current_scene_name in ['scroll', 'chase']:
-                # Recalculate raw_val with full scaling relative to calibrated center
-                # This ensures we can hit 0 and 255 but stay centered at 64
-                macro_offset = 191 # Full potential for wave/chase scenes
-                if role == 'pos_x':
-                    raw_val = center + (scene_x * macro_offset)
-                else:
-                    raw_val = center + (scene_y * macro_offset)
                 
-                safe_min, safe_max = 0, 255
-                man_min, man_max = 0, 255
-            else:
-                # Standard Manual Mode Limit (Safety from Fixture Profile)
-                manual_range = fixture.get('modes', {}).get(role, {}).get('manual', {}).get('range', [0, 127])
-                man_min, man_max = manual_range[0], manual_range[1]
-            
+            # Final clamp to safe envelope
             val = max(safe_min, min(safe_max, raw_val))
-            val = max(man_min, min(man_max, val))
             
             # Final Inversion
             if (role == 'pos_x' and dev_stage_cfg.get('invert_x')):
@@ -1104,12 +1121,11 @@ class DMXEngine:
 
         # 4. ROTATION & TUMBLE (Z, X, Y)
         if role in ['rot_z', 'rot_x', 'rot_y']:
-            mx_range = fixture.get('ranges', {}).get('manual', [0, 127])
-            # Role Override
-            if role == 'rot_z' and 'rot_z' in self.roles.get('lead', {}):
-                mx_range = self.roles['lead']['rot_z']
+            # Use calibration bounds if available, fallback to manual range
+            entry = cal.get(role, {})
+            mn = entry.get('min_dmx', 0)
+            mx = entry.get('max_dmx', 127)
             
-            mn, mx = mx_range[0], mx_range[1]
             # Center is 0 per Hardware Spec (Lissajous Profile view avoidance)
             center_rot = 0 
             
@@ -1130,11 +1146,11 @@ class DMXEngine:
             
             if role == 'rot_x':
                 val_norm = drone.get('curr_rot_x', 0.0)
-                return int(max(0, min(mx, center_rot + val_norm * max_tilt)))
+                return int(max(mn, min(mx, center_rot + val_norm * max_tilt)))
                 
             if role == 'rot_y':
                 val_norm = drone.get('curr_rot_y', 0.0)
-                return int(max(0, min(mx, center_rot + val_norm * max_tilt)))
+                return int(max(mn, min(mx, center_rot + val_norm * max_tilt)))
 
         # 5. HARDWARE COLOR LOGIC
         if role in ['color_multi', 'color_solid']:
@@ -1181,9 +1197,9 @@ class DMXEngine:
             if vibe == "high":
                 # High Vibe: identical to 'multi' logic
                 if role == 'color_solid': 
-                     cycle_cfg = fixture.get('modes', {}).get('color_solid', {}).get('cycle', {})
-                     rng = cycle_cfg.get('range', [64, 255])
-                     return min(255, rng[0] + 50) # Faster cycle
+                    cycle_cfg = fixture.get('modes', {}).get('color_solid', {}).get('cycle', {})
+                    rng = cycle_cfg.get('range', [64, 255])
+                    return min(255, rng[0] + 50) # Faster cycle
                 if role == 'color_multi': return (seed_val * 13) % 256
                 return 0
             
@@ -1195,14 +1211,19 @@ class DMXEngine:
 
         # 6. BEAM FX
         if role == 'beam_fx':
-             if vibe == 'chill': return 0
-             dyn_beam = fixture.get('dynamics', {}).get('beam_fx', {})
-             if self.smoothed_high > dyn_beam.get('high_threshold', 0.4):
-                 self.push_effect(zone_idx, 'beam_fx', 'active')
-                 val = dyn_beam.get('base', 64) + (self.smoothed_high * dyn_beam.get('mult', 136)) 
-                 return int(min(255, val))
-             self.pop_effect(zone_idx, 'beam_fx')
-             return 0
+            if vibe == 'chill': return 0
+            # Priority: Calibration bounds (base/max)
+            b_cfg = cal.get('beam_fx', {})
+            high_thresh = self.vibe_config.get(vibe, {}).get('dynamics', {}).get('beam_fx', {}).get('high_threshold', 0.4)
+            
+            if self.smoothed_high > high_thresh:
+                self.push_effect(zone_idx, 'beam_fx', 'active')
+                base = b_cfg.get('base', 64)
+                mx = b_cfg.get('max', 255)
+                val = base + (self.smoothed_high * (mx - base))
+                return int(min(255, val))
+            self.pop_effect(zone_idx, 'beam_fx')
+            return 0
         # 7. GRATING (High-Speed Texture Scanning)
         if role == 'grating':
             # Base intensity driven by bass
@@ -1215,7 +1236,12 @@ class DMXEngine:
             
             # Only scan if there is actually some audio energy or it's forced
             if scan_intensity > 0.1 or is_forced:
-                return self.grating_lfo.update(self._dt, scan_intensity)
+                # Use calibration range for LFO if available
+                g_cfg = cal.get('grating', {})
+                mn = g_cfg.get('base', 0)
+                mx = g_cfg.get('max', 255)
+                raw_lfo = self.grating_lfo.update(self._dt, scan_intensity) / 255.0 # normalized 0-1
+                return int(mn + raw_lfo * (mx - mn))
             
             return 0
 
@@ -1233,7 +1259,14 @@ class DMXEngine:
             # Trigger conditions: EDM Drop or extreme bass spike
             if (self.transient == 'dropping' or energy > 0.85):
                 # Selection logic (Rare activation)
-                steps = [63, 127, 159, 191, 223, 255]
+                steps_str = cal.get(role, {}).get('steps', "63, 127, 255")
+                try:
+                    steps = [int(s.strip()) for s in str(steps_str).split(',') if s.strip()]
+                except:
+                    steps = [63, 127, 255]
+                
+                if not steps: steps = [255]
+                
                 s_idx = int(energy * len(steps))
                 s_idx = max(0, min(len(steps)-1, s_idx))
                 
@@ -1263,8 +1296,18 @@ class DMXEngine:
             energy = self.smoothed_high
             
             if (self.transient == 'dropping' or energy > 0.85):
-                # Map treble energy to point grating range (0-255)
-                val = int(min(255, (energy * 1.5) * 255))
+                steps_str = cal.get(role, {}).get('steps', "255")
+                try:
+                    steps = [int(s.strip()) for s in str(steps_str).split(',') if s.strip()]
+                except:
+                    steps = [255]
+                
+                if not steps: steps = [255]
+                
+                s_idx = int(energy * len(steps))
+                s_idx = max(0, min(len(steps)-1, s_idx))
+                val = steps[s_idx]
+                
                 self.held_dots_values[zone_idx] = val
                 self.push_effect(zone_idx, 'dots', 'active')
                 return val
@@ -1361,9 +1404,7 @@ class DMXEngine:
     
     def set_audio_sensitivity(self, val): self.audio_sensitivity = float(val)
     
-    def set_pattern_freq(self, freq):
-        """Set pattern change frequency: 0=slow, 1=normal, 2=fast, 3=frantic."""
-        self.pattern_freq = max(0, min(3, int(freq)))
+    # Deprecated set_pattern_freq removed in favor of global scene_freq
     
     def set_pattern_mode(self, mode):
         """Set pattern selection mode."""
@@ -1391,9 +1432,9 @@ class DMXEngine:
 
             base = cfg['address'] + cfg['offset']
             for role, off in fixture['channels'].items():
-                 addr = base + off
-                 if 0 < addr < len(self.universe):
-                     res["values"][f"{name}_{role}"] = self.universe[addr]
+                addr = base + off
+                if 0 < addr < len(self.universe):
+                    res["values"][f"{name}_{role}"] = self.universe[addr]
         
         # Collect currently active hardware effects (macros)
         for (zone_idx, role), effect_name in self.active_effects.items():
@@ -1478,7 +1519,7 @@ class DMXEngine:
                 continue
                 
             # 1. WAVE -> Only on Drop or Extreme Energy (Hardware Macros)
-            energy = (self.smoothed_bass + self.smoothed_flux) * 0.5
+            energy = (self.smoothed_bass + self.smoothed_flux) * 0.1
             if energy > 0.85 or force_macros:
                 self.push_effect(i, 'pos_x', 'wave')
                 self.push_effect(i, 'pos_y', 'wave')
@@ -1498,8 +1539,10 @@ class DMXEngine:
                 self.pop_effect(i, 'grating')
                 self.pop_effect(i, 'rot_z')
 
-            # 4. ZOOM OSCILLATION -> Only on Drop or Extreme Energy (Hardware Macros)
-            if energy > 0.85 or force_macros:
+            # 4. ZOOM OSCILLATION -> Only on REAL Drop or Major Energy
+            # Increased threshold to 0.95 and using a more stable energy metric
+            zoom_trigger_energy = (self.smoothed_bass * 0.7 + self.smoothed_flux * 0.3)
+            if zoom_trigger_energy > 0.95 or force_macros:
                 self.push_effect(i, 'zoom', 'oscillation')
             else:
                 self.pop_effect(i, 'zoom')

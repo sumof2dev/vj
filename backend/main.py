@@ -58,11 +58,11 @@ def save_live_defaults():
                 "flux_sensitivity": (3.0 - analyzer.flux_threshold_mult) / 1.9 if analyzer.flux_threshold_mult else 0.5,
                 "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
                 "speed": dmx_engine.speed if dmx_engine else 1.0,
-                "intensity": dmx_engine.intensity if dmx_engine else 1.0
+                "intensity": dmx_engine.intensity if dmx_engine else 1.0,
+                "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
             },
             "laser": {
                 "speed": dmx_engine.speed if dmx_engine else 1.0,
-                "patternFreq": dmx_engine.pattern_freq if dmx_engine else 1,
                 "pattern": dmx_engine.pattern_mode if dmx_engine else 'auto',
                 "color": dmx_engine.color_mode if dmx_engine else 'auto',
                 "color_multi": dmx_engine.color_multi if dmx_engine else 0.0,
@@ -93,12 +93,12 @@ def load_live_defaults():
             if "vibe_bias" in m_data and vibe_engine: vibe_engine.mid_vibe_bias = m_data["vibe_bias"]
             if "speed" in m_data and dmx_engine: dmx_engine.set_speed(m_data["speed"])
             if "intensity" in m_data and dmx_engine: dmx_engine.set_intensity(m_data["intensity"])
+            if "sceneFreq" in m_data and dmx_engine: dmx_engine.scene_freq = m_data["sceneFreq"]
 
             # 2. Laser Section
             l_data = data.get("laser", {})
             if dmx_engine:
                 if "speed" in l_data: dmx_engine.set_speed(l_data["speed"]) 
-                if "patternFreq" in l_data: dmx_engine.set_pattern_freq(l_data["patternFreq"])
                 if "pattern" in l_data: dmx_engine.set_pattern_mode(l_data["pattern"])
                 if "color" in l_data: dmx_engine.set_color_mode(l_data["color"])
                 if "color_multi" in l_data: dmx_engine.set_color_multi(l_data["color_multi"])
@@ -179,20 +179,20 @@ class AudioAnalyzer:
         self.flux_threshold_abs = 0.6 - (float(val) * 0.5)
 
     def _normalize(self, val, history):
-        """Perform rolling normalization (val - min) / (max - min)"""
+        """Perform rolling normalization (val - history_min) / (history_max - history_min)"""
         history.append(val)
         if len(history) < 10: return 0.5 # Not enough data
         
         min_val = min(history)
         max_val = max(history)
         
-        if max_val - min_val < 0.0001: return 0.0 # Silence/Noise Floor check
+        # SANE PEAK: Instead of normalizing against absolute max in history (which might be noise),
+        # use a minimum baseline for the 'max' so tiny sounds aren't boosted to 100%.
+        sane_peak = max(0.4, max_val)
         
-        # NOISE GATE: If the loudest signal in history is still very quiet, ignore it.
-        # This prevents "gain pumping" where silence/background noise gets normalized to 100%.
-        if max_val < 0.05: return 0.0
-
-        norm = (val - min_val) / (max_val - min_val)
+        if sane_peak - min_val < 0.0001: return 0.0
+        
+        norm = (val - min_val) / (sane_peak - min_val)
         return min(1.0, max(0.0, norm))
 
     def process(self, indata):
@@ -841,8 +841,6 @@ async def ws_handler(websocket):
                                 if "sensitivity" in data:
                                     # Restore direct sensitivity 1:1 mapping
                                     analyzer.set_gain(float(data["sensitivity"]))
-                                if "patternFreq" in data:
-                                    dmx_engine.set_pattern_freq(int(data["patternFreq"]))
                                 if "pattern" in data:
                                     dmx_engine.set_pattern_mode(data["pattern"])
                                 if "color" in data:
@@ -879,6 +877,8 @@ async def ws_handler(websocket):
                                     vibe_engine.mid_vibe_bias = float(data["vibe_bias"])
                             if "speed" in data and dmx_engine:
                                 dmx_engine.set_speed(float(data["speed"]))
+                            if "sceneFreq" in data and dmx_engine:
+                                dmx_engine.scene_freq = int(data["sceneFreq"])
                         
                         elif msg_type == "force_refresh":
                             # Broadcast refresh signal to all clients
@@ -903,11 +903,11 @@ async def ws_handler(websocket):
                                     "sensitivity": analyzer.gain,
                                     "flux_sensitivity": (3.0 - analyzer.flux_threshold_mult) / 1.9 if analyzer.flux_threshold_mult else 0.5,
                                     "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
-                                    "intensity": dmx_engine.intensity if dmx_engine else 1.0
+                                    "intensity": dmx_engine.intensity if dmx_engine else 1.0,
+                                    "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
                                 },
                                 "laser": {
                                     "speed": dmx_engine.speed if dmx_engine else 1.0,
-                                    "patternFreq": dmx_engine.pattern_freq if dmx_engine else 1,
                                     "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0,
                                     "pattern": dmx_engine.pattern_mode if dmx_engine else 'auto',
                                     "color": dmx_engine.color_mode if dmx_engine else 'auto',
