@@ -737,6 +737,10 @@
         }
 
         void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            vec3 color = vec3(0.0);
+
             // 4 Zones mirroring the hardware laser array
             float clampedFlux = min(u_flux, 0.6);
             float clampedBass = min(u_bass, 0.8);
@@ -791,6 +795,48 @@
             }
             
             gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <script id="bgSpotifyFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_bass;
+        uniform float u_flux;
+        uniform float u_vol;
+        uniform vec2 u_resolution;
+        uniform sampler2D tDiffuse; // Spotify Album Art
+        
+        void main() {
+            vec2 uv = vUv;
+            
+            // Center and cover image (aspect ratio correction approx)
+            vec2 aspect = vec2(u_resolution.x / u_resolution.y, 1.0);
+            uv -= 0.5;
+            uv.x *= aspect.x;
+            
+            // Scale and react
+            float clampedFlux = min(u_flux, 0.8);
+            float scale = 0.8 + clampedFlux * 0.4 + u_bass * 0.2;
+            uv /= scale;
+            
+            // Re-center
+            uv += 0.5;
+            
+            // Sample image with bounds checking
+            vec4 color = vec4(0.0);
+            if (uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0) {
+                color = texture2D(tDiffuse, uv);
+            }
+            
+            // Add a slight darkened edge/vignette
+            float dist = length(vUv - 0.5);
+            color.rgb *= smoothstep(0.8, 0.4, dist);
+            
+            // Add some visual reactivity to colors
+            color.rgb *= 0.5 + clampedFlux * 0.5 + u_vol;
+            
+            gl_FragColor = color;
         }
     </script>
 
@@ -1200,6 +1246,7 @@
 
         let bgFloatingCubesMesh;
         let bgNeonWebMesh, bgCrystalBurstMesh, bgStainedGlassMesh, bgFractalTunnelMesh, bgLissajousMesh;
+        let bgSpotifyMesh;
         let sacredGeoMesh;
 
         // --- THREE.JS ---
@@ -1274,7 +1321,8 @@
             u_high: { value: 0 },
             u_audioLevel: { value: 0 },
             u_speed: { value: 1.0 },
-            u_dmxRot: { value: 0 }
+            u_dmxRot: { value: 0 },
+            tDiffuse: { value: null } // Used for Spotify Album Art
         };
 
         // ========== BASE LAYERS ==========
@@ -1756,10 +1804,21 @@
             if (shootingMesh.instanceColor) shootingMesh.instanceColor.needsUpdate = true;
         }
 
+        const bgSpotifyMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('fullscreenVertex').textContent,
+            fragmentShader: document.getElementById('bgSpotifyFragment').textContent,
+            uniforms: uniforms,
+            depthWrite: false
+        });
+        bgSpotifyMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgSpotifyMat);
+        bgSpotifyMesh.renderOrder = -100;
+        bgSpotifyMesh.visible = false;
+        scene.add(bgSpotifyMesh);
+
         const baseLayers = [
             voxelMesh, tunnelMesh, base2Group, oldXGroup, visual3Group,
             bgFloatingCubesMesh, bgNeonWebMesh, bgCrystalBurstMesh, bgStainedGlassMesh,
-            bgFractalTunnelMesh, bgLissajousMesh
+            bgFractalTunnelMesh, bgLissajousMesh, bgSpotifyMesh
         ];
 
         // ========== EFFECT LAYERS ==========
@@ -1941,7 +2000,30 @@
                     if (data.beat === true) isBeat = true;
                 }
 
+                // Spotify Background Image integration
+                if (data.spotify) {
+                    const sp = data.spotify;
 
+                    // Use image_high if available, fallback to image_low
+                    const newImageUrl = sp.image_high || sp.image_low;
+
+                    if (newImageUrl && newImageUrl !== window._currentSpotifyBgUrl) {
+                        window._currentSpotifyBgUrl = newImageUrl;
+
+                        // Load texture
+                        new THREE.TextureLoader().load(newImageUrl, (texture) => {
+                            // Ensure wrapping is set correctly for shaders
+                            texture.wrapS = THREE.ClampToEdgeWrapping;
+                            texture.wrapT = THREE.ClampToEdgeWrapping;
+                            texture.minFilter = THREE.LinearFilter;
+
+                            // Assign to the mesh's uniform
+                            if (bgSpotifyMesh && bgSpotifyMesh.material.uniforms.tDiffuse) {
+                                bgSpotifyMesh.material.uniforms.tDiffuse.value = texture;
+                            }
+                        });
+                    }
+                }
 
                 // Track rotation state for visual sync
                 if (data.rot_state) rotState = data.rot_state;

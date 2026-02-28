@@ -1,0 +1,277 @@
+{
+    "name": "Ehaho 4-Beam Laser",
+    "type": "ehaho_laser",
+    "channels": {
+        "group": 2,
+        "clip": 1,
+        "generic_twist": 15,
+        "generic_pattern": 3,
+        "generic_rot_z": 5,
+        "generic_color1": 10,
+        "generic_color2": 11,
+        "generic_drawing_delay": 12,
+        "generic_drawing": 14,
+        "generic_14": 13,
+        "generic_gratiung": 16,
+        "pos_x": 6,
+        "pos_y": 7,
+        "rot_y": 9,
+        "rot_x": 8,
+        "zoom": 4,
+        "dimmer": 0
+    },
+    "modes": {
+        "pos_x": {
+            "manual": {
+                "range": [
+                    0,
+                    255
+                ]
+            }
+        },
+        "pos_y": {
+            "manual": {
+                "range": [
+                    0,
+                    255
+                ]
+            }
+        },
+        "rot_y": {
+            "manual": {
+                "range": [
+                    0,
+                    255
+                ]
+            }
+        },
+        "rot_x": {
+            "manual": {
+                "range": [
+                    0,
+                    255
+                ]
+            }
+        },
+        "zoom": {
+            "manual": {
+                "range": [
+                    0,
+                    255
+                ]
+            }
+        }
+    },
+    "defaults": {
+        "group": 250,
+        "clip": 1,
+        "generic_twist": null,
+        "generic_pattern": 0,
+        "generic_rot_z": null,
+        "generic_color1": null,
+        "generic_color2": null,
+        "generic_drawing_delay": 0,
+        "generic_drawing": 0,
+        "generic_14": null,
+        "generic_gratiung": 0,
+        "pos_x": null,
+        "pos_y": null,
+        "rot_y": null,
+        "rot_x": null,
+        "zoom": null,
+        "dimmer": null
+    },
+    "calibration": {
+        "pos_x": {
+            "center": 0,
+            "left": 124,
+            "right": 255
+        },
+        "pos_y": {
+            "center": 124,
+            "top": 0,
+            "bottom": 255
+        },
+        "rot_y": {
+            "min_dmx": 0,
+            "max_dmx": 255,
+            "degree_min": 0,
+            "degree_max": 255
+        },
+        "rot_x": {
+            "min_dmx": 0,
+            "max_dmx": 255,
+            "degree_min": 0,
+            "degree_max": 255
+        },
+        "zoom": {
+            "min_dmx": 0,
+            "max_dmx": 255,
+            "center": 124
+        }
+    },
+    "shapes": {
+        "circle": 0,
+        "star": 1,
+        "dot1": 14,
+        "dot2": 15,
+        "dot3": 16,
+        "octagon": 17,
+        "line": 19,
+        "diag_cir": 20,
+        "spiral": 21,
+        "bullseye": 28,
+        "circle_of_cir": 29,
+        "square": 30,
+        "dot_x3": 32,
+        "line_x2": 33,
+        "line_dotted": 35,
+        "arch": 41,
+        "star_x4": 50,
+        "sine": 51,
+        "caret": 55,
+        "triangle": 75,
+        "circle_2up1down": 124,
+        "diamond": 125
+    },
+    "ranges": {
+        "manual": [
+            0,
+            127
+        ],
+        "macros": [
+            128,
+            255
+        ]
+    },
+    "dynamics": {
+        "pan_tilt": {
+            "base_offset": 1,
+            "zoom_offset_mult": 250,
+            "beat_punch": 8,
+            "flux_boost": 6,
+            "energy_threshold_high": 0.6,
+            "energy_threshold_mid": 0.8
+        },
+        "zoom": {
+            "bass_mult": 0.2,
+            "treble_mult": 0.2,
+            "flux_mult": 0.1,
+            "energy_threshold": 0.3,
+            "overdrive_threshold": 0.4
+        },
+        "rotation": {
+            "mod_base": 0.2,
+            "mod_mult": 0.8,
+            "energy_threshold": 0.7,
+            "confidence_threshold": 0.7
+        },
+        "beam_fx": {
+            "high_threshold": 0.4,
+            "base": 64,
+            "mult": 136
+        },
+        "grating": {
+            "mid_threshold": 0.6,
+            "mid_val": 3,
+            "high_threshold_a": 0.8,
+            "high_val_a": 13,
+            "high_threshold_b": 0.5,
+            "high_base": 24,
+            "high_mult": 231
+        },
+        "drawing": {
+            "energy_threshold": 0.6,
+            "delay_base": 32,
+            "delay_mult": 223,
+            "val_base": 128,
+            "val_mult": 127
+        }
+    },
+    "macros": {
+        "zoom_out_b": 160,
+        "zoom_in_out": 192,
+        "zoom_rot": 224,
+        "distort_up": 128,
+        "distort_down": 160,
+        "rot_fast": 192,
+        "rot_frantic": 224,
+        "zoom_out_a": 128,
+        "wave_up": 128,
+        "wave_left": 127,
+        "wave_right": 127,
+        "wave_down": 128
+    },
+    "dimmers": {
+        "dimmer": {
+            "mode": "range",
+            "logic": "normally_on",
+            "min": 0,
+            "max": 255,
+            "on_val": 254,
+            "off_val": 0
+        }
+    },
+    "generic": {
+        "generic_rot_z": {
+            "min": 127,
+            "max": 255,
+            "default": 0,
+            "modifier": "intensity"
+        },
+        "generic_color2": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "bass"
+        },
+        "generic_14": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "flux"
+        },
+        "generic_drawing": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "flux"
+        },
+        "pos_x": {
+            "min": 127,
+            "max": 255,
+            "default": 0,
+            "modifier": "flux"
+        },
+        "pos_y": {
+            "min": 127,
+            "max": 255,
+            "default": 0,
+            "modifier": "treble"
+        },
+        "rot_y": {
+            "min": 127,
+            "max": 255,
+            "default": 0,
+            "modifier": "intensity"
+        },
+        "rot_x": {
+            "min": 127,
+            "max": 255,
+            "default": 0,
+            "modifier": "crosstalk"
+        },
+        "zoom": {
+            "min": 127,
+            "max": 255,
+            "default": 0,
+            "modifier": "bass"
+        },
+        "dimmer": {
+            "min": 20,
+            "max": 240,
+            "default": 0,
+            "modifier": "flux"
+        }
+    }
+}

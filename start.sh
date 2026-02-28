@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Kill background processes on exit (Ctrl+C)
-trap 'kill %1; kill %2' SIGINT
+# Kill background processes on exit (Ctrl+C or Systemd Stop)
+trap 'kill $(jobs -p) 2>/dev/null' SIGINT SIGTERM
 
 # Ensure we are in the script's directory (Robust for Symlinks)
 SOURCE="${BASH_SOURCE[0]}"

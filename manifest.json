@@ -4,7 +4,7 @@
   "short_name": "RaveBox",
   "description": "VJ Visualizer|DMX Control",
   "start_url": "/manager.html",
-  "scope": "/",
+  "scope": "/manager.html",
   "display": "fullscreen",
   "display_override": [
     "fullscreen",

@@ -14,6 +14,8 @@ from vibe_engine import VibeEngine
 
 import collections
 import concurrent.futures
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth, CacheFileHandler
 
 # --- CONFIGURATION ---
 WS_PORT = 8765
@@ -24,6 +26,11 @@ BLOCK_SIZE = 2048  # Increased to 2048 to prevent dropouts under load
 # --- GLOBAL STATE ---
 # --- GLOBAL STATE ---
 CONFIG_FILE = "vj_remote_settings.json"
+SPOT_CLIENT_ID = '7e4217110f7b40e5a5e3c112b94b4a8a'
+SPOT_CLIENT_SECRET = 'dcd9b82d426340499791c70da4f92329'
+# Standard loopback URI for Spotipy auth
+SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:8888/callback'
+SPOTIFY_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".spotify_cache")
 SESSION_ID = str(time.time()) # Unique ID per engine restart
 last_callback_time = time.time()
 dmx_port = None
@@ -672,7 +679,13 @@ async def process_audio_queue():
             # indata is float32 array (Frames, Channels) from sounddevice
             
             # Process (Analysis includes mean-subtraction DC filter)
-            audio_state = analyzer.process(indata)
+            new_audio_state = analyzer.process(indata)
+            
+            # Preserve Spotify metadata injected by the async poller
+            if 'spotify' in audio_state:
+                new_audio_state['spotify'] = audio_state['spotify']
+                
+            audio_state = new_audio_state
             
             # --- VIBE ENGINE DETERMINATION ---
             if vibe_engine:
@@ -734,6 +747,80 @@ async def process_audio_queue():
         except Exception as e:
             print(f"⚠️ Audio Process Error: {e}")
             await asyncio.sleep(0.1)
+
+
+async def spotify_poller():
+    global audio_state
+    print("🎵 Initializing Spotify Connection...")
+    try:
+        handler = CacheFileHandler(cache_path=SPOTIFY_CACHE_PATH)
+        auth_manager = SpotifyOAuth(
+            client_id=SPOT_CLIENT_ID,
+            client_secret=SPOT_CLIENT_SECRET,
+            redirect_uri=SPOTIFY_REDIRECT_URI,
+            scope="user-read-currently-playing",
+            cache_handler=handler,
+            open_browser=False # Important for headless Pi
+        )
+        sp = spotipy.Spotify(auth_manager=auth_manager)
+    except Exception as e:
+        print(f"❌ Spotify Init Failed: {e}")
+        return
+
+    current_track_id = None
+    loop = asyncio.get_running_loop()
+
+    while True:
+        try:
+            # Run the network request in an executor so it doesn't freeze the DMX lasers
+            current_playing = await loop.run_in_executor(None, sp.current_user_playing_track)
+            
+            if current_playing is not None and current_playing.get('item') is not None:
+                track = current_playing['item']
+                track_id = track['id']
+                
+                if track_id != current_track_id:
+                    current_track_id = track_id
+                    track_name = track['name']
+                    artist_name = track['artists'][0]['name']
+                    
+                    # Extract Album Art (Spotify provides [High, Medium, Low] resolution)
+                    images = track.get('album', {}).get('images', [])
+                    
+                    # Store these in the outer scope / global so they persist across polls 
+                    # for the same track
+                    spotify_images = {
+                        'high': images[0]['url'] if len(images) > 0 else None,
+                        'low': images[-1]['url'] if len(images) > 0 else None
+                    }
+                    
+                    print(f"\n🎶 [SPOTIFY] NEW TRACK: {track_name} by {artist_name}")
+                    
+                # We update the state every cycle now to send the live playback progress
+                progress_ms = current_playing.get('progress_ms', 0)
+                duration_ms = track.get('duration_ms', 1)
+                
+                audio_state['spotify'] = {
+                    'name': f"{track_name} - {artist_name}",
+                    'progress_ms': progress_ms,
+                    'duration_ms': duration_ms,
+                    'image_high': spotify_images.get('high'),
+                    'image_low': spotify_images.get('low'),
+                    'energy': 0,
+                    'valence': 0,
+                    'bpm': 0
+                }
+            else:
+                # Nothing playing
+                if 'spotify' in audio_state:
+                    del audio_state['spotify']
+                
+        except spotipy.SpotifyException as se:
+            print(f"⚠️ Spotify API Error: {se}")
+        except Exception as e:
+            print(f"⚠️ Spotify Poller generic error: {e}")
+            
+        await asyncio.sleep(3.0) # Check every 3 seconds
 
 # --- 4. SERVER LOOP ---
 async def ws_handler(websocket):
@@ -929,6 +1016,7 @@ async def ws_handler(websocket):
             dmx_info = dmx_engine.get_channel_state() if dmx_engine else {"values": {}, "effects": []}
             rot_state = dmx_engine.rot_state if dmx_engine else 'IDLE'
             active_scene = dmx_engine.current_scene_name if dmx_engine else 'none'
+            active_addon_scene = getattr(dmx_engine, 'active_addon_scene', None) if dmx_engine else None
             vibe = audio_state.get("vibe", "mid")
             
             await websocket.send(json.dumps({
@@ -938,6 +1026,7 @@ async def ws_handler(websocket):
                 "dmx": dmx_info["values"],
                 "effects": dmx_info["effects"],
                 "active_scene": active_scene,
+                "active_addon_scene": active_addon_scene,
                 "rot_state": rot_state,
                 "base_layer": dmx_engine.current_base_layer if dmx_engine else 0,
                 "fg_layer": dmx_engine.current_fx_layer if dmx_engine else -1,
@@ -985,7 +1074,8 @@ async def main():
     async with websockets.serve(ws_handler, "0.0.0.0", WS_PORT):
         await asyncio.gather(
             process_audio_queue(),
-            audio_watchdog()
+            audio_watchdog(),
+            spotify_poller()
         )
 
 # Global stream variable
@@ -1035,7 +1125,23 @@ def restart_audio_stream(device_index):
 
 
 if __name__ == "__main__":
+    import signal
+    
+    def handle_exit(sig, frame):
+        print(f"\n🛑 Received signal {sig}. Stopping...")
+        if dmx_executor:
+            print("⏳ Shutting down DMX executor...")
+            dmx_executor.shutdown(wait=False)
+        # Raising SystemExit will trigger finally blocks if any, 
+        # but here we are at top level.
+        os._exit(0) # Force exit to ensure background threads don't hang
+
+    signal.signal(signal.SIGINT, handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
+
     try:
         asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n🛑 Server Stopping...")
+    except Exception as e:
+        print(f"❌ Main Loop Error: {e}")
+    finally:
+        handle_exit(None, None)

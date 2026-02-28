@@ -169,73 +169,176 @@
             opacity: 1;
         }
 
-        /* --- TOGGLE SWITCH UI --- */
-        .toggle-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
 
-        .toggle-label {
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            text-transform: lowercase;
-        }
 
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 28px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255, 255, 255, 0.1);
-            transition: .3s;
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 3px;
-            bottom: 3px;
-            background-color: var(--text-dim);
-            transition: .3s;
-            border-radius: 50%;
-        }
-
-        input:checked+.slider {
-            background-color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        input:checked+.slider:before {
-            transform: translateX(22px);
-            background-color: #000;
-        }
-
-        .smart-controls-grid {
+        /* --- DASHBOARD WIDGETS --- */
+        .dashboard-grid {
             margin-top: 1.5rem;
             display: flex;
-            justify-content: center;
-            gap: 20px;
+            flex-direction: column;
+            gap: 15px;
+            text-align: left;
+        }
+
+        .dash-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 15px;
+        }
+
+        .dash-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Spotify Focus */
+        .spotify-wrap {
+            display: none;
+            border-color: rgba(29, 185, 84, 0.4);
+            background: linear-gradient(135deg, rgba(29, 185, 84, 0.1), transparent);
+        }
+
+        .spot-art {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            margin-right: 12px;
+            display: none;
+        }
+
+        .spot-track {
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .spot-prog-bg {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .spot-prog-fg {
+            height: 100%;
+            width: 0%;
+            background: #1db954;
+            transition: width 1s linear;
+        }
+
+        /* Vibe & Volume */
+        .vol-meter {
+            height: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 6px;
+            overflow: hidden;
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .vol-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), #ffeb3b, var(--error));
+            width: 0%;
+            transition: width 0.05s ease-out;
+        }
+
+        .vibe-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            background: #333;
+        }
+
+        .vibe-badge.chill {
+            background: #2a5a8a;
+            color: #8ad4ff;
+        }
+
+        .vibe-badge.mid {
+            background: #5a5a2a;
+            color: #ffdd8a;
+        }
+
+        .vibe-badge.high {
+            background: #8a2a5a;
+            color: #ff8add;
+        }
+
+        /* Engine Thinking */
+        .thinking-grid {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .logic-state {
+            text-align: center;
+            font-weight: 900;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            color: #888;
+        }
+
+        .logic-state.building {
+            color: #a29bfe;
+            text-shadow: 0 0 10px rgba(162, 155, 254, 0.4);
+        }
+
+        .logic-state.tension {
+            color: #f9ca24;
+            text-shadow: 0 0 10px rgba(249, 202, 36, 0.4);
+        }
+
+        .logic-state.dropping {
+            color: #eb4d4b;
+            text-shadow: 0 0 10px rgba(235, 77, 75, 0.6);
+        }
+
+        .bin-viz {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .bin-bar {
+            flex: 1;
+            background: #444;
+            min-height: 2px;
+            border-radius: 1px 1px 0 0;
+            transition: height 0.05s ease-out;
+        }
+
+        .sys-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 10px;
+        }
+
+        .stat-val {
+            font-family: monospace;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 0.85rem;
         }
     </style>
 </head>
@@ -252,11 +355,63 @@
         <button id="btnStop" class="btn btn-stop" onclick="doAction('stop')">Kill Engine</button>
         <button id="btnRestart" class="btn btn-restart" onclick="doAction('restart')">Restart</button>
 
-        <div id="smart-controls" class="smart-controls-grid">
-            <!-- Dynamic Kasa Buttons -->
-        </div>
+
 
         <div id="loader" class="loading-spinner"></div>
+
+        <!-- LIVE DASHBOARD (Mirrored from Remote) -->
+        <div class="dashboard-grid" id="liveDashboard" style="display:none; opacity:0; transition: opacity 0.5s;">
+
+            <!-- Audio State Overview -->
+            <div class="dash-panel" style="display: flex; align-items: center;">
+                <span style="font-size: 0.8rem; color: #888;">VOL</span>
+                <div class="vol-meter">
+                    <div class="vol-bar" id="hubVol"></div>
+                </div>
+                <span class="vibe-badge" id="hubVibe">--</span>
+            </div>
+
+            <!-- Spotify Overlay -->
+            <div class="dash-panel spotify-wrap" id="hubSpotify">
+                <div class="dash-header"><span style="color:#1db954;">🎵 Now Playing</span></div>
+                <div style="display: flex; align-items: center;">
+                    <img id="hubSpotArt" class="spot-art" src="">
+                    <div style="flex:1; min-width:0;">
+                        <div class="spot-track" id="hubSpotName">Track Name</div>
+                        <div class="spot-prog-bg">
+                            <div class="spot-prog-fg" id="hubSpotProg"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Engine Thinking -->
+            <div class="dash-panel">
+                <div class="dash-header">🧠 Engine Thinking</div>
+                <div class="thinking-grid">
+                    <div class="logic-state" id="hubTransient">STEADY</div>
+                    <div class="bin-viz" id="hubBins">
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                    </div>
+                </div>
+                <div class="sys-stats">
+                    <div>BPM: <span class="stat-val" id="hubBpm">--</span></div>
+                    <div>Confidence: <span class="stat-val" id="hubConf">--</span></div>
+                    <div>Grid: <span class="stat-val" id="hubGrid" style="transition: color 0.1s;">PULSE</span></div>
+                </div>
+            </div>
+
+        </div>
 
         <div class="links">
             <a id="link-visual" href="#">Visualizer</a>
@@ -274,50 +429,7 @@
         document.getElementById('link-remote').href = `/remote.html`;
         document.getElementById('link-setup').href = `/setup.html`;
 
-        async function loadSmartControls() {
-            try {
-                // Add cache buster to bypass browser cache so new devices show up immediately
-                const res = await fetch('/api/fixtures/stage_config.json?t=' + Date.now(), { cache: 'no-store' });
-                const config = await res.json();
-                const container = document.getElementById('smart-controls');
-                container.innerHTML = '';
 
-                if (config['outlets/switches']) {
-                    for (const [name, dev] of Object.entries(config['outlets/switches'])) {
-                        if (dev.toggle_behavior === 'manager') {
-                            const ip = dev.ip;
-                            if (!ip) continue;
-
-                            const wrap = document.createElement('div');
-                            wrap.className = 'toggle-container';
-                            wrap.innerHTML = `
-                                <div class="toggle-label">${name}</div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" onchange="controlSmart('${ip}', this.checked)">
-                                    <span class="slider"></span>
-                                </label>
-                            `;
-                            container.appendChild(wrap);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to load smart controls", e);
-            }
-        }
-
-        async function controlSmart(ip, isChecked) {
-            const state = isChecked ? 'on' : 'off';
-            try {
-                const res = await fetch(`/api/smart/control?ip=${encodeURIComponent(ip)}&state=${state}`);
-                const data = await res.json();
-                console.log(`Smart control for ${ip} to ${state}:`, data);
-                // Optionally update UI based on response
-            } catch (e) {
-                console.error(`Failed to control smart device ${ip}`, e);
-                // Revert toggle state if error?
-            }
-        }
 
         async function updateStatus() {
             try {
@@ -368,7 +480,100 @@
         // Poll every 3 seconds
         setInterval(updateStatus, 3000);
         updateStatus();
-        loadSmartControls();
+
+        // --- DASHBOARD WEBSOCKET ---
+        let ws = null;
+        let currentBgUrl = '';
+
+        function connectLiveDashboard() {
+            ws = new WebSocket(`ws://${host}:8765`);
+
+            ws.onopen = () => {
+                document.getElementById('liveDashboard').style.display = 'flex';
+                // Trigger reflow to fade in
+                setTimeout(() => document.getElementById('liveDashboard').style.opacity = '1', 50);
+            };
+
+            ws.onclose = () => {
+                document.getElementById('liveDashboard').style.opacity = '0';
+                setTimeout(() => document.getElementById('liveDashboard').style.display = 'none', 500);
+                setTimeout(connectLiveDashboard, 2000);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'audio') {
+                        const d = msg.data;
+
+                        // Vol & Vibe
+                        if (d.vol !== undefined) document.getElementById('hubVol').style.width = Math.min(100, d.vol * 100) + '%';
+                        if (d.vibe) {
+                            const vb = document.getElementById('hubVibe');
+                            vb.textContent = d.vibe;
+                            vb.className = 'vibe-badge ' + d.vibe;
+                        }
+
+                        // Engine
+                        if (d.transient) {
+                            const tr = document.getElementById('hubTransient');
+                            tr.textContent = d.transient.toUpperCase();
+                            tr.className = 'logic-state ' + d.transient;
+                        }
+                        if (d.bpm) document.getElementById('hubBpm').textContent = Math.round(d.bpm);
+                        if (d.confidence !== undefined) document.getElementById('hubConf').textContent = Math.round(d.confidence * 100) + '%';
+                        if (d.beat) {
+                            const bd = document.getElementById('hubGrid');
+                            bd.style.color = '#fff';
+                            setTimeout(() => bd.style.color = 'var(--primary)', 100);
+                        }
+                        if (d.bins) {
+                            const bars = document.getElementById('hubBins').children;
+                            for (let i = 0; i < bars.length; i++) {
+                                if (d.bins[i] !== undefined) {
+                                    bars[i].style.height = Math.max(2, d.bins[i] * 38) + 'px';
+                                    bars[i].style.background = d.bins[i] > 0.6 ? 'var(--primary)' : '#444';
+                                }
+                            }
+                        }
+
+                        // Spotify Background & UI
+                        if (d.spotify) {
+                            const sp = d.spotify;
+                            document.getElementById('hubSpotify').style.display = 'block';
+                            document.getElementById('hubSpotName').textContent = sp.name;
+
+                            if (sp.duration_ms && sp.progress_ms) {
+                                document.getElementById('hubSpotProg').style.width = Math.min(100, (sp.progress_ms / sp.duration_ms) * 100) + '%';
+                            }
+
+                            const art = document.getElementById('hubSpotArt');
+                            if (sp.image_low) {
+                                art.src = sp.image_low;
+                                art.style.display = 'block';
+                            }
+
+                            // Dynamic Background
+                            if (sp.image_high && sp.image_high !== currentBgUrl) {
+                                currentBgUrl = sp.image_high;
+                                // Smooth crossfade trick via CSS
+                                document.body.style.transition = 'background-image 1s ease-in-out';
+                                document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.8)), url('${currentBgUrl}')`;
+                            }
+                        } else {
+                            document.getElementById('hubSpotify').style.display = 'none';
+                            if (currentBgUrl !== '') {
+                                currentBgUrl = '';
+                                document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('background.png')`;
+                            }
+                        }
+                    }
+                } catch (e) { }
+            };
+        }
+
+        // Start live dashboard listener
+        connectLiveDashboard();
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {

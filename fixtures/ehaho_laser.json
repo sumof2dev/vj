@@ -185,7 +185,7 @@
     "defaults": {
         "group": 250,
         "pattern": 0,
-        "zoom": 40,
+        "zoom": null,
         "pos_x": 64,
         "pos_y": 64,
         "rot_z": 0,
@@ -196,7 +196,7 @@
         "dots": 0,
         "drawing_delay": 0,
         "drawing": 0,
-        "twist": 0,
+        "twist": null,
         "grating": 0,
         "dimmer": 254,
         "clip": 10
@@ -236,13 +236,13 @@
             "degree_max": 255
         },
         "dots": {
-            "steps": "63,127-255"
+            "steps": "63,127, 255"
         },
         "drawing": {
-            "steps": "0-127"
+            "steps": "50, 63, 127"
         },
         "grating": {
-            "max": 50
+            "max": 63
         }
     },
     "shapes": {

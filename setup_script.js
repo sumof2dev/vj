@@ -52,7 +52,6 @@ async function loadStageConfig() {
         }
 
         renderDevices();
-        populateTestDevices();
     } catch (e) {
         console.error(e);
         stageConfig = { devices: {} };
@@ -249,13 +248,14 @@ function renderDevices() {
                 <select onchange="updateDeviceProp('${key}', 'behavior', this.value); renderDevices()" title="Behavior Role">
                     <option value="lead" ${dev.behavior === 'lead' || !dev.behavior ? 'selected' : ''}>Lead (Fluid)</option>
                     <option value="rhythm" ${dev.behavior === 'rhythm' ? 'selected' : ''}>Rhythm</option>
-
+                    <option value="custom" ${dev.behavior === 'custom' ? 'selected' : ''}>Custom</option>
                 </select>
 
                 <button class="kv-remove" onclick="deleteDevice('${key}')">×</button>
             `;
         list.appendChild(row);
     });
+    populateTestDevices();
 }
 
 function addDevice() {
@@ -374,7 +374,7 @@ function createNewProfile() {
 
     // Populate channels sequentially
     for (let i = 0; i < count; i++) {
-        let roleName = `generic_ch${i + 1}`;
+        let roleName = `unassigned_ch${i + 1}`;
         currentProfile.channels[roleName] = i;
         currentProfile.defaults[roleName] = 0;
     }
@@ -411,7 +411,7 @@ const KNOWN_ROLES = [
     'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y',
     'color_solid', 'color_multi', 'pattern',
     'beam_fx', 'grating', 'drawing', 'drawing_delay',
-    'strobe', 'generic', 'dimmer',
+    'strobe', 'generic', 'unassigned', 'dimmer',
     'mode', 'clip', 'group'
 ];
 
@@ -559,20 +559,25 @@ function renderChannelsSection() {
         html += `<div style="width:130px; font-weight:bold; color:var(--accent);">CH ${chNum} <span style="font-size:10px; color:#666">(Offs ${offset})</span></div>`;
 
         const isGeneric = role === 'generic' || role.startsWith('generic_');
+        const isUnassigned = role === 'unassigned' || role.startsWith('unassigned_');
 
-        // Get available roles (allow generic to be used infinitely)
-        const usedRoles = Object.keys(ch).filter(r => !r.startsWith('generic'));
-        const availableRoles = KNOWN_ROLES.filter(r => !usedRoles.includes(r) || r === role || r === 'generic');
+        // Get available roles (allow generic and unassigned to be used infinitely)
+        const usedRoles = Object.keys(ch).filter(r => !r.startsWith('generic') && !r.startsWith('unassigned'));
+        const availableRoles = KNOWN_ROLES.filter(r => !usedRoles.includes(r) || r === role || r === 'generic' || r === 'unassigned');
 
         html += `<select class="kv-wide" onchange="handleRoleChange('${role}', this.value)" style="margin-right:10px; min-width:120px;">`;
         if (isGeneric) {
-            html += `<option value="${role}" selected>Generic / Unassigned</option>`;
+            html += `<option value="${role}" selected>Generic</option>`;
+        } else if (isUnassigned) {
+            html += `<option value="${role}" selected>Unassigned</option>`;
         }
         availableRoles.forEach(r => {
             if (r === 'generic') {
                 html += `<option value="generic">Generic...</option>`;
+            } else if (r === 'unassigned') {
+                html += `<option value="unassigned">Unassigned...</option>`;
             } else {
-                html += `<option value="${r}" ${r === role && !isGeneric ? 'selected' : ''}>${r}</option>`;
+                html += `<option value="${r}" ${r === role && !isGeneric && !isUnassigned ? 'selected' : ''}>${r}</option>`;
             }
         });
         html += `</select>`;
@@ -591,13 +596,13 @@ function renderChannelsSection() {
 
 function handleRoleChange(oldRole, newValue) {
     let newRole = newValue;
-    if (newValue === 'generic') {
-        const suffix = prompt("Enter a suffix for this generic channel (e.g., 'fan', 'macro'):\nLeave blank for standard 'generic'.");
+    if (newValue === 'generic' || newValue === 'unassigned') {
+        const suffix = prompt(`Enter a suffix for this ${newValue} channel (e.g., 'macro', 'fan'):\nLeave blank for standard '${newValue}'.`);
         if (suffix === null) {
             renderProfileUi(); // Re-render to reset the dropdown visually
             return;
         }
-        newRole = suffix ? `generic_${suffix.replace(/\s+/g, '_')}` : 'generic';
+        newRole = suffix ? `${newValue}_${suffix.replace(/\s+/g, '_')}` : newValue;
     }
     renameProfileChannel(oldRole, newRole);
 }
@@ -605,7 +610,7 @@ function handleRoleChange(oldRole, newValue) {
 function appendNewChannel() {
     const offsets = Object.values(currentProfile.channels);
     const nextOffset = offsets.length > 0 ? Math.max(...offsets) + 1 : 0;
-    const newRole = `generic_ch${nextOffset + 1}`;
+    const newRole = `unassigned_ch${nextOffset + 1}`;
 
     currentProfile.channels[newRole] = nextOffset;
     currentProfile.defaults[newRole] = 0;
@@ -1016,9 +1021,9 @@ function renderGenericsSection() {
     if (roles.length === 0) return html + '<div style="color:var(--text-dim)">No generic channels found. Add a channel with role "generic".</div>';
 
     roles.forEach(role => {
-        const cfg = gen[role] || { min: 0, max: 255, default: 0, modifier: 'intensity' };
+        const cfg = gen[role] || { min: 0, max: 255, default: 0, modifier: 'intensity', amount: 100 };
         html += `<div class="sub-card"><h4>${role}</h4>
-                    <div class="device-row" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:5px; background:none; padding:0">
+                    <div class="device-row" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:5px; background:none; padding:0">
                         <div>
                             <label>Min</label>
                             <input type="number" value="${cfg.min}" onchange="updateGenericParam('${role}', 'min', parseInt(this.value))">
@@ -1026,6 +1031,10 @@ function renderGenericsSection() {
                         <div>
                             <label>Max</label>
                             <input type="number" value="${cfg.max}" onchange="updateGenericParam('${role}', 'max', parseInt(this.value))">
+                        </div>
+                        <div>
+                            <label>Amount %</label>
+                            <input type="number" value="${cfg.amount !== undefined ? cfg.amount : 100}" min="0" max="100" onchange="updateGenericParam('${role}', 'amount', parseInt(this.value))">
                         </div>
                         <div>
                             <label>Default</label>
@@ -1050,7 +1059,7 @@ function renderGenericsSection() {
 
 function updateGenericParam(role, param, val) {
     if (!currentProfile.generic) currentProfile.generic = {};
-    if (!currentProfile.generic[role]) currentProfile.generic[role] = { min: 0, max: 255, default: 0, modifier: 'intensity' };
+    if (!currentProfile.generic[role]) currentProfile.generic[role] = { min: 0, max: 255, default: 0, modifier: 'intensity', amount: 100 };
     currentProfile.generic[role][param] = val;
     syncUiToJson();
 }
@@ -1169,6 +1178,7 @@ function connectWs() {
 
 function populateTestDevices() {
     const sel = document.getElementById('test-dev-select');
+    const currentVal = sel.value;
     sel.innerHTML = '';
 
     let allDevices = {};
@@ -1181,6 +1191,11 @@ function populateTestDevices() {
         opt.innerText = k;
         sel.appendChild(opt);
     });
+
+    if (currentVal && Array.from(sel.options).some(o => o.value === currentVal)) {
+        sel.value = currentVal;
+    }
+
     if (sel.options.length > 0) renderTestFaders();
 }
 
@@ -1574,7 +1589,7 @@ async function performPresetSave() {
     // Persist to presets.json
     let existingPresets = {};
     try {
-        const res = await fetch(`${API_BASE}/presets.json`);
+        const res = await fetch(`${API_BASE}/presets.json?t=${Date.now()}`, { cache: 'no-store' });
         if (res.ok) existingPresets = await res.json();
     } catch (e) {
         console.log("No existing presets.json found. Creating new one.");

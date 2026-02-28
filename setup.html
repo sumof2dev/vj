@@ -395,7 +395,8 @@
         .fader-ch {
             background: linear-gradient(to bottom, #252530, #15151c);
             border-radius: 8px;
-            padding: 10px 4px;
+            padding: 10px 4px 0 4px;
+            /* Removed bottom padding for the handle */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -404,6 +405,86 @@
             border-right: 1px solid #2a2a38;
             border-left: 1px solid #2a2a38;
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+            user-select: none;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .fader-ch.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent);
+        }
+
+        .drag-handle {
+            width: calc(100% + 8px);
+            height: 16px;
+            background: #2a2a38;
+            margin-top: auto;
+            border-radius: 0 0 7px 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+            cursor: grab;
+            border-top: 1px solid #111;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .fader-ch.linked-next {
+            border-right: 2px solid var(--accent);
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            margin-right: -1px;
+        }
+
+        .fader-ch.linked-prev {
+            border-left: 2px solid var(--accent);
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            margin-left: -1px;
+        }
+
+        .link-connector {
+            width: 20px;
+            height: 340px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .link-btn {
+            width: 24px;
+            height: 24px;
+            background: #1a1a24;
+            border: 1px solid #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .link-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .link-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+            box-shadow: 0 0 8px var(--accent);
         }
 
         .looper-btn {
@@ -836,6 +917,8 @@
 <body>
 
     <div id="nav-panel">
+        <div class="nav-btn" onclick="window.location.href='manager.html'" title="Return to Manager">🏠<span
+                class="nav-label">Manager</span></div>
         <div class="nav-btn active" onclick="showView('stage')" title="Stage Manager">🏟<span
                 class="nav-label">Stage</span></div>
         <div class="nav-btn" onclick="showView('roles')" title="Role Configuration">🎭<span
@@ -1013,9 +1096,9 @@
                     <button class="btn accent" style="padding: 4px 10px; font-size:12px; height: 26px;"
                         onclick="saveGlobalPreset()">💾 Save Vibe Preset</button>
 
-                    <div style="font-size: 12px; color: var(--accent); font-weight: bold; letter-spacing: 1px;">ZONE
+                    <div style="font-size: 12px; color: var(--accent); font-weight: bold; letter-spacing: 1px;">DEVICE
                     </div>
-                    <select id="test-dev-select" onchange="renderTestFaders()"
+                    <select id="test-dev-select" onchange="handleDeviceSelection(this.value)"
                         style="width:200px; background:#1a1a24; border-color:#333; color:#ccc;"></select>
                     <div id="conn-status"
                         style="color:var(--danger); font-size:12px; margin-left:15px; font-weight:bold;">🔴 Disconnected
@@ -1081,6 +1164,16 @@
         let currentProfile = null;
         let availableProfiles = [];
         let ws = null;
+
+        // Live Test Enhancements State
+        let activeTestDevices = []; // Array of devNames
+        let testProfiles = {}; // Key: type, Value: Profile object
+        let testOrder = {}; // Key: devName, Value: Array of absAddr
+        let linkedLinks = {}; // Key: devName, Value: Set of linked pairs (e.g. "addr1-addr2")
+        let saveActiveChannels = {};
+        let currentFaderValues = {};
+        let looperState = {};
+        let looperInterval = null;
 
         // --- INIT ---
         async function init() {
@@ -1438,7 +1531,7 @@
 
             // Populate channels sequentially
             for (let i = 0; i < count; i++) {
-                let roleName = `generic_ch${i + 1}`;
+                let roleName = `unassigned_ch${i + 1}`;
                 currentProfile.channels[roleName] = i;
                 currentProfile.defaults[roleName] = 0;
             }
@@ -1475,7 +1568,7 @@
             'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y',
             'color_solid', 'color_multi', 'pattern',
             'beam_fx', 'grating', 'drawing', 'drawing_delay',
-            'strobe', 'generic', 'dimmer',
+            'strobe', 'generic', 'unassigned', 'dimmer',
             'mode', 'clip', 'group'
         ];
 
@@ -1595,6 +1688,7 @@
             sortedChannels.forEach(([role, offset]) => {
                 const chNum = offset + 1; // 1-based display
                 const isGeneric = role === 'generic' || role.startsWith('generic_');
+                const isUnassigned = role === 'unassigned' || role.startsWith('unassigned_');
 
                 html += `<div class="card" style="margin-bottom: 15px; padding: 12px; border-left: 4px solid var(--accent); background:rgba(255,255,255,0.01);">`;
 
@@ -1602,14 +1696,16 @@
                 html += `<div class="kv-row" style="margin-bottom: 10px;">`;
                 html += `<div style="width:100px; font-weight:bold; color:var(--accent); font-size:14px;">CH ${chNum} <div style="font-size:10px; color:#666; font-weight:normal;">(Offs ${offset})</div></div>`;
 
-                const usedRoles = Object.keys(ch).filter(r => !r.startsWith('generic'));
-                const availableRoles = KNOWN_ROLES.filter(r => !usedRoles.includes(r) || r === role || r === 'generic');
+                const usedRoles = Object.keys(ch).filter(r => !r.startsWith('generic') && !r.startsWith('unassigned'));
+                const availableRoles = KNOWN_ROLES.filter(r => !usedRoles.includes(r) || r === role || r === 'generic' || r === 'unassigned');
 
                 html += `<select class="kv-wide" onchange="handleRoleChange('${role}', this.value)" style="margin-right:10px;">`;
-                if (isGeneric) html += `<option value="${role}" selected>Generic / Unassigned</option>`;
+                if (isGeneric) html += `<option value="${role}" selected>Generic</option>`;
+                else if (isUnassigned) html += `<option value="${role}" selected>Unassigned</option>`;
                 availableRoles.forEach(r => {
                     if (r === 'generic') html += `<option value="generic">Generic...</option>`;
-                    else html += `<option value="${r}" ${r === role && !isGeneric ? 'selected' : ''}>${r}</option>`;
+                    else if (r === 'unassigned') html += `<option value="unassigned">Unassigned...</option>`;
+                    else html += `<option value="${r}" ${r === role && !isGeneric && !isUnassigned ? 'selected' : ''}>${r}</option>`;
                 });
                 html += `</select>`;
 
@@ -1698,12 +1794,13 @@
 
         function getGenericHtml(role) {
             const gen = currentProfile.generic || {};
-            const cfg = gen[role] || { min: 0, max: 255, default: 0, modifier: 'intensity' };
+            const cfg = gen[role] || { min: 0, max: 255, default: 0, modifier: 'intensity', amount: 100 };
             return `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
                 <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Generic Bounds</h4>
-                <div class="device-row" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:5px; background:none; padding:0; border:none;">
+                <div class="device-row" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:5px; background:none; padding:0; border:none;">
                     <div><label>Min</label><input type="number" value="${cfg.min}" onchange="updateGenericParam('${role}', 'min', parseInt(this.value))"></div>
                     <div><label>Max</label><input type="number" value="${cfg.max}" onchange="updateGenericParam('${role}', 'max', parseInt(this.value))"></div>
+                    <div><label>Amount %</label><input type="number" value="${cfg.amount !== undefined ? cfg.amount : 100}" min="0" max="100" onchange="updateGenericParam('${role}', 'amount', parseInt(this.value))"></div>
                     <div><label>Modifier</label>
                         <select onchange="updateGenericParam('${role}', 'modifier', this.value)">
                             <option value="intensity" ${cfg.modifier === 'intensity' ? 'selected' : ''}>Intensity</option>
@@ -1845,13 +1942,13 @@
 
         function handleRoleChange(oldRole, newValue) {
             let newRole = newValue;
-            if (newValue === 'generic') {
-                const suffix = prompt("Enter a suffix for this generic channel (e.g., 'fan', 'macro'):\nLeave blank for standard 'generic'.");
+            if (newValue === 'generic' || newValue === 'unassigned') {
+                const suffix = prompt(`Enter a suffix for this ${newValue} channel (e.g., 'macro', 'fan'):\nLeave blank for standard '${newValue}'.`);
                 if (suffix === null) {
                     renderProfileUi(); // Re-render to reset the dropdown visually
                     return;
                 }
-                newRole = suffix ? `generic_${suffix.replace(/\s+/g, '_')}` : 'generic';
+                newRole = suffix ? `${newValue}_${suffix.replace(/\s+/g, '_')}` : newValue;
             }
             renameProfileChannel(oldRole, newRole);
         }
@@ -1859,7 +1956,7 @@
         function appendNewChannel() {
             const offsets = Object.values(currentProfile.channels);
             const nextOffset = offsets.length > 0 ? Math.max(...offsets) + 1 : 0;
-            const newRole = `generic_ch${nextOffset + 1}`;
+            const newRole = `unassigned_ch${nextOffset + 1}`;
 
             currentProfile.channels[newRole] = nextOffset;
             currentProfile.defaults[newRole] = 0;
@@ -2091,7 +2188,7 @@
 
         function updateGenericParam(role, param, val) {
             if (!currentProfile.generic) currentProfile.generic = {};
-            if (!currentProfile.generic[role]) currentProfile.generic[role] = { min: 0, max: 255, default: 0, modifier: 'intensity' };
+            if (!currentProfile.generic[role]) currentProfile.generic[role] = { min: 0, max: 255, default: 0, modifier: 'intensity', amount: 100 };
             currentProfile.generic[role][param] = val;
             syncUiToJson();
         }
@@ -2150,16 +2247,11 @@
                 opt.innerText = k;
                 sel.appendChild(opt);
             });
-            if (sel.options.length > 0) renderTestFaders();
+            if (sel.options.length > 0) handleDeviceSelection(sel.options[0].value);
         }
 
-        let currentFaderValues = {};
-        let saveActiveChannels = {}; // { addr: true/false }
-
         // --- LOOPER ENGINE ---
-        let looperState = {}; // { addr: { mode: 'idle'|'rec'|'play', frames: [], playIdx: 0, lastVal: 0 } }
-        let looperInterval = null;
-        let isEngineVisualOn = true;
+        isEngineVisualOn = true;
 
         const SCENE_MAPPINGS = {
             'hold': 'HOLD',
@@ -2312,75 +2404,200 @@
             }
         }
 
-        async function renderTestFaders() {
-            const devName = document.getElementById('test-dev-select').value;
-            // Removed: currentFaderValues = {};
-            // Removed: looperState = {};
+        async function handleDeviceSelection(devName) {
+            if (!devName) return;
+            if (activeTestDevices.includes(devName)) return;
 
-            let allDevices = stageConfig.devices || {};
-            const dev = allDevices[devName];
-            if (!dev) return;
-
-            let profile = currentProfile;
-            if (!profile || !profile.type || profile.type !== dev.type) {
-                try {
-                    const res = await fetch(`${API_BASE}/${dev.type}.json`);
-                    if (res.ok) profile = await res.json();
-                    else return;
-                } catch (e) { console.error("Profile load error", e); return; }
+            if (activeTestDevices.length > 0) {
+                if (confirm(`Add ${devName} to current view?`)) {
+                    activeTestDevices.push(devName);
+                } else {
+                    activeTestDevices = [devName];
+                }
+            } else {
+                activeTestDevices = [devName];
             }
-            currentProfile = profile;
+            await renderTestFaders();
+        }
 
+        async function renderTestFaders() {
             const container = document.getElementById('test-faders');
             container.innerHTML = '';
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column'; // Vertical stack of horizontal rows
+            container.style.gap = '20px';
+            container.style.padding = '20px';
 
-            const sortedChans = Object.entries(profile.channels).sort((a, b) => {
-                const offA = typeof a[1] === 'object' ? a[1].offset : a[1];
-                const offB = typeof b[1] === 'object' ? b[1].offset : b[1];
-                return offA - offB;
-            });
+            let allDevices = stageConfig.devices || {};
 
-            sortedChans.forEach(([role, val]) => {
-                const offset = typeof val === 'object' ? val.offset : val;
-                const absAddr = dev.address + dev.offset + offset;
+            for (const devName of activeTestDevices) {
+                const dev = allDevices[devName];
+                if (!dev) continue;
 
-                if (!looperState[absAddr]) {
-                    looperState[absAddr] = { mode: 'idle', frames: [], playIdx: 0, lastVal: 0 };
+                let profile = testProfiles[dev.type];
+                if (!profile) {
+                    try {
+                        const res = await fetch(`${API_BASE}/${dev.type}.json`);
+                        if (res.ok) {
+                            profile = await res.json();
+                            testProfiles[dev.type] = profile;
+                        } else continue;
+                    } catch (e) { console.error("Profile load error", e); continue; }
                 }
 
-                const wrapperOffset = document.createElement('div');
-                wrapperOffset.className = 'fader-ch';
+                const deviceSection = document.createElement('div');
+                deviceSection.style.display = 'flex';
+                deviceSection.style.flexDirection = 'column';
+                deviceSection.style.gap = '5px';
 
-                let shortRole = role.replace(/_/g, ' ').toUpperCase();
-                if (shortRole.length > 10) shortRole = shortRole.substring(0, 8) + '..';
-
-                wrapperOffset.innerHTML = `
-                    <div style="min-height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
-                        <input type="checkbox" id="save-active-${absAddr}" ${saveActiveChannels[absAddr] ? 'checked' : ''} 
-                            onchange="saveActiveChannels[${absAddr}] = this.checked"
-                            title="Include in Save"
-                            style="margin:0; cursor:pointer; accent-color:var(--accent);">
-                        <div id="led-${absAddr}" class="led"></div>
-                        <button class="looper-btn" onclick="toggleLooper(${absAddr})"></button>
-                    </div>
-                    
-                    <div style="font-size:10px; color:#aaa; margin-bottom:5px">CH ${absAddr}</div>
-                    
-                    <input type="range" id="input-${absAddr}" min="0" max="255" value="0" 
-                        oninput="updateDmxState(${absAddr}, this.value)"
-                        style="flex:1;">
-                    
-                    <input id="disp-${absAddr}" type="text" value="0" class="fader-val" style="background:transparent; border:none; text-align:center; color:var(--text); width:100%; font-family:inherit; outline:none; border-bottom:1px solid #333;" 
-                        onkeydown="handleFaderInput(event, ${absAddr}, this)" 
-                        onblur="syncFaderInput(${absAddr}, this)"
-                        title="Enter value (0-255) or loop range (0-100)">
-                    <div style="font-size:9px; margin-top:5px; text-align:center; color:#888; letter-spacing:1px; line-height: 1.1;">${shortRole}</div>
+                const deviceHeader = document.createElement('div');
+                deviceHeader.style.display = 'flex';
+                deviceHeader.style.justifyContent = 'space-between';
+                deviceHeader.style.alignItems = 'center';
+                deviceHeader.style.borderBottom = '1px solid #333';
+                deviceHeader.style.paddingBottom = '5px';
+                deviceHeader.style.marginBottom = '5px';
+                deviceHeader.innerHTML = `
+                    <div style="color:var(--accent); font-weight:bold; font-size:14px; letter-spacing:1px;">${devName} (${dev.type})</div>
+                    <button onclick="removeActiveTestDevice('${devName}')" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px;">✕ Close</button>
                 `;
-                container.appendChild(wrapperOffset);
-            });
+                deviceSection.appendChild(deviceHeader);
+
+                const fadersRow = document.createElement('div');
+                fadersRow.style.display = 'flex';
+                fadersRow.style.flexWrap = 'nowrap';
+                fadersRow.style.alignItems = 'flex-start';
+                fadersRow.style.gap = '0';
+                fadersRow.style.overflowX = 'auto';
+
+                // Get standard sorted addresses
+                const standardOrder = Object.entries(profile.channels).sort((a, b) => {
+                    const offA = typeof a[1] === 'object' ? a[1].offset : a[1];
+                    const offB = typeof b[1] === 'object' ? b[1].offset : b[1];
+                    return offA - offB;
+                }).map(([role, val]) => {
+                    const offset = typeof val === 'object' ? val.offset : val;
+                    return { role, addr: dev.address + dev.offset + offset };
+                });
+
+                // Maintain persistent order per device
+                if (!testOrder[devName] || testOrder[devName].length !== standardOrder.length) {
+                    testOrder[devName] = standardOrder;
+                }
+                if (!linkedLinks[devName]) linkedLinks[devName] = new Set();
+
+                const order = testOrder[devName];
+                const links = linkedLinks[devName];
+
+                order.forEach((ch, idx) => {
+                    const absAddr = ch.addr;
+                    const role = ch.role;
+
+                    if (!looperState[absAddr]) {
+                        looperState[absAddr] = { mode: 'idle', frames: [], playIdx: 0, lastVal: 0 };
+                    }
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'fader-ch';
+                    wrapper.dataset.addr = absAddr;
+                    wrapper.dataset.index = idx;
+                    wrapper.dataset.devName = devName;
+
+                    const isLinkedNext = links.has(`${absAddr}-${order[idx + 1]?.addr}`);
+                    const isLinkedPrev = links.has(`${order[idx - 1]?.addr}-${absAddr}`);
+
+                    if (isLinkedNext) wrapper.classList.add('linked-next');
+                    if (isLinkedPrev) wrapper.classList.add('linked-prev');
+
+                    // Drag Events
+                    wrapper.addEventListener('dragstart', (e) => {
+                        wrapper.classList.add('dragging');
+                        e.dataTransfer.setData('text/plain', JSON.stringify({ devName, idx }));
+                    });
+                    wrapper.addEventListener('dragend', () => {
+                        wrapper.classList.remove('dragging');
+                        wrapper.removeAttribute('draggable');
+                    });
+                    wrapper.addEventListener('dragover', (e) => e.preventDefault());
+                    wrapper.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        if (data.devName !== devName) return; // Only allow reorder within same device group
+                        const fromIdx = data.idx;
+                        const toIdx = idx;
+                        if (fromIdx !== toIdx) {
+                            const item = order.splice(fromIdx, 1)[0];
+                            order.splice(toIdx, 0, item);
+                            renderTestFaders();
+                        }
+                    });
+
+                    let shortRole = role.replace(/_/g, ' ').toUpperCase();
+                    if (shortRole.length > 10) shortRole = shortRole.substring(0, 8) + '..';
+
+                    wrapper.innerHTML = `
+                        <div style="min-height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+                            <input type="checkbox" id="save-active-${absAddr}" ${saveActiveChannels[absAddr] ? 'checked' : ''} 
+                                onchange="saveActiveChannels[${absAddr}] = this.checked"
+                                title="Include in Save"
+                                style="margin:0; cursor:pointer; accent-color:var(--accent);">
+                            <div id="led-${absAddr}" class="led"></div>
+                            <button class="looper-btn" onclick="toggleLooper(${absAddr})"></button>
+                        </div>
+                        
+                        <div style="font-size:10px; color:#aaa; margin-bottom:5px">CH ${absAddr}</div>
+                        
+                        <input type="range" id="input-${absAddr}" min="0" max="255" value="${currentFaderValues[absAddr] || 0}" 
+                            oninput="updateDmxState(${absAddr}, this.value)"
+                            style="flex:1;">
+                        
+                        <input id="disp-${absAddr}" type="text" value="${currentFaderValues[absAddr] || 0}" class="fader-val" style="background:transparent; border:none; text-align:center; color:var(--text); width:100%; font-family:inherit; outline:none; border-bottom:1px solid #333;" 
+                            onkeydown="handleFaderInput(event, ${absAddr}, this)" 
+                            onblur="syncFaderInput(${absAddr}, this)"
+                            title="Enter value (0-255) or loop range (0-100)">
+                        <div style="font-size:9px; margin-top:5px; text-align:center; color:#888; letter-spacing:1px; line-height: 1.1; margin-bottom: 5px;">${shortRole}</div>
+                        
+                        <div class="drag-handle" 
+                            onmousedown="this.parentElement.setAttribute('draggable', 'true')" 
+                            onmouseup="this.parentElement.removeAttribute('draggable')" 
+                            onmouseleave="this.parentElement.removeAttribute('draggable')">≡</div>
+                    `;
+                    fadersRow.appendChild(wrapper);
+
+                    // Add Link Button after if not last
+                    if (idx < order.length - 1) {
+                        const connector = document.createElement('div');
+                        connector.className = 'link-connector';
+                        const nextAddr = order[idx + 1].addr;
+                        const linkKey = `${absAddr}-${nextAddr}`;
+                        const isActive = links.has(linkKey);
+
+                        connector.innerHTML = `
+                            <button class="link-btn ${isActive ? 'active' : ''}" onclick="toggleFaderLink('${devName}', '${linkKey}')" title="Link Sliders">
+                                🔗
+                            </button>
+                        `;
+                        fadersRow.appendChild(connector);
+                    }
+                });
+                deviceSection.appendChild(fadersRow);
+                container.appendChild(deviceSection);
+            }
 
             if (looperInterval) clearInterval(looperInterval);
             looperInterval = setInterval(looperTick, 1000 / 30);
+        }
+
+        async function removeActiveTestDevice(devName) {
+            activeTestDevices = activeTestDevices.filter(d => d !== devName);
+            await renderTestFaders();
+        }
+
+        function toggleFaderLink(devName, linkKey) {
+            const links = linkedLinks[devName];
+            if (links.has(linkKey)) links.delete(linkKey);
+            else links.add(linkKey);
+            renderTestFaders();
         }
 
         function handleFaderInput(e, addr, el) {
@@ -2415,8 +2632,6 @@
             let v = parseInt(valStr);
             if (!isNaN(v)) {
                 v = Math.max(0, Math.min(255, v));
-                el.value = v;
-                document.getElementById(`input-${addr}`).value = v;
                 updateDmxState(addr, v);
             } else {
                 el.value = currentFaderValues[addr] || 0;
@@ -2470,23 +2685,76 @@
             if (led) led.className = 'led green';
         }
 
-        function updateDmxState(addr, val) {
+        function updateDmxState(addr, val, skipLinked = false) {
             const intVal = parseInt(val);
-            currentFaderValues[addr] = intVal;
-            saveActiveChannels[addr] = true; // Auto-activate for save
 
-            const checkbox = document.getElementById(`save-active-${addr}`);
-            if (checkbox) checkbox.checked = true;
+            // Find which device this addr belongs to
+            let devName = null;
+            let allDevices = stageConfig.devices || {};
+            for (const name of activeTestDevices) {
+                const dev = allDevices[name];
+                const profile = testProfiles[dev.type];
+                if (!profile) continue;
 
-            const disp = document.getElementById(`disp-${addr}`);
-            if (disp) {
-                disp.value = intVal;
-                disp.innerText = intVal;
+                const offsets = Object.values(profile.channels).map(v => typeof v === 'object' ? v.offset : v);
+                const minAddr = dev.address + dev.offset + Math.min(...offsets);
+                const maxAddr = dev.address + dev.offset + Math.max(...offsets);
+
+                if (addr >= minAddr && addr <= maxAddr) {
+                    devName = name;
+                    break;
+                }
             }
 
-            if (looperState[addr] && looperState[addr].mode === 'play') {
-                // Optionally interrupt playback? Or let it fight. Let it fight for simplicity.
+            if (!devName) {
+                // Fallback for cases where it's not in a current profile (shouldn't happen with current logic)
+                currentFaderValues[addr] = intVal;
+                return;
             }
+
+            // Find Linked Group
+            let group = [addr];
+            if (!skipLinked && linkedLinks[devName]) {
+                const order = testOrder[devName] || [];
+                const links = linkedLinks[devName];
+
+                // Expand forwards
+                let curr = addr;
+                while (true) {
+                    const idx = order.findIndex(o => o.addr === curr);
+                    const next = order[idx + 1];
+                    if (next && links.has(`${curr}-${next.addr}`)) {
+                        group.push(next.addr);
+                        curr = next.addr;
+                    } else break;
+                }
+                // Expand backwards
+                curr = addr;
+                while (true) {
+                    const idx = order.findIndex(o => o.addr === curr);
+                    const prev = order[idx - 1];
+                    if (prev && links.has(`${prev.addr}-${curr}`)) {
+                        group.unshift(prev.addr);
+                        curr = prev.addr;
+                    } else break;
+                }
+            }
+
+            group.forEach(targetAddr => {
+                currentFaderValues[targetAddr] = intVal;
+                saveActiveChannels[targetAddr] = true;
+
+                const checkbox = document.getElementById(`save-active-${targetAddr}`);
+                if (checkbox) checkbox.checked = true;
+
+                const disp = document.getElementById(`disp-${targetAddr}`);
+                if (disp) {
+                    disp.value = intVal;
+                    disp.innerText = intVal;
+                }
+                const input = document.getElementById(`input-${targetAddr}`);
+                if (input) input.value = intVal;
+            });
 
             // Send ALL active overrides
             const overrides = Object.entries(currentFaderValues).map(([a, v]) => ({
@@ -2543,7 +2811,7 @@
             // Persist to presets.json
             let existingPresets = {};
             try {
-                const res = await fetch(`${API_BASE}/presets.json`);
+                const res = await fetch(`${API_BASE}/presets.json?t=${Date.now()}`, { cache: 'no-store' });
                 if (res.ok) existingPresets = await res.json();
             } catch (e) {
                 console.log("No existing presets.json found. Creating new one.");

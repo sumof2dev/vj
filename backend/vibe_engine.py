@@ -43,10 +43,16 @@ class VibeEngine:
             # Low Density + Low Vol = CHILL
             # High Density AND High Vol = HIGH (harder to achieve - reserve for drops)
             # Everything else = MID
-            if density < 2 and audio_state['vol'] < 0.3:
+            # Inject Spotify Context if available
+            spotify = audio_state.get('spotify', {})
+            track_energy = spotify.get('energy', 0.5)
+            
+            # Logic mapped with Spotify authority
+            # If Spotify says it's a chill song (< 0.4 energy), suppress wild modes
+            if (density < 2 and audio_state['vol'] < 0.3) or (track_energy < 0.4 and audio_state['vol'] < 0.6):
                 target = "chill"
-            elif density > 4 and audio_state['vol'] > 0.5 and audio_state.get('confidence', 0.5) > 0.5:
-                # HIGH is now easier to reach
+            # If Spotify says it's a banger (> 0.7 energy), let it reach HIGH much easier
+            elif density > 3 and audio_state['vol'] > 0.5 and (audio_state.get('confidence', 0.5) > 0.5 or track_energy > 0.7):
                 target = "high"
             else:
                 target = "mid"
