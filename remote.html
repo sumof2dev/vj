@@ -366,6 +366,138 @@
             padding-bottom: 5px;
         }
 
+        /* --- SPOTIFY NOW PLAYING PANEL --- */
+        .spotify-panel {
+            background: linear-gradient(135deg, #121812, #080a08);
+            border: 1px solid #1db954;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            display: none;
+            /* Hidden when nothing is playing */
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .spotify-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .spotify-title {
+            color: #1db954;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .spotify-track-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .spotify-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 60px;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .spot-stat-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .spot-label {
+            font-size: 0.6rem;
+            color: #888;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .spot-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: #222;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .spot-bar-fg {
+            height: 100%;
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.3s ease-out;
+        }
+
+        .spot-energy-bar {
+            background: linear-gradient(90deg, #f39c12, #e74c3c);
+        }
+
+        .spot-valence-bar {
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+        }
+
+        .spot-bpm {
+            font-size: 1.1rem;
+            font-family: monospace;
+            font-weight: bold;
+            color: #1db954;
+            text-align: right;
+            padding-right: 4px;
+        }
+
+        /* --- DEBUG DETAILS CONTAINER --- */
+        details.debug-section {
+            background: #111;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        details.debug-section>summary {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            cursor: pointer;
+            list-style: none;
+            /* Hide default arrow in some browsers */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        details.debug-section>summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.debug-section>summary::after {
+            content: '▼';
+            font-size: 0.8em;
+            transition: transform 0.2s;
+        }
+
+        details.debug-section[open]>summary::after {
+            transform: rotate(180deg);
+        }
+
+        details.debug-section>summary:hover {
+            color: #fff;
+        }
+
         /* --- ENGINE THINKING PANEL --- */
         .thinking-panel {
             background: linear-gradient(135deg, #111, #080808);
@@ -608,55 +740,83 @@
             </div>
         </div>
 
-
-        <!-- ENGINE THINKING DASHBOARD -->
-        <div class="thinking-panel">
-            <div class="transient-display">
-                <div class="transient-label">AI Logic</div>
-                <div id="transientVal" class="transient-value steady">STEADY</div>
+        <!-- SPOTIFY NOW PLAYING PANEL -->
+        <div class="spotify-panel" id="spotifyPanel" style="display:none;">
+            <div class="spotify-header">
+                <div class="spotify-title">🎵 Now Playing</div>
             </div>
 
-            <div class="bin-viz" id="binViz">
-                <!-- 11 Bins -->
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-                <div class="bin-bar"></div>
-            </div>
+            <div style="display: flex; gap: 12px; align-items: center; margin-top: 5px;">
+                <img id="spotArt" src=""
+                    style="width: 48px; height: 48px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: none;">
+                <div style="flex: 1; min-width: 0;">
+                    <div class="spotify-track-name" id="spotTrackName">Waiting for track...</div>
 
-            <div class="stats-display">
-                <div class="stat-item">
-                    <span class="stat-label">System BPM</span>
-                    <span class="stat-val" id="statsBpm">--</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Confidence</span>
-                    <span class="stat-val" id="statsConf">--%</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">IQ (Isolation)</span>
-                    <span class="stat-val" id="statsIso">--%</span>
-                </div>
-                <div class="stat-item" id="beatTrigger" style="transition: background 0.1s;">
-                    <span class="stat-label">Grid Sync</span>
-                    <span class="stat-val" style="color:white; font-size:0.55rem;">PULSE</span>
+                    <div
+                        style="height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-top: 8px; overflow: hidden;">
+                        <div id="spotProgress"
+                            style="height: 100%; width: 0%; background: #1db954; transition: width 1s linear;"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- MONITOR -->
-        <div class="section" style="margin-top:16px;">
-            <div class="section-title">📊 Live Monitor</div>
-            <div id="activeSceneTag" style="font-size:0.8rem; margin-bottom:5px; color:#aaa;">Scene: --</div>
-            <div class="monitor-grid" id="dmxGrid"></div>
-        </div>
+        <!-- DEBUG & LIVE MONITOR -->
+        <details class="debug-section">
+            <summary>🛠️ Live Debugger & Engine Data</summary>
+
+            <div style="margin-top: 15px;">
+                <!-- ENGINE THINKING DASHBOARD -->
+                <div class="thinking-panel">
+                    <div class="transient-display">
+                        <div class="transient-label">AI Logic</div>
+                        <div id="transientVal" class="transient-value steady">STEADY</div>
+                    </div>
+
+                    <div class="bin-viz" id="binViz">
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                        <div class="bin-bar"></div>
+                    </div>
+
+                    <div class="stats-display">
+                        <div class="stat-item">
+                            <span class="stat-label">System BPM</span>
+                            <span class="stat-val" id="statsBpm">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Confidence</span>
+                            <span class="stat-val" id="statsConf">--%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">IQ (Isolation)</span>
+                            <span class="stat-val" id="statsIso">--%</span>
+                        </div>
+                        <div class="stat-item" id="beatTrigger" style="transition: background 0.1s;">
+                            <span class="stat-label">Grid Sync</span>
+                            <span class="stat-val" style="color:white; font-size:0.55rem;">PULSE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MONITOR -->
+                <div class="section" style="margin-top:16px;">
+                    <div class="section-title">📊 Live Monitor</div>
+                    <div id="activeSceneTag" style="font-size:0.8rem; margin-bottom:5px; color:#aaa;">Scene: --</div>
+                    <div id="activeAddonSceneTag"
+                        style="font-size:0.8rem; margin-bottom:10px; color:#aaa; display:none;">Add-on: --</div>
+                    <div class="monitor-grid" id="dmxGrid"></div>
+                </div>
+            </div>
+        </details>
 
     </div>
 
@@ -717,6 +877,34 @@
                         }
 
                         // Update Engine Thinking Panels
+                        if (data.spotify) {
+                            const sp = data.spotify;
+                            document.getElementById('spotifyPanel').style.display = 'flex';
+                            document.getElementById('spotTrackName').textContent = sp.name || "Unknown Track";
+
+                            // Progress bar
+                            const progEl = document.getElementById('spotProgress');
+                            if (sp.duration_ms && sp.progress_ms) {
+                                const pct = Math.min(100, (sp.progress_ms / sp.duration_ms) * 100);
+                                progEl.style.width = pct + '%';
+                            } else {
+                                progEl.style.width = '0%';
+                            }
+
+                            // Album Art
+                            const artEl = document.getElementById('spotArt');
+                            if (sp.image_low) {
+                                artEl.src = sp.image_low;
+                                artEl.style.display = 'block';
+                            } else {
+                                artEl.style.display = 'none';
+                            }
+
+                        } else {
+                            // If no spotify data is present in the latest audio state, hide the panel
+                            document.getElementById('spotifyPanel').style.display = 'none';
+                        }
+
                         if (data.transient) {
                             const tVal = document.getElementById('transientVal');
                             const tStr = data.transient.toUpperCase();
@@ -760,6 +948,12 @@
 
                         if (msg.dmx) updateDMXMonitor(msg.dmx);
                         if (msg.active_scene) document.getElementById('activeSceneTag').innerHTML = `Scene: <b style="color:white">${msg.active_scene.toUpperCase()}</b>`;
+                        if (msg.active_addon_scene) {
+                            document.getElementById('activeAddonSceneTag').innerHTML = `Add-on: <b style="color:var(--accent-visual)">${msg.active_addon_scene.toUpperCase()}</b>`;
+                            document.getElementById('activeAddonSceneTag').style.display = 'block';
+                        } else {
+                            document.getElementById('activeAddonSceneTag').style.display = 'none';
+                        }
                     }
                     else if (msg.type === 'force_refresh') {
                         window.location.reload();

@@ -1,0 +1,140 @@
+{
+    "type": "testeha",
+    "name": "New Fixture",
+    "channels": {
+        "generic_ch2": 1,
+        "generic_ch3": 2,
+        "generic_ch4": 3,
+        "generic_ch5": 4,
+        "generic_ch6": 5,
+        "generic_ch7": 6,
+        "generic_ch8": 7,
+        "generic_ch9": 8,
+        "generic_ch10": 9,
+        "generic_ch11": 10,
+        "generic_ch12": 11,
+        "generic_ch13": 12,
+        "generic_ch14": 13,
+        "generic_1": 0
+    },
+    "modes": {},
+    "defaults": {
+        "generic_ch2": null,
+        "generic_ch3": null,
+        "generic_ch4": null,
+        "generic_ch5": null,
+        "generic_ch6": null,
+        "generic_ch7": null,
+        "generic_ch8": null,
+        "generic_ch9": null,
+        "generic_ch10": null,
+        "generic_ch11": null,
+        "generic_ch12": null,
+        "generic_ch13": 0,
+        "generic_ch14": 0,
+        "generic_1": 0
+    },
+    "calibration": {},
+    "shapes": {},
+    "ranges": {},
+    "dynamics": {},
+    "macros": {},
+    "generic": {
+        "generic_ch2": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "flux"
+        },
+        "generic_ch3": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "crosstalk"
+        },
+        "generic_ch4": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "bass"
+        },
+        "generic_ch5": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "intensity"
+        },
+        "generic_ch6": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "treble"
+        },
+        "generic_ch7": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "intensity"
+        },
+        "generic_ch8": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "intensity"
+        },
+        "generic_ch9": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "intensity"
+        },
+        "generic_ch10": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "intensity"
+        },
+        "generic_ch11": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "flux"
+        },
+        "generic_ch12": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "intensity"
+        },
+        "generic_ch13": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "none"
+        },
+        "generic_ch14": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "none"
+        },
+        "generic_ch15": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "none"
+        },
+        "generic_ch16": {
+            "min": 0,
+            "max": 255,
+            "default": 0,
+            "modifier": "none"
+        },
+        "generic_1": {
+            "min": 220,
+            "max": 255,
+            "default": 0,
+            "modifier": "treble"
+        }
+    }
+}

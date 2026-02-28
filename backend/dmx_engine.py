@@ -75,7 +75,7 @@ class DMXEngine:
         self.rot_cycle = 0 
         
         # Universal visual pools (Vibe-agnostic)
-        all_bases = [0, 1, 2, 3, 3, 3, 4, 5, 6, 7, 8, 9, 10] 
+        all_bases = [0, 1, 2, 3, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11] 
         all_fx = [0, 1, 2, 3, 5, 6]
         
         self.visual_pools = {
@@ -140,6 +140,7 @@ class DMXEngine:
         self._stage_config_path = os.path.join('fixtures', 'stage_config.json')
         self._presets_config_path = os.path.join('fixtures', 'presets.json')
         self._roles_config_path = 'roles.json'
+        self._fixture_mtimes = {}  # Track fixture file modifications
         
         self._load_profiles()
         self._load_roles() # Explicitly load roles after path is defined
@@ -154,6 +155,8 @@ class DMXEngine:
             'high': ['chase', 'lissajous']
         }
         self.current_scene_name = 'hold'
+        self.active_addon_scene = None
+        self._last_addon_scene_switch_beat = 0
 
         self._last_vibe_mtime = os.path.getmtime(self._vibe_config_path) if os.path.exists(self._vibe_config_path) else 0
         self._last_stage_mtime = os.path.getmtime(self._stage_config_path) if os.path.exists(self._stage_config_path) else 0
@@ -213,6 +216,7 @@ class DMXEngine:
                         fix_data = json.load(f)
                         fix_name = filename.replace('.json', '')
                         self.fixtures[fix_name] = fix_data
+                        self._fixture_mtimes[path] = os.path.getmtime(path)
                         print(f"✅ Loaded fixture definition: {fix_name}")
                 except Exception as e:
                     print(f"❌ Error loading fixture {filename}: {e}")
@@ -549,6 +553,17 @@ class DMXEngine:
                     self.current_scene_name = random.choice(active_pool)
                     self._last_scene_switch_beat = self.rot_state_timer
 
+            # --- ADDON SCENE SELECTION ---
+            # Periodically select an addon scene matching vibe for unassigned channels
+            beats_in_addon = self.rot_state_timer - getattr(self, '_last_addon_scene_switch_beat', 0)
+            if beats_in_addon >= 8 or getattr(self, 'active_addon_scene', None) is None:
+                addon_candidates = [p_name for p_name, p_data in self.presets.items() if p_data.get('vibe') == vibe]
+                if addon_candidates:
+                    self.active_addon_scene = random.choice(addon_candidates)
+                else:
+                    self.active_addon_scene = None
+                self._last_addon_scene_switch_beat = self.rot_state_timer
+
             # 1.5 Handle Intentional Effect Triggers (Effect Stack)
             self._handle_effect_triggers(audio, vibe)
 
@@ -577,10 +592,6 @@ class DMXEngine:
                 # Scene Handoff & Anchor Capture
                 if drone['scene'] != self.current_scene_name:
                     drone['scene'] = self.current_scene_name
-                    # SCENE RESET: Hard zero rotation memory on change
-                    drone['last_rot_z'] = 0.0
-                    drone['curr_rot_x'] = 0.0
-                    drone['curr_rot_y'] = 0.0
                     
                     # 1. Capture Lock Positions for current scene
                     drone['lock_x'] = drone['last_x']
@@ -591,7 +602,7 @@ class DMXEngine:
                     else:
                         drone['anchor_x'] = drone['last_x']
                         drone['anchor_y'] = drone['last_y']
-                        drone['anchor_rot_z'] = 0.0 # Reset rotation anchor
+                        drone['anchor_rot_z'] = drone['last_rot_z']
                         drone['blend'] = 0.0
 
                 # Progress the interpolation timer
@@ -701,6 +712,23 @@ class DMXEngine:
                     print(f"\n[DMX] 🎭 Roles change detected! Reloading {self._roles_config_path}...")
                     self._load_roles()
                     self._last_roles_mtime = m_roles
+            
+            # Watch fixture profiles
+            if hasattr(self, '_fixture_mtimes'):
+                for path, old_time in list(self._fixture_mtimes.items()):
+                    if os.path.exists(path):
+                        m_time = os.path.getmtime(path)
+                        if m_time > old_time:
+                            print(f"\n[DMX] 🔦 Fixture profile change detected! Reloading {path}...")
+                            try:
+                                with open(path, 'r') as f:
+                                    fix_data = json.load(f)
+                                    fix_name = os.path.basename(path).replace('.json', '')
+                                    self.fixtures[fix_name] = fix_data
+                                    print(f"✅ Reloaded fixture definition: {fix_name}")
+                                self._fixture_mtimes[path] = m_time
+                            except Exception as e:
+                                print(f"❌ Error reloading fixture {path}: {e}")
                     
         except Exception as e:
             print(f"\n[DMX] Error reloading config: {e}")
@@ -747,6 +775,14 @@ class DMXEngine:
                         if role in p_data.get('channels', {}):
                             val = p_data['channels'][role]
 
+            # --- ADDON SCENE OVERLAY (GENERIC CHANNELS) ---
+            if getattr(self, 'active_addon_scene', None):
+                p_data = self.presets.get(self.active_addon_scene, {})
+                # Only apply to channels with no assignment
+                if role.startswith('generic') or role.startswith('none') or role.startswith('unassigned'):
+                    if role in p_data.get('channels', {}):
+                        val = p_data['channels'][role]
+
             # Write to Universe
             if 0 < final_addr < len(self.universe):
                 # TENSION BLACKOUT: Force intensity-related channels to 0
@@ -755,7 +791,9 @@ class DMXEngine:
                 if self.transient == 'tension' and role in blackout_roles:
                     self.universe[final_addr] = 0
                 else:
-                    self.universe[final_addr] = int(max(0, min(255, val)))
+                    # Final safety: Ensure val is a number to prevent TypeError crashes
+                    safe_val = val if val is not None else 0
+                    self.universe[final_addr] = int(max(0, min(255, safe_val)))
 
     def _calculate_channel(self, role, vibe, audio, zone_idx, dev_name='L1', fixture=None):
         """Determine DMX value based on role and current vibe using JSON fixture metadata"""
@@ -910,19 +948,7 @@ class DMXEngine:
             safe_max = max(min_dmx, max_dmx)
             return int(max(safe_min, min(safe_max, val)))
 
-        # 2. HARDWARE COLOR LOGIC (Bass vs Treble Dominance)
-        if role in ['color_multi', 'color_solid']:
-            seed = getattr(self, 'color_idx', 0) + zone_idx
-            
-            # Treble Dominates -> Multi-Color Mode
-            if self.smoothed_high > self.smoothed_bass:
-                if role == 'color_multi': return (seed * 13) % 256
-                return 0
-            # Bass Dominates -> Solid Color Mode
-            else:
-                if role == 'color_solid': return 64 + ((seed * 17) % (255 - 64)) # Use cycle range
-                return 0
-
+        # 2. MOVED: HARDWARE COLOR LOGIC now handled entirely in Section 5
         # 3. MOVEMENT (Pan/Tilt)
         if role == 'pos_x' or role == 'pos_y':
             # Retrieve side for logic
@@ -1062,20 +1088,14 @@ class DMXEngine:
             self.drones[zone_idx]['curr_rot_y'] = output_rot_y
 
             # --- PURE PATH CALCULATIONS ---
-            # The smaller the size_pct (tighter dot), the higher the mobility allowance.
-            # Wide lasers move 50% less to prevent clipping, Dots move 100%.
-            mobility_factor = 0.5 + (1.0 - size_pct) * 0.5
-            
-            # Check for optional zoom-based position limitation range
-            zoom_cal = cal.get('zoom', {})
-            limit_range = zoom_cal.get('pos_limit_range', [0, 255])
-            if zoom_dmx_val < limit_range[0] or zoom_dmx_val > limit_range[1]:
-                mobility_factor = 1.0
+            # FULL MOBILITY ALLOWED
+            # User Request: Lift the restriction completely for all values
+            mobility_factor = 1.0
             
             # Ensure we use bounds safely inside the hardware's manual mapping (usually 0-127)
             # This mathematically guarantees we NEVER accidentally trigger a hardware macro
             manual_range = fixture.get('modes', {}).get(role, {}).get('manual', {}).get('range', [0, 127])
-            man_min, man_max = manual_range[0], manual_range[1]
+            man_min, man_max = min(manual_range), max(manual_range)
             
             # Use roles.json limits, but hard-clamp them to the manual range
             safe_min = max(man_min, min(c_min, c_max))
@@ -1189,25 +1209,41 @@ class DMXEngine:
                     return (seed_val * 13) % 256
                 return 0
             
-            # 5c. AUTO MODE: Vibe-based selection (Existing Logic)
-            if vibe == "chill":
-                if role == 'color_solid': return (seed_val * 7) % 64 
-                return 0
+            # 5c. AUTO MODE: Probabilistic selection (Vibe + Intensity + EQ)
+            # Base probability derived from vibe
+            base_score = 0.1
+            if vibe == "mid": base_score = 0.5
+            elif vibe == "high": base_score = 0.9
             
-            if vibe == "high":
-                # High Vibe: identical to 'multi' logic
+            # Intensity Mod: high intensity pushes it closer to the next state (+0.2)
+            intensity_boost = min(0.2, self.intensity * 0.2)
+            
+            # EQ Mod: Bass anchors to solid (negative), Treble pushes to multi (positive)
+            # Max delta is ~1.0, scaled by 0.4 for strong but balanced influence
+            eq_bias = (self.smoothed_high - self.smoothed_bass) * 0.4
+            
+            multi_score = max(0.0, min(1.0, base_score + intensity_boost + eq_bias))
+            
+            # Selection Threshold
+            prefer_multi = multi_score > 0.5
+            
+            if prefer_multi:
+                # Same active speeds as High/Multi logic
                 if role == 'color_solid': 
                     cycle_cfg = fixture.get('modes', {}).get('color_solid', {}).get('cycle', {})
                     rng = cycle_cfg.get('range', [64, 255])
-                    return min(255, rng[0] + 50) # Faster cycle
-                if role == 'color_multi': return (seed_val * 13) % 256
+                    return min(255, rng[0] + 50) 
+                if role == 'color_multi': 
+                    return (seed_val * 13) % 256
                 return 0
-            
-            if vibe == "mid":
-                if role == 'color_solid': return (seed_val * 17) % 256
-                else:
-                    if role == 'color_multi': return 20 + (seed_val * 77) % 200
-                    return 0
+            else:
+                # Prefer Solid Color (Bass / Chill)
+                if role == 'color_solid':
+                    if vibe == "chill":
+                        return (seed_val * 7) % 64 
+                    # Mid vibes are a bit faster
+                    return (seed_val * 17) % 256
+                return 0
 
         # 6. BEAM FX
         if role == 'beam_fx':
@@ -1331,6 +1367,7 @@ class DMXEngine:
         if role == 'generic' or role.startswith('generic'):
             gen = fixture.get('generic', {}).get(role, {})
             mod_name = gen.get('modifier', 'intensity')
+            amount = gen.get('amount', 100) / 100.0
             
             # Get Modifier Value (0.0 - 1.0)
             val_norm = 0.0
@@ -1348,6 +1385,8 @@ class DMXEngine:
                 val_norm = 1.0 - max(self.smoothed_bass, self.smoothed_high, self.smoothed_flux)
             elif mod_name == 'none':
                 val_norm = 0.0 # Just uses default/min?
+            
+            val_norm *= amount
             
             # Map 0.0-1.0 to Min-Max
             mn = gen.get('min', 0)
@@ -1385,7 +1424,7 @@ class DMXEngine:
                 # and let the global intensity scaling handle it.
                 return mx
 
-        if role in ['mode', 'boundary', 'group', 'twist', 'clip']: 
+        if role in ['mode', 'boundary', 'group', 'twist', 'clip', 'unassigned'] or role.startswith('unassigned'): 
             return -1
 
         return -1
@@ -1494,11 +1533,13 @@ class DMXEngine:
                 
                 # Bass Dominant -> Rotation Velocity (Drawing removed for Rare & Held consistency)
                 if bass_energy == dominant and bass_energy > 0.3:
-                    self.push_effect(i, 'rot_z', 'oscillation')
+                    # self.push_effect(i, 'rot_z', 'oscillation')
+                    pass
                 
                 # Mid Dominant -> 3D Rotation Unlock (Rot X/Y/Z get aggressive velocity)
                 elif mid_energy == dominant and mid_energy > 0.3:
-                    self.push_effect(i, 'rot_z', 'distortion')
+                    # self.push_effect(i, 'rot_z', 'distortion')
+                    pass
                     # Rot X and Y are handled via tumble in _calculate_channel
                     # but we push zoom oscillation to add visual intensity
                     # Zoom oscillation moved to rare status below
@@ -1519,10 +1560,11 @@ class DMXEngine:
                 continue
                 
             # 1. WAVE -> Only on Drop or Extreme Energy (Hardware Macros)
-            energy = (self.smoothed_bass + self.smoothed_flux) * 0.1
+            energy = (self.smoothed_bass + self.smoothed_flux) * 0.5
             if energy > 0.85 or force_macros:
-                self.push_effect(i, 'pos_x', 'wave')
-                self.push_effect(i, 'pos_y', 'wave')
+                # self.push_effect(i, 'pos_x', 'wave')
+                # self.push_effect(i, 'pos_y', 'wave')
+                pass
             else:
                 self.pop_effect(i, 'pos_x')
                 self.pop_effect(i, 'pos_y')
@@ -1534,7 +1576,7 @@ class DMXEngine:
             # 3. GRATING -> TREBLE (High-end energy)
             if treble_energy > 0.5 or force_macros:
                 self.push_effect(i, 'grating', 'active')
-                self.push_effect(i, 'rot_z', 'distortion')
+                # self.push_effect(i, 'rot_z', 'distortion')
             else:
                 self.pop_effect(i, 'grating')
                 self.pop_effect(i, 'rot_z')
@@ -1543,7 +1585,8 @@ class DMXEngine:
             # Increased threshold to 0.95 and using a more stable energy metric
             zoom_trigger_energy = (self.smoothed_bass * 0.7 + self.smoothed_flux * 0.3)
             if zoom_trigger_energy > 0.95 or force_macros:
-                self.push_effect(i, 'zoom', 'oscillation')
+                # self.push_effect(i, 'zoom', 'oscillation')
+                pass
             else:
                 self.pop_effect(i, 'zoom')
 

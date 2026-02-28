@@ -1,7 +1,7 @@
 {
     "devices": {
         "R1": {
-            "type": "ehaho_laser",
+            "type": "dynamic2",
             "address": 1,
             "offset": 0,
             "location": "left",
@@ -12,7 +12,7 @@
             "ip_address": "192.168.1.100"
         },
         "R2": {
-            "type": "ehaho_laser",
+            "type": "dynamic2",
             "address": 1,
             "offset": 17,
             "location": "left",
@@ -23,7 +23,7 @@
             "behavior": "lead"
         },
         "L1": {
-            "type": "ehaho_laser",
+            "type": "dynamic2",
             "address": 35,
             "offset": 0,
             "location": "right",
@@ -33,7 +33,7 @@
             "category": "laser"
         },
         "L2": {
-            "type": "ehaho_laser",
+            "type": "dynamic2",
             "address": 35,
             "offset": 17,
             "location": "right",
