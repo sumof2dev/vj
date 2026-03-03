@@ -35,24 +35,25 @@ class VibeEngine:
         density = len(self.beat_history)
 
         # 2. SELECT VIBE (The "Bucket")
-        # Hysteresis: Don't switch faster than every 4 seconds
+        # Hysteresis: Don't switch faster than every 2 seconds
         if now - self.last_vibe_change > 2.0:
             target = self.current_vibe
             
-            # Logic:
-            # Low Density + Low Vol = CHILL
-            # High Density AND High Vol = HIGH (harder to achieve - reserve for drops)
-            # Everything else = MID
-            # Inject Spotify Context if available
-            spotify = audio_state.get('spotify', {})
-            track_energy = spotify.get('energy', 0.5)
+            # Hybrid Logic: Discrete checks (Density AND Volume) but parameterized by Bias
+            # Bias 0.0 -> Easy to leave Mid (Small Mid Zone)
+            # Bias 1.0 -> Hard to leave Mid (Extreme Mid Zone)
             
-            # Logic mapped with Spotify authority
-            # If Spotify says it's a chill song (< 0.4 energy), suppress wild modes
-            if (density < 2 and audio_state['vol'] < 0.3) or (track_energy < 0.4 and audio_state['vol'] < 0.6):
+            # Chill Thresholds: Lower bias makes it easier to hit chill (higher thresholds)
+            chill_density = 2.0 * (1.0 - self.mid_vibe_bias)
+            chill_vol = 0.3 * (1.0 - self.mid_vibe_bias)
+            
+            # High Thresholds: Lower bias makes it easier to hit high (lower thresholds)
+            high_density = 4.0 + (4.0 * self.mid_vibe_bias)
+            high_vol = 0.5 + (0.4 * self.mid_vibe_bias)
+            
+            if density < chill_density and audio_state['vol'] < chill_vol:
                 target = "chill"
-            # If Spotify says it's a banger (> 0.7 energy), let it reach HIGH much easier
-            elif density > 3 and audio_state['vol'] > 0.5 and (audio_state.get('confidence', 0.5) > 0.5 or track_energy > 0.7):
+            elif density > high_density and audio_state['vol'] > high_vol and audio_state.get('confidence', 1.0) > 0.5:
                 target = "high"
             else:
                 target = "mid"

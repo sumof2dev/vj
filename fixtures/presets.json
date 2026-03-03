@@ -14,6 +14,129 @@
             "drawing": 255,
             "twist": 178,
             "grating": 255
+        },
+        "profile": "Ehaho"
+    },
+    "maxrotate": {
+        "vibe": "high",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "Dim": 220,
+            "patterns": 123,
+            "zoom": 255,
+            "group": 250,
+            "clip": 0,
+            "rotate z": 255,
+            "x rot": 255,
+            "y rot": 255,
+            "dots": 82,
+            "draw": 0,
+            "drawing": 0,
+            "twist": 0,
+            "grating": 0
         }
+    },
+    "wonky": {
+        "vibe": "wonky",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "Dim": 220,
+            "zoom": 0,
+            "group": 250,
+            "clip": 0,
+            "rotate z": 0,
+            "x pos": 161,
+            "y pos": 0,
+            "x rot": 0,
+            "y rot": 255,
+            "dots": 82,
+            "draw": 0,
+            "drawing": 0,
+            "twist": 0,
+            "grating": 0
+        }
+    },
+    "machinegun": {
+        "vibe": "machine_gun",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "Dim": 220,
+            "zoom": 0,
+            "group": 250,
+            "clip": 0,
+            "rotate z": 0,
+            "x pos": 0,
+            "y pos": 198,
+            "x rot": 255,
+            "y rot": 113,
+            "dots": 82,
+            "draw": 0,
+            "drawing": 0,
+            "twist": 0,
+            "grating": 0
+        }
+    },
+    "spiral": {
+        "vibe": "high",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "patterns": 21
+        },
+        "trigger": "vibe:high",
+        "category": "shapes"
+    },
+    "circle_of_cir": {
+        "vibe": "high",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "patterns": 29
+        },
+        "category": "shapes",
+        "trigger": "vibe:high"
+    },
+    "square": {
+        "vibe": "chill",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "patterns": 30
+        },
+        "category": "shapes",
+        "trigger": "vibe:chill"
+    },
+    "caret": {
+        "vibe": "high",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "patterns": 55
+        },
+        "trigger": "vibe:high",
+        "category": "shapes"
+    },
+    "jagged": {
+        "vibe": "high",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "patterns": 127
+        },
+        "trigger": "vibe:high",
+        "category": "shapes"
+    },
+    "dotted_circle": {
+        "vibe": "high",
+        "target_category": "laser",
+        "profile": "Ehaho",
+        "channels": {
+            "patterns": 3
+        },
+        "trigger": "vibe:high",
+        "category": "shapes"
     }
 }

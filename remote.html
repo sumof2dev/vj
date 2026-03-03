@@ -605,6 +605,40 @@
             font-family: monospace;
             font-weight: bold;
         }
+
+        /* Lissajous Visualization */
+        .lissajous-container {
+            grid-column: span 3;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #222;
+            border-radius: 8px;
+            height: 120px;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .lissajous-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .lissajous-label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 0.6rem;
+            color: #555;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        @media(max-width: 600px) {
+            .lissajous-container {
+                grid-column: span 1;
+            }
+        }
     </style>
 </head>
 
@@ -807,6 +841,11 @@
                     </div>
                 </div>
 
+                <div class="lissajous-container">
+                    <div class="lissajous-label">Lissajous Live (Phase / Oscillator State)</div>
+                    <canvas id="lissajousCanvas" class="lissajous-canvas"></canvas>
+                </div>
+
                 <!-- MONITOR -->
                 <div class="section" style="margin-top:16px;">
                     <div class="section-title">📊 Live Monitor</div>
@@ -945,6 +984,8 @@
                             bt.style.background = 'rgba(162, 155, 254, 0.4)';
                             setTimeout(() => bt.style.background = '#1a1a1a', 100);
                         }
+
+                        if (msg.logic) renderLissajous(msg.logic);
 
                         if (msg.dmx) updateDMXMonitor(msg.dmx);
                         if (msg.active_scene) document.getElementById('activeSceneTag').innerHTML = `Scene: <b style="color:white">${msg.active_scene.toUpperCase()}</b>`;
@@ -1112,6 +1153,89 @@
             else hiddenChannels.add(key);
             localStorage.setItem('hiddenChannels', JSON.stringify([...hiddenChannels]));
             updateDMXMonitor(lastDMX, true); // Force re-render
+        }
+
+        // Lissajous Renderer
+        const lCanvas = document.getElementById('lissajousCanvas');
+        const lCtx = lCanvas.getContext('2d');
+        let axisHistory = [];
+
+        function renderLissajous(logic) {
+            if (!lCanvas.width || lCanvas.width !== lCanvas.clientWidth) {
+                lCanvas.width = lCanvas.clientWidth;
+                lCanvas.height = lCanvas.clientHeight;
+            }
+
+            const w = lCanvas.width;
+            const h = lCanvas.height;
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const zoom = Math.min(w, h) * 0.4;
+
+            lCtx.clearRect(0, 0, w, h);
+
+            // Draw Grid
+            lCtx.strokeStyle = '#1a1a1a';
+            lCtx.lineWidth = 1;
+            lCtx.beginPath();
+            lCtx.moveTo(centerX, 0); lCtx.lineTo(centerX, h);
+            lCtx.moveTo(0, centerY); lCtx.lineTo(w, centerY);
+            lCtx.stroke();
+
+            // Store history for trails
+            axisHistory.push({ x: logic.axis_a || 0, y: logic.axis_b || 0, d: logic.axis_d || 0, e: logic.axis_e || 0 });
+            if (axisHistory.length > 50) axisHistory.shift();
+
+            // Draw Trail (Primary Axis A/B)
+            lCtx.lineWidth = 2;
+            lCtx.beginPath();
+            axisHistory.forEach((pt, i) => {
+                const alpha = i / axisHistory.length;
+                lCtx.strokeStyle = `rgba(162, 155, 254, ${alpha * 0.5})`;
+                const px = centerX + pt.x * zoom;
+                const py = centerY + pt.y * zoom;
+                if (i === 0) lCtx.moveTo(px, py);
+                else lCtx.lineTo(px, py);
+            });
+            lCtx.stroke();
+
+            // Draw Current Head (Primary)
+            const curX = centerX + (logic.axis_a || 0) * zoom;
+            const curY = centerY + (logic.axis_b || 0) * zoom;
+            lCtx.fillStyle = 'var(--accent-global)';
+            lCtx.beginPath();
+            lCtx.arc(curX, curY, 5, 0, Math.PI * 2);
+            lCtx.fill();
+
+            // Draw Secondary (Quadrature D/E)
+            const curD = centerX + (logic.axis_d || 0) * zoom;
+            const curE = centerY + (logic.axis_e || 0) * zoom;
+            lCtx.strokeStyle = 'rgba(107, 255, 219, 0.4)';
+            lCtx.setLineDash([2, 4]);
+            lCtx.beginPath();
+            lCtx.moveTo(centerX, centerY);
+            lCtx.lineTo(curD, curE);
+            lCtx.stroke();
+            lCtx.setLineDash([]);
+
+            lCtx.fillStyle = 'var(--accent-visual)';
+            lCtx.beginPath();
+            lCtx.arc(curD, curE, 3, 0, Math.PI * 2);
+            lCtx.fill();
+
+            // Draw Axis C (Z-Rotation / Color hint)
+            const curC = logic.axis_c || 0;
+            lCtx.strokeStyle = 'rgba(255, 107, 157, 0.6)';
+            lCtx.lineWidth = 4;
+            lCtx.beginPath();
+            lCtx.moveTo(w - 10, h / 2 - zoom / 2);
+            lCtx.lineTo(w - 10, h / 2 + zoom / 2);
+            lCtx.stroke();
+
+            lCtx.fillStyle = 'var(--accent-laser)';
+            lCtx.beginPath();
+            lCtx.arc(w - 10, h / 2 + curC * (zoom / 2), 4, 0, Math.PI * 2);
+            lCtx.fill();
         }
 
         function updateDMXMonitor(dmx, force = false) {

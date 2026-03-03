@@ -17,6 +17,7 @@ let rolesConfig = {
 let currentProfile = null;
 let availableProfiles = [];
 let ws = null;
+let testProfiles = {}; // Cache of loaded profiles for testing
 
 // --- INIT ---
 async function init() {
@@ -529,8 +530,8 @@ function renderProfileUi() {
         html += makeSectionCard('defaults', '⚙️ Defaults', renderDefaultsSection());
     if (profileHasRolesFor('calibration'))
         html += makeSectionCard('calibration', '🎯 Calibration', renderCalibrationSection());
-    if (profileHasRolesFor('shapes'))
-        html += makeSectionCard('shapes', '🔷 Shapes', renderShapesSection());
+    if (profileHasRolesFor('step_data'))
+        html += makeSectionCard('step_data', '🔷 Step Data', renderStepDataSection());
     if (profileHasRolesFor('ranges'))
         html += makeSectionCard('ranges', '📏 Ranges', renderRangesSection());
     if (profileHasRolesFor('dynamics'))
@@ -583,7 +584,7 @@ function renderChannelsSection() {
         html += `</select>`;
 
         // Keep offset editable just in case, but de-emphasized
-        html += `<input type="number" value="${offset}" min="0" max="512" style="width:55px; font-size:11px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Manual Offset Adjust">`;
+        html += `<input type="number" value="${offset}" min="0" max="512" style="width:75px; font-size:11px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Manual Offset Adjust">`;
         html += `<button class="kv-remove" style="margin-left:8px;" onclick="removeProfileChannel('${role}')">×</button>`;
         html += `</div>`;
     });
@@ -893,45 +894,45 @@ function updateCalibrationParam(chName, paramName, val, idx = -1) {
     syncUiToJson();
 }
 
-// ==================== SHAPES ====================
-function renderShapesSection() {
-    const shapes = currentProfile.shapes || {};
-    let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Shape name → DMX pattern value</div>';
-    Object.entries(shapes).forEach(([name, val]) => {
+// ==================== STEP DATA ====================
+function renderStepDataSection() {
+    const data = currentProfile.step_data || {};
+    let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Step mapping → DMX value index</div>';
+    Object.entries(data).forEach(([name, val]) => {
         html += `<div class="kv-row">
-                    <input class="kv-name" type="text" value="${name}" onchange="renameProfileShape('${name}', this.value)">
-                    <input class="kv-val" type="number" value="${val}" min="0" max="255" onchange="updateProfileShape('${name}', parseInt(this.value))">
-                    <button class="kv-remove" onclick="removeProfileShape('${name}')">×</button>
+                    <input class="kv-name" type="text" value="${name}" onchange="renameProfileStep('${name}', this.value)">
+                    <input class="kv-val" type="number" value="${val}" min="0" max="255" onchange="updateProfileStep('${name}', parseInt(this.value))">
+                    <button class="kv-remove" onclick="removeProfileStep('${name}')">×</button>
                 </div>`;
     });
-    html += `<button class="add-row-btn" onclick="addProfileShape()">+ Add Shape</button>`;
+    html += `<button class="add-row-btn" onclick="addProfileStep()">+ Add Step Index</button>`;
     return html;
 }
 
-function addProfileShape() {
-    const name = prompt("Shape name (e.g. circle, star, dot1):");
+function addProfileStep() {
+    const name = prompt("Step name (e.g. v1, v2, v3):");
     if (!name) return;
-    if (!currentProfile.shapes) currentProfile.shapes = {};
-    currentProfile.shapes[name] = 0;
+    if (!currentProfile.step_data) currentProfile.step_data = {};
+    currentProfile.step_data[name] = 0;
     syncUiToJson();
     renderProfileUi();
 }
 
-function removeProfileShape(name) {
-    delete currentProfile.shapes[name];
+function removeProfileStep(name) {
+    delete currentProfile.step_data[name];
     syncUiToJson();
     renderProfileUi();
 }
 
-function renameProfileShape(oldName, newName) {
+function renameProfileStep(oldName, newName) {
     if (oldName === newName || !newName) return;
-    currentProfile.shapes[newName] = currentProfile.shapes[oldName];
-    delete currentProfile.shapes[oldName];
+    currentProfile.step_data[newName] = currentProfile.step_data[oldName];
+    delete currentProfile.step_data[oldName];
     syncUiToJson();
 }
 
-function updateProfileShape(name, val) {
-    currentProfile.shapes[name] = val;
+function updateProfileStep(name, val) {
+    currentProfile.step_data[name] = val;
     syncUiToJson();
 }
 
@@ -1207,68 +1208,149 @@ let looperState = {}; // { addr: { mode: 'idle'|'rec'|'play', frames: [], playId
 let looperInterval = null;
 let isEngineVisualOn = true;
 
-const SCENE_MAPPINGS = {
-    'hold': 'HOLD',
-    'scroll': 'SCROLL',
-    'chase': 'CHASE',
-    'lissajous': 'LISSAJOUS'
-};
+function zeroAllDmx() {
+    const devName = document.getElementById('test-dev-select').value;
+    let allDevices = stageConfig.devices || {};
+    const dev = allDevices[devName];
+    if (!dev || !currentProfile || !currentProfile.channels) return;
+
+    Object.entries(currentProfile.channels).forEach(([role, val]) => {
+        const offset = typeof val === 'object' ? val.offset : val;
+        const absAddr = dev.address + dev.offset + offset;
+
+        currentFaderValues[absAddr] = 0;
+
+        const disp = document.getElementById(`disp-${absAddr}`);
+        if (disp) disp.value = 0;
+        const input = document.getElementById(`input-${absAddr}`);
+        if (input) input.value = 0;
+
+        updateDmxState(absAddr, 0, false, true); // Use skipAutoCheck to avoid marking as active
+    });
+}
+
+async function zeroAllDmx() {
+    let allDevices = stageConfig.devices || {};
+    for (const devName of Object.keys(allDevices)) {
+        await zeroDeviceDmx(devName);
+    }
+}
+
+async function setAsDefault() {
+    const devName = document.getElementById('test-dev-select').value;
+    let allDevices = stageConfig.devices || {};
+    const dev = allDevices[devName];
+    if (!dev) return;
+
+    // Use current profile if it matches, else fallback to testProfiles cache
+    let profile = currentProfile;
+    if (!profile || profile.type !== dev?.type) {
+        profile = testProfiles[dev?.type];
+    }
+
+    if (!profile) {
+        try {
+            const res = await fetch(`${API_BASE}/${dev.type}.json`);
+            if (res.ok) {
+                profile = await res.json();
+                testProfiles[dev.type] = profile;
+            } else {
+                alert("Could not load profile to set defaults.");
+                return;
+            }
+        } catch (e) {
+            console.error("Profile load error", e);
+            return;
+        }
+    }
+
+    Object.entries(profile.channels).forEach(([role, val]) => {
+        const offset = typeof val === 'object' ? val.offset : val;
+        const absAddr = dev.address + dev.offset + offset;
+
+        const faderVal = currentFaderValues[absAddr] || 0;
+
+        if (!currentProfile.calibration) currentProfile.calibration = {};
+        if (!currentProfile.calibration[role]) currentProfile.calibration[role] = { min: 0, center: 127, max: 255 };
+
+        currentProfile.calibration[role].center = faderVal;
+
+        if (!currentProfile.defaults) currentProfile.defaults = {};
+        currentProfile.defaults[role] = faderVal;
+    });
+    syncUiToJson();
+    alert("Set current values as default for profile!");
+}
 
 function initScenes() {
     const grid = document.getElementById('scenes-grid');
     if (!grid) return;
     grid.innerHTML = '';
 
-    // Only 4 buttons now
-    Object.keys(SCENE_MAPPINGS).forEach((scene) => {
-        const btn = document.createElement('div');
-        btn.className = 'scene-btn';
-        btn.style.height = '60px'; // Make them bigger since there are fewer
-        btn.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">${scene.toUpperCase()}</div>`;
-        btn.onclick = () => {
-            document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
-            btn.classList.add('playing');
+    // ZERO ALL Button
+    const btnZero = document.createElement('div');
+    btnZero.className = 'scene-btn';
+    btnZero.style.height = '60px';
+    btnZero.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">ZERO ALL</div>`;
+    btnZero.onclick = async () => {
+        document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
+        btnZero.classList.add('playing');
+        await zeroAllDmx();
+        setTimeout(() => btnZero.classList.remove('playing'), 500);
+    };
+    grid.appendChild(btnZero);
 
-            if (ws && ws.readyState === 1) {
-                ws.send(JSON.stringify({ type: 'trigger_scene', scene: scene }));
-            }
+    // SET AS DEFAULT Button
+    const btnDefault = document.createElement('div');
+    btnDefault.className = 'scene-btn';
+    btnDefault.style.height = '60px';
+    btnDefault.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">SET AS DEFAULT</div>`;
+    btnDefault.onclick = () => {
+        document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
+        btnDefault.classList.add('playing');
+        setAsDefault();
+        setTimeout(() => btnDefault.classList.remove('playing'), 500);
+    };
+    grid.appendChild(btnDefault);
 
-            setTimeout(() => btn.classList.remove('playing'), 500);
-        };
-        grid.appendChild(btn);
-    });
-}
+    // SAVE GLOBAL PRESET Button
+    const btnSaveGlobal = document.createElement('div');
+    btnSaveGlobal.className = 'scene-btn';
+    btnSaveGlobal.style.height = '60px';
+    btnSaveGlobal.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">SAVE GLOBAL PRESET</div>`;
+    btnSaveGlobal.onclick = async () => {
+        document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
+        btnSaveGlobal.classList.add('playing');
+        await saveGlobalPreset();
+        setTimeout(() => btnSaveGlobal.classList.remove('playing'), 500);
+    };
+    grid.appendChild(btnSaveGlobal);
 
-function applyLocalScene(sceneName) {
-    const devName = document.getElementById('test-dev-select').value;
-    let allDevices = stageConfig.devices || {};
-    const dev = allDevices[devName];
-    if (!dev || !currentProfile || !currentProfile.channels) return;
+    // SAVE PROFILE PRESET Button
+    const btnSaveProfile = document.createElement('div');
+    btnSaveProfile.className = 'scene-btn';
+    btnSaveProfile.style.height = '60px';
+    btnSaveProfile.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">SAVE PROFILE PRESET</div>`;
+    btnSaveProfile.onclick = async () => {
+        document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
+        btnSaveProfile.classList.add('playing');
+        await saveToProfilePreset();
+        setTimeout(() => btnSaveProfile.classList.remove('playing'), 500);
+    };
+    grid.appendChild(btnSaveProfile);
 
-    const mapping = SCENE_MAPPINGS[sceneName];
-    if (!mapping) return;
-
-    Object.entries(currentProfile.channels).forEach(([role, val]) => {
-        if (mapping[role]) {
-            const offset = typeof val === 'object' ? val.offset : val;
-            const absAddr = dev.address + dev.offset + offset;
-
-            const minVal = mapping[role][0];
-            const maxVal = mapping[role][1];
-
-            if (minVal === maxVal) {
-                // Just hold
-                const disp = document.getElementById(`disp-${absAddr}`);
-                if (disp) disp.value = minVal;
-                updateDmxState(absAddr, minVal);
-            } else {
-                // Range sequence
-                const disp = document.getElementById(`disp-${absAddr}`);
-                if (disp) disp.value = `${minVal}-${maxVal}`;
-                generateRangeSequence(absAddr, minVal, maxVal);
-            }
-        }
-    });
+    // SAVE FIXTURE PRESET Button
+    const btnSaveFixture = document.createElement('div');
+    btnSaveFixture.className = 'scene-btn';
+    btnSaveFixture.style.height = '60px';
+    btnSaveFixture.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">SAVE FIXTURE PRESET</div>`;
+    btnSaveFixture.onclick = async () => {
+        document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
+        btnSaveFixture.classList.add('playing');
+        await saveToFixturePreset();
+        setTimeout(() => btnSaveFixture.classList.remove('playing'), 500);
+    };
+    grid.appendChild(btnSaveFixture);
 }
 
 function toggleEngineVisual() {
@@ -1360,8 +1442,7 @@ function looperTick() {
 
 async function renderTestFaders() {
     const devName = document.getElementById('test-dev-select').value;
-    // Removed: currentFaderValues = {};
-    // Removed: looperState = {};
+    activeTestDevices = [devName]; // Update active devices list
 
     let allDevices = stageConfig.devices || {};
     const dev = allDevices[devName];
@@ -1369,10 +1450,16 @@ async function renderTestFaders() {
 
     let profile = currentProfile;
     if (!profile || !profile.type || profile.type !== dev.type) {
+        profile = testProfiles[dev.type];
+    }
+
+    if (!profile) {
         try {
             const res = await fetch(`${API_BASE}/${dev.type}.json`);
-            if (res.ok) profile = await res.json();
-            else return;
+            if (res.ok) {
+                profile = await res.json();
+                testProfiles[dev.type] = profile;
+            } else return;
         } catch (e) { console.error("Profile load error", e); return; }
     }
     currentProfile = profile;
@@ -1516,13 +1603,15 @@ function generateMultiSequence(addr, input) {
     if (led) led.className = 'led green';
 }
 
-function updateDmxState(addr, val) {
+function updateDmxState(addr, val, skipLinked = false, skipAutoCheck = false) {
     const intVal = parseInt(val);
     currentFaderValues[addr] = intVal;
-    saveActiveChannels[addr] = true; // Auto-activate for save
 
-    const checkbox = document.getElementById(`save-active-${addr}`);
-    if (checkbox) checkbox.checked = true;
+    if (!skipAutoCheck) {
+        saveActiveChannels[addr] = true; // Auto-activate for save
+        const checkbox = document.getElementById(`save-active-${addr}`);
+        if (checkbox) checkbox.checked = true;
+    }
 
     const disp = document.getElementById(`disp-${addr}`);
     if (disp) {
@@ -1552,24 +1641,186 @@ async function saveGlobalPreset() {
     await performPresetSave();
 }
 
+// --- PRESET SAVING ---
+function getTriggerForVibe(vibe) {
+    const v = vibe.toLowerCase().trim();
+    const mapping = {
+        'boots': 'rhythm:boots',
+        'cats': 'rhythm:cats',
+        'cha': 'rhythm:cha',
+        'drop': 'transient:dropping',
+        'building': 'transient:building',
+        'tension': 'transient:tension',
+        'machine_gun': 'bass_style:machine_gun',
+        'tearout': 'bass_style:tearout',
+        'wonky': 'bass_style:wonky',
+        'sub': 'bass_style:sub'
+    };
+    return mapping[v] || `vibe:${v}`;
+}
+
+async function saveToProfilePreset() {
+    if (activeTestDevices.length === 0) {
+        alert("Please select at least one active fixture first.");
+        return;
+    }
+
+    let activeProfiles = [];
+    let allDevices = stageConfig.devices || {};
+    activeTestDevices.forEach(dName => {
+        const dev = allDevices[dName];
+        if (dev && !activeProfiles.includes(dev.type)) activeProfiles.push(dev.type);
+    });
+
+    if (activeProfiles.length === 0) return;
+
+    let selectedProfile = activeProfiles[0];
+    if (activeProfiles.length > 1) {
+        selectedProfile = prompt(`Active fixtures use multiple profiles: ${activeProfiles.join(', ')}. Which profile should this preset apply to?`, activeProfiles[0]);
+        if (!selectedProfile || !activeProfiles.includes(selectedProfile)) return;
+    }
+
+    const profile = testProfiles[selectedProfile];
+    if (!profile) return;
+
+    const sourceDevName = activeTestDevices.find(d => allDevices[d]?.type === selectedProfile);
+    const dev = allDevices[sourceDevName];
+
+    let presetPayload = {};
+    let hasData = false;
+    Object.entries(profile.channels).forEach(([role, val]) => {
+        const offset = typeof val === 'object' ? val.offset : val;
+        const absAddr = dev.address + dev.offset + offset;
+
+        if (saveActiveChannels[absAddr]) {
+            presetPayload[role] = (currentFaderValues[absAddr] !== undefined) ? currentFaderValues[absAddr] : 0;
+            hasData = true;
+        }
+    });
+
+    if (!hasData) {
+        alert("No channels selected for inclusion.");
+        return;
+    }
+
+    const presetName = prompt(`Save Profile Preset for ${selectedProfile}. Enter Name:`);
+    if (!presetName) return;
+
+    const vibe = prompt("Assign a Vibe/Trigger (chill, mid, high, boots, cats, cha, drop, building, tension, machine_gun, tearout, wonky, sub):", "mid");
+    if (!vibe) return;
+
+    const trigger = getTriggerForVibe(vibe);
+
+    savePresetToDisk(presetName, {
+        vibe: vibe.toLowerCase().trim(),
+        trigger: trigger,
+        target_category: dev.category || 'laser',
+        profile: selectedProfile,
+        channels: presetPayload
+    });
+}
+
+async function saveToFixturePreset() {
+    if (activeTestDevices.length === 0) return;
+
+    if (!confirm(`Save snapshot for active fixtures: ${activeTestDevices.join(', ')}?`)) return;
+
+    let allDevices = stageConfig.devices || {};
+    let fixturePayloads = {};
+    let hasData = false;
+
+    for (const dName of activeTestDevices) {
+        const dev = allDevices[dName];
+        const profile = testProfiles[dev.type];
+        if (!dev || !profile) continue;
+
+        let devData = {};
+        let devHasData = false;
+
+        Object.entries(profile.channels).forEach(([role, val]) => {
+            const offset = typeof val === 'object' ? val.offset : val;
+            const absAddr = dev.address + dev.offset + offset;
+
+            if (saveActiveChannels[absAddr]) {
+                devData[role] = (currentFaderValues[absAddr] !== undefined) ? currentFaderValues[absAddr] : 0;
+                devHasData = true;
+                hasData = true;
+            }
+        });
+
+        if (devHasData) {
+            fixturePayloads[dName] = devData;
+        }
+    }
+
+    if (!hasData) return;
+
+    const presetName = prompt(`Save Fixture Snapshot. Enter Name:`);
+    if (!presetName) return;
+
+    const vibe = prompt("Assign a Vibe/Trigger:", "mid");
+    if (!vibe) return;
+
+    const trigger = getTriggerForVibe(vibe);
+
+    const primaryDev = allDevices[activeTestDevices[0]];
+
+    savePresetToDisk(presetName, {
+        vibe: vibe.toLowerCase().trim(),
+        trigger: trigger,
+        target_fixtures: [...activeTestDevices],
+        target_category: primaryDev.category || 'laser',
+        fixture_payloads: fixturePayloads
+    });
+}
+
+async function savePresetToDisk(name, data) {
+    let existingPresets = {};
+    try {
+        const res = await fetch(`${API_BASE}/presets.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (res.ok) existingPresets = await res.json();
+    } catch (e) { }
+
+    existingPresets[name] = data;
+
+    try {
+        const saveRes = await fetch(`${API_BASE}/presets.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(existingPresets, null, 4)
+        });
+        if (saveRes.ok) {
+            alert(`Preset "${name}" saved!`);
+            renderPresetsManager();
+        }
+    } catch (e) { }
+}
+
 async function performPresetSave() {
     const devName = document.getElementById('test-dev-select').value;
     let allDevices = stageConfig.devices || {};
     const dev = allDevices[devName];
-    if (!dev || !currentProfile || !currentProfile.channels) {
+
+    // Use current profile if it matches, else fallback to testProfiles cache
+    let profile = currentProfile;
+    if (!profile || profile.type !== dev?.type) {
+        profile = testProfiles[dev?.type];
+    }
+
+    if (!dev || !profile || !profile.channels) {
         alert("Please select a valid device and profile first.");
         return;
     }
 
     let presetPayload = {};
     let hasData = false;
-    Object.entries(currentProfile.channels).forEach(([role, val]) => {
+    Object.entries(profile.channels).forEach(([role, val]) => {
         const offset = typeof val === 'object' ? val.offset : val;
         const absAddr = dev.address + dev.offset + offset;
 
         // ONLY include if specifically active for save
-        if (saveActiveChannels[absAddr] && currentFaderValues[absAddr] !== undefined) {
-            presetPayload[role] = currentFaderValues[absAddr];
+        if (saveActiveChannels[absAddr]) {
+            presetPayload[role] = (currentFaderValues[absAddr] !== undefined) ? currentFaderValues[absAddr] : 0;
             hasData = true;
         }
     });
@@ -1582,9 +1833,11 @@ async function performPresetSave() {
     const presetName = prompt("Enter a name for this Preset (e.g., 'Red Dot High'):");
     if (!presetName) return;
 
-    let vibe = prompt("Assign a vibe (chill, mid, high, sub, tearout, machine_gun, wonky):", "mid");
+    let vibe = prompt("Assign a Vibe/Trigger (chill, mid, high, boots, cats, cha, drop, building, tension, machine_gun, tearout, wonky, sub):", "mid");
     if (!vibe) return;
     vibe = vibe.toLowerCase().trim();
+
+    const trigger = getTriggerForVibe(vibe);
 
     // Persist to presets.json
     let existingPresets = {};
@@ -1597,6 +1850,7 @@ async function performPresetSave() {
 
     existingPresets[presetName] = {
         vibe: vibe,
+        trigger: trigger,
         target_category: dev.category || 'laser',
         profile: dev.type,
         channels: presetPayload
@@ -1658,9 +1912,15 @@ async function renderPresetsManager(forceRefresh = false) {
                             <option value="mid" ${pData.vibe === 'mid' ? 'selected' : ''}>mid</option>
                             <option value="high" ${pData.vibe === 'high' ? 'selected' : ''}>high</option>
                             <option value="sub" ${pData.vibe === 'sub' ? 'selected' : ''}>sub</option>
+                            <option value="boots" ${pData.vibe === 'boots' ? 'selected' : ''}>Boots (Bass)</option>
+                            <option value="cats" ${pData.vibe === 'cats' ? 'selected' : ''}>Cats (Treble)</option>
+                            <option value="cha" ${pData.vibe === 'cha' ? 'selected' : ''}>Cha (Mid)</option>
                             <option value="tearout" ${pData.vibe === 'tearout' ? 'selected' : ''}>tearout</option>
                             <option value="machine_gun" ${pData.vibe === 'machine_gun' ? 'selected' : ''}>machine_gun</option>
                             <option value="wonky" ${pData.vibe === 'wonky' ? 'selected' : ''}>wonky</option>
+                            <option value="building" ${pData.vibe === 'building' ? 'selected' : ''}>building</option>
+                            <option value="tension" ${pData.vibe === 'tension' ? 'selected' : ''}>tension</option>
+                            <option value="drop" ${pData.vibe === 'drop' ? 'selected' : ''}>drop</option>
                         </select>
                         <button class="btn accent" style="padding:4px 10px; font-size:12px; height:28px;" onclick="playPreset('${escapedName}')">\u25b6 Play</button>
                         <button class="kv-remove" onclick="deletePreset('${escapedName}')">\u2716</button>
@@ -1669,7 +1929,7 @@ async function renderPresetsManager(forceRefresh = false) {
     });
 
     if (html === '') {
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">No presets saved yet. Go to Live Test to create some!</div>';
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">No presets saved yet. Go to Fixture Setup to create some!</div>';
     } else {
         container.innerHTML = html;
     }
@@ -1679,6 +1939,7 @@ async function updatePresetVibe(pName, newVibe) {
     if (allPresetsData[pName]) {
         console.log(`Updating ${pName} vibe to ${newVibe}`);
         allPresetsData[pName].vibe = newVibe;
+        allPresetsData[pName].trigger = getTriggerForVibe(newVibe);
         renderPresetsManager(); // Re-render to update grouping if needed
         await savePresetsFile(); // Persist immediately
     }

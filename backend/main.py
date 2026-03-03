@@ -40,7 +40,6 @@ audio_queue = collections.deque(maxlen=50)
 last_injection_time = 0.0  
 dmx_engine = None  
 vibe_engine = None
-govee_engine = None
 connected_clients = set()
 dmx_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 is_usb_dmx = False
@@ -70,10 +69,6 @@ def save_live_defaults():
             },
             "laser": {
                 "speed": dmx_engine.speed if dmx_engine else 1.0,
-                "pattern": dmx_engine.pattern_mode if dmx_engine else 'auto',
-                "color": dmx_engine.color_mode if dmx_engine else 'auto',
-                "color_multi": dmx_engine.color_multi if dmx_engine else 0.0,
-                "color_solid": dmx_engine.color_solid if dmx_engine else 0.0,
                 "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0,
                 "amplitude": dmx_engine.intensity if dmx_engine else 1.0
             },
@@ -106,10 +101,6 @@ def load_live_defaults():
             l_data = data.get("laser", {})
             if dmx_engine:
                 if "speed" in l_data: dmx_engine.set_speed(l_data["speed"]) 
-                if "pattern" in l_data: dmx_engine.set_pattern_mode(l_data["pattern"])
-                if "color" in l_data: dmx_engine.set_color_mode(l_data["color"])
-                if "color_multi" in l_data: dmx_engine.set_color_multi(l_data["color_multi"])
-                if "color_solid" in l_data: dmx_engine.set_color_solid(l_data["color_solid"])
                 
                 # New Params
                 if "audioSensitivity" in l_data: dmx_engine.set_audio_sensitivity(l_data["audioSensitivity"])
@@ -655,7 +646,7 @@ async def audio_watchdog():
 # --- 3.6 AUDIO PROCESSOR (CONSUMER) ---
 async def process_audio_queue():
     """Consume audio frames from queue and run heavy analysis."""
-    global audio_state, dmx_engine, dmx_port, govee_engine
+    global audio_state, dmx_engine, dmx_port
     print("🧠 Audio Processor Started")
     
     # Global Error State Tracking
@@ -805,10 +796,7 @@ async def spotify_poller():
                     'progress_ms': progress_ms,
                     'duration_ms': duration_ms,
                     'image_high': spotify_images.get('high'),
-                    'image_low': spotify_images.get('low'),
-                    'energy': 0,
-                    'valence': 0,
-                    'bpm': 0
+                    'image_low': spotify_images.get('low')
                 }
             else:
                 # Nothing playing
@@ -928,14 +916,6 @@ async def ws_handler(websocket):
                                 if "sensitivity" in data:
                                     # Restore direct sensitivity 1:1 mapping
                                     analyzer.set_gain(float(data["sensitivity"]))
-                                if "pattern" in data:
-                                    dmx_engine.set_pattern_mode(data["pattern"])
-                                if "color" in data:
-                                    dmx_engine.set_color_mode(data["color"])
-                                if "color_multi" in data:
-                                    dmx_engine.set_color_multi(data["color_multi"])
-                                if "color_solid" in data:
-                                    dmx_engine.set_color_solid(data["color_solid"])
                             elif target == "visual":
                                 # Cache visual params for persistence
                                 # Iterate to support partial updates without listing every field
@@ -995,11 +975,7 @@ async def ws_handler(websocket):
                                 },
                                 "laser": {
                                     "speed": dmx_engine.speed if dmx_engine else 1.0,
-                                    "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0,
-                                    "pattern": dmx_engine.pattern_mode if dmx_engine else 'auto',
-                                    "color": dmx_engine.color_mode if dmx_engine else 'auto',
-                                    "color_multi": dmx_engine.color_multi if dmx_engine else 0.0,
-                                    "color_solid": dmx_engine.color_solid if dmx_engine else 0.0
+                                    "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0
                                 },
                                 "visual": visual_params_cache
                             }
@@ -1015,14 +991,15 @@ async def ws_handler(websocket):
             # Tx to Browser: Audio Analysis + DMX State
             dmx_info = dmx_engine.get_channel_state() if dmx_engine else {"values": {}, "effects": []}
             rot_state = dmx_engine.rot_state if dmx_engine else 'IDLE'
-            active_scene = dmx_engine.current_scene_name if dmx_engine else 'none'
-            active_addon_scene = getattr(dmx_engine, 'active_addon_scene', None) if dmx_engine else None
+            active_scene = 'none'
+            active_addon_scene = None
             vibe = audio_state.get("vibe", "mid")
             
             await websocket.send(json.dumps({
                 "type": "audio", 
                 "session_id": SESSION_ID,
                 "data": audio_state,
+                "logic": dmx_engine.logic.state if dmx_engine else {},
                 "dmx": dmx_info["values"],
                 "effects": dmx_info["effects"],
                 "active_scene": active_scene,

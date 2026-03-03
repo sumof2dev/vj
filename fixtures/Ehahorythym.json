@@ -1,0 +1,264 @@
+{
+    "type": "Ehaho",
+    "name": "New Fixture",
+    "channels": {
+        "Dim": 0,
+        "patterns": 3,
+        "zoom": 4,
+        "group": 2,
+        "clip": 1,
+        "rotate z": 5,
+        "x pos": 6,
+        "y pos": 7,
+        "x rot": 8,
+        "y rot": 9,
+        "color1": 10,
+        "color2": 11,
+        "dots": 12,
+        "draw": 13,
+        "drawing": 14,
+        "twist": 15,
+        "grating": 16
+    },
+    "modes": {
+        "zoom": {
+            "manual": {
+                "range": [
+                    0,
+                    127
+                ]
+            },
+            "oscillation": {
+                "range": [
+                    128,
+                    255
+                ]
+            }
+        }
+    },
+    "defaults": {
+        "Dim": 0,
+        "patterns": 0,
+        "zoom": 0,
+        "group": 0,
+        "clip": 0,
+        "rotate z": 0,
+        "x pos": 0,
+        "y pos": 0,
+        "x rot": 0,
+        "y rot": 0,
+        "color1": 0,
+        "color2": 0,
+        "dots": 0,
+        "draw": 0,
+        "drawing": 0,
+        "twist": 0,
+        "grating": 0
+    },
+    "calibration": {
+        "Dim": [
+            {
+                "min": 220,
+                "max": 254,
+                "center": 245
+            }
+        ],
+        "group": [
+            {
+                "min": 250,
+                "max": 250,
+                "center": 250
+            }
+        ],
+        "patterns": [
+            {
+                "min": 0,
+                "max": 127,
+                "center": 5
+            }
+        ],
+        "zoom": [
+            {
+                "min": 0,
+                "max": 127,
+                "center": 20,
+                "vibe": "any"
+            }
+        ],
+        "rotate z": [
+            {
+                "min": 0,
+                "max": 127,
+                "center": 64
+            },
+            {
+                "min": 255,
+                "center": 255,
+                "max": 255,
+                "vibe": "high"
+            }
+        ],
+        "x pos": [
+            {
+                "min": 64,
+                "max": 64,
+                "center": 64,
+                "vibe": "any"
+            }
+        ],
+        "y pos": [
+            {
+                "min": 64,
+                "center": 64,
+                "max": 64,
+                "vibe": "any"
+            }
+        ],
+        "x rot": [
+            {
+                "min": 0,
+                "max": 32,
+                "center": 0
+            },
+            {
+                "min": 255,
+                "center": 255,
+                "max": 255,
+                "vibe": "high"
+            }
+        ],
+        "y rot": [
+            {
+                "min": 0,
+                "max": 0,
+                "center": 0,
+                "vibe": "chill"
+            },
+            {
+                "min": 255,
+                "center": 255,
+                "max": 255,
+                "vibe": "high"
+            }
+        ],
+        "dots": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            }
+        ],
+        "drawing": [
+            {
+                "min": 0,
+                "max": 0,
+                "center": 0
+            }
+        ],
+        "grating": [
+            {
+                "min": 0,
+                "max": 0,
+                "center": 0,
+                "vibe": "any"
+            }
+        ],
+        "clip": [
+            {
+                "min": 0,
+                "center": 5,
+                "max": 10
+            }
+        ],
+        "twist": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0
+            }
+        ],
+        "draw": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0
+            }
+        ],
+        "color1": [
+            {
+                "min": 0,
+                "center": 2,
+                "max": 127,
+                "vibe": "any"
+            }
+        ],
+        "color2": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "high"
+            }
+        ]
+    },
+    "ranges": {},
+    "dynamics": {},
+    "macros": {},
+    "modifiers": {
+        "patterns": "beat",
+        "zoom": "flux",
+        "rotate z": "bass",
+        "x pos": "bass",
+        "y pos": "beat",
+        "x rot": "axis_c",
+        "y rot": "axis_c",
+        "color1": "bass",
+        "color2": "flux",
+        "dots": "axis_c",
+        "Dim": "state_machine",
+        "group": "mode",
+        "clip": "state_machine",
+        "draw": "axis_a",
+        "twist": "bass",
+        "grating": "flux",
+        "drawing": "axis_c"
+    },
+    "channel_macros": {},
+    "step_data": {},
+    "state_data": {
+        "Dim": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 220,
+            "mid": 220,
+            "high": 220,
+            "drop": 220,
+            "default": 220
+        },
+        "clip": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 0,
+            "mid": 2,
+            "high": 10,
+            "drop": 0,
+            "default": 0
+        },
+        "x pos": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 254,
+            "mid": 120,
+            "high": 220,
+            "drop": 220,
+            "default": 254
+        }
+    }
+}
