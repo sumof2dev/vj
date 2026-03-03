@@ -1,12 +1,13 @@
-const CACHE_NAME = 'vj-v2';
+const CACHE_NAME = 'vj-v3';
 const ASSETS = [
-    './visualdmx.html',
-    './vj_console.html',
-    './manifest.json',
-    './icon.png',
-    './background.png',
-    './remote.html',
-    './manager.html'
+    '/',
+    '/manager.html',
+    '/visualdmx.html',
+    '/remote.html',
+    '/setup.html',
+    '/manifest.json',
+    '/icon.png',
+    '/background.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -19,13 +20,23 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
 });
 
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        fetch(event.request).catch(() => {
-            return caches.match(event.request);
+        caches.match(event.request).then((response) => {
+            return response || fetch(event.request);
         })
     );
 });

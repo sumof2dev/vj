@@ -3,8 +3,14 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>DMX Setup & Fixture Editor</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMX Setup & Profile Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RaveBox">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" href="icon.png">
     <style>
         :root {
             --bg: #0f0f13;
@@ -134,11 +140,15 @@
             background: #333;
             color: white;
             border: 1px solid var(--border);
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 5px 10px;
+            border-radius: 6px;
             cursor: pointer;
             font-family: inherit;
-            transition: background 0.1s;
+            transition: all 0.2s;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .btn:hover {
@@ -171,10 +181,11 @@
             background: #111;
             border: 1px solid var(--border);
             color: white;
-            padding: 8px;
-            border-radius: 4px;
+            padding: 6px 10px;
+            border-radius: 6px;
             font-family: monospace;
             width: 100%;
+            font-size: 13px;
         }
 
         input:focus,
@@ -203,15 +214,20 @@
 
         /* --- STAGE MANAGER --- */
         .device-row {
-            display: grid;
-            grid-template-columns: 70px 1fr 80px 60px 60px 80px 50px 100px 40px;
-            gap: 10px;
-            align-items: center;
-            background: #222;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border: 1px solid transparent;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px 12px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .device-header {
+            display: none;
+            /* Header is redundant with internal labels/icons */
         }
 
         .device-row:hover {
@@ -485,6 +501,102 @@
             border-color: var(--accent);
             color: white;
             box-shadow: 0 0 8px var(--accent);
+        }
+
+        /* --- CATEGORY CONTAINERS --- */
+        .category-container {
+            margin-bottom: 12px;
+            border: 1px solid rgba(124, 77, 255, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(124, 77, 255, 0.08);
+            cursor: pointer;
+            user-select: none;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .category-header:hover {
+            background: rgba(124, 77, 255, 0.14);
+        }
+
+        .category-chevron {
+            margin-left: auto;
+            transition: transform 0.2s;
+            color: var(--text-dim);
+        }
+
+        .category-chevron.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .category-body {
+            overflow: hidden;
+        }
+
+        .category-body.collapsed {
+            display: none;
+        }
+
+        .uncategorized-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 6px 10px 4px;
+        }
+
+        /* Category dropdown */
+        .category-dropdown-wrap {
+            position: relative;
+            display: inline-block;
+        }
+
+        .category-dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 4px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            z-index: 500;
+            min-width: 120px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .category-dropdown-menu.open {
+            display: block;
+        }
+
+        .category-dropdown-menu button {
+            display: block;
+            width: 100%;
+            padding: 9px 14px;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            text-align: left;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .category-dropdown-menu button:hover {
+            background: rgba(124, 77, 255, 0.12);
+            color: var(--accent);
         }
 
         .looper-btn {
@@ -780,19 +892,26 @@
                 padding: 14px;
             }
 
-            /* Stack Device Manager Rows */
+            .device-header {
+                display: none;
+            }
+
             .device-row {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                padding: 10px;
                 background: linear-gradient(145deg, #1e1e26, #14141a);
-                border-radius: 16px;
+                border-radius: 10px;
+                margin-bottom: 8px;
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-                margin-bottom: 16px;
-                position: relative;
-                overflow: hidden;
+            }
+
+            .device-row-line {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+                width: 100%;
             }
 
             .device-row::before {
@@ -808,19 +927,19 @@
             .device-row input[type="text"],
             .device-row select:first-of-type {
                 grid-column: span 2;
-                font-size: 16px;
+                font-size: 15px;
                 background: rgba(0, 0, 0, 0.25);
                 border-color: rgba(255, 255, 255, 0.1);
-                border-radius: 10px;
-                height: 48px;
+                border-radius: 8px;
+                height: 38px;
             }
 
             .device-row select,
             .device-row input {
                 width: 100%;
-                height: 44px;
+                height: 36px;
                 margin-bottom: 0;
-                border-radius: 8px;
+                border-radius: 6px;
                 background: rgba(0, 0, 0, 0.2);
             }
 
@@ -837,16 +956,16 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 10px;
+                gap: 8px;
                 background: rgba(255, 255, 255, 0.04);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 12px;
-                height: 54px;
+                border-radius: 8px;
+                height: 42px;
                 cursor: pointer;
                 user-select: none;
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 font-weight: 600;
-                font-size: 13px;
+                font-size: 12px;
             }
 
             .custom-checkbox.checked {
@@ -863,12 +982,12 @@
             .device-row .kv-remove {
                 grid-column: span 2;
                 width: 100%;
-                height: 44px;
-                margin-top: 10px;
+                height: 38px;
+                margin-top: 6px;
                 background: rgba(255, 71, 87, 0.08);
                 border-color: rgba(255, 71, 87, 0.2);
-                border-radius: 10px;
-                font-size: 18px;
+                border-radius: 8px;
+                font-size: 16px;
             }
 
             /* Touch Targets */
@@ -917,112 +1036,95 @@
 <body>
 
     <div id="nav-panel">
-        <div class="nav-btn" onclick="window.location.href='manager.html'" title="Return to Manager">🏠<span
-                class="nav-label">Manager</span></div>
-        <div class="nav-btn active" onclick="showView('stage')" title="Stage Manager">🏟<span
-                class="nav-label">Stage</span></div>
-        <div class="nav-btn" onclick="showView('roles')" title="Role Configuration">🎭<span
-                class="nav-label">Roles</span></div>
-        <div class="nav-btn" onclick="showView('fixtures')" title="Fixture Editor">💡<span
-                class="nav-label">Editor</span></div>
-        <div class="nav-btn" onclick="showView('test')" title="Live Test">🎚<span class="nav-label">Test</span></div>
-        <div class="nav-btn" onclick="showView('presets')" title="Preset Manager">💾<span class="nav-label">Save</span>
+        <div class="nav-btn" onclick="window.location.href='manager.html'" title="Return to Manager">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            <span class="nav-label">Manager</span>
+        </div>
+        <div class="nav-btn active" onclick="showView('stage')" title="Stage Manager">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4" />
+                <path d="M2 10v11a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V10" />
+                <path d="M2 10h20" />
+                <path d="m9 15 3 3 3-3" />
+            </svg>
+            <span class="nav-label">Stage</span>
+        </div>
+        <div class="nav-btn" onclick="showView('fixtures')" title="Profile Editor">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1.1 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.4 1.5 3.5.8.8 1.3 1.5 1.5 2.5" />
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+            </svg>
+            <span class="nav-label">Profile</span>
+        </div>
+        <div class="nav-btn" onclick="showView('test')" title="Fixture Setup">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="4" x1="21" y1="21" y2="4" />
+                <line x1="14" x1="14" y1="21" y2="14" />
+                <line x1="4" x1="4" y1="10" y2="4" />
+                <circle cx="4" cy="14" r="4" />
+                <circle cx="14" cy="10" r="4" />
+            </svg>
+            <span class="nav-label">Setup</span>
+        </div>
+        <div class="nav-btn" onclick="showView('presets')" title="Preset Manager">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+            </svg>
+            <span class="nav-label">Saved</span>
         </div>
     </div>
 
     <div id="main-content">
 
-        <!-- === ROLES CONFIGURATION === -->
-        <div id="view-roles" class="view-panel">
-            <div class="row" style="justify-content:space-between">
-                <h2>Role Behavior & Buckets</h2>
-                <div class="row">
-                    <button class="btn" onclick="loadRolesConfig()">🔄 Refresh</button>
-                    <button class="btn primary" onclick="saveRolesConfig()">💾 Save Roles</button>
-                </div>
-            </div>
-
-            <div class="row" style="gap:20px; align-items: flex-start;">
-                <!-- Column 1: Lead (Fluid) -->
-                <div class="col card">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-                        <span style="font-size:24px;">💧</span>
-                        <h3 style="margin:0">Lead (Fluid)</h3>
-                    </div>
-                    <p style="font-size:11px; color:var(--text-dim); margin-top:-10px; margin-bottom:15px;">DMX
-                        constraints for organic movement bases.</p>
-
-                    <div id="lead-ranges-ui">
-                        <!-- Ranges for X, Y, Z, Zoom -->
-                    </div>
-                </div>
-
-                <!-- Column 2: Rythm -->
-                <div class="col card">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-                        <span style="font-size:24px;">🥁</span>
-                        <h3 style="margin:0">Rythm</h3>
-                    </div>
-                    <p style="font-size:11px; color:var(--text-dim); margin-top:-10px; margin-bottom:15px;">Shape &
-                        Color buckets for transient triggers.</p>
-
-                    <div class="row" style="gap:10px; align-items: flex-start;">
-                        <div class="col" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
-                            <h4 style="margin:0 0 8px 0; font-size:12px; color:var(--accent); text-align:center;">BOOTS
-                            </h4>
-                            <div id="rythm-boots-list"
-                                style="min-height:50px; display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
-                            </div>
-                            <button class="add-row-btn" onclick="openRythmPicker('boots', 'shape')">+ Shape</button>
-                            <button class="add-row-btn" onclick="openRythmPicker('boots', 'color')">+ Color</button>
-                        </div>
-                        <div class="col" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
-                            <h4 style="margin:0 0 8px 0; font-size:12px; color:var(--accent); text-align:center;">CATS
-                            </h4>
-                            <div id="rythm-cats-list"
-                                style="min-height:50px; display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
-                            </div>
-                            <button class="add-row-btn" onclick="openRythmPicker('cats', 'shape')">+ Shape</button>
-                            <button class="add-row-btn" onclick="openRythmPicker('cats', 'color')">+ Color</button>
-                        </div>
-                        <div class="col" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px;">
-                            <h4 style="margin:0 0 8px 0; font-size:12px; color:var(--accent); text-align:center;">CHA
-                            </h4>
-                            <div id="rythm-cha-list"
-                                style="min-height:50px; display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
-                            </div>
-                            <button class="add-row-btn" onclick="openRythmPicker('cha', 'shape')">+ Shape</button>
-                            <button class="add-row-btn" onclick="openRythmPicker('cha', 'color')">+ Color</button>
-                        </div>
-                    </div>
-                </div>
-
-
-            </div>
-        </div>
 
         <!-- === STAGE MANAGER === -->
         <div id="view-stage" class="view-panel active">
             <div class="row" style="justify-content:space-between">
                 <h2>Stage Configuration</h2>
                 <div class="row">
-                    <button class="btn" onclick="loadStageConfig()">🔄 Refresh</button>
-                    <button class="btn primary" onclick="saveStageConfig()">💾 Save Layout</button>
+                    <button class="btn" onclick="loadStageConfig()" style="display:flex; align-items:center; gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                            <path d="M21 3v5h-5" />
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                            <path d="M8 16H3v5" />
+                        </svg>
+                        Refresh
+                    </button>
+                    <button class="btn primary" onclick="saveStageConfig()"
+                        style="display:flex; align-items:center; gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                            <polyline points="17 21 17 13 7 13 7 21" />
+                            <polyline points="7 3 7 8 15 8" />
+                        </svg>
+                        Save Layout
+                    </button>
                 </div>
             </div>
 
             <div class="card">
                 <h3>Devices</h3>
-                <div
-                    style="margin-bottom: 10px; font-weight: bold; color: var(--text-dim); display: grid; grid-template-columns: 70px 1fr 80px 60px 60px 80px 50px 100px 40px; gap: 10px; padding: 0 10px;">
+                <div class="device-header">
                     <div>Name</div>
                     <div>Profile</div>
-                    <div>Cat</div>
                     <div>Addr</div>
                     <div>Offs</div>
-                    <div>Loc</div>
-                    <div>Invs</div>
-                    <div>Behavior</div>
+                    <div>Inverses</div>
                     <div></div>
                 </div>
                 <div id="device-list"></div>
@@ -1082,19 +1184,22 @@
 
             <div class="looper-topbar">
                 <div class="toggle-switch">
-                    <div class="switch-label on-text">On</div>
+                    <div
+                        style="font-size: 10px; color: var(--accent); margin-right: 8px; letter-spacing: 1px; font-weight: bold;">
+                        CONTROL:</div>
+                    <div class="switch-label off-text">Setup</div>
                     <div id="engine-toggle" class="switch-track on" onclick="toggleEngineVisual()">
                         <div class="switch-knob"></div>
                     </div>
-                    <div class="switch-label off-text">Off</div>
-                    <div
-                        style="font-size: 10px; color: var(--accent); margin-left: 8px; margin-top: 2px; letter-spacing: 1px; font-weight: bold;">
-                        ACTIVE ENGINE</div>
+                    <div class="switch-label on-text">Audio Engine</div>
                 </div>
 
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <button class="btn accent" style="padding: 4px 10px; font-size:12px; height: 26px;"
-                        onclick="saveGlobalPreset()">💾 Save Vibe Preset</button>
+                    <button class="btn"
+                        style="padding: 4px 10px; font-size:11px; height: 26px; border-color: var(--accent); color: var(--accent);"
+                        onclick="saveToProfilePreset()">💾 Save to Profile</button>
+                    <button class="btn primary" style="padding: 4px 10px; font-size:11px; height: 26px;"
+                        onclick="saveToFixturePreset()">🎯 Save to Fixture(s)</button>
 
                     <div style="font-size: 12px; color: var(--accent); font-weight: bold; letter-spacing: 1px;">DEVICE
                     </div>
@@ -1125,17 +1230,24 @@
                 <div class="row">
                     <button class="btn" onclick="renderPresetsManager(true)">🔄 Refresh</button>
                     <button class="btn primary" onclick="savePresetsFile()">💾 Save Changes</button>
+                    <div class="category-dropdown-wrap">
+                        <button class="btn" onclick="toggleCategoryDropdown(event)">Category ▾</button>
+                        <div class="category-dropdown-menu" id="category-dropdown-menu">
+                            <button onclick="categoryActionNew()">New</button>
+                            <button onclick="categoryActionAdd()">Add</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
                 <h3>Global Presets</h3>
                 <div
-                    style="margin-bottom: 10px; font-weight: bold; color: var(--text-dim); display: grid; grid-template-columns: 2fr 1fr 1fr 120px 50px; gap: 10px; padding: 0 10px;">
+                    style="margin-bottom: 10px; font-weight: bold; color: var(--text-dim); display: grid; grid-template-columns: 2fr 1fr 1fr 80px 36px; gap: 8px; padding: 0 10px; font-size: 11px; text-transform: uppercase;">
                     <div>Preset Name</div>
-                    <div>Target Category</div>
+                    <div>Profile</div>
                     <div>Vibe</div>
-                    <div>Test Play</div>
+                    <div>Play</div>
                     <div></div>
                 </div>
                 <div id="presets-list"></div>
@@ -1144,28 +1256,40 @@
 
     </div>
 
+    <!-- Custom Modal for Fixture Selection -->
+    <div id="fixture-modal-overlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center;">
+        <div class="card"
+            style="width:400px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); padding:30px; border-color:var(--accent);">
+            <h3 id="modal-title" style="margin-bottom:20px; color:var(--accent);">Select Fixture Mode</h3>
+            <p id="modal-text" style="margin-bottom:25px; line-height:1.5; color:#ccc;"></p>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <button id="modal-switch-btn" class="btn" style="padding:12px;"></button>
+                <button id="modal-add-btn" class="btn primary" style="padding:12px;"></button>
+                <button class="btn danger" onclick="closeFixtureModal()"
+                    style="margin-top:10px; border:none; background:transparent;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- STATE ---
+        // Global Error Handler for Mobile/Remote Debugging
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            alert(`[JS ERROR] ${msg}\nLine: ${lineNo}\nColumn: ${columnNo}\n${error ? error.stack : ''}`);
+            return false;
+        };
+        window.onunhandledrejection = function (event) {
+            alert(`[ASYNC ERROR] ${event.reason}`);
+        };
+
         const API_BASE = '/api/fixtures';
         let stageConfig = { devices: {} };
-        let rolesConfig = {
-            lead: {
-                pos_x: [32, 96],
-                pos_y: [32, 96],
-                zoom: [0, 127],
-                rot_z: [0, 127]
-            },
-            rythm: {
-                boots: { shapes: [], colors: [] },
-                cats: { shapes: [], colors: [] },
-                cha: { shapes: [], colors: [] }
-            }
-        };
         let currentProfile = null;
         let availableProfiles = [];
         let ws = null;
 
-        // Live Test Enhancements State
+        // Fixture Setup Enhancements State
         let activeTestDevices = []; // Array of devNames
         let testProfiles = {}; // Key: type, Value: Profile object
         let testOrder = {}; // Key: devName, Value: Array of absAddr
@@ -1174,13 +1298,13 @@
         let currentFaderValues = {};
         let looperState = {};
         let looperInterval = null;
+        let isEngineVisualOn = true;
 
         // --- INIT ---
         async function init() {
             await Promise.all([
                 loadStageConfig(),
-                loadProfileList(),
-                loadRolesConfig()
+                loadProfileList()
             ]);
             initScenes();
             connectWs();
@@ -1230,132 +1354,6 @@
             }
         }
 
-        // --- ROLES CONFIGURATION ---
-        async function loadRolesConfig() {
-            try {
-                const res = await fetch(`/roles.json`);
-                if (res.ok) {
-                    const data = await res.json();
-                    rolesConfig = Object.assign(rolesConfig, data);
-                    console.log("Loaded rolesConfig:", rolesConfig);
-                }
-            } catch (e) {
-                console.warn("No roles.json found, using defaults");
-            }
-            renderRolesUi();
-        }
-
-        async function saveRolesConfig() {
-            try {
-                const res = await fetch(`/roles.json`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(rolesConfig, null, 4)
-                });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                alert('Roles Configuration Saved!');
-            } catch (e) {
-                alert(`Error saving roles: ${e.message}`);
-            }
-        }
-
-        function renderRolesUi() {
-            renderLeadRanges();
-            renderRythmBuckets();
-        }
-
-        function renderLeadRanges() {
-            const container = document.getElementById('lead-ranges-ui');
-            container.innerHTML = '';
-
-            const channels = ['pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y'];
-            channels.forEach(ch => {
-                const range = rolesConfig.lead[ch] || [0, 255];
-                const row = document.createElement('div');
-                row.className = 'kv-row';
-                row.innerHTML = `
-                    <div class="kv-name" style="text-transform:uppercase; font-size:11px; color:var(--accent)">${ch.replace('_', ' ')}</div>
-                    <input type="number" class="kv-val" value="${range[0]}" onchange="updateLeadRange('${ch}', 0, this.value)">
-                    <span style="color:var(--text-dim)">-</span>
-                    <input type="number" class="kv-val" value="${range[1]}" onchange="updateLeadRange('${ch}', 1, this.value)">
-                `;
-                container.appendChild(row);
-            });
-        }
-
-        function updateLeadRange(ch, index, val) {
-            if (!rolesConfig.lead[ch]) rolesConfig.lead[ch] = [0, 255];
-            rolesConfig.lead[ch][index] = parseInt(val);
-        }
-
-        function renderRythmBuckets() {
-            ['boots', 'cats', 'cha'].forEach(cat => {
-                const list = document.getElementById(`rythm-${cat}-list`);
-                list.innerHTML = '';
-
-                const items = rolesConfig.rythm[cat];
-                items.shapes.forEach(shape => {
-                    list.appendChild(createBucketItem(cat, 'shapes', shape, '💠'));
-                });
-                items.colors.forEach(color => {
-                    list.appendChild(createBucketItem(cat, 'colors', color, '🎨'));
-                });
-            });
-        }
-
-        function createBucketItem(category, type, value, icon) {
-            const el = document.createElement('div');
-            el.style = "display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; font-size:11px;";
-            el.innerHTML = `
-                <span style="display:flex; align-items:center; gap:5px;">
-                    <span>${icon}</span>
-                    <span style="color:var(--text);">${value}</span>
-                </span>
-                <button onclick="removeFromBucket('${category}', '${type}', '${value}')" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:0 4px;">×</button>
-            `;
-            return el;
-        }
-
-        async function openRythmPicker(category, type) {
-            // Get available shapes or colors from the first laser fixture we find
-            let options = [];
-            const laserDev = Object.values(stageConfig.devices).find(d => d.type === 'ehaho_laser');
-            if (!laserDev) {
-                alert("No ehaho_laser found in stage config to pull patterns/colors from.");
-                return;
-            }
-
-            try {
-                const res = await fetch(`${API_BASE}/ehaho_laser.json`);
-                const profile = await res.json();
-
-                if (type === 'shape') {
-                    options = Object.keys(profile.shapes || {});
-                } else {
-                    options = (profile.modes?.color_solid?.individual?.colors || []).map(c => c.name);
-                }
-
-                const choice = prompt(`Select ${type} to add to ${category}:\n\n` + options.join(', '));
-                if (choice && options.includes(choice)) {
-                    if (!rolesConfig.rythm[category][type + 's'].includes(choice)) {
-                        rolesConfig.rythm[category][type + 's'].push(choice);
-                        renderRythmBuckets();
-                    }
-                } else if (choice) {
-                    alert("Invalid selection");
-                }
-            } catch (e) {
-                alert("Error loading profile data: " + e.message);
-            }
-        }
-
-        function removeFromBucket(category, type, value) {
-            rolesConfig.rythm[category][type] = rolesConfig.rythm[category][type].filter(v => v !== value);
-            renderRythmBuckets();
-        }
-
-
-
         function renderDevices() {
             const list = document.getElementById('device-list');
             list.innerHTML = '';
@@ -1369,47 +1367,35 @@
                 ).join('');
 
                 row.innerHTML = `
-                <input type="text" value="${key}" onchange="updateDeviceKey('${key}', this.value)" style="font-weight:bold" placeholder="Device Name">
-                <select onchange="updateDeviceProp('${key}', 'type', this.value)">${profOptions}</select>
-                
-                <select onchange="updateDeviceProp('${key}', 'category', this.value)" title="Fixture Category">
-                    <option value="laser" ${dev.category === 'laser' ? 'selected' : ''}>Laser</option>
-                    <option value="light" ${dev.category === 'light' ? 'selected' : ''}>Light</option>
-                    <option value="led_strip" ${dev.category === 'led_strip' ? 'selected' : ''}>LED Strip</option>
-                    <option value="outlet" ${dev.category === 'outlet' ? 'selected' : ''}>Outlet</option>
-                    <option value="generic" ${dev.category === 'generic' ? 'selected' : ''}>Generic</option>
-                </select>
-                
-                <select onchange="updateDeviceProp('${key}', 'location', this.value)" title="Physical Location">
-                    <option value="left" ${dev.location === 'left' ? 'selected' : ''}>Left</option>
-                    <option value="right" ${dev.location === 'right' ? 'selected' : ''}>Right</option>
-                    <option value="bottom" ${dev.location === 'bottom' ? 'selected' : ''}>Bottom</option>
-                    <option value="top" ${dev.location === 'top' ? 'selected' : ''}>Top</option>
-                    <option value="center" ${dev.location === 'center' ? 'selected' : ''}>Center</option>
-                    <option value="n/a" ${dev.location === 'n/a' ? 'selected' : ''}>N/A</option>
-                </select>
-
-                <input type="number" value="${dev.address}" onchange="updateDeviceProp('${key}', 'address', parseInt(this.value))" title="DMX Address" placeholder="Addr">
-                <input type="number" value="${dev.offset}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" title="Channel Offset" placeholder="Offs">
-                
-                <div class="checkbox-group">
-                    <label class="custom-checkbox ${dev.invert_x ? 'checked' : ''}">
-                        <input type="checkbox" ${dev.invert_x ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_x', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> 
-                        ↔ Inv X
-                    </label>
-                    <label class="custom-checkbox ${dev.invert_y ? 'checked' : ''}">
-                        <input type="checkbox" ${dev.invert_y ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_y', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> 
-                        ↕ Inv Y
-                    </label>
+                <div class="device-row-line">
+                    <input type="text" value="${key}" onchange="updateDeviceKey('${key}', this.value)" style="font-weight:bold; flex: 1;" placeholder="Name">
+                    <select onchange="updateDeviceProp('${key}', 'type', this.value)" style="flex: 1;">${profOptions}</select>
+                    <button class="kv-remove" onclick="deleteDevice('${key}')" style="width: 32px; height: 32px; margin: 0;">×</button>
                 </div>
-
-                <select onchange="updateDeviceProp('${key}', 'behavior', this.value); renderDevices()" title="Behavior Role">
-                    <option value="lead" ${dev.behavior === 'lead' || !dev.behavior ? 'selected' : ''}>Lead (Fluid)</option>
-                    <option value="rhythm" ${dev.behavior === 'rhythm' ? 'selected' : ''}>Rhythm</option>
-
-                </select>
-
-                <button class="kv-remove" onclick="deleteDevice('${key}')">×</button>
+                <div class="device-row-line" style="justify-content: space-between; font-size: 11px; color: var(--text-dim);">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:2px;" title="DMX Address">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            <input type="number" value="${dev.address}" onchange="updateDeviceProp('${key}', 'address', parseInt(this.value))" style="width:45px; height: 28px; padding: 0 4px; text-align: center;">
+                        </div>
+                        <div style="display:flex; align-items:center; gap:2px;" title="Channel Offset">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <input type="number" value="${dev.offset}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" style="width:40px; height: 28px; padding: 0 4px; text-align: center;">
+                        </div>
+                    </div>
+                    <div class="checkbox-group" style="margin: 0; gap: 4px;">
+                        <label class="custom-checkbox ${dev.invert_x ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert X">
+                            <input type="checkbox" ${dev.invert_x ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_x', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> 
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 13 2 18 7 23"/><polyline points="17 11 22 6 17 1"/><line x1="2" y1="18" x2="15" y2="5"/><line x1="9" y1="19" x2="22" y2="6"/></svg>
+                            X
+                        </label>
+                        <label class="custom-checkbox ${dev.invert_y ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert Y">
+                            <input type="checkbox" ${dev.invert_y ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_y', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> 
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 7 18 2 23 7"/><polyline points="11 17 6 22 1 17"/><line x1="18" y1="2" x2="5" y2="15"/><line x1="19" y1="9" x2="6" y2="22"/></svg>
+                            Y
+                        </label>
+                    </div>
+                </div>
             `;
                 list.appendChild(row);
             });
@@ -1419,8 +1405,7 @@
             const name = prompt("Device Name (e.g. L3):");
             if (name) {
                 stageConfig.devices[name] = {
-                    type: "ehaho_laser", category: "laser", address: 1, offset: 0,
-                    location: "left", behavior: "lead",
+                    type: "Ehaho", address: 1, offset: 0,
                     invert_x: false, invert_y: false
                 };
                 renderDevices();
@@ -1432,7 +1417,16 @@
         }
 
         function updateDeviceKey(oldKey, newKey) {
-            if (oldKey === newKey) return;
+            newKey = newKey.trim();
+            if (oldKey === newKey || !newKey) {
+                renderDevices(); // Revert UI if invalid
+                return;
+            }
+            if (stageConfig.devices[newKey]) {
+                alert("A device with that name already exists!");
+                renderDevices(); // Revert UI
+                return;
+            }
             stageConfig.devices[newKey] = stageConfig.devices[oldKey];
             delete stageConfig.devices[oldKey];
             renderDevices();
@@ -1615,22 +1609,27 @@
             dots: ['steps']
         };
 
-        // Roles that use shapes
-        const ROLES_WITH_SHAPES = ['pattern'];
+        // Roles that use step_data
+        const ROLES_WITH_STEPS = ['pattern', 'patterns'];
         // Roles that are static (defaults only)
         const STATIC_ROLES = ['mode', 'clip', 'group', 'dimmer'];
 
         // ==================== SECTION VISIBILITY ====================
         function profileHasRolesFor(section) {
             const roles = Object.keys(currentProfile.channels || {});
+            const modifiers = Object.values(currentProfile.modifiers || {});
             switch (section) {
+                case 'step_data':
+                    // Show if any role uses patterns/4th beat/beat mod OR if any channel is NAMED patterns
+                    return roles.some(r => ROLES_WITH_STEPS.includes(r)) ||
+                        modifiers.some(m => ['4th beat', 'beat'].includes(m));
                 case 'macros': return roles.some(r => ROLE_MODES[r] && ROLE_MODES[r].length > 1);
                 default: return true;
             }
         }
 
         // Track which sections are open
-        let openSections = { shapes: false };
+        let openSections = { step_data: false };
 
         function toggleSection(key) {
             if (openSections[key] === undefined) openSections[key] = false;
@@ -1660,7 +1659,11 @@
             if (!p.modes) p.modes = {};
             if (!p.defaults) p.defaults = {};
             if (!p.calibration) p.calibration = {};
-            if (!p.shapes) p.shapes = {};
+            if (!p.step_data) p.step_data = {};
+            if (p.shapes) {
+                Object.assign(p.step_data, p.shapes);
+                delete p.shapes;
+            }
             if (!p.macros) p.macros = {};
 
             let html = '';
@@ -1676,361 +1679,253 @@
             container.innerHTML = html;
         }
 
-        // ==================== CHANNELS ====================
-        // ==================== CHANNELS (UNIFIED UI) ====================
+        const KNOWN_MODIFIERS = [
+            { id: 'state_machine', label: 'Static Value State Machine / Dimmer' },
+            { id: 'axis_a', label: 'Lissajous: Slow A' },
+            { id: 'axis_d', label: 'Lissajous: Slow D (Offset)' },
+            { id: 'axis_b', label: 'Lissajous: Mid B' },
+            { id: 'axis_c', label: 'Lissajous: Fast C' },
+            { id: 'bass', label: 'Direct: Bass Energy' },
+            { id: 'flux', label: 'Direct: Transients (Flux)' },
+            { id: '4th beat', label: 'Cycle: Rhythm (4th Beat)' },
+            { id: 'beat', label: 'Cycle: rhythm (Beat)' }
+        ];
+
+        // ==================== CHANNELS (UNIFIED LFO UI) ====================
         function renderChannelsSection() {
             const ch = currentProfile.channels;
-            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:15px">Map physical DMX channels and configure their specific behaviors.</div>';
+            let html = '<div style="font-size:11px; color:var(--text-dim); margin-bottom:15px">Map physical channels to the LFO Logic Matrix and configure scale.</div>';
 
-            // Sort by offset so they appear in physical channel order
+            // Init missing schemas to prevent errors
+            if (!currentProfile.modifiers) currentProfile.modifiers = {};
+            if (!currentProfile.calibration) currentProfile.calibration = {};
+
             const sortedChannels = Object.entries(ch).sort((a, b) => a[1] - b[1]);
 
             sortedChannels.forEach(([role, offset]) => {
-                const chNum = offset + 1; // 1-based display
-                const isGeneric = role === 'generic' || role.startsWith('generic_');
-                const isUnassigned = role === 'unassigned' || role.startsWith('unassigned_');
+                const chNum = offset + 1;
 
-                html += `<div class="card" style="margin-bottom: 15px; padding: 12px; border-left: 4px solid var(--accent); background:rgba(255,255,255,0.01);">`;
+                // Get State
+                let mod = currentProfile.modifiers[role] || 'static';
 
-                // --- HEADER ROW ---
-                html += `<div class="kv-row" style="margin-bottom: 10px;">`;
+                html += `<div class="card" style="margin-bottom: 10px; padding: 12px; border-left: 4px solid var(--accent); background:rgba(255,255,255,0.01);">`;
+
+                // --- TOP ROW: Channel Name & Modifier ---
+                html += `<div class="kv-row" style="margin-bottom: 8px;">`;
                 html += `<div style="width:100px; font-weight:bold; color:var(--accent); font-size:14px;">CH ${chNum} <div style="font-size:10px; color:#666; font-weight:normal;">(Offs ${offset})</div></div>`;
 
-                const usedRoles = Object.keys(ch).filter(r => !r.startsWith('generic') && !r.startsWith('unassigned'));
-                const availableRoles = KNOWN_ROLES.filter(r => !usedRoles.includes(r) || r === role || r === 'generic' || r === 'unassigned');
-
-                html += `<select class="kv-wide" onchange="handleRoleChange('${role}', this.value)" style="margin-right:10px;">`;
-                if (isGeneric) html += `<option value="${role}" selected>Generic</option>`;
-                else if (isUnassigned) html += `<option value="${role}" selected>Unassigned</option>`;
-                availableRoles.forEach(r => {
-                    if (r === 'generic') html += `<option value="generic">Generic...</option>`;
-                    else if (r === 'unassigned') html += `<option value="unassigned">Unassigned...</option>`;
-                    else html += `<option value="${r}" ${r === role && !isGeneric && !isUnassigned ? 'selected' : ''}>${r}</option>`;
+                // Subscribing to the LFO Engine
+                html += `<select class="kv-wide" onchange="updateProfileModifier('${role}', this.value)" style="flex:1; background:#222; border:1px solid var(--accent); color:white;">`;
+                KNOWN_MODIFIERS.forEach(m => {
+                    html += `<option value="${m.id}" ${m.id === mod ? 'selected' : ''}>${m.label}</option>`;
                 });
                 html += `</select>`;
 
-                html += `<input type="number" value="${offset}" min="0" max="512" style="width:60px; font-size:11px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Manual Offset Adjust">`;
-                html += `<button class="kv-remove" style="margin-left:8px; width:36px; height:36px;" onclick="removeProfileChannel('${role}')">×</button>`;
-                html += `</div>`; // End Header Row
+                // Role Re-name and Offset Adjust
+                html += `<input type="text" value="${role}" style="width:100px; font-size:11px; background:#111; border:none; text-align:right;" onchange="renameProfileChannel('${role}', this.value)" title="Rename Logic Role">`;
+                html += `<input type="number" value="${offset}" min="0" max="512" style="width:40px; font-size:11px; margin-left:5px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Offset">`;
+                html += `<button class="kv-remove" style="margin-left:8px; width:30px; height:30px;" onclick="removeProfileChannel('${role}')">×</button>`;
+                html += `</div>`;
 
-                // --- BODY ROW (Nested Configurations) ---
-                html += `<div style="padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">`;
+                // --- BOTTOM ROW: Mult-Range Calibration ---
+                if (mod !== 'state_machine') {
+                    html += `<div class="kv-row" style="background: rgba(0,0,0,0.3); padding:8px; border-radius:4px; font-size:11px;">`;
+                    html += renderCalibrationRanges(role);
+                    html += `</div>`; // End Bottom Row
+                }
 
-                // 1. Default Value
-                const defVal = currentProfile.defaults[role] !== undefined ? currentProfile.defaults[role] : 0;
-                html += `<div class="kv-row" style="margin-bottom:10px;">
-                            <label style="width:100px; margin:0; color:var(--text-dim);">Default Val</label>
-                            <input class="kv-val" type="number" value="${defVal}" min="0" max="255" onchange="updateProfileDefault('${role}', parseInt(this.value))">
-                         </div>`;
+                // Step Data dictionary inclusion for discrete modifiers
+                if (['4th beat', 'beat'].includes(mod) || role === 'patterns' || role === 'pattern') {
+                    html += renderStepDataSection();
+                }
 
-                // 2. Specific Configurations
-                if (role.startsWith('dimmer')) html += getDimmerHtml(role);
-                else if (role === 'strobe') html += getStrobeHtml(role);
-                else if (role.startsWith('generic')) html += getGenericHtml(role);
+                // State Machine Configuration
+                if (mod === 'state_machine') html += renderStateMachineSection(role);
 
-                // 3. Calibration
-                if (ROLE_CALIBRATION[role]) html += getCalibrationHtml(role);
-
-                // 4. Modes & Macros
-                if (ROLE_MODES[role]) html += getModesHtml(role);
-
-                // 5. Shapes Dictionary (specifically for pattern roles)
-                if (role === 'pattern') html += getShapesHtml(role);
-
-                html += `</div></div>`; // End Body, End Card
+                html += `</div>`; // End Card
             });
 
             html += `<button class="add-row-btn" style="padding:12px; font-weight:bold;" onclick="appendNewChannel()">+ Append Extra Channel</button>`;
             return html;
         }
 
-        // --- SUB-GENERATORS FOR NESTED UI ---
-        function getDimmerHtml(role) {
-            const dim = currentProfile.dimmers || {};
-            const cfg = dim[role] || { mode: 'binary', logic: 'normally_off', min: 0, max: 255, on_val: 255, off_val: 0 };
-            let html = `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
-                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Dimmer Config</h4>
-                <div class="row">
-                    <label>Mode:</label>
-                    <select style="width:100px" onchange="updateDimmerParam('${role}', 'mode', this.value)">
-                        <option value="binary" ${cfg.mode === 'binary' ? 'selected' : ''}>Binary</option>
-                        <option value="range" ${cfg.mode === 'range' ? 'selected' : ''}>Range</option>
-                    </select>
-                    <label>Logic:</label>
-                    <select style="width:120px" onchange="updateDimmerParam('${role}', 'logic', this.value)">
-                        <option value="normally_off" ${cfg.logic === 'normally_off' ? 'selected' : ''}>Normally Off</option>
-                        <option value="normally_on" ${cfg.logic === 'normally_on' ? 'selected' : ''}>Normally On</option>
-                    </select>
-                </div>`;
-            if (cfg.mode === 'binary') {
-                html += `<div class="row" style="margin-top:8px">
-                    <label>On Value:</label>
-                    <input class="kv-val" type="number" value="${cfg.on_val}" style="width:60px" onchange="updateDimmerParam('${role}', 'on_val', parseInt(this.value))">
-                    <label>Off Value:</label>
-                    <input class="kv-val" type="number" value="${cfg.off_val}" style="width:60px" onchange="updateDimmerParam('${role}', 'off_val', parseInt(this.value))">
-                </div>`;
-            } else {
-                html += `<div class="row" style="margin-top:8px">
-                    <label>Range:</label>
-                    <input class="kv-val" type="number" value="${cfg.min}" style="width:60px" onchange="updateDimmerParam('${role}', 'min', parseInt(this.value))">
-                    <span style="color:var(--text-dim)">–</span>
-                    <input class="kv-val" type="number" value="${cfg.max}" style="width:60px" onchange="updateDimmerParam('${role}', 'max', parseInt(this.value))">
-                </div>`;
+        // Logic Updaters for New Schema
+        function updateProfileModifier(role, val) {
+            if (!currentProfile.modifiers) currentProfile.modifiers = {};
+            currentProfile.modifiers[role] = val;
+            syncUiToJson();
+            renderProfileUi(); // Re-render to swap between Calibration vs State Machine UI
+        }
+
+        function renderCalibrationRanges(role) {
+            let cal = currentProfile.calibration[role] || { min: 0, center: 127, max: 255, vibe: 'any' };
+            if (!Array.isArray(cal)) {
+                cal = [cal];
+                currentProfile.calibration[role] = cal;
             }
-            return html + '</div>';
-        }
 
-        function getStrobeHtml(role) {
-            const strb = currentProfile.strobe || {};
-            const cfg = strb[role] || { min: 0, max: 255 };
-            return `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
-                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Strobe Range</h4>
-                <div class="row">
-                    <input class="kv-val" type="number" value="${cfg.min}" style="width:60px" onchange="updateStrobeParam('${role}', 'min', parseInt(this.value))">
-                    <span style="color:var(--text-dim)">–</span>
-                    <input class="kv-val" type="number" value="${cfg.max}" style="width:60px" onchange="updateStrobeParam('${role}', 'max', parseInt(this.value))">
-                </div></div>`;
-        }
+            let html = '<div style="display:flex; flex-direction:column; gap:8px; flex:1;">';
+            cal.forEach((range, idx) => {
+                html += `<div style="display:flex; gap:10px; align-items:center; background: rgba(0,0,0,0.2); padding:6px; border-radius:4px;">`;
 
-        function getGenericHtml(role) {
-            const gen = currentProfile.generic || {};
-            const cfg = gen[role] || { min: 0, max: 255, default: 0, modifier: 'intensity', amount: 100 };
-            return `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
-                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Generic Bounds</h4>
-                <div class="device-row" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:5px; background:none; padding:0; border:none;">
-                    <div><label>Min</label><input type="number" value="${cfg.min}" onchange="updateGenericParam('${role}', 'min', parseInt(this.value))"></div>
-                    <div><label>Max</label><input type="number" value="${cfg.max}" onchange="updateGenericParam('${role}', 'max', parseInt(this.value))"></div>
-                    <div><label>Amount %</label><input type="number" value="${cfg.amount !== undefined ? cfg.amount : 100}" min="0" max="100" onchange="updateGenericParam('${role}', 'amount', parseInt(this.value))"></div>
-                    <div><label>Modifier</label>
-                        <select onchange="updateGenericParam('${role}', 'modifier', this.value)">
-                            <option value="intensity" ${cfg.modifier === 'intensity' ? 'selected' : ''}>Intensity</option>
-                            <option value="flux" ${cfg.modifier === 'flux' ? 'selected' : ''}>Flux</option>
-                            <option value="bass" ${cfg.modifier === 'bass' ? 'selected' : ''}>Bass</option>
-                            <option value="treble" ${cfg.modifier === 'treble' ? 'selected' : ''}>Treble</option>
-                            <option value="crosstalk" ${cfg.modifier === 'crosstalk' ? 'selected' : ''}>Crosstalk</option>
-                            <option value="none" ${cfg.modifier === 'none' ? 'selected' : ''}>None</option>
-                        </select>
-                    </div>
-                </div></div>`;
-        }
-
-        function getCalibrationHtml(chName) {
-            const cal = currentProfile.calibration || {};
-            const params = cal[chName] || {};
-            const knownParams = ROLE_CALIBRATION[chName] || [];
-
-            let html = `<div style="margin-top:10px; border-top:1px dashed #333; padding-top:10px;">
-                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Calibration</h4>`;
-
-            knownParams.forEach(paramName => {
-                const paramVal = params[paramName] !== undefined ? params[paramName] : 0;
-                const isStepped = paramName === 'steps';
-
-                html += `<div class="kv-row" style="margin-bottom:4px;">
-                    <label style="width:100px; margin:0; color:var(--text-dim); font-family:monospace;">${paramName}</label>`;
-
-                if (isStepped) {
-                    html += `<input class="kv-wide" type="text" value="${paramVal}" onchange="updateCalibrationParam('${chName}', '${paramName}', this.value)" placeholder="e.g. 63, 127">`;
-                } else {
-                    html += `<input class="kv-val" type="number" value="${paramVal}" onchange="updateCalibrationParam('${chName}', '${paramName}', parseFloat(this.value))">`;
-                }
-
-                html += `</div>`;
-            });
-            return html + '</div>';
-        }
-
-        function getModesHtml(chName) {
-            const modeDefs = currentProfile.modes[chName] || {};
-            const availableModes = ROLE_MODES[chName] || [];
-            let html = `<div style="margin-top:15px; border-top:1px dashed #333; padding-top:10px;">
-                <h4 style="margin:0 0 10px 0; color:var(--accent); font-size:12px;">Modes & Triggers</h4>`;
-
-            Object.entries(modeDefs).forEach(([modeName, modeData]) => {
-                const rangeMin = modeData.range ? modeData.range[0] : 0;
-                const rangeMax = modeData.range ? modeData.range[1] : 255;
-
-                const modeOpts = availableModes.map(m => {
-                    const disp = m === 'manual' ? 'calibration' : m;
-                    return `<option value="${m}" ${m === modeName ? 'selected' : ''}>${disp}</option>`;
-                }).join('');
-
-                html += `<div style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 4px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05);">`;
-                html += `<div class="kv-row">
-                    <select class="kv-name" style="width:120px;" onchange="renameProfileMode('${chName}', '${modeName}', this.value)">${modeOpts}</select>
-                    <span style="color:var(--text-dim); font-size:11px">Range:</span>
-                    <input class="kv-val" type="number" value="${rangeMin}" style="width:55px" onchange="updateProfileModeRange('${chName}', '${modeName}', 0, parseInt(this.value))">
-                    <span style="color:var(--text-dim)">–</span>
-                    <input class="kv-val" type="number" value="${rangeMax}" style="width:55px" onchange="updateProfileModeRange('${chName}', '${modeName}', 1, parseInt(this.value))">
-                    <button class="kv-remove" onclick="removeProfileMode('${chName}', '${modeName}')">×</button>
-                </div>`;
-
-                // Clean Macro List Dropdown Logic
-                if (modeData.macros !== undefined) {
-                    const activeMacros = modeData.macros || [];
-                    html += `<div style="margin-top:8px; padding-left:5px; font-size:11px;">
-                        <div style="color:var(--text-dim); margin-bottom:4px;">Macros:</div>`;
-
-                    if (activeMacros.length > 0) {
-                        html += `<div style="display:flex; flex-wrap:wrap; gap:5px;">`;
-                        html += activeMacros.map(m =>
-                            `<span style="background:rgba(124,77,255,0.2); color:var(--accent); border:1px solid var(--accent); padding:2px 8px; border-radius:12px; display:flex; align-items:center; gap:5px;">
-                                ${m} <span style="cursor:pointer; font-weight:bold; color:var(--danger);" onclick="removeModeMacro('${chName}', '${modeName}', '${m}')">×</span>
-                            </span>`
-                        ).join('');
-                        html += `</div>`;
-                    } else {
-                        html += `<span style="color:#666; font-style:italic;">None active</span>`;
-                    }
-
-                    const availableMacros = KNOWN_MACROS.filter(m => !activeMacros.includes(m));
-                    if (availableMacros.length > 0) {
-                        html += `<div style="margin-top:8px; display:flex; gap:5px; align-items:center;">
-                            <select id="add-macro-${chName}-${modeName}" style="flex:1; background:#222; border:1px solid #444; color:white; border-radius:4px; padding:4px;">
-                                <option value="">-- Add Macro --</option>
-                                ${availableMacros.map(m => `<option value="${m}">${m}</option>`).join('')}
+                // Vibe Selector
+                html += `<div style="display:flex; flex-direction:column; align-items:center;">
+                            <label style="margin:0; font-size:9px; color:#888;">STATE</label>
+                            <select style="font-size:10px; padding:2px; background:#111; border:1px solid #333; color:#ccc;" onchange="updateCal('${role}', ${idx}, 'vibe', this.value)">
+                                <option value="any" ${range.vibe === 'any' ? 'selected' : ''}>Any</option>
+                                <option value="chill" ${range.vibe === 'chill' ? 'selected' : ''}>Chill</option>
+                                <option value="mid" ${range.vibe === 'mid' ? 'selected' : ''}>Mid</option>
+                                <option value="high" ${range.vibe === 'high' ? 'selected' : ''}>High</option>
                             </select>
-                            <button class="btn primary" style="padding:4px 10px; font-size:11px;" onclick="addModeMacro('${chName}', '${modeName}')">+ Add</button>
-                        </div>`;
-                    }
-                    html += `</div>`;
+                         </div>`;
+
+                // Values
+                ['min', 'center', 'max'].forEach(key => {
+                    let label = key.toUpperCase();
+                    if (key === 'min') label = "MIN (-1.0)";
+                    if (key === 'center') label = "CENTER (0.0)";
+                    if (key === 'max') label = "MAX (+1.0)";
+
+                    html += `<div style="display:flex; flex-direction:column; align-items:center;">
+                                <label style="margin:0; font-size:9px; color:#555;">${label}</label>
+                                <input type="number" value="${range[key] ?? (key === 'center' ? 127 : (key === 'max' ? 255 : 0))}" style="width:70px; text-align:center; font-size:11px;" onchange="updateCal('${role}', ${idx}, '${key}', this.value)">
+                             </div>`;
+                });
+
+                // Action Buttons (Add/Remove)
+                html += `<div style="display:flex; gap:4px; align-self:flex-end; margin-bottom:2px;">`;
+                if (cal.length > 1) {
+                    html += `<button class="kv-remove" style="width:24px; height:24px;" onclick="removeCalRange('${role}', ${idx})">×</button>`;
                 }
+                if (idx === cal.length - 1) {
+                    html += `<button class="btn" style="padding:0 8px; font-size:10px; height:24px; background:var(--accent); border:none; color:white; font-weight:bold; white-space:nowrap;" onclick="addCalRange('${role}')">Add Range</button>`;
+                }
+                html += `</div>`;
+
                 html += `</div>`;
             });
 
-            // Add missing modes button
-            const definedModes = Object.keys(modeDefs);
-            const missingModes = availableModes.filter(m => !definedModes.includes(m));
-            if (missingModes.length > 0) {
-                html += `<div style="display:flex; gap:8px; margin-top:6px">
-                     <select id="add-mode-${chName}" style="flex:1; background:#222; border:1px solid #444; color:white; border-radius:4px; padding:4px;">
-                         ${missingModes.map(m => `<option value="${m}">${m === 'manual' ? 'calibrated' : m}</option>`).join('')}
-                     </select>
-                     <button class="btn" style="padding:4px 10px; font-size:11px;" onclick="addProfileMode('${chName}')">+ Add Mode</button>
-                 </div>`;
-            }
-            return html + `</div>`;
-        }
-        function getShapesHtml(role) {
-            const shapes = currentProfile.shapes || {};
-            const isOpen = openSections.shapes;
-
-            let html = `<div style="margin-top:15px; border-top:1px dashed #333; padding-top:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleSection('shapes')">
-                    <h4 style="margin:0; color:var(--accent); font-size:12px;">🔷 Shapes Dictionary</h4>
-                    <span style="font-size:10px; color:var(--text-dim); transition: transform 0.2s; transform: ${isOpen ? 'rotate(90deg)' : 'none'};">▶</span>
-                </div>`;
-
-            if (isOpen) {
-                html += `<div style="margin-top:10px;">
-                    <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px">Shape name → DMX pattern value</div>`;
-
-                Object.entries(shapes).forEach(([name, val]) => {
-                    html += `<div class="kv-row" style="margin-bottom:4px;">
-                        <input class="kv-name" type="text" value="${name}" style="flex:1;" onchange="renameProfileShape('${name}', this.value)">
-                        <input class="kv-val" type="number" value="${val}" min="0" max="255" style="width:60px;" onchange="updateProfileShape('${name}', parseInt(this.value))">
-                        <button class="kv-remove" onclick="removeProfileShape('${name}')">×</button>
-                    </div>`;
-                });
-
-                html += `<button class="add-row-btn" style="margin-top:5px; padding:4px 8px; font-size:11px;" onclick="addProfileShape()">+ Add Shape</button>
-                </div>`;
-            }
-
-            return html + '</div>';
+            html += '</div>';
+            return html;
         }
 
-        function handleRoleChange(oldRole, newValue) {
-            let newRole = newValue;
-            if (newValue === 'generic' || newValue === 'unassigned') {
-                const suffix = prompt(`Enter a suffix for this ${newValue} channel (e.g., 'macro', 'fan'):\nLeave blank for standard '${newValue}'.`);
-                if (suffix === null) {
-                    renderProfileUi(); // Re-render to reset the dropdown visually
-                    return;
+        function updateCal(role, index, key, val) {
+            if (!currentProfile.calibration[role]) return;
+            let v = val;
+            if (key !== 'vibe') {
+                v = parseInt(val);
+                if (isNaN(v)) {
+                    if (key === 'center') v = 127;
+                    else if (key === 'max') v = 255;
+                    else v = 0;
                 }
-                newRole = suffix ? `${newValue}_${suffix.replace(/\s+/g, '_')}` : newValue;
             }
-            renameProfileChannel(oldRole, newRole);
+            currentProfile.calibration[role][index][key] = v;
+            syncUiToJson();
         }
 
-        function appendNewChannel() {
-            const offsets = Object.values(currentProfile.channels);
-            const nextOffset = offsets.length > 0 ? Math.max(...offsets) + 1 : 0;
-            const newRole = `unassigned_ch${nextOffset + 1}`;
-
-            currentProfile.channels[newRole] = nextOffset;
-            currentProfile.defaults[newRole] = 0;
+        function addCalRange(role) {
+            if (!currentProfile.calibration[role]) {
+                currentProfile.calibration[role] = [];
+            }
+            if (!Array.isArray(currentProfile.calibration[role])) {
+                currentProfile.calibration[role] = [currentProfile.calibration[role]];
+            }
+            currentProfile.calibration[role].push({ min: 0, center: 127, max: 255, vibe: 'any' });
             syncUiToJson();
             renderProfileUi();
         }
 
-        function removeProfileChannel(role) {
-            if (!confirm(`Remove channel "${role}"?`)) return;
-            delete currentProfile.channels[role];
-            delete currentProfile.defaults[role];
-            delete currentProfile.modes[role];
-            if (currentProfile.calibration) delete currentProfile.calibration[role];
-            // Clean dynamics if no other channel uses the same group
-            if (ROLE_DYNAMICS[role]) {
-                const grp = ROLE_DYNAMICS[role];
-                const othersUsingGroup = Object.keys(currentProfile.channels).some(r => ROLE_DYNAMICS[r] === grp);
-                if (!othersUsingGroup) delete currentProfile.dynamics[grp];
-            }
-            syncUiToJson();
-            renderProfileUi();
-        }
-
-        function renameProfileChannel(oldName, newName) {
-            if (oldName === newName || !newName) return;
-            if (currentProfile.channels[newName] !== undefined) {
-                alert("Channel name already exists!");
-                // Re-render to revert input
+        function removeCalRange(role, index) {
+            if (currentProfile.calibration[role] && currentProfile.calibration[role].length > 1) {
+                currentProfile.calibration[role].splice(index, 1);
+                syncUiToJson();
                 renderProfileUi();
-                return;
             }
-            const val = currentProfile.channels[oldName];
-            delete currentProfile.channels[oldName];
-            currentProfile.channels[newName] = val;
-            // Move related entries
-            if (currentProfile.defaults && currentProfile.defaults[oldName] !== undefined) {
-                currentProfile.defaults[newName] = currentProfile.defaults[oldName];
-                delete currentProfile.defaults[oldName];
-            }
+        }
 
-            // Move Generic config
-            if (currentProfile.generic && currentProfile.generic[oldName]) {
-                currentProfile.generic[newName] = currentProfile.generic[oldName];
-                delete currentProfile.generic[oldName];
-            }
 
-            // Move Strobe config
-            if (currentProfile.strobe && currentProfile.strobe[oldName]) {
-                currentProfile.strobe[newName] = currentProfile.strobe[oldName];
-                delete currentProfile.strobe[oldName];
-            }
-            // Clear old role-specific data, recreate for new role
-            delete currentProfile.modes[oldName];
-            if (currentProfile.calibration) delete currentProfile.calibration[oldName];
 
-            if (ROLE_MODES[newName] && !currentProfile.modes[newName]) {
-                currentProfile.modes[newName] = {};
-                ROLE_MODES[newName].forEach(m => {
-                    currentProfile.modes[newName][m] = { range: m === 'manual' || m === 'individual' ? [0, 127] : [128, 255] };
-                });
+        // ==================== STATE MACHINE ====================
+        function renderStateMachineSection(role) {
+            if (!currentProfile.state_data) currentProfile.state_data = {};
+            if (!currentProfile.state_data[role]) {
+                currentProfile.state_data[role] = {
+                    off: [0, 0],
+                    chill: 254,
+                    mid: 120,
+                    high: 220,
+                    drop: 220,
+                    default: 254
+                };
             }
-            if (ROLE_CALIBRATION[newName] && !currentProfile.calibration[newName]) {
-                currentProfile.calibration[newName] = {};
-                ROLE_CALIBRATION[newName].forEach(p => {
-                    let def = 0;
-                    if (p === 'center') def = 64;
-                    else if (p === 'max_dmx' || p === 'right' || p === 'bottom') def = 127;
-                    else if (p === 'left' || p === 'top' || p === 'min_dmx') def = 0;
-                    else if (p === 'range') def = 32;
-                    currentProfile.calibration[newName][p] = def;
-                });
+            const data = currentProfile.state_data[role];
+            let html = '<div style="background:rgba(124,77,255,0.05); padding:10px; margin-top:5px; border-radius:4px; border:1px solid rgba(124,77,255,0.2);">';
+            html += '<div style="font-size:10px; color:var(--accent); margin-bottom:8px; font-weight:bold; text-transform:uppercase; letter-spacing:1px;">State Machine Configuration</div>';
+
+            html += `<div style="display:flex; flex-direction:column; gap:10px;">`;
+
+            // OFF Range
+            const offVal = data.off || [0, 0];
+            const off0 = Array.isArray(offVal) ? offVal[0] : offVal;
+            const off1 = Array.isArray(offVal) ? offVal[1] : offVal;
+
+            html += `<div style="display:flex; gap:10px; align-items:center; background:rgba(0,0,0,0.2); padding:6px; border-radius:4px;">
+                        <div style="width:80px; font-size:10px; color:var(--danger); font-weight:bold;">OFF RANGE</div>
+                        <div style="display:flex; gap:5px;">
+                            <input type="number" value="${off0}" min="0" max="255" style="width:60px; font-size:11px;" onchange="updateProfileState('${role}', 'off', this.value, 0)">
+                            <span style="color:#666">...</span>
+                            <input type="number" value="${off1}" min="0" max="255" style="width:60px; font-size:11px;" onchange="updateProfileState('${role}', 'off', this.value, 1)">
+                        </div>
+                     </div>`;
+
+            // Static Vibes
+            html += `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap:10px; background:rgba(0,0,0,0.1); padding:6px; border-radius:4px;">`;
+            ['chill', 'mid', 'high', 'drop', 'default'].forEach(state => {
+                html += `<div style="display:flex; flex-direction:column;">
+                            <label style="margin:0; font-size:9px; color:#888; text-transform:uppercase;">${state}</label>
+                            <input type="number" value="${data[state] ?? 0}" min="0" max="255" style="width:100%; font-size:11px;" onchange="updateProfileState('${role}', '${state}', this.value)">
+                         </div>`;
+            });
+            html += `</div></div></div>`;
+            return html;
+        }
+
+        function updateProfileState(role, state, val, idx = -1) {
+            if (!currentProfile.state_data) currentProfile.state_data = {};
+            if (!currentProfile.state_data[role]) currentProfile.state_data[role] = {};
+
+            let v = parseInt(val);
+            if (isNaN(v)) v = 0;
+
+            if (idx === -1) {
+                currentProfile.state_data[role][state] = v;
+            } else {
+                if (!Array.isArray(currentProfile.state_data[role][state])) {
+                    const current = currentProfile.state_data[role][state] || 0;
+                    currentProfile.state_data[role][state] = [current, current];
+                }
+                currentProfile.state_data[role][state][idx] = v;
             }
             syncUiToJson();
-            renderProfileUi();
+        }
+
+        // ==================== STEP DATA ====================
+        function renderStepDataSection() {
+            const data = currentProfile.step_data || {};
+            let html = '<div style="background:rgba(255,255,255,0.05); padding:10px; margin-top:5px; border-radius:4px;">';
+            html += '<div style="font-size:10px; color:var(--text-dim); margin-bottom:8px">Step mapping → DMX value index</div>';
+
+            Object.entries(data).forEach(([name, val]) => {
+                html += `<div class="kv-row" style="margin-bottom:4px;">
+                    <input type="text" value="${name}" style="flex:1; background:#222; border:none; font-size:11px;" onchange="renameProfileStep('${name}', this.value)">
+                    <input type="number" value="${val}" min="0" max="255" style="width:60px; font-size:11px;" onchange="updateProfileStep('${name}', parseInt(this.value))">
+                    <button class="kv-remove" style="width:24px; height:24px;" onclick="removeProfileStep('${name}')">×</button>
+                </div>`;
+            });
+            html += `<button class="add-row-btn" style="padding:4px; font-size:11px;" onclick="addProfileStep()">+ Add Step Index</button>`;
+            html += '</div>';
+            return html;
         }
 
         function updateProfileChannel(role, val) {
@@ -2041,113 +1936,33 @@
 
         // ==================== MODES ====================
 
-        function addProfileMode(chName) {
-            const sel = document.getElementById('add-mode-' + chName);
-            if (!sel) return;
-            const modeName = sel.value;
-            if (!modeName) return;
-            if (!currentProfile.modes[chName]) currentProfile.modes[chName] = {};
-
-            const isFirst = modeName === 'manual' || modeName === 'individual';
-            currentProfile.modes[chName][modeName] = { range: isFirst ? [0, 127] : [128, 255] };
-
-            // Auto-add macros array for effect modes
-            if (modeName !== 'manual' && modeName !== 'individual' && modeName !== 'cycle') {
-                currentProfile.modes[chName][modeName].macros = [];
-            }
-            syncUiToJson();
-            renderProfileUi();
-        }
-
-        function removeProfileMode(chName, modeName) {
-            delete currentProfile.modes[chName][modeName];
-            if (Object.keys(currentProfile.modes[chName]).length === 0) {
-                delete currentProfile.modes[chName];
-            }
-            syncUiToJson();
-            renderProfileUi();
-        }
-
-        function renameProfileMode(chName, oldName, newName) {
-            if (oldName === newName || !newName) return;
-            currentProfile.modes[chName][newName] = currentProfile.modes[chName][oldName];
-            delete currentProfile.modes[chName][oldName];
-            syncUiToJson();
-            renderProfileUi();
-        }
-
-        function updateProfileModeRange(chName, modeName, idx, val) {
-            if (!currentProfile.modes[chName][modeName].range) currentProfile.modes[chName][modeName].range = [0, 255];
-            currentProfile.modes[chName][modeName].range[idx] = val;
-            syncUiToJson();
-        }
-
-        function addModeMacro(chName, modeName) {
-            const sel = document.getElementById(`add-macro-${chName}-${modeName}`);
-            if (!sel || !sel.value) return;
-            const macro = sel.value;
-            const mode = currentProfile.modes[chName][modeName];
-            if (!mode.macros) mode.macros = [];
-            if (!mode.macros.includes(macro)) mode.macros.push(macro);
-            syncUiToJson();
-            renderProfileUi(); // Re-render to show new pill
-        }
-
-        function removeModeMacro(chName, modeName, macro) {
-            const mode = currentProfile.modes[chName][modeName];
-            if (mode.macros) {
-                mode.macros = mode.macros.filter(m => m !== macro);
-            }
-            syncUiToJson();
-            renderProfileUi(); // Re-render to remove pill
-        }
-
-        function updateProfileModeColors(chName, modeName, val) {
-            try {
-                currentProfile.modes[chName][modeName].colors = JSON.parse(val);
-                syncUiToJson();
-            } catch (e) {
-                alert("Invalid JSON for colors");
-            }
-        }
+        // Removed legacy Mode and Calibration block code
 
 
-        function updateProfileDefault(role, val) {
-            currentProfile.defaults[role] = val;
-            syncUiToJson();
-        }
-
-        function updateCalibrationParam(chName, paramName, val) {
-            if (!currentProfile.calibration[chName]) currentProfile.calibration[chName] = {};
-            currentProfile.calibration[chName][paramName] = val;
-            syncUiToJson();
-        }
-
-
-        function addProfileShape() {
-            const name = prompt("Shape name (e.g. circle, star, dot1):");
+        function addProfileStep() {
+            const name = prompt("Step name (e.g. v1, v2, v3):");
             if (!name) return;
-            if (!currentProfile.shapes) currentProfile.shapes = {};
-            currentProfile.shapes[name] = 0;
+            if (!currentProfile.step_data) currentProfile.step_data = {};
+            currentProfile.step_data[name] = 0;
             syncUiToJson();
             renderProfileUi();
         }
 
-        function removeProfileShape(name) {
-            delete currentProfile.shapes[name];
+        function removeProfileStep(name) {
+            delete currentProfile.step_data[name];
             syncUiToJson();
             renderProfileUi();
         }
 
-        function renameProfileShape(oldName, newName) {
+        function renameProfileStep(oldName, newName) {
             if (oldName === newName || !newName) return;
-            currentProfile.shapes[newName] = currentProfile.shapes[oldName];
-            delete currentProfile.shapes[oldName];
+            currentProfile.step_data[newName] = currentProfile.step_data[oldName];
+            delete currentProfile.step_data[oldName];
             syncUiToJson();
         }
 
-        function updateProfileShape(name, val) {
-            currentProfile.shapes[name] = val;
+        function updateProfileStep(name, val) {
+            currentProfile.step_data[name] = val;
             syncUiToJson();
         }
 
@@ -2215,19 +2030,19 @@
         function connectWs() {
             ws = new WebSocket(`ws://${window.location.hostname}:8765`);
             ws.onopen = () => {
-                document.getElementById('conn-status').innerText = "🟢 Connected";
+                document.getElementById('conn-status').innerHTML = '<span style="display:flex; align-items:center; gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Connected</span>';
                 document.getElementById('conn-status').style.color = "var(--success)";
             };
             ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    if (msg.type === "force_refresh") {
-                        window.location.reload();
-                    }
-                } catch (e) { }
+                    // Removed legacy Mode and Calibration block code
+                } catch (e) {
+                    console.error("WS Parse Error:", e);
+                }
             };
             ws.onclose = () => {
-                document.getElementById('conn-status').innerText = "🔴 Disconnected";
+                document.getElementById('conn-status').innerHTML = '<span style="display:flex; align-items:center; gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Offline</span>';
                 document.getElementById('conn-status').style.color = "var(--danger)";
                 setTimeout(connectWs, 2000);
             };
@@ -2235,11 +2050,11 @@
 
         function populateTestDevices() {
             const sel = document.getElementById('test-dev-select');
+            if (!sel) return;
+            const currentVal = sel.value;
             sel.innerHTML = '';
 
-            let allDevices = {};
-            if (stageConfig.lasers) Object.assign(allDevices, stageConfig.lasers);
-            if (stageConfig.devices) Object.assign(allDevices, stageConfig.devices);
+            let allDevices = stageConfig.devices || {};
 
             Object.keys(allDevices).forEach(k => {
                 const opt = document.createElement('option');
@@ -2247,74 +2062,100 @@
                 opt.innerText = k;
                 sel.appendChild(opt);
             });
-            if (sel.options.length > 0) handleDeviceSelection(sel.options[0].value);
+
+            if (currentVal && Array.from(sel.options).some(o => o.value === currentVal)) {
+                sel.value = currentVal;
+            }
+
+            if (sel.options.length > 0 && activeTestDevices.length === 0) {
+                // Initialize with first device if none active
+                handleDeviceSelection(sel.value);
+            }
         }
-
-        // --- LOOPER ENGINE ---
-        isEngineVisualOn = true;
-
-        const SCENE_MAPPINGS = {
-            'hold': 'HOLD',
-            'scroll': 'SCROLL',
-            'chase': 'CHASE',
-            'lissajous': 'LISSAJOUS'
-        };
 
         function initScenes() {
             const grid = document.getElementById('scenes-grid');
             if (!grid) return;
             grid.innerHTML = '';
 
-            // Only 4 buttons now
-            Object.keys(SCENE_MAPPINGS).forEach((scene) => {
-                const btn = document.createElement('div');
-                btn.className = 'scene-btn';
-                btn.style.height = '60px'; // Make them bigger since there are fewer
-                btn.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">${scene.toUpperCase()}</div>`;
-                btn.onclick = () => {
-                    document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
-                    btn.classList.add('playing');
+            // ZERO ALL Button
+            const btnZero = document.createElement('div');
+            btnZero.className = 'scene-btn';
+            btnZero.style.height = '60px';
+            btnZero.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">ZERO ALL</div>`;
+            btnZero.onclick = async () => {
+                document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
+                btnZero.classList.add('playing');
+                await zeroAllDmx();
+                setTimeout(() => btnZero.classList.remove('playing'), 500);
+            };
+            grid.appendChild(btnZero);
 
-                    if (ws && ws.readyState === 1) {
-                        ws.send(JSON.stringify({ type: 'trigger_scene', scene: scene }));
-                    }
-
-                    setTimeout(() => btn.classList.remove('playing'), 500);
-                };
-                grid.appendChild(btn);
-            });
+            // SET AS DEFAULT Button
+            const btnDefault = document.createElement('div');
+            btnDefault.className = 'scene-btn';
+            btnDefault.style.height = '60px';
+            btnDefault.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">SET AS DEFAULT</div>`;
+            btnDefault.onclick = () => {
+                document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
+                btnDefault.classList.add('playing');
+                setAsDefault();
+                setTimeout(() => btnDefault.classList.remove('playing'), 500);
+            };
+            grid.appendChild(btnDefault);
         }
 
-        function applyLocalScene(sceneName) {
+        async function zeroAllDmx() {
+            let allDevices = stageConfig.devices || {};
+            for (const devName of Object.keys(allDevices)) {
+                await zeroDeviceDmx(devName);
+            }
+        }
+
+        async function setAsDefault() {
             const devName = document.getElementById('test-dev-select').value;
             let allDevices = stageConfig.devices || {};
             const dev = allDevices[devName];
-            if (!dev || !currentProfile || !currentProfile.channels) return;
+            if (!dev) return;
 
-            const mapping = SCENE_MAPPINGS[sceneName];
-            if (!mapping) return;
+            // Use current profile if it matches, else fallback to testProfiles cache
+            let profile = currentProfile;
+            if (!profile || profile.type !== dev?.type) {
+                profile = testProfiles[dev?.type];
+            }
 
-            Object.entries(currentProfile.channels).forEach(([role, val]) => {
-                if (mapping[role]) {
-                    const offset = typeof val === 'object' ? val.offset : val;
-                    const absAddr = dev.address + dev.offset + offset;
-
-                    const minVal = mapping[role][0];
-                    const maxVal = mapping[role][1];
-
-                    if (minVal === maxVal) {
-                        // Just hold
-                        const disp = document.getElementById(`disp-${absAddr}`);
-                        if (disp) disp.value = minVal;
-                        updateDmxState(absAddr, minVal);
+            if (!profile) {
+                try {
+                    const res = await fetch(`${API_BASE}/${dev.type}.json`);
+                    if (res.ok) {
+                        profile = await res.json();
+                        testProfiles[dev.type] = profile;
                     } else {
-                        // Range sequence
-                        const disp = document.getElementById(`disp-${absAddr}`);
-                        if (disp) disp.value = `${minVal}-${maxVal}`;
-                        generateRangeSequence(absAddr, minVal, maxVal);
+                        alert("Could not load profile to set defaults.");
+                        return;
                     }
+                } catch (e) {
+                    console.error("Profile load error", e);
+                    return;
                 }
+            }
+
+            Object.entries(profile.channels).forEach(([role, val]) => {
+                const offset = typeof val === 'object' ? val.offset : val;
+                const absAddr = dev.address + dev.offset + offset;
+
+                const faderVal = currentFaderValues[absAddr] || 0;
+
+                if (!currentProfile.calibration) currentProfile.calibration = {};
+                if (!currentProfile.calibration[role]) currentProfile.calibration[role] = { min: 0, center: 127, max: 255 };
+
+                currentProfile.calibration[role].center = faderVal;
+
+                if (!currentProfile.defaults) currentProfile.defaults = {};
+                currentProfile.defaults[role] = faderVal;
             });
+            syncUiToJson();
+            alert("Set current values as default for profile!");
         }
 
         function toggleEngineVisual() {
@@ -2323,18 +2164,52 @@
 
             if (isEngineVisualOn) {
                 track.classList.add('on');
-                // Clear overrides for the currently selected device
-                const devName = document.getElementById('test-dev-select').value;
-                if (ws && ws.readyState === 1 && devName) {
-                    ws.send(JSON.stringify({ type: 'clear_overrides', device: devName }));
-
-                    // Also clear local UI fader values for this device? 
-                    // Let's at least reset the currentFaderValues cache for those addresses
-                    // but we don't know the exact addresses easily without re-scanning profile
+                // Clear overrides for all active test devices to return control to the engine
+                if (ws && ws.readyState === 1) {
+                    activeTestDevices.forEach(devName => {
+                        ws.send(JSON.stringify({ type: 'clear_overrides', device: devName }));
+                    });
                 }
             } else {
                 track.classList.remove('on');
+                // Switch to manual Setup control: zero all channels and keep faders as source of truth
+                activeTestDevices.forEach(devName => {
+                    zeroDeviceDmx(devName);
+                });
             }
+        }
+
+        async function zeroDeviceDmx(devName) {
+            let allDevices = stageConfig.devices || {};
+            const dev = allDevices[devName];
+            if (!dev) return;
+
+            let profile = testProfiles[dev.type];
+            if (!profile) {
+                try {
+                    const res = await fetch(`${API_BASE}/${dev.type}.json`);
+                    if (res.ok) {
+                        profile = await res.json();
+                        testProfiles[dev.type] = profile;
+                    } else return;
+                } catch (e) { console.error("Profile load error", e); return; }
+            }
+
+            if (!profile || !profile.channels) return;
+
+            Object.entries(profile.channels).forEach(([role, val]) => {
+                const offset = typeof val === 'object' ? val.offset : val;
+                const absAddr = dev.address + dev.offset + offset;
+
+                currentFaderValues[absAddr] = 0;
+
+                const disp = document.getElementById(`disp-${absAddr}`);
+                if (disp) disp.value = 0;
+                const input = document.getElementById(`input-${absAddr}`);
+                if (input) input.value = 0;
+
+                updateDmxState(absAddr, 0, false, true); // skipLinked=false, skipAutoCheck=true
+            });
         }
 
         function toggleLooper(addr) {
@@ -2404,20 +2279,43 @@
             }
         }
 
+        function closeFixtureModal() {
+            document.getElementById('fixture-modal-overlay').style.display = 'none';
+        }
+
         async function handleDeviceSelection(devName) {
             if (!devName) return;
             if (activeTestDevices.includes(devName)) return;
 
             if (activeTestDevices.length > 0) {
-                if (confirm(`Add ${devName} to current view?`)) {
-                    activeTestDevices.push(devName);
-                } else {
+                const overlay = document.getElementById('fixture-modal-overlay');
+                const title = document.getElementById('modal-title');
+                const text = document.getElementById('modal-text');
+                const switchBtn = document.getElementById('modal-switch-btn');
+                const addBtn = document.getElementById('modal-add-btn');
+
+                title.innerText = `Manage Selection`;
+                text.innerText = `You currently have ${activeTestDevices.join(', ')} active. How would you like to handle ${devName}?`;
+
+                switchBtn.innerText = `No, switch to ${devName}`;
+                switchBtn.onclick = () => {
                     activeTestDevices = [devName];
-                }
+                    renderTestFaders();
+                    closeFixtureModal();
+                };
+
+                addBtn.innerText = `Add ${devName} to current setup`;
+                addBtn.onclick = () => {
+                    activeTestDevices.push(devName);
+                    renderTestFaders();
+                    closeFixtureModal();
+                };
+
+                overlay.style.display = 'flex';
             } else {
                 activeTestDevices = [devName];
+                await renderTestFaders();
             }
-            await renderTestFaders();
         }
 
         async function renderTestFaders() {
@@ -2560,7 +2458,9 @@
                         <div class="drag-handle" 
                             onmousedown="this.parentElement.setAttribute('draggable', 'true')" 
                             onmouseup="this.parentElement.removeAttribute('draggable')" 
-                            onmouseleave="this.parentElement.removeAttribute('draggable')">≡</div>
+                            onmouseleave="this.parentElement.removeAttribute('draggable')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/></svg>
+                        </div>
                     `;
                     fadersRow.appendChild(wrapper);
 
@@ -2574,7 +2474,7 @@
 
                         connector.innerHTML = `
                             <button class="link-btn ${isActive ? 'active' : ''}" onclick="toggleFaderLink('${devName}', '${linkKey}')" title="Link Sliders">
-                                🔗
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                             </button>
                         `;
                         fadersRow.appendChild(connector);
@@ -2685,7 +2585,7 @@
             if (led) led.className = 'led green';
         }
 
-        function updateDmxState(addr, val, skipLinked = false) {
+        function updateDmxState(addr, val, skipLinked = false, skipAutoCheck = false) {
             const intVal = parseInt(val);
 
             // Find which device this addr belongs to
@@ -2742,10 +2642,12 @@
 
             group.forEach(targetAddr => {
                 currentFaderValues[targetAddr] = intVal;
-                saveActiveChannels[targetAddr] = true;
 
-                const checkbox = document.getElementById(`save-active-${targetAddr}`);
-                if (checkbox) checkbox.checked = true;
+                if (!skipAutoCheck) {
+                    saveActiveChannels[targetAddr] = true;
+                    const checkbox = document.getElementById(`save-active-${targetAddr}`);
+                    if (checkbox) checkbox.checked = true;
+                }
 
                 const disp = document.getElementById(`disp-${targetAddr}`);
                 if (disp) {
@@ -2755,7 +2657,6 @@
                 const input = document.getElementById(`input-${targetAddr}`);
                 if (input) input.value = intVal;
             });
-
             // Send ALL active overrides
             const overrides = Object.entries(currentFaderValues).map(([a, v]) => ({
                 address: parseInt(a),
@@ -2770,61 +2671,172 @@
             }
         }
 
-        async function saveGlobalPreset() {
-            await performPresetSave();
+        function getTriggerForVibe(vibe) {
+            const v = vibe.toLowerCase().trim();
+            const mapping = {
+                'boots': 'rhythm:boots',
+                'cats': 'rhythm:cats',
+                'cha': 'rhythm:cha',
+                'drop': 'transient:dropping',
+                'building': 'transient:building',
+                'tension': 'transient:tension',
+                'machine_gun': 'bass_style:machine_gun',
+                'tearout': 'bass_style:tearout',
+                'wonky': 'bass_style:wonky',
+                'sub': 'bass_style:sub'
+            };
+            // Fallback: Default to vibe trigger if not a special rhythm/transient
+            return mapping[v] || `vibe:${v}`;
         }
 
-        async function performPresetSave() {
-            const devName = document.getElementById('test-dev-select').value;
-            let allDevices = stageConfig.devices || {};
-            const dev = allDevices[devName];
-            if (!dev || !currentProfile || !currentProfile.channels) {
-                alert("Please select a valid device and profile first.");
+        async function saveToProfilePreset() {
+            if (activeTestDevices.length === 0) {
+                alert("Please select at least one active fixture first.");
                 return;
             }
 
+            // Identify unique profiles among active fixtures
+            let activeProfiles = [];
+            let allDevices = stageConfig.devices || {};
+            activeTestDevices.forEach(dName => {
+                const dev = allDevices[dName];
+                if (dev && !activeProfiles.includes(dev.type)) activeProfiles.push(dev.type);
+            });
+
+            if (activeProfiles.length === 0) return;
+
+            let selectedProfile = activeProfiles[0];
+            if (activeProfiles.length > 1) {
+                selectedProfile = prompt(`Active fixtures use multiple profiles: ${activeProfiles.join(', ')}. Which profile should this preset apply to?`, activeProfiles[0]);
+                if (!selectedProfile || !activeProfiles.includes(selectedProfile)) return;
+            }
+
+            const profile = testProfiles[selectedProfile];
+            if (!profile) {
+                alert("Profile data not loaded. Please try again.");
+                return;
+            }
+
+            // Find an active fixture of this profile type to pull data from
+            const sourceDevName = activeTestDevices.find(d => allDevices[d]?.type === selectedProfile);
+            const dev = allDevices[sourceDevName];
+
             let presetPayload = {};
             let hasData = false;
-            Object.entries(currentProfile.channels).forEach(([role, val]) => {
+            Object.entries(profile.channels).forEach(([role, val]) => {
                 const offset = typeof val === 'object' ? val.offset : val;
                 const absAddr = dev.address + dev.offset + offset;
 
-                // ONLY include if specifically active for save
-                if (saveActiveChannels[absAddr] && currentFaderValues[absAddr] !== undefined) {
-                    presetPayload[role] = currentFaderValues[absAddr];
+                if (saveActiveChannels[absAddr]) {
+                    presetPayload[role] = (currentFaderValues[absAddr] !== undefined) ? currentFaderValues[absAddr] : 0;
                     hasData = true;
                 }
             });
 
             if (!hasData) {
-                alert("No active fader data found. Move some faders or check the 'Include' boxes first!");
+                alert("No channels selected for inclusion. Check the 'Include' boxes first!");
                 return;
             }
 
-            const presetName = prompt("Enter a name for this Preset (e.g., 'Red Dot High'):");
+            const presetName = prompt(`Save Profile Preset for ${selectedProfile}. Enter Name:`);
             if (!presetName) return;
 
-            let vibe = prompt("Assign a vibe (chill, mid, high, sub, tearout, machine_gun, wonky):", "mid");
+            const vibe = prompt("Assign a Vibe/Trigger (chill, mid, high, boots, cats, cha, drop, building, tension, machine_gun, tearout, wonky, sub):", "mid");
             if (!vibe) return;
-            vibe = vibe.toLowerCase().trim();
 
-            // Persist to presets.json
-            let existingPresets = {};
-            try {
-                const res = await fetch(`${API_BASE}/presets.json?t=${Date.now()}`, { cache: 'no-store' });
-                if (res.ok) existingPresets = await res.json();
-            } catch (e) {
-                console.log("No existing presets.json found. Creating new one.");
+            const trigger = getTriggerForVibe(vibe);
+
+            await savePresetToDisk(presetName, {
+                vibe: vibe.toLowerCase().trim(),
+                trigger: trigger,
+                target_category: dev.category || 'laser',
+                profile: selectedProfile,
+                channels: presetPayload
+            });
+        }
+
+        async function saveToFixturePreset() {
+            if (activeTestDevices.length === 0) {
+                alert("Please select at least one active fixture first.");
+                return;
             }
 
-            existingPresets[presetName] = {
-                vibe: vibe,
-                target_category: dev.category || 'laser',
-                profile: dev.type,
-                channels: presetPayload
-            };
+            if (!confirm(`Save a snapshot for the current active fixtures: ${activeTestDevices.join(', ')}?`)) return;
+
+            let fixturePayloads = {};
+            let hasData = false;
+            let allDevices = stageConfig.devices || {};
+
+            for (const dName of activeTestDevices) {
+                const dev = allDevices[dName];
+                const profile = testProfiles[dev.type];
+                if (!dev || !profile) continue;
+
+                let devData = {};
+                let devHasData = false;
+
+                Object.entries(profile.channels).forEach(([role, val]) => {
+                    const offset = typeof val === 'object' ? val.offset : val;
+                    const absAddr = dev.address + dev.offset + offset;
+
+                    if (saveActiveChannels[absAddr]) {
+                        devData[role] = (currentFaderValues[absAddr] !== undefined) ? currentFaderValues[absAddr] : 0;
+                        devHasData = true;
+                        hasData = true;
+                    }
+                });
+
+                if (devHasData) {
+                    fixturePayloads[dName] = devData;
+                }
+            }
+
+            if (!hasData) {
+                alert("No channels selected for inclusion on any fixture.");
+                return;
+            }
+
+            const presetName = prompt(`Save Fixture Snapshot. Enter Name:`);
+            if (!presetName) return;
+
+            const vibe = prompt("Assign a Vibe/Trigger:", "mid");
+            if (!vibe) return;
+
+            const trigger = getTriggerForVibe(vibe);
+
+            const primaryDev = allDevices[activeTestDevices[0]];
+
+            await savePresetToDisk(presetName, {
+                vibe: vibe.toLowerCase().trim(),
+                trigger: trigger,
+                target_fixtures: [...activeTestDevices],
+                target_category: (primaryDev ? primaryDev.category : 'laser'),
+                fixture_payloads: fixturePayloads
+            });
+        }
+
+        async function savePresetToDisk(name, data) {
+            console.log(`[DEBUG] Attempting to save preset: ${name}`, data);
+            let existingPresets = {};
+            try {
+                const url = `${API_BASE}/presets.json?t=${Date.now()}`;
+                console.log(`[DEBUG] Fetching existing presets from: ${url}`);
+                const res = await fetch(url, { cache: 'no-store' });
+                if (res.ok) {
+                    existingPresets = await res.json();
+                    console.log(`[DEBUG] Found ${Object.keys(existingPresets).length} existing presets`);
+                } else {
+                    console.warn(`[DEBUG] Could not fetch existing presets (HTTP ${res.status}), starting fresh.`);
+                }
+            } catch (e) {
+                console.error(`[DEBUG] Error loading existing presets:`, e);
+                // Continue with empty object if it's the first time or error
+            }
+
+            existingPresets[name] = data;
 
             try {
+                console.log(`[DEBUG] Sending PUT request to: ${API_BASE}/presets.json`);
                 const saveRes = await fetch(`${API_BASE}/presets.json`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -2832,19 +2844,59 @@
                 });
 
                 if (saveRes.ok) {
-                    alert(`\u2705 Saved Preset: '${presetName}' (${vibe}) successfully!`);
-                    renderPresetsManager(true);
+                    console.log(`[DEBUG] Save successful!`);
+                    alert(`✅ Preset "${name}" saved!`);
+                    await renderPresetsManager(true);
                 } else {
-                    alert("\u274c Failed to save preset. Check server logs.");
+                    const errText = await saveRes.text();
+                    console.error(`[DEBUG] Save failed: HTTP ${saveRes.status}`, errText);
+                    alert("❌ Error saving presets.json: " + errText);
                 }
             } catch (e) {
-                console.error(e);
-                alert("\u274c Error saving preset.");
+                console.error(`[DEBUG] Network error during save:`, e);
+                alert("❌ Connection error while saving presets: " + e.message);
             }
         }
 
         // --- PRESET MANAGER ---
         let allPresetsData = {};
+        let categoryCollapsed = {};
+        let pendingCategories = []; // Categories created via New, before any preset is assigned
+
+        function presetRowHtml(pName, pData) {
+            const escapedName = pName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            return `
+                <div class="device-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr 80px 36px; gap: 8px; align-items: center;">
+                    <input type="text" value="${pName.replace(/"/g, '&quot;')}" readonly style="background:transparent; border:none; outline:none; font-weight:bold; color:var(--text); font-size:13px;">
+                    <select onchange="updatePresetProfile('${escapedName}', this.value)" style="background:#1a1a24; border-color:#333; color:#ccc; width:100%; font-size:12px; padding:2px 4px;">
+                        <option value="" ${!pData.profile ? 'selected' : ''}>Any</option>
+                        ${availableProfiles.map(p => `<option value="${p.replace('.json', '')}" ${pData.profile === p.replace('.json', '') ? 'selected' : ''}>${p.replace('.json', '')}</option>`).join('')}
+                    </select>
+                    <select onchange="updatePresetVibe('${escapedName}', this.value)" style="background:#1a1a24; border-color:#333; color:#ccc; width:100%; font-size:12px; padding:2px 4px;">
+                        <option value="chill" ${pData.vibe === 'chill' ? 'selected' : ''}>chill</option>
+                        <option value="mid" ${pData.vibe === 'mid' ? 'selected' : ''}>mid</option>
+                        <option value="high" ${pData.vibe === 'high' ? 'selected' : ''}>high</option>
+                        <option value="sub" ${pData.vibe === 'sub' ? 'selected' : ''}>sub</option>
+                        <option value="boots" ${pData.vibe === 'boots' ? 'selected' : ''}>Boots (Bass)</option>
+                        <option value="cats" ${pData.vibe === 'cats' ? 'selected' : ''}>Cats (Treble)</option>
+                        <option value="cha" ${pData.vibe === 'cha' ? 'selected' : ''}>Cha (Mid)</option>
+                        <option value="tearout" ${pData.vibe === 'tearout' ? 'selected' : ''}>tearout</option>
+                        <option value="machine_gun" ${pData.vibe === 'machine_gun' ? 'selected' : ''}>machine_gun</option>
+                        <option value="wonky" ${pData.vibe === 'wonky' ? 'selected' : ''}>wonky</option>
+                        <option value="building" ${pData.vibe === 'building' ? 'selected' : ''}>building</option>
+                        <option value="tension" ${pData.vibe === 'tension' ? 'selected' : ''}>tension</option>
+                        <option value="drop" ${pData.vibe === 'drop' ? 'selected' : ''}>drop</option>
+                    </select>
+                    <button class="btn" style="padding:3px 6px; font-size:11px; height:26px; display:flex; align-items:center; gap:4px; border-color:var(--accent); color:var(--accent);" onclick="playPreset('${escapedName}')">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Play
+                    </button>
+                    <button class="kv-remove" onclick="deletePreset('${escapedName}')" style="width:28px; height:26px; display:flex; align-items:center; justify-content:center; margin:0; padding:0;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            `;
+        }
 
         async function renderPresetsManager(forceRefresh = false) {
             if (forceRefresh || Object.keys(allPresetsData).length === 0) {
@@ -2867,33 +2919,66 @@
             if (!container) return;
             container.innerHTML = '';
 
+            const entries = Object.entries(allPresetsData);
+            if (entries.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">No presets saved yet. Go to Fixture Setup to create some!</div>';
+                return;
+            }
+
+            // Group by category
+            const grouped = {};
+            const uncategorized = [];
+            entries.forEach(([pName, pData]) => {
+                const cat = pData.category;
+                if (cat) {
+                    if (!grouped[cat]) grouped[cat] = [];
+                    grouped[cat].push([pName, pData]);
+                } else {
+                    uncategorized.push([pName, pData]);
+                }
+            });
+
             let html = '';
-            Object.entries(allPresetsData).forEach(([pName, pData]) => {
-                const escapedName = pName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+            // Render categorized groups first
+            Object.entries(grouped).forEach(([catName, items]) => {
+                const isCollapsed = categoryCollapsed[catName];
+                const escapedCat = catName.replace(/"/g, '&quot;').replace(/'/g, "\\'");
                 html += `
-                    <div class="device-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 120px 50px; align-items: center;">
-                        <input type="text" value="${pName.replace(/"/g, '&quot;')}" readonly style="background:transparent; border:none; outline:none; font-weight:bold; color:var(--text);">
-                        <div style="color:var(--text-dim); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="${pData.profile || 'Any'}">${pData.profile || 'Any'}</div>
-                        <div style="color:var(--text-dim);">${pData.target_category || 'laser'}</div>
-                        <select onchange="updatePresetVibe('${escapedName}', this.value)" style="background:#1a1a24; border-color:#333; color:#ccc; width:100%;">
-                            <option value="chill" ${pData.vibe === 'chill' ? 'selected' : ''}>chill</option>
-                            <option value="mid" ${pData.vibe === 'mid' ? 'selected' : ''}>mid</option>
-                            <option value="high" ${pData.vibe === 'high' ? 'selected' : ''}>high</option>
-                            <option value="sub" ${pData.vibe === 'sub' ? 'selected' : ''}>sub</option>
-                            <option value="tearout" ${pData.vibe === 'tearout' ? 'selected' : ''}>tearout</option>
-                            <option value="machine_gun" ${pData.vibe === 'machine_gun' ? 'selected' : ''}>machine_gun</option>
-                            <option value="wonky" ${pData.vibe === 'wonky' ? 'selected' : ''}>wonky</option>
-                        </select>
-                        <button class="btn accent" style="padding:4px 10px; font-size:12px; height:28px;" onclick="playPreset('${escapedName}')">\u25b6 Play</button>
-                        <button class="kv-remove" onclick="deletePreset('${escapedName}')">\u2716</button>
+                    <div class="category-container">
+                        <div class="category-header" onclick="toggleCategory('${escapedCat}')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            ${catName} <span style="color:var(--text-dim); font-weight:400; font-size:10px; margin-left:4px;">(${items.length})</span>
+                            <svg class="category-chevron ${isCollapsed ? 'collapsed' : ''}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="category-body ${isCollapsed ? 'collapsed' : ''}">
+                            ${items.map(([pName, pData]) => presetRowHtml(pName, pData)).join('')}
+                        </div>
                     </div>
                 `;
             });
 
-            if (html === '') {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">No presets saved yet. Go to Live Test to create some!</div>';
-            } else {
-                container.innerHTML = html;
+            // Render uncategorized
+            if (uncategorized.length > 0) {
+                if (Object.keys(grouped).length > 0) {
+                    html += `<div class="uncategorized-label">Uncategorized</div>`;
+                }
+                uncategorized.forEach(([pName, pData]) => {
+                    html += presetRowHtml(pName, pData);
+                });
+            }
+
+            container.innerHTML = html;
+        }
+
+        async function updatePresetProfile(pName, newProfile) {
+            if (allPresetsData[pName]) {
+                if (newProfile) {
+                    allPresetsData[pName].profile = newProfile;
+                } else {
+                    delete allPresetsData[pName].profile;
+                }
+                await savePresetsFile();
             }
         }
 
@@ -2901,9 +2986,108 @@
             if (allPresetsData[pName]) {
                 console.log(`Updating ${pName} vibe to ${newVibe}`);
                 allPresetsData[pName].vibe = newVibe;
-                renderPresetsManager(); // Re-render to update grouping if needed
-                await savePresetsFile(); // Persist immediately
+                allPresetsData[pName].trigger = getTriggerForVibe(newVibe);
+                await savePresetsFile();
             }
+        }
+
+        function toggleCategory(catName) {
+            categoryCollapsed[catName] = !categoryCollapsed[catName];
+            renderPresetsManager();
+        }
+
+        function toggleCategoryDropdown(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('category-dropdown-menu');
+            menu.classList.toggle('open');
+        }
+
+        // Close dropdown when clicking elsewhere
+        document.addEventListener('click', function () {
+            const menu = document.getElementById('category-dropdown-menu');
+            if (menu) menu.classList.remove('open');
+        });
+
+        function categoryActionNew() {
+            document.getElementById('category-dropdown-menu').classList.remove('open');
+            const name = prompt('New category name:');
+            if (!name || !name.trim()) return;
+            const trimmed = name.trim();
+            const existsInPresets = Object.values(allPresetsData).some(p => p.category === trimmed);
+            const existsInPending = pendingCategories.includes(trimmed);
+            if (existsInPresets || existsInPending) {
+                alert(`Category "${trimmed}" already exists.`);
+                return;
+            }
+            pendingCategories.push(trimmed);
+            alert(`Category "${trimmed}" created. Use Add to assign presets to it.`);
+        }
+
+        function categoryActionAdd() {
+            document.getElementById('category-dropdown-menu').classList.remove('open');
+
+            // Get uncategorized presets
+            const uncategorized = Object.entries(allPresetsData).filter(([, p]) => !p.category);
+            if (uncategorized.length === 0) {
+                alert('No uncategorized presets to add.');
+                return;
+            }
+
+            // Get existing categories (from presets + pending)
+            const fromPresets = Object.values(allPresetsData).map(p => p.category).filter(Boolean);
+            const categories = [...new Set([...fromPresets, ...pendingCategories])];
+            if (categories.length === 0) {
+                alert('No categories exist yet. Create one first using New.');
+                return;
+            }
+
+            // Build modal content
+            const catOptions = categories.map(c => `<option value="${c.replace(/"/g, '&quot;')}">${c}</option>`).join('');
+            const checkboxes = uncategorized.map(([pName]) => {
+                const esc = pName.replace(/"/g, '&quot;');
+                return `<label style="display:flex; align-items:center; gap:8px; padding:5px 0; cursor:pointer; font-size:13px;">
+                    <input type="checkbox" value="${esc}" style="width:16px; height:16px; accent-color:var(--accent);">
+                    ${pName}
+                </label>`;
+            }).join('');
+
+            // Reuse fixture modal overlay
+            const overlay = document.getElementById('fixture-modal-overlay');
+            overlay.querySelector('#modal-title').textContent = 'Add to Category';
+            overlay.querySelector('#modal-text').innerHTML = `
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:12px; color:var(--text-dim); display:block; margin-bottom:4px;">Category</label>
+                    <select id="add-cat-select" style="width:100%; background:#1a1a24; border:1px solid #333; color:#ccc; padding:6px; border-radius:6px; font-family:inherit;">${catOptions}</select>
+                </div>
+                <div style="font-size:12px; color:var(--text-dim); margin-bottom:6px;">Select presets to add:</div>
+                <div id="add-cat-checkboxes" style="max-height:200px; overflow-y:auto;">${checkboxes}</div>
+            `;
+            overlay.querySelector('#modal-switch-btn').textContent = 'Confirm';
+            overlay.querySelector('#modal-switch-btn').onclick = confirmAddToCategory;
+            overlay.querySelector('#modal-add-btn').style.display = 'none';
+            overlay.style.display = 'flex';
+        }
+
+        async function confirmAddToCategory() {
+            const catName = document.getElementById('add-cat-select').value;
+            const checkboxes = document.querySelectorAll('#add-cat-checkboxes input[type=checkbox]:checked');
+            if (checkboxes.length === 0) {
+                alert('No presets selected.');
+                return;
+            }
+            checkboxes.forEach(cb => {
+                const pName = cb.value;
+                if (allPresetsData[pName]) {
+                    allPresetsData[pName].category = catName;
+                }
+            });
+            // Move category from pending to real once presets are assigned
+            const idx = pendingCategories.indexOf(catName);
+            if (idx !== -1) pendingCategories.splice(idx, 1);
+            closeFixtureModal();
+            document.getElementById('modal-add-btn').style.display = '';
+            renderPresetsManager();
+            await savePresetsFile();
         }
 
         function playPreset(pName) {

@@ -1,0 +1,94 @@
+{
+    "type": "temu",
+    "name": "New Fixture",
+    "channels": {
+        "unassigned_ch1": 0,
+        "unassigned_ch2": 1,
+        "unassigned_ch3": 2,
+        "unassigned_ch4": 3,
+        "unassigned_ch5": 4,
+        "unassigned_ch6": 5,
+        "unassigned_ch7": 6
+    },
+    "modes": {},
+    "defaults": {
+        "unassigned_ch1": 0,
+        "unassigned_ch2": 0,
+        "unassigned_ch3": 0,
+        "unassigned_ch4": 0,
+        "unassigned_ch5": 0,
+        "unassigned_ch6": 0,
+        "unassigned_ch7": 0
+    },
+    "calibration": {
+        "unassigned_ch1": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            },
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "high"
+            }
+        ],
+        "unassigned_ch2": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch3": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch4": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch5": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch6": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch7": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ]
+    },
+    "ranges": {},
+    "dynamics": {},
+    "macros": {},
+    "step_data": {},
+    "modifiers": {
+        "unassigned_ch1": "axis_a"
+    }
+}

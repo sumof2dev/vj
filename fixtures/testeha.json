@@ -34,8 +34,150 @@
         "generic_ch14": 0,
         "generic_1": 0
     },
-    "calibration": {},
-    "shapes": {},
+    "calibration": {
+        "generic_1": [
+            {
+                "min": 0,
+                "center": 25,
+                "max": 50,
+                "vibe": "high"
+            },
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch2": [
+            {
+                "min": 0,
+                "center": 25,
+                "max": 255,
+                "vibe": "high"
+            },
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch3": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            },
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "high"
+            }
+        ],
+        "generic_ch4": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch5": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            },
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "high"
+            }
+        ],
+        "generic_ch6": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch7": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            },
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "high"
+            }
+        ],
+        "generic_ch8": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch9": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch10": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch11": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch12": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch13": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "generic_ch14": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ]
+    },
     "ranges": {},
     "dynamics": {},
     "macros": {},
@@ -135,6 +277,30 @@
             "max": 255,
             "default": 0,
             "modifier": "treble"
+        }
+    },
+    "modifiers": {
+        "generic_1": "state_machine",
+        "generic_ch2": "axis_d",
+        "generic_ch3": "axis_c",
+        "generic_ch4": "axis_a",
+        "generic_ch5": "axis_d",
+        "generic_ch6": "beat",
+        "generic_ch8": "axis_b"
+    },
+    "channel_macros": {},
+    "step_data": {},
+    "state_data": {
+        "generic_1": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 0,
+            "mid": 0,
+            "high": 20,
+            "drop": 30,
+            "default": 0
         }
     }
 }

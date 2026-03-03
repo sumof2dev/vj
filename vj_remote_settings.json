@@ -1,6 +1,6 @@
 {
     "master": {
-        "sensitivity": 0.75,
+        "sensitivity": 0.6,
         "flux_sensitivity": 0.6,
         "vibe_bias": 0.4,
         "speed": 0.4,
@@ -9,12 +9,8 @@
     },
     "laser": {
         "speed": 0.4,
-        "pattern": "auto",
-        "color": "auto",
-        "color_multi": 0.0,
-        "color_solid": 0.0,
         "audioSensitivity": 0.6,
-        "amplitude": 1.0
+        "amplitude": 0.5
     },
     "visual": {
         "speed": 0.4,

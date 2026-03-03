@@ -4,6 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <title>RaveBox Visualizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RaveBox">
+    <link rel="apple-touch-icon" href="icon.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW Registered', reg.scope))
+                    .catch(err => console.log('SW Failed', err));
+            });
+        }
+    </script>
     <style>
         body {
             margin: 0;
@@ -1206,6 +1222,7 @@
         let previousVibe = "";
         let currentTransient = "steady";
         let dmxState = {};
+        let logicState = { axis_a: 0, axis_b: 0, axis_c: 0, axis_d: 0, axis_e: 0, beat: 0 };
         let targetMods = { flux: 0, bass: 0, high: 0, vol: 0 };
         let smoothedMods = { flux: 0, bass: 0, high: 0, vol: 0 };
         let rotState = "IDLE"; // NEW: Track rotation state (IDLE, ROTX, ROTY)
@@ -1322,6 +1339,11 @@
             u_audioLevel: { value: 0 },
             u_speed: { value: 1.0 },
             u_dmxRot: { value: 0 },
+            u_axis_a: { value: 0 },
+            u_axis_b: { value: 0 },
+            u_axis_c: { value: 0 },
+            u_axis_d: { value: 0 },
+            u_axis_e: { value: 0 },
             tDiffuse: { value: null } // Used for Spotify Album Art
         };
 
@@ -1986,6 +2008,7 @@
 
             else if (msg.type === "audio") {
                 if (msg.dmx) dmxState = msg.dmx; // Capture incoming DMX state
+                if (msg.logic) logicState = msg.logic; // Capture LogicMatrix axes
                 const data = msg.data;
                 if (data.vibe) currentVibe = data.vibe;
                 if (data.transient) currentTransient = data.transient;
@@ -2123,11 +2146,19 @@
             const visualPower = VISUAL_BASE_GAIN * amp;
 
             // --- DMX HARDWARE SYNC ---
+            // Fix: Match fixture profile role name "rotate z" instead of "rot_z"
             const rawZoom = dmxState["L1_zoom"] !== undefined ? dmxState["L1_zoom"] : 127;
             const dmxZoomMod = (1.0 - (rawZoom / 255.0)) * visualPower;
 
-            const rawRotZ = dmxState["L1_rot_z"] !== undefined ? dmxState["L1_rot_z"] : 0;
+            const rawRotZ = dmxState["L1_rotate z"] !== undefined ? dmxState["L1_rotate z"] : 0;
             const dmxRotRad = (rawRotZ / 255.0) * Math.PI * 2.0;
+
+            // --- PROCEDURAL LOGIC AXES ---
+            uniforms.u_axis_a.value = logicState.axis_a || 0;
+            uniforms.u_axis_b.value = logicState.axis_b || 0;
+            uniforms.u_axis_c.value = logicState.axis_c || 0;
+            uniforms.u_axis_d.value = logicState.axis_d || 0;
+            uniforms.u_axis_e.value = logicState.axis_e || 0;
 
             // Audio Modulators (Reactivity)
             // Clamped at 1.5 to prevent the shaders from blowing out to pure white
@@ -2150,12 +2181,16 @@
             const intensityMod = smoothedMods.vol * visualPower;
 
             // --- INSTANT BEAT ENVELOPE ---
-            // Replicate the exact same decay math used in dmx_engine.py
-            if (isBeat && visualBeatPulse < 0.2) {
-                visualBeatPulse = 1.0;
+            // Sync with backend's LogicMatrix beat envelope for perfect timing
+            if (logicState.beat !== undefined) {
+                visualBeatPulse = logicState.beat;
             } else {
-                // Assuming standard 60fps (~0.016 dt)
-                visualBeatPulse = Math.max(0.0, visualBeatPulse - 4.0 * 0.016);
+                // Fallback to local decay if logic doesn't provide it
+                if (isBeat && visualBeatPulse < 0.2) {
+                    visualBeatPulse = 1.0;
+                } else {
+                    visualBeatPulse = Math.max(0.0, visualBeatPulse - 4.0 * 0.016);
+                }
             }
             isBeat = false; // Reset trigger
 
