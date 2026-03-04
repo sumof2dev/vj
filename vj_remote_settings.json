@@ -1,20 +1,20 @@
 {
     "master": {
-        "sensitivity": 0.6,
+        "sensitivity": 0.8,
         "flux_sensitivity": 0.6,
         "vibe_bias": 0.4,
-        "speed": 0.4,
-        "intensity": 1.0,
-        "sceneFreq": 1
+        "speed": 0.8,
+        "intensity": 0.5,
+        "sceneFreq": 2
     },
     "laser": {
-        "speed": 0.4,
+        "speed": 0.8,
         "audioSensitivity": 0.6,
         "amplitude": 0.5
     },
     "visual": {
-        "speed": 0.4,
-        "amplitude": 3.5,
+        "speed": 0.8,
+        "amplitude": 1,
         "sensitivity": 0.6,
         "layerFreq": 2,
         "baseLayer": "auto",

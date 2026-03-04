@@ -1157,7 +1157,8 @@ function updateDimmerParam(key, param, val) {
 
 // --- LIVE TEST ---
 function connectWs() {
-    ws = new WebSocket(`ws://${window.location.hostname}:8765`);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${wsProtocol}://${window.location.hostname}:8765`);
     ws.onopen = () => {
         document.getElementById('conn-status').innerText = "🟢 Connected";
         document.getElementById('conn-status').style.color = "var(--success)";

@@ -79,64 +79,44 @@
             "grating": 0
         }
     },
-    "spiral": {
-        "vibe": "high",
+    "temu": {
+        "vibe": "tearout",
+        "trigger": "bass_style:tearout",
         "target_category": "laser",
-        "profile": "Ehaho",
+        "profile": "temu",
         "channels": {
-            "patterns": 21
-        },
-        "trigger": "vibe:high",
-        "category": "shapes"
+            "unassigned_ch1": 157,
+            "unassigned_ch2": 255,
+            "unassigned_ch3": 255,
+            "unassigned_ch4": 23,
+            "unassigned_ch5": 255,
+            "unassigned_ch6": 255,
+            "unassigned_ch7": 255
+        }
     },
-    "circle_of_cir": {
-        "vibe": "high",
+    "purpletriangle": {
+        "vibe": "drop",
+        "trigger": "transient:dropping",
         "target_category": "laser",
-        "profile": "Ehaho",
+        "profile": "Ehaho2",
         "channels": {
-            "patterns": 29
-        },
-        "category": "shapes",
-        "trigger": "vibe:high"
-    },
-    "square": {
-        "vibe": "chill",
-        "target_category": "laser",
-        "profile": "Ehaho",
-        "channels": {
-            "patterns": 30
-        },
-        "category": "shapes",
-        "trigger": "vibe:chill"
-    },
-    "caret": {
-        "vibe": "high",
-        "target_category": "laser",
-        "profile": "Ehaho",
-        "channels": {
-            "patterns": 55
-        },
-        "trigger": "vibe:high",
-        "category": "shapes"
-    },
-    "jagged": {
-        "vibe": "high",
-        "target_category": "laser",
-        "profile": "Ehaho",
-        "channels": {
-            "patterns": 127
-        },
-        "trigger": "vibe:high",
-        "category": "shapes"
-    },
-    "dotted_circle": {
-        "vibe": "high",
-        "target_category": "laser",
-        "profile": "Ehaho",
-        "channels": {
-            "patterns": 3
-        },
-        "trigger": "vibe:high",
-        "category": "shapes"
+            "Dim": 220,
+            "patterns": 75,
+            "zoom": 255,
+            "group": 250,
+            "clip": 0,
+            "rotate z": 0,
+            "x pos": 0,
+            "y pos": 0,
+            "x rot": 255,
+            "y rot": 255,
+            "color1": 255,
+            "color2": 53,
+            "dots": 255,
+            "draw": 0,
+            "drawing": 96,
+            "twist": 0,
+            "grating": 0
+        }
     }
 }

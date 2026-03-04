@@ -11,6 +11,7 @@ import json
 import os
 import sys
 import subprocess
+import ssl
 from urllib.parse import urlparse
 
 # --- CONFIGURATION ---
@@ -46,10 +47,6 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_fixture(fname)
             return
             
-        # API: Smart Control Manager
-        if path.startswith('/api/smart/control'):
-            self._handle_smart_control()
-            return
 
         # API: Launcher Stubs (Manual Mode)
         if path == '/status':
@@ -153,41 +150,6 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, str(e))
 
-    def _handle_smart_control(self):
-        query = urlparse(self.path).query
-        from urllib.parse import parse_qs
-        parsed_query = parse_qs(query)
-        ip = parsed_query.get('ip', [None])[0]
-        state = parsed_query.get('state', [None])[0]
-        
-        if not ip or not state:
-            self.send_error(400, "Missing ip or state parameter")
-            return
-            
-        try:
-            # Use kasa cli with newly required credentials for KLAP encrypted plugs
-            action = 'on' if state.lower() == 'on' else 'off'
-            cmd = [
-                '/home/sumof2/vj/venv/bin/kasa', 
-                '--host', ip, 
-                '--username', 'lochenjohnjohns@gmail.com', 
-                '--password', 'Ka$apass', 
-                action
-            ]
-            
-            # Print command locally for debugging (scrubbing password)
-            print(f"Executing: kasa --host {ip} --username lochenjohnjohns@gmail.com --password **** {action}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            
-            self._send_json({
-                "success": result.returncode == 0,
-                "ip": ip,
-                "state": action,
-                "output": result.stdout,
-                "error": result.stderr
-            })
-        except Exception as e:
-            self.send_error(500, str(e))
 
     def _send_json(self, data):
         self.send_response(200)
@@ -225,26 +187,46 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b"Saved successfully")
             except Exception as e:
                 self.send_error(500, str(e))
-        else:
-            self.send_error(403, "Forbidden")
+
+# Add manifest mime-type
+http.server.SimpleHTTPRequestHandler.extensions_map.update({
+    '.json': 'application/json',
+    '.manifest': 'application/manifest+json',
+    '.webmanifest': 'application/manifest+json'
+})
 
 if __name__ == '__main__':
     socketserver.ThreadingTCPServer.allow_reuse_address = True
-    with socketserver.ThreadingTCPServer(("0.0.0.0", PORT), ProductionHandler) as httpd:
-        print(f"🚀 VJ Production Server running on port {PORT}")
-        print(f"👉 http://localhost:{PORT}/")
-        
-        import socket
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            lan_ip = s.getsockname()[0]
-            print(f"👉 Network: http://{lan_ip}:{PORT}/")
-            s.close()
-        except:
-            pass
+    
+    server_address = ("0.0.0.0", PORT)
+    httpd = socketserver.ThreadingTCPServer(server_address, ProductionHandler)
+    
+    # Check for SSL certificates
+    cert_path = os.path.join(BASE_DIR, 'cert.pem')
+    key_path = os.path.join(BASE_DIR, 'key.pem')
+    
+    protocol = "http"
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(certfile=cert_path, keyfile=key_path)
+        httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+        protocol = "https"
+        print(f"🔒 SSL Enabled (Using {cert_path})")
 
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\nStopped.")
+    print(f"🚀 VJ Production Server running on port {PORT} ({protocol})")
+    print(f"👉 {protocol}://localhost:{PORT}/")
+    
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        lan_ip = s.getsockname()[0]
+        print(f"👉 Network: {protocol}://{lan_ip}:{PORT}/")
+        s.close()
+    except:
+        pass
+
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopped.")

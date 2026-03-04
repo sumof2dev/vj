@@ -53,10 +53,30 @@
 
         .header h1 {
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .back-btn {
+            text-decoration: none;
+            color: var(--accent-global);
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-global);
         }
 
         .vol-meter {
@@ -639,17 +659,76 @@
                 grid-column: span 1;
             }
         }
+
+        /* Axis Matrix Styles */
+        .axis-row {
+            display: grid;
+            grid-template-columns: 30px 1fr 1fr 80px;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+
+        .axis-id {
+            font-weight: 900;
+            color: var(--accent-global);
+            font-size: 1.1rem;
+            text-shadow: 0 0 10px rgba(162, 155, 254, 0.3);
+        }
+
+        .axis-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .axis-label-tiny {
+            font-size: 0.55rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .axis-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .axis-val-disp {
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: var(--accent-visual);
+            min-width: 25px;
+        }
+
+        .axis-bin-select {
+            background: #222;
+            color: #eee;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 0.7rem;
+            width: 100%;
+        }
     </style>
 </head>
 
 <body>
     <div class="header">
-        <h1>
-            🎮 Remote
-            <div class="vol-meter" title="Input Volume">
-                <div id="vol-bar" class="vol-bar"></div>
-            </div>
-        </h1>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="/manager.html" class="back-btn">←</a>
+            <h1>
+                🎮 Remote
+                <div class="vol-meter" title="Input Volume">
+                    <div id="vol-bar" class="vol-bar"></div>
+                </div>
+            </h1>
+        </div>
 
         <div class="status-row">
             <div class="status-indicator">
@@ -718,61 +797,17 @@
             </div>
         </div>
 
-        <!-- DETAILS SELECTION -->
-        <div class="details-row">
-            <!-- LASER -->
-            <div class="detail-card">
-                <div class="detail-title">🔦 Laser Config</div>
-                <label style="font-size:0.8rem; color:#888;">Pattern Mode</label>
-                <select id="laserPattern">
-                    <option value="auto">Auto (Vibe)</option>
-                    <option value="geometric">Geometric</option>
-                    <option value="lines">Lines</option>
-                    <option value="dots">Dots</option>
-                    <option value="spirals">Spirals</option>
-                </select>
-
-                <label style="font-size:0.8rem; color:#888;">Color Mode</label>
-                <select id="laserColor">
-                    <option value="auto">Auto (Vibe)</option>
-                    <option value="multi">Multi-Color</option>
-                    <option value="solid">Solid Cycle</option>
-                </select>
-
+        <!-- AXIS MATRIX CONTROLS -->
+        <div class="section" style="border-color: var(--accent-laser);">
+            <div class="section-title">
+                🌀 Axis Matrix (A-F Controllers)
+                <span style="font-size:0.6rem; opacity:0.5;">Granular Oscillator Tuning</span>
             </div>
-
-            <!-- VISUAL -->
-            <div class="detail-card">
-                <div class="detail-title">🎆 Visual Config</div>
-                <label style="font-size:0.8rem; color:#888;">Base Layer</label>
-                <select id="visualBase">
-                    <option value="auto">Auto (Cycling)</option>
-                    <option value="0">Voxel Maze</option>
-                    <option value="1">Tunnel</option>
-                    <option value="2">Mandala</option>
-                    <option value="3">Game of Lines</option>
-                    <option value="4">Sonic Ring</option>
-                    <option value="5">Floating Cubes</option>
-                    <option value="6">Neon Web</option>
-                    <option value="7">Crystal Burst</option>
-                    <option value="8">Stained Glass</option>
-                    <option value="9">Fractal Tunnel</option>
-                    <option value="10">3D Lissajous</option>
-                </select>
-
-                <label style="font-size:0.8rem; color:#888;">Effect Overlay</label>
-                <select id="visualEffect">
-                    <option value="auto">Auto (Cycling)</option>
-                    <option value="0">DNA</option>
-                    <option value="1">Terrain</option>
-                    <option value="2">Hex Pulse</option>
-                    <option value="3">Kaleido</option>
-                    <option value="5">Fractal Fold</option>
-                    <option value="-1">None</option>
-                </select>
-
+            <div id="axisMatrixRoot">
+                <!-- Populated by JS -->
             </div>
         </div>
+
 
         <!-- SPOTIFY NOW PLAYING PANEL -->
         <div class="spotify-panel" id="spotifyPanel" style="display:none;">
@@ -866,16 +901,7 @@
             sensitivity: 1.0,     // Flux sensibility
             gain: 1.0,            // Input gain
             vibe_bias: 0.5,
-            sceneFreq: 1,         // Master phrasing
-
-            laser: {
-                pattern: 'auto',
-                color: 'auto'
-            },
-            visual: {
-                baseLayer: 'auto',
-                effect: 'auto'
-            }
+            sceneFreq: 1          // Master phrasing
         };
 
         const FREQ_LABELS = ['Slow', 'Normal', 'Fast', 'Frantic'];
@@ -884,7 +910,8 @@
 
         function connect() {
             const host = window.location.hostname || 'localhost';
-            ws = new WebSocket(`ws://${host}:8765`);
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${wsProtocol}://${host}:8765`);
 
             ws.onopen = () => {
                 document.getElementById('statusDot').classList.add('connected');
@@ -902,7 +929,12 @@
                 try {
                     const msg = JSON.parse(event.data);
 
-                    if (msg.type === 'current_params') syncUI(msg);
+                    if (msg.type === 'current_params') {
+                        syncUI(msg);
+                        if (msg.axes) {
+                            renderAxisMatrix(msg.axes);
+                        }
+                    }
 
                     if (msg.type === 'audio') {
                         const data = msg.data;
@@ -1024,8 +1056,8 @@
                 speed: state.speed,
                 audioSensitivity: state.sensitivity,
                 // Specifics
-                pattern: state.laser.pattern,
-                color: state.laser.color
+                pattern: 'auto',
+                color: 'auto'
             }));
 
             // 3. VISUAL PARAMS (Targeted)
@@ -1034,11 +1066,11 @@
                 target: 'visual',
                 // Propagate global values to visual engine
                 speed: state.speed,
-                amplitude: state.amplitude,
+                amplitude: 1.0,
                 sensitivity: state.sensitivity, // visual.sensitivity = flux sens
                 // Specifics
-                baseLayer: state.visual.baseLayer,
-                effect: state.visual.effect
+                baseLayer: 'auto',
+                effect: 'auto'
             }));
         }
 
@@ -1058,22 +1090,56 @@
                 updateSlider('masterSceneFreq', state.sceneFreq, '', true);
             }
 
-            if (params.laser) {
-                state.laser.pattern = params.laser.pattern;
-                state.laser.color = params.laser.color;
-
-                document.getElementById('laserPattern').value = state.laser.pattern;
-                document.getElementById('laserColor').value = state.laser.color;
-            }
-
-            if (params.visual) {
-                state.visual.baseLayer = params.visual.baseLayer;
-                state.visual.effect = params.visual.effect;
-
-                document.getElementById('visualBase').value = state.visual.baseLayer;
-                document.getElementById('visualEffect').value = state.visual.effect;
+            if (params.axes) {
+                renderAxisMatrix(params.axes);
             }
         }
+
+        function renderAxisMatrix(axes) {
+            const root = document.getElementById('axisMatrixRoot');
+            if (!root) return;
+            root.innerHTML = '';
+
+            const axisList = Object.keys(axes).sort();
+            axisList.forEach(id => {
+                const cfg = axes[id];
+                const row = document.createElement('div');
+                row.className = 'axis-row';
+
+                row.innerHTML = `
+                    <div class="axis-id">${id}</div>
+                    <div class="axis-group">
+                        <div class="axis-label-tiny">Speed <span class="axis-val-disp" id="v_speed_${id}">${parseFloat(cfg.speed).toFixed(2)}</span></div>
+                        <input type="range" min="0" max="3" step="0.05" value="${cfg.speed}" oninput="updateAxis('${id}', 'speed', this.value)">
+                    </div>
+                    <div class="axis-group">
+                        <div class="axis-label-tiny">React <span class="axis-val-disp" id="v_react_${id}">${parseFloat(cfg.react).toFixed(2)}</span></div>
+                        <input type="range" min="0" max="4" step="0.1" value="${cfg.react}" oninput="updateAxis('${id}', 'react', this.value)">
+                    </div>
+                    <div class="axis-group">
+                        <div class="axis-label-tiny">EQ Bin</div>
+                        <select class="axis-bin-select" onchange="updateAxis('${id}', 'bin', this.value)">
+                            ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => `<option value="${i}" ${cfg.bin == i ? 'selected' : ''}>Bin ${i}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+                root.appendChild(row);
+            });
+        }
+
+        window.updateAxis = (axis, param, val) => {
+            const disp = document.getElementById(`v_${param}_${axis}`);
+            if (disp) disp.textContent = parseFloat(val).toFixed(2);
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'axis_param',
+                    axis: axis,
+                    param: param,
+                    val: val
+                }));
+            }
+        };
 
         function updateSlider(id, val, suffix = '', isFreq = false) {
             const el = document.getElementById(id);
@@ -1106,20 +1172,7 @@
             });
         });
 
-        // Dropdowns
-        ['laserPattern', 'laserColor'].forEach(id => {
-            document.getElementById(id).addEventListener('change', (e) => {
-                state.laser[id.replace('laser', '').toLowerCase()] = e.target.value;
-                sendParams();
-            });
-        });
 
-        ['visualBase', 'visualEffect'].forEach(id => {
-            document.getElementById(id).addEventListener('change', (e) => {
-                state.visual[id.replace('visual', '').replace('Base', 'baseLayer').replace('Effect', 'effect')] = e.target.value;
-                sendParams();
-            });
-        });
 
         // Buttons
         document.getElementById('saveDefaultsBtn').addEventListener('click', () => {
@@ -1158,7 +1211,11 @@
         // Lissajous Renderer
         const lCanvas = document.getElementById('lissajousCanvas');
         const lCtx = lCanvas.getContext('2d');
-        let axisHistory = [];
+        const trails = [
+            { points: [], color: 'rgba(162, 155, 254, 1.0)', glow: 'rgba(162, 155, 254, 0.4)' }, // A/B (Primary)
+            { points: [], color: 'rgba(0, 206, 201, 1.0)', glow: 'rgba(0, 206, 201, 0.4)' },   // D/E (Secondary)
+            { points: [], color: 'rgba(253, 121, 168, 1.0)', glow: 'rgba(253, 121, 168, 0.4)' } // C/F (Tertiary)
+        ];
 
         function renderLissajous(logic) {
             if (!lCanvas.width || lCanvas.width !== lCanvas.clientWidth) {
@@ -1172,70 +1229,46 @@
             const centerY = h / 2;
             const zoom = Math.min(w, h) * 0.4;
 
-            lCtx.clearRect(0, 0, w, h);
+            lCtx.fillStyle = 'rgba(0,0,0,0.15)';
+            lCtx.fillRect(0, 0, w, h);
 
-            // Draw Grid
-            lCtx.strokeStyle = '#1a1a1a';
-            lCtx.lineWidth = 1;
-            lCtx.beginPath();
-            lCtx.moveTo(centerX, 0); lCtx.lineTo(centerX, h);
-            lCtx.moveTo(0, centerY); lCtx.lineTo(w, centerY);
-            lCtx.stroke();
+            // Group axes for visualization
+            const pairs = [
+                { x: logic.axis_a, y: logic.axis_b },
+                { x: logic.axis_d, y: logic.axis_e },
+                { x: logic.axis_c, y: logic.axis_f }
+            ];
 
-            // Store history for trails
-            axisHistory.push({ x: logic.axis_a || 0, y: logic.axis_b || 0, d: logic.axis_d || 0, e: logic.axis_e || 0 });
-            if (axisHistory.length > 50) axisHistory.shift();
+            pairs.forEach((pair, i) => {
+                if (pair.x === undefined || pair.y === undefined) return;
 
-            // Draw Trail (Primary Axis A/B)
-            lCtx.lineWidth = 2;
-            lCtx.beginPath();
-            axisHistory.forEach((pt, i) => {
-                const alpha = i / axisHistory.length;
-                lCtx.strokeStyle = `rgba(162, 155, 254, ${alpha * 0.5})`;
-                const px = centerX + pt.x * zoom;
-                const py = centerY + pt.y * zoom;
-                if (i === 0) lCtx.moveTo(px, py);
-                else lCtx.lineTo(px, py);
+                const px = centerX + (pair.x * zoom);
+                const py = centerY + (pair.y * zoom);
+
+                trails[i].points.push({ x: px, y: py });
+                if (trails[i].points.length > 25) trails[i].points.shift();
+
+                lCtx.beginPath();
+                lCtx.strokeStyle = trails[i].color;
+                lCtx.lineWidth = 2.5 - (i * 0.5);
+                lCtx.shadowBlur = 8;
+                lCtx.shadowColor = trails[i].glow;
+
+                for (let j = 0; j < trails[i].points.length; j++) {
+                    const p = trails[i].points[j];
+                    if (j === 0) lCtx.moveTo(p.x, p.y);
+                    else lCtx.lineTo(p.x, p.y);
+                }
+                lCtx.stroke();
+
+                // Draw Head
+                lCtx.beginPath();
+                lCtx.arc(px, py, 4 - i, 0, Math.PI * 2);
+                lCtx.fillStyle = i === 0 ? 'white' : trails[i].color;
+                lCtx.fill();
             });
-            lCtx.stroke();
 
-            // Draw Current Head (Primary)
-            const curX = centerX + (logic.axis_a || 0) * zoom;
-            const curY = centerY + (logic.axis_b || 0) * zoom;
-            lCtx.fillStyle = 'var(--accent-global)';
-            lCtx.beginPath();
-            lCtx.arc(curX, curY, 5, 0, Math.PI * 2);
-            lCtx.fill();
-
-            // Draw Secondary (Quadrature D/E)
-            const curD = centerX + (logic.axis_d || 0) * zoom;
-            const curE = centerY + (logic.axis_e || 0) * zoom;
-            lCtx.strokeStyle = 'rgba(107, 255, 219, 0.4)';
-            lCtx.setLineDash([2, 4]);
-            lCtx.beginPath();
-            lCtx.moveTo(centerX, centerY);
-            lCtx.lineTo(curD, curE);
-            lCtx.stroke();
-            lCtx.setLineDash([]);
-
-            lCtx.fillStyle = 'var(--accent-visual)';
-            lCtx.beginPath();
-            lCtx.arc(curD, curE, 3, 0, Math.PI * 2);
-            lCtx.fill();
-
-            // Draw Axis C (Z-Rotation / Color hint)
-            const curC = logic.axis_c || 0;
-            lCtx.strokeStyle = 'rgba(255, 107, 157, 0.6)';
-            lCtx.lineWidth = 4;
-            lCtx.beginPath();
-            lCtx.moveTo(w - 10, h / 2 - zoom / 2);
-            lCtx.lineTo(w - 10, h / 2 + zoom / 2);
-            lCtx.stroke();
-
-            lCtx.fillStyle = 'var(--accent-laser)';
-            lCtx.beginPath();
-            lCtx.arc(w - 10, h / 2 + curC * (zoom / 2), 4, 0, Math.PI * 2);
-            lCtx.fill();
+            lCtx.shadowBlur = 0;
         }
 
         function updateDMXMonitor(dmx, force = false) {
@@ -1320,6 +1353,15 @@
         }
 
         connect();
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW Registered', reg.scope))
+                    .catch(err => console.log('SW Failed', err));
+            });
+        }
     </script>
 </body>
 

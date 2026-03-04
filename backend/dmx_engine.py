@@ -8,16 +8,17 @@ import os
 import json
 import collections
 from typing import Dict
+import threading
 
 class LogicMatrix:
     """The modular core. Generates continuous LFOs and Envelopes."""
     def __init__(self):
-        self.phases = {'A': 0.0, 'B': 0.0, 'C': 0.0}
+        self.phases = {ax: 0.0 for ax in 'ABCDEF'}
         self.beat_env = 0.0
         self.beat_count = 0
         self.state = {}
 
-    def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0):
+    def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, axis_configs=None):
         # 1. Update Beat Envelope (Sharp attack, exponential decay)
         if audio.get('beat', False):
             self.beat_env = 1.0
@@ -25,62 +26,64 @@ class LogicMatrix:
         else:
             self.beat_env = max(0.0, self.beat_env - (4.0 * dt))
 
-        # 2. Extract EQ Bins
+        # 2. Extract EQ Bins (0-10)
         bins = audio.get('bins', [0.0]*11)
-        sub_nrg = (bins[0] + bins[1]) / 2.0
-        mid_nrg = (bins[3] + bins[4] + bins[5]) / 3.0
-        hi_nrg  = (bins[8] + bins[9] + bins[10]) / 3.0
 
-        # 3. Calculate Frequencies (Vibe-independent static ratios)
-        freq_a = 0.2 * speed_mult
-        freq_b = 0.5 * speed_mult
-        freq_c = 1.0 * speed_mult
-
-        # 4. Advance Phases
-        self.phases['A'] += dt * freq_a
-        self.phases['B'] += dt * freq_b
-        self.phases['C'] += dt * freq_c
-
-        axis_a = math.sin(self.phases['A'])
-        axis_d = math.sin(self.phases['A'] + math.pi/2)
-        axis_b = math.sin(self.phases['B'])
-        axis_e = math.sin(self.phases['B'] + math.pi/2)
-        axis_c = math.sin(self.phases['C'])
+        # 3. Process 6 Independent Axes (A-F)
+        # Bipolar State (-1.0 to 1.0)
+        self.state = {}
         
+        # Default config if none provided (Matches previous logic ratios roughly)
+        if not axis_configs:
+            axis_configs = {
+                'A': {'speed': 0.2, 'react': 0.4, 'bin': 0},
+                'B': {'speed': 0.5, 'react': 0.75, 'bin': 4},
+                'C': {'speed': 1.0, 'react': 1.5, 'bin': 8},
+                'D': {'speed': 0.2, 'react': 0.4, 'bin': 1, 'phase_offset': math.pi/2}, # Quadrature A
+                'E': {'speed': 0.5, 'react': 0.75, 'bin': 5, 'phase_offset': math.pi/2}, # Quadrature B
+                'F': {'speed': 1.0, 'react': 1.5, 'bin': 10}
+            }
+
+        for ax in 'ABCDEF':
+            cfg = axis_configs.get(ax, {})
+            base_speed = cfg.get('speed', 0.5)
+            reactivity = cfg.get('react', 0.5)
+            bin_idx = cfg.get('bin', 0)
+            offset = cfg.get('phase_offset', 0.0)
+            
+            # Get energy from specific bin
+            bin_energy = bins[bin_idx] if 0 <= bin_idx < len(bins) else 0.0
+            
+            # Frequency Calculation
+            freq = (base_speed + (bin_energy * reactivity)) * speed_mult
+            
+            # Advance Phase
+            self.phases[ax] += dt * freq
+            
+            # Generate bipolar sin output
+            val = math.sin(self.phases[ax] + offset)
+            
+            # Gating: Tension blackout
+            if transient == 'tension':
+                val = 0.0
+                
+            self.state[f'axis_{ax.lower()}'] = val
+
+        # 4. Global State Metadata
         intensity_val = (master_intensity * 2.0) - 1.0
-
         if transient == 'tension':
-            axis_a = 0.0
-            axis_b = 0.0
-            axis_c = 0.0
-            axis_d = 0.0
-            axis_e = 0.0
             intensity_val = -1.0
-
-        # 5. Generate Raw Matrix Output
-        self.state = {
-            # Bipolar (-1.0 to 1.0)
-            'axis_a': axis_a,
-            'axis_d': axis_d,
             
-            'axis_b': axis_b,
-            'axis_e': axis_e,
-            
-            'axis_c': axis_c,
-            
+        self.state.update({
             'intensity': intensity_val,
-            
-            # Unipolar (0.0 to 1.0)
             'bass': audio.get('bass', 0.0),
             'flux': audio.get('flux', 0.0),
             'beat': self.beat_env,
-            
-            # Constants
             'static': 1.0,
             'zero': 0.0,
             'dimmer': 1.0,
             'mode': 0.0
-        }
+        })
 
 class DMXEngine:
     def __init__(self):
@@ -108,12 +111,25 @@ class DMXEngine:
         self._last_scene_switch_beat = 0
         
         # System State Detectors (Bass Styles & Rhythm)
+        self.rhythm_state = {'boots': False, 'cats': False, 'cha': False}
+        
+        # Bass Style Detection State
         self._bass_bins_history = collections.deque(maxlen=30)
         self._bass_delta_history = collections.deque(maxlen=30)
         self._mid_history = collections.deque(maxlen=30)
         self._current_bass_style = None
         self._bass_style_holdoff = 0.0
-        self.rhythm_state = {'boots': False, 'cats': False, 'cha': False}
+
+        # Axis Configs (A-F)
+        # Default mapping roughly matches the previous hardcoded logic
+        self.axis_configs = {
+            'A': {'speed': 0.1, 'react': 0.4, 'bin': 0},
+            'B': {'speed': 0.25, 'react': 0.75, 'bin': 4},
+            'C': {'speed': 0.5, 'react': 1.5, 'bin': 8},
+            'D': {'speed': 0.1, 'react': 0.4, 'bin': 1, 'phase_offset': 1.57}, # ~math.pi/2
+            'E': {'speed': 0.25, 'react': 0.75, 'bin': 5, 'phase_offset': 1.57},
+            'F': {'speed': 0.5, 'react': 1.5, 'bin': 10}
+        }
         
         # Config Storage
         self.fixtures = {}
@@ -125,8 +141,13 @@ class DMXEngine:
         self._presets_config_path = os.path.join('fixtures', 'presets.json')
         self._last_reload_check = 0
         self._fixture_mtimes = {} 
+        self._fast_cache = {}
         
         self._load_profiles()
+        
+        # Background Disk I/O for Hot Reloading
+        self._reload_thread = threading.Thread(target=self._hot_reload_loop, daemon=True)
+        self._reload_thread.start()
 
     def _load_profiles(self):
         fixtures_dir = 'fixtures'
@@ -147,13 +168,43 @@ class DMXEngine:
         for filename in os.listdir(fixtures_dir):
             if filename.endswith('.json') and filename not in ['stage_config.json', 'vibe_config.json', 'presets.json']:
                 with open(os.path.join(fixtures_dir, filename), 'r') as f:
-                    self.fixtures[filename.replace('.json', '')] = json.load(f)
+                    fix_name = filename.replace('.json', '')
+                    self.fixtures[fix_name] = json.load(f)
+                    
+        self._build_fast_cache()
+
+    def _build_fast_cache(self):
+        """Flattens nested dictionaries to prevent CPU overhead in the 60fps render loop."""
+        self._fast_cache = {}
+        for fix_name, fixture in self.fixtures.items():
+            self._fast_cache[fix_name] = {}
+            for role in fixture.get('channels', {}).keys():
+                mods = fixture.get('modifiers', {})
+                mod_name = mods.get(role, 'static')
+                
+                cals = fixture.get('calibration', {}).get(role, [])
+                if isinstance(cals, dict): cals = [cals]
+                    
+                states = fixture.get('state_data', {}).get(role, {})
+                steps = list(fixture.get('step_data', {}).values())
+                default_val = fixture.get('defaults', {}).get(role, 127)
+                
+                self._fast_cache[fix_name][role] = {
+                    'mod_name': mod_name,
+                    'cals': cals,
+                    'states': states,
+                    'steps': steps,
+                    'default_val': default_val
+                }
+
+    def _hot_reload_loop(self):
+        """Background thread to check for file changes without blocking the render loop."""
+        while True:
+            time.sleep(2.0)
+            self._check_for_reload()
 
     def _check_for_reload(self):
         """Checks if fixture or stage config files have changed on disk."""
-        now = time.time()
-        if now - self._last_reload_check < 2.0: return
-        self._last_reload_check = now
 
         fixtures_dir = 'fixtures'
         if not os.path.exists(fixtures_dir): return
@@ -178,11 +229,8 @@ class DMXEngine:
         self._dt = dt
         self.transient = audio.get('transient', 'steady')
 
-        # 0. Check for disk changes (Hot Reload)
-        self._check_for_reload()
-
         # 1. Update the pure math core
-        self.logic.update(dt, audio, self.transient, self.speed, self.intensity)
+        self.logic.update(dt, audio, self.transient, self.speed, self.intensity, self.axis_configs)
         
         # 1.5 Update System Triggers (Bass Styles & Rhythm)
         self._detect_bass_style(audio, dt)
@@ -238,7 +286,7 @@ class DMXEngine:
             final_addr = base_addr + ch_offset
             
             # Layer 1: Calculate the pure mapped math value
-            val = self._calculate_channel(role, audio, zone_idx, fixture, dev_cfg)
+            val = self._calculate_channel(role, audio, zone_idx, fixture, dev_cfg, dev_cfg.get('type'))
             
             # Layer 2: Preset Overrides (Manual UI Triggers & System Triggers)
             preset_override_val = None
@@ -272,6 +320,17 @@ class DMXEngine:
             # Iterate all presets to see if their 'trigger' matches our active_triggers
             for p_name, p_data in self.presets.items():
                 p_trigger = p_data.get('trigger')
+                # Legacy: presets with only a 'vibe' field and no 'trigger'
+                if not p_trigger and p_data.get('vibe'):
+                    vibe_val = p_data['vibe']
+                    # Map known vibe names to proper trigger format
+                    VIBE_TRIGGER_MAP = {
+                        'drop': 'transient:dropping', 'dropping': 'transient:dropping',
+                        'building': 'transient:building', 'tension': 'transient:tension',
+                        'machine_gun': 'bass_style:machine_gun', 'tearout': 'bass_style:tearout',
+                        'wonky': 'bass_style:wonky', 'sub': 'bass_style:sub',
+                    }
+                    p_trigger = VIBE_TRIGGER_MAP.get(vibe_val, f"vibe:{vibe_val}")
                 if p_trigger and p_trigger in active_triggers:
                     if is_preset_applicable(p_data, dev_name):
                         # Check for fixture-specific override first, then fallback to global channels
@@ -292,18 +351,13 @@ class DMXEngine:
             if 0 < final_addr < len(self.universe):
                 self.universe[final_addr] = max(0, min(255, val))
 
-    def _calculate_channel(self, role, audio, zone_idx, fixture, dev_cfg):
+    def _calculate_channel(self, role, audio, zone_idx, fixture, dev_cfg, fixture_name):
         """The Universal Mapper: Subscribes to the Logic Matrix and applies 3-point scaling."""
         
-        # 1. Fetch Routing Config
-        mod_dict = fixture.get('modifiers', {})
-        mod_name = mod_dict.get(role) if role in mod_dict else 'static'
-        if not mod_name: mod_name = 'static'
-        
-        # 2. Calibration Range Selection (Vibe Gating)
-        cals = fixture.get('calibration', {}).get(role, [])
-        if isinstance(cals, dict): # Migration for single object calibration
-            cals = [cals]
+        # Fetch Pre-compiled Routing & Calibration Config
+        cache = self._fast_cache.get(fixture_name, {}).get(role, {})
+        mod_name = cache.get('mod_name', 'static')
+        cals = cache.get('cals', [])
         
         current_vibe = audio.get('vibe', 'mid')
         active_range = None
@@ -326,9 +380,7 @@ class DMXEngine:
         c_min = active_range.get('min')
         if c_min is None: c_min = 0
         
-        default_val = fixture.get('defaults', {}).get(role)
-        if default_val is None:
-            default_val = 127
+        default_val = cache.get('default_val', 127)
             
         c_center = active_range.get('center')
         if c_center is None: c_center = default_val
@@ -338,7 +390,7 @@ class DMXEngine:
         
         # --- DISCRETE HANDLERS (Arrays/Lookups) ---
         if mod_name == '4th beat':
-            steps = list(fixture.get('step_data', {}).values())
+            steps = cache.get('steps', [])
             if not steps: 
                 # Fallback: slow cycle between min and max if no steps defined
                 span = c_max - c_min
@@ -353,7 +405,7 @@ class DMXEngine:
             return max(c_min, min(c_max, val))
             
         if mod_name == 'beat':
-            steps = list(fixture.get('step_data', {}).values())
+            steps = cache.get('steps', [])
             if steps:
                 # Random selection every beat (seeded for stability)
                 seed = self.logic.beat_count + zone_idx + 7
@@ -369,7 +421,7 @@ class DMXEngine:
 
         # --- STATE MACHINE HANDLER (For Mode/Dimmer Combo Channels) ---
         if mod_name == 'state_machine':
-            states = fixture.get('state_data', {}).get(role, {})
+            states = cache.get('states', {})
             
             # Helper to get sanitized state value
             def get_state_val(key, default):
@@ -428,6 +480,16 @@ class DMXEngine:
     def set_pattern_mode(self, mode): pass # Deprecated, handled by modifiers now
     def set_color_mode(self, mode): pass # Deprecated, handled by modifiers now
     
+    def set_axis_param(self, axis: str, param: str, val):
+        """Update a specific parameter for one of the 6 axes (A-F)"""
+        axis = axis.upper()
+        if axis in self.axis_configs:
+            # Handle type conversion based on param
+            if param == 'bin':
+                self.axis_configs[axis][param] = int(val)
+            else:
+                self.axis_configs[axis][param] = float(val)
+
     def get_channel_state(self):
         res = {"values": {}, "effects": []}
         for name, cfg in self.stage_config.get('devices', {}).items():
@@ -456,18 +518,18 @@ class DMXEngine:
             return
 
         detected = None
-        if bins[0] > 0.8 and sum(bins[4:]) < 0.2 and isolation > 0.7:
+        if bins[0] > 0.5 and sum(bins[4:]) < 0.2 and isolation > 0.5:
             detected = 'sub'
-        elif bass > 0.7 and sum(bins[5:]) > 2.0 and isolation < 0.2:
+        elif bass > 0.4 and sum(bins[5:]) > 1.2 and isolation < 0.35:
             detected = 'tearout'
         elif len(self._bass_delta_history) >= 15:
             deltas = list(self._bass_delta_history)
             avg_delta = sum(deltas) / len(deltas)
             crossings = sum(1 for i in range(1, len(deltas)) if (deltas[i] > avg_delta * 1.5) != (deltas[i-1] > avg_delta * 1.5))
-            if crossings > 8 and bass > 0.4 and avg_delta > 0.15:
+            if crossings > 8 and bass > 0.25 and avg_delta > 0.08:
                 detected = 'machine_gun'
                 
-        if detected is None and len(self._mid_history) >= 15 and bass > 0.5:
+        if detected is None and len(self._mid_history) >= 15 and bass > 0.3:
             mids = list(self._mid_history)
             sign_changes = 0
             for i in range(2, len(mids)):
@@ -475,7 +537,7 @@ class DMXEngine:
                 d2 = mids[i-1] - mids[i-2]
                 if (d1 > 0.02 and d2 < -0.02) or (d1 < -0.02 and d2 > 0.02):
                     sign_changes += 1
-            bass_sustained = min(self._bass_bins_history) > 0.3 if len(self._bass_bins_history) >= 10 else False
+            bass_sustained = min(self._bass_bins_history) > 0.15 if len(self._bass_bins_history) >= 10 else False
             if sign_changes > 5 and bass_sustained:
                 detected = 'wonky'
 

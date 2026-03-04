@@ -39,19 +39,45 @@
             justify-content: center;
             min-height: 100vh;
             padding: 20px;
+            overflow: hidden;
+            /* Prevent scrolling */
+            touch-action: none;
+            /* Disable browser gestures like pull-to-refresh */
         }
 
         .container {
-            background: rgba(22, 22, 26, 0.85);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 2.5rem;
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 2rem;
             border-radius: 24px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
             width: 100%;
-            max-width: 440px;
+            max-width: 350px;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.2rem;
+                max-width: 86%;
+                border-radius: 20px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .dash-panel {
+                padding: 10px;
+            }
+
+            .btn {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.85rem;
+            }
         }
 
         h1 {
@@ -92,19 +118,25 @@
             background: rgba(255, 51, 102, 0.1);
         }
 
+        .action-btns {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+
         .btn {
             display: block;
-            width: 100%;
-            padding: 1.2rem;
-            margin-bottom: 1rem;
+            flex: 1;
+            padding: 0.9rem 1rem;
             border: none;
             border-radius: 12px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         .btn:active {
@@ -348,13 +380,13 @@
 
     <div class="container">
         <h1>RaveBox Control</h1>
-        <p>Remote Engine Manager</p>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
-        <button id="btnStart" class="btn btn-start" onclick="doAction('start')">Launch Engine</button>
-        <button id="btnStop" class="btn btn-stop" onclick="doAction('stop')">Kill Engine</button>
-        <button id="btnRestart" class="btn btn-restart" onclick="doAction('restart')">Restart</button>
+        <div class="action-btns">
+            <button id="btnToggle" class="btn btn-start" onclick="toggleEngine()">Launch Engine</button>
+            <button id="btnRestart" class="btn btn-restart" onclick="doAction('restart')">Restart</button>
+        </div>
 
 
 
@@ -386,9 +418,7 @@
                 </div>
             </div>
 
-            <!-- Engine Thinking -->
             <div class="dash-panel">
-                <div class="dash-header">🧠 Engine Thinking</div>
                 <div class="thinking-grid">
                     <div class="logic-state" id="hubTransient">STEADY</div>
                     <div class="bin-viz" id="hubBins">
@@ -397,18 +427,12 @@
                         <div class="bin-bar"></div>
                         <div class="bin-bar"></div>
                         <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
                     </div>
                 </div>
                 <div class="sys-stats">
-                    <div>BPM: <span class="stat-val" id="hubBpm">--</span></div>
-                    <div>Confidence: <span class="stat-val" id="hubConf">--</span></div>
-                    <div>Grid: <span class="stat-val" id="hubGrid" style="transition: color 0.1s;">PULSE</span></div>
+                    <span class="stat-val" id="hubBpm">--</span>
+                    <span class="stat-val" id="hubConf">--</span>
+                    <span class="stat-val" id="hubGrid" style="transition: color 0.1s;">PULSE</span>
                 </div>
             </div>
 
@@ -432,19 +456,34 @@
 
 
 
+        let engineActive = false;
+
         async function updateStatus() {
             try {
                 const res = await fetch(`${LAUNCHER_API}/status`);
                 const data = await res.json();
                 const badge = document.getElementById('status');
-                badge.innerText = `Engine: ${data.status}`;
+                const btn = document.getElementById('btnToggle');
+
+                engineActive = data.active;
+                badge.innerText = data.active ? `Engine: ${data.status}` : "Engine: ready to party";
                 badge.className = `status-badge ${data.active ? 'active' : 'inactive'}`;
 
-                document.getElementById('btnStart').disabled = data.active;
-                document.getElementById('btnStop').disabled = !data.active;
+                if (data.active) {
+                    btn.innerText = "Kill Engine";
+                    btn.className = "btn btn-stop";
+                } else {
+                    btn.innerText = "Launch Engine";
+                    btn.className = "btn btn-start";
+                }
             } catch (e) {
                 console.error("Status check failed", e);
             }
+        }
+
+        async function toggleEngine() {
+            const action = engineActive ? 'stop' : 'start';
+            await doAction(action);
         }
 
         async function doAction(action) {
@@ -487,7 +526,8 @@
         let currentBgUrl = '';
 
         function connectLiveDashboard() {
-            ws = new WebSocket(`ws://${host}:8765`);
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${wsProtocol}://${host}:8765`);
 
             ws.onopen = () => {
                 document.getElementById('liveDashboard').style.display = 'flex';
@@ -575,6 +615,21 @@
 
         // Start live dashboard listener
         connectLiveDashboard();
+
+        // Gesture Support: Swipe Up -> Remote, Swipe Down -> Setup
+        let touchStartY = 0;
+        document.addEventListener('touchstart', e => {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaY = touchEndY - touchStartY;
+            if (Math.abs(deltaY) > 80) { // Threshold for swipe
+                if (deltaY < -80) window.location.href = '/remote.html'; // Swipe Up
+                if (deltaY > 80) window.location.href = '/setup.html'; // Swipe Down
+            }
+        }, { passive: true });
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {

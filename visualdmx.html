@@ -1336,6 +1336,9 @@
             u_flux: { value: 0 },
             u_vol: { value: 0 },
             u_high: { value: 0 },
+            u_mids: { value: 0 },
+            u_highs: { value: 0 },
+            u_intensity: { value: 1.5 },
             u_audioLevel: { value: 0 },
             u_speed: { value: 1.0 },
             u_dmxRot: { value: 0 },
@@ -1984,7 +1987,8 @@
         }
 
         console.log(`🔌 Connecting to WebSocket at ${serverIP}:8765`);
-        const ws = new WebSocket(`ws://${serverIP}:8765`);
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${wsProtocol}://${serverIP}:8765`);
         ws.onopen = () => {
             console.log("✅ WebSocket Connected");
             ws.send(JSON.stringify({ type: "get_params" }));
@@ -2206,8 +2210,11 @@
             // This prevents the "washed out" white screen
             uniforms.u_flux.value = modFlux;
             uniforms.u_bass.value = modBass;
+            uniforms.u_mids.value = modFlux;
             uniforms.u_high.value = modHigh;
+            uniforms.u_highs.value = modHigh;
             uniforms.u_vol.value = modVol;
+            uniforms.u_intensity.value = 1.5;
 
             uniforms.u_audioLevel.value = intensityMod; // Intensity trigger
             uniforms.u_speed.value = remoteParams.speed;

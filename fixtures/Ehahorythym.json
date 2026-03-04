@@ -73,15 +73,28 @@
         "patterns": [
             {
                 "min": 0,
-                "max": 127,
-                "center": 5
+                "max": 30,
+                "center": 20,
+                "vibe": "chill"
+            },
+            {
+                "min": 30,
+                "center": 50,
+                "max": 60,
+                "vibe": "mid"
+            },
+            {
+                "min": 60,
+                "center": 70,
+                "max": 96,
+                "vibe": "high"
             }
         ],
         "zoom": [
             {
                 "min": 0,
                 "max": 127,
-                "center": 20,
+                "center": 40,
                 "vibe": "any"
             }
         ],

@@ -72,75 +72,82 @@
         ],
         "patterns": [
             {
-                "min": 1,
+                "min": 25,
                 "max": 127,
                 "center": 26
             }
         ],
         "zoom": [
             {
-                "min": 255,
+                "min": 0,
                 "max": 255,
-                "center": 255,
+                "center": 127,
+                "vibe": "any"
+            }
+        ],
+        "rotate z": [
+            {
+                "min": 224,
+                "max": 255,
+                "center": 230,
                 "vibe": "high"
             },
             {
                 "min": 0,
-                "center": 64,
+                "center": 0,
                 "max": 127,
                 "vibe": "chill"
             },
             {
                 "min": 0,
-                "center": 50,
-                "max": 124,
-                "vibe": "mid"
-            }
-        ],
-        "rotate z": [
-            {
-                "min": 0,
-                "max": 127,
-                "center": 64
-            },
-            {
-                "min": 255,
-                "center": 255,
+                "center": 0,
                 "max": 255,
-                "vibe": "high"
-            },
-            {
-                "min": 192,
-                "center": 200,
-                "max": 220,
                 "vibe": "mid"
             }
         ],
         "x pos": [
             {
                 "min": 0,
-                "center": 179,
+                "center": 64,
                 "max": 255,
                 "vibe": "any"
+            },
+            {
+                "min": 224,
+                "center": 230,
+                "max": 255,
+                "vibe": "high"
             }
         ],
         "y pos": [
             {
                 "min": 0,
-                "center": 179,
+                "center": 64,
                 "max": 255,
                 "vibe": "any"
+            },
+            {
+                "min": 224,
+                "center": 230,
+                "max": 255,
+                "vibe": "high"
             }
         ],
         "x rot": [
             {
                 "min": 0,
-                "max": 191,
-                "center": 20
+                "max": 255,
+                "center": 127
             },
             {
-                "min": 200,
-                "center": 224,
+                "min": 0,
+                "center": 0,
+                "max": 124,
+                "vibe": "chill"
+            },
+            {
+                "min": 224,
+                "center": 230,
                 "max": 255,
                 "vibe": "high"
             }
@@ -149,27 +156,21 @@
             {
                 "min": 0,
                 "max": 255,
-                "center": 224
+                "center": 127
+            },
+            {
+                "min": 0,
+                "center": 0,
+                "max": 124,
+                "vibe": "chill"
             }
         ],
         "dots": [
             {
                 "min": 0,
-                "max": 0,
-                "center": 0,
-                "vibe": "chill"
-            },
-            {
-                "min": 0,
-                "center": 20,
-                "max": 63,
-                "vibe": "mid"
-            },
-            {
-                "min": 63,
                 "center": 127,
                 "max": 255,
-                "vibe": "high"
+                "vibe": "any"
             }
         ],
         "drawing": [
@@ -183,22 +184,22 @@
             {
                 "min": 0,
                 "max": 255,
-                "center": 224,
+                "center": 0,
                 "vibe": "high"
             }
         ],
         "clip": [
             {
                 "min": 0,
-                "center": 5,
-                "max": 10
+                "center": 25,
+                "max": 49
             }
         ],
         "twist": [
             {
                 "min": 0,
                 "center": 10,
-                "max": 255
+                "max": 127
             }
         ],
         "draw": [
@@ -213,12 +214,6 @@
                 "min": 0,
                 "center": 127,
                 "max": 255,
-                "vibe": "chill"
-            },
-            {
-                "min": 0,
-                "center": 0,
-                "max": 0,
                 "vibe": "any"
             }
         ],
@@ -228,12 +223,6 @@
                 "center": 127,
                 "max": 255,
                 "vibe": "any"
-            },
-            {
-                "min": 0,
-                "center": 0,
-                "max": 0,
-                "vibe": "chill"
             }
         ]
     },
@@ -241,23 +230,23 @@
     "dynamics": {},
     "macros": {},
     "modifiers": {
-        "patterns": "4th beat",
-        "zoom": "flux",
-        "rotate z": "axis_b",
+        "patterns": "axis_b",
+        "zoom": "bass",
+        "rotate z": "axis_c",
         "x pos": "axis_a",
-        "y pos": "axis_d",
-        "x rot": "axis_a",
+        "y pos": "axis_b",
+        "x rot": "axis_d",
         "y rot": "axis_b",
-        "color1": "4th beat",
-        "color2": "4th beat",
+        "color1": "axis_b",
+        "color2": "axis_d",
         "dots": "axis_c",
         "Dim": "state_machine",
         "group": "mode",
         "clip": "state_machine",
         "draw": "axis_a",
-        "twist": "bass",
+        "twist": "axis_a",
         "grating": "axis_c",
-        "drawing": "axis_a"
+        "drawing": "axis_d"
     },
     "channel_macros": {},
     "step_data": {},
@@ -267,7 +256,7 @@
                 0,
                 0
             ],
-            "chill": 220,
+            "chill": 254,
             "mid": 220,
             "high": 220,
             "drop": 220,
@@ -279,10 +268,10 @@
                 0
             ],
             "chill": 0,
-            "mid": 50,
-            "high": 50,
+            "mid": 149,
+            "high": 149,
             "drop": 0,
-            "default": 50
+            "default": 149
         }
     }
 }

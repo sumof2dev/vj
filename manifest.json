@@ -5,11 +5,7 @@
   "description": "VJ Visualizer|DMX Control",
   "start_url": "/manager.html",
   "scope": "/",
-  "display": "fullscreen",
-  "display_override": [
-    "fullscreen",
-    "standalone"
-  ],
+  "display": "standalone",
   "orientation": "any",
   "background_color": "#000000",
   "theme_color": "#000000",
