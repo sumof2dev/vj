@@ -17,7 +17,8 @@ class VibeEngine:
 
         # Energy Trend Tracking (Build/Drop Detection)
         self.energy_history = collections.deque(maxlen=120)  # ~4s at 30fps
-        self.transient = "steady"  # "building", "dropping", "steady"
+        self.transient = "steady"  # "building", "dropping", "tension", "steady"
+        self._transient_hold_until = 0  # Hold timer to prevent single-frame flickers
 
     def update(self, audio_state):
         """
@@ -84,28 +85,59 @@ class VibeEngine:
         self.energy_history.append(energy)
         
         if len(self.energy_history) >= 60 and len(self.impact_history) >= 15:
-            old_energy = self.energy_history[-60]
+            e_list = list(self.energy_history)
+            old_energy = e_list[-60]
             trend_long = energy - old_energy
             
-            old_impact = self.impact_history[0]
+            i_list = list(self.impact_history)
+            old_impact = i_list[0]
             impact_spike = impact - old_impact
 
-            # 1. TENSION: Sudden volume/bass cut while overall energy was recently high
-            if impact < 0.25 and old_energy > 1.5:
-                self.transient = "tension"
-                
-            # 2. THE DROP: Massive sudden spike in impact (Bass snapping back hard)
-            # OR we are coming directly out of tension with a heavy bass hit
-            elif impact_spike > 0.45 or (self.transient == "tension" and audio_state['bass'] > 0.7):
-                self.transient = "dropping"
-                
-            # 3. BUILD: Gradual increase in overall density/volume over 2 seconds
-            elif trend_long > 1.0:
-                self.transient = "building"
-                
-            # 4. STEADY
+            # Minimum hold durations per state (seconds)
+            HOLD_TIMES = {"building": 1.0, "tension": 1.5, "dropping": 2.0}
+            
+            # Sustained spike check: average of last 5 impact samples vs 5 oldest
+            recent_avg = sum(i_list[-5:]) / 5.0
+            old_avg = sum(i_list[:5]) / 5.0
+            sustained_spike = recent_avg - old_avg
+            
+            # If we're still in a hold period, don't override
+            if now < self._transient_hold_until:
+                pass
             else:
-                self.transient = "steady"
+                # STATE MACHINE: steady → building → tension → dropping → steady
+                
+                if self.transient == "steady":
+                    # Entry to BUILDING: Energy is rising over ~2 seconds
+                    if trend_long > 1.0:
+                        self.transient = "building"
+                        self._transient_hold_until = now + HOLD_TIMES["building"]
+                
+                elif self.transient == "building":
+                    # Advance to TENSION: Energy drops off (the breakdown/silence before a drop)
+                    if impact < 0.25 and old_energy > 1.5:
+                        self.transient = "tension"
+                        self._transient_hold_until = now + HOLD_TIMES["tension"]
+                    # Still building? Stay here if energy is still trending up
+                    elif trend_long > 0.5:
+                        pass  # Hold building
+                    else:
+                        self.transient = "steady"  # Build fizzled out
+                
+                elif self.transient == "tension":
+                    # Advance to DROPPING: Bass comes back hard (the drop!)
+                    if audio_state['bass'] > 0.5 or (sustained_spike > 0.35 and impact > 0.6):
+                        self.transient = "dropping"
+                        self._transient_hold_until = now + HOLD_TIMES["dropping"]
+                    # Still tense? Stay here if impact is still low
+                    elif impact < 0.4:
+                        pass  # Hold tension
+                    else:
+                        self.transient = "steady"  # Tension resolved without drop
+                
+                elif self.transient == "dropping":
+                    # Drop is over, return to steady
+                    self.transient = "steady"
 
         # 4. APPLY CONFIDENCE SCALING (The "Commit Zone")
         # Low confidence = reduced amplitude of effects

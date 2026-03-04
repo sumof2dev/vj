@@ -1,6 +1,7 @@
-const CACHE_NAME = 'vj-v3';
+const CACHE_NAME = 'ravebox-vj-v4';
 const ASSETS = [
     '/',
+    '/index.html',
     '/manager.html',
     '/visualdmx.html',
     '/remote.html',
@@ -34,6 +35,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Skip non-GET requests
+    if (event.request.method !== 'GET') return;
+
+    // For navigation requests, try network first, then cache
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(() => {
+                return caches.match(event.request) || caches.match('/manager.html');
+            })
+        );
+        return;
+    }
+
+    // For other assets, try cache first, then network
     event.respondWith(
         caches.match(event.request).then((response) => {
             return response || fetch(event.request);

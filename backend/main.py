@@ -8,6 +8,7 @@ import serial.tools.list_ports
 import pulsectl
 import time
 import os
+import ssl
 import random
 from dmx_engine import DMXEngine
 from vibe_engine import VibeEngine
@@ -42,6 +43,7 @@ dmx_engine = None
 vibe_engine = None
 connected_clients = set()
 dmx_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+audio_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 is_usb_dmx = False
 
 # Cache for visualizer params to persist them even if frontend isn't active
@@ -72,6 +74,7 @@ def save_live_defaults():
                 "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0,
                 "amplitude": dmx_engine.intensity if dmx_engine else 1.0
             },
+            "axes": dmx_engine.axis_configs if dmx_engine else {},
             "visual": visual_params_cache
         }
         with open(CONFIG_FILE, "w") as f:
@@ -114,6 +117,14 @@ def load_live_defaults():
             if v_data:
                 visual_params_cache.update(v_data)
                 
+            # 4. Axis Section
+            a_data = data.get("axes", {})
+            if dmx_engine and a_data:
+                # Basic update, ensuring type safety where possible
+                for ax, cfg in a_data.items():
+                    if ax in dmx_engine.axis_configs:
+                        dmx_engine.axis_configs[ax].update(cfg)
+
         print(f"📖 [Persistence] Loaded defaults from {CONFIG_FILE}")
     except Exception as e:
         print(f"⚠️ Failed to load defaults: {e}")
@@ -670,7 +681,8 @@ async def process_audio_queue():
             # indata is float32 array (Frames, Channels) from sounddevice
             
             # Process (Analysis includes mean-subtraction DC filter)
-            new_audio_state = analyzer.process(indata)
+            loop = asyncio.get_running_loop()
+            new_audio_state = await loop.run_in_executor(audio_executor, analyzer.process, indata)
             
             # Preserve Spotify metadata injected by the async poller
             if 'spotify' in audio_state:
@@ -947,6 +959,14 @@ async def ws_handler(websocket):
                             if "sceneFreq" in data and dmx_engine:
                                 dmx_engine.scene_freq = int(data["sceneFreq"])
                         
+                        elif msg_type == "axis_param":
+                            # Handle Granular Axis Control (A-F)
+                            axis = data.get("axis")
+                            param = data.get("param")
+                            val = data.get("val")
+                            if dmx_engine and axis and param:
+                                dmx_engine.set_axis_param(axis, param, val)
+
                         elif msg_type == "force_refresh":
                             # Broadcast refresh signal to all clients
                             refresh_msg = json.dumps({"type": "force_refresh"})
@@ -977,6 +997,7 @@ async def ws_handler(websocket):
                                     "speed": dmx_engine.speed if dmx_engine else 1.0,
                                     "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0
                                 },
+                                "axes": dmx_engine.axis_configs if dmx_engine else {},
                                 "visual": visual_params_cache
                             }
                             await websocket.send(json.dumps(params))
@@ -1047,8 +1068,20 @@ async def main():
 
     print(f"🚀 Engine Running on port {WS_PORT}. Connect Browser now.")
     
-    # Start websocket server and tasks
-    async with websockets.serve(ws_handler, "0.0.0.0", WS_PORT):
+    # Start websocket server and tasks with optional SSL
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    cert_path = os.path.join(BASE_DIR, '..', 'cert.pem')
+    key_path = os.path.join(BASE_DIR, '..', 'key.pem')
+
+    ssl_context = None
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
+        print(f"🔒 WS SSL Enabled (wss://0.0.0.0:{WS_PORT})")
+    else:
+        print(f"🔓 WS running in plain mode (ws://0.0.0.0:{WS_PORT})")
+
+    async with websockets.serve(ws_handler, "0.0.0.0", WS_PORT, ssl=ssl_context):
         await asyncio.gather(
             process_audio_queue(),
             audio_watchdog(),

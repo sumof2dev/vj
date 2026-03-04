@@ -6,6 +6,7 @@
     <title>DMX Setup & Profile Editor</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RaveBox">
@@ -1075,6 +1076,13 @@
             </svg>
             <span class="nav-label">Setup</span>
         </div>
+        <div class="nav-btn" onclick="showView('axes')" title="LFO Matrix">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+            <span class="nav-label">Matrix</span>
+        </div>
         <div class="nav-btn" onclick="showView('presets')" title="Preset Manager">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -1088,6 +1096,23 @@
 
     <div id="main-content">
 
+
+        <!-- === LFO MATRIX === -->
+        <div id="view-axes" class="view-panel">
+            <div class="row" style="justify-content:space-between">
+                <h2>LFO Math Matrix</h2>
+                <button class="btn primary" onclick="saveStageConfig()">💾 Save Changes</button>
+            </div>
+
+            <div style="font-size:12px; color:var(--text-dim); margin-bottom:20px; line-height:1.5;">
+                Configure the 6 continuous math waves (A-F) that drive the generative animations.<br>
+                <b>Base Speed:</b> How fast it moves during silence. <b>Reactivity:</b> How much it accelerates when the
+                audio hits.
+            </div>
+
+            <div id="axisMatrixRoot" style="display: flex; flex-direction: column; gap: 12px;">
+            </div>
+        </div>
 
         <!-- === STAGE MANAGER === -->
         <div id="view-stage" class="view-panel active">
@@ -1182,39 +1207,43 @@
         <!-- === LIVE TEST === -->
         <div id="view-test" class="view-panel" style="padding:0; background:#111;">
 
-            <div class="looper-topbar">
-                <div class="toggle-switch">
-                    <div
-                        style="font-size: 10px; color: var(--accent); margin-right: 8px; letter-spacing: 1px; font-weight: bold;">
-                        CONTROL:</div>
-                    <div class="switch-label off-text">Setup</div>
-                    <div id="engine-toggle" class="switch-track on" onclick="toggleEngineVisual()">
-                        <div class="switch-knob"></div>
+            <div class="looper-topbar"
+                style="display: flex; flex-direction: column; align-items: stretch; gap: 8px; height: auto; padding: 10px 15px;">
+                <!-- Row 1: Control & Device -->
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 5px;">
+                    <div class="toggle-switch" style="gap: 6px;">
+                        <div style="font-size: 10px; color: var(--accent); letter-spacing: 1px; font-weight: bold;">
+                            CONTROL:</div>
+                        <div class="switch-label off-text" style="font-size: 11px;">Setup</div>
+                        <div id="engine-toggle" class="switch-track on" onclick="toggleEngineVisual()"
+                            style="transform: scale(0.8); margin: 0 -4px;">
+                            <div class="switch-knob"></div>
+                        </div>
+                        <div class="switch-label on-text" style="font-size: 11px;">Audio</div>
+                        <button class="btn"
+                            style="padding: 2px 6px; font-size:9px; height: 18px; border-color: #444; margin-left: 10px; display: flex; align-items:center; background: #222;"
+                            onclick="zeroAllDmx()">ZERO ALL</button>
                     </div>
-                    <div class="switch-label on-text">Audio Engine</div>
+
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="font-size: 10px; color: var(--accent); font-weight: bold; letter-spacing: 1px;">
+                            DEVICE:</div>
+                        <select id="test-dev-select" onchange="handleDeviceSelection(this.value)"
+                            style="width:120px; background:#1a1a24; border-color:#333; color:#ccc; font-size:11px; height:24px; padding:0 4px;"></select>
+                        <div id="conn-status" style="color:var(--danger); font-size:10px; font-weight:bold;">🔴</div>
+                    </div>
                 </div>
 
-                <div style="display:flex; align-items:center; gap:10px;">
+                <!-- Row 2: Save Options -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 10px; color: var(--accent); letter-spacing: 1px; font-weight: bold;">SAVE TO:
+                    </div>
                     <button class="btn"
                         style="padding: 4px 10px; font-size:11px; height: 26px; border-color: var(--accent); color: var(--accent);"
-                        onclick="saveToProfilePreset()">💾 Save to Profile</button>
+                        onclick="saveToProfilePreset()">PROFILE</button>
                     <button class="btn primary" style="padding: 4px 10px; font-size:11px; height: 26px;"
-                        onclick="saveToFixturePreset()">🎯 Save to Fixture(s)</button>
-
-                    <div style="font-size: 12px; color: var(--accent); font-weight: bold; letter-spacing: 1px;">DEVICE
-                    </div>
-                    <select id="test-dev-select" onchange="handleDeviceSelection(this.value)"
-                        style="width:200px; background:#1a1a24; border-color:#333; color:#ccc;"></select>
-                    <div id="conn-status"
-                        style="color:var(--danger); font-size:12px; margin-left:15px; font-weight:bold;">🔴 Disconnected
-                    </div>
-                </div>
-            </div>
-
-            <div class="scenes-panel">
-                <div class="scenes-panel-title">SCENES</div>
-                <div class="scenes-grid" id="scenes-grid">
-                    <!-- Populated via JS -->
+                        onclick="saveToFixturePreset()">FIXTURE</button>
                 </div>
             </div>
 
@@ -1306,10 +1335,87 @@
                 loadStageConfig(),
                 loadProfileList()
             ]);
-            initScenes();
             connectWs();
             renderPresetsManager();
         }
+
+        const BIN_LABELS = [
+            "0: Sub-Bass (Heavy Kicks/808)",
+            "1: Bass (Basslines)",
+            "2: Low-Mid (Warmth/Mud)",
+            "3: Mid (Low Vocals/Snare)",
+            "4: Upper-Mid (Main Synths)",
+            "5: Presence (High Vocals)",
+            "6: Upper-Pres (Claps)",
+            "7: Low-Treble (Percussion)",
+            "8: Treble (Hi-Hats)",
+            "9: High-Treble (Cymbals)",
+            "10: Brilliance (Air/Sizzle)"
+        ];
+
+        function renderAxisMatrix(axes) {
+            const root = document.getElementById('axisMatrixRoot');
+            if (!root) return;
+            root.innerHTML = '';
+
+            const axisList = Object.keys(axes).sort();
+            axisList.forEach(id => {
+                const cfg = axes[id];
+                const row = document.createElement('div');
+
+                // Styling to match setup.html theme
+                row.style.background = 'rgba(255, 255, 255, 0.03)';
+                row.style.border = '1px solid rgba(255, 255, 255, 0.05)';
+                row.style.borderRadius = '8px';
+                row.style.padding = '15px';
+                row.style.display = 'grid';
+                row.style.gridTemplateColumns = '40px 1fr 1fr 1.5fr';
+                row.style.gap = '15px';
+                row.style.alignItems = 'center';
+
+                let binOptions = BIN_LABELS.map((label, i) =>
+                    `<option value="${i}" ${cfg.bin == i ? 'selected' : ''}>${label}</option>`
+                ).join('');
+
+                row.innerHTML = `
+                    <div style="font-weight: 900; color: var(--accent); font-size: 1.5rem; text-align: center;">${id}</div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Base Speed: <span style="color:white; font-family:monospace;" id="v_speed_${id}">${parseFloat(cfg.speed).toFixed(2)}</span></div>
+                        <input type="range" min="0" max="3" step="0.05" value="${cfg.speed}" style="width:100%; accent-color:var(--accent);" oninput="updateAxis('${id}', 'speed', this.value)">
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Reactivity: <span style="color:white; font-family:monospace;" id="v_react_${id}">${parseFloat(cfg.react).toFixed(2)}</span></div>
+                        <input type="range" min="0" max="4" step="0.1" value="${cfg.react}" style="width:100%; accent-color:var(--accent);" oninput="updateAxis('${id}', 'react', this.value)">
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Audio Trigger (EQ Bin)</div>
+                        <select style="width:100%; background:#111; border:1px solid #333; color:#ccc; padding:6px; border-radius:4px; font-size:11px;" onchange="updateAxis('${id}', 'bin', this.value)">
+                            ${binOptions}
+                        </select>
+                    </div>
+                `;
+                root.appendChild(row);
+            });
+        }
+
+        window.updateAxis = (axis, param, val) => {
+            const disp = document.getElementById(`v_${param}_${axis}`);
+            if (disp) disp.textContent = parseFloat(val).toFixed(2);
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'axis_param',
+                    axis: axis,
+                    param: param,
+                    val: val
+                }));
+                // Also trigger a save defaults command so Axis changes persist across reboots
+                ws.send(JSON.stringify({ type: 'save_defaults' }));
+            }
+        };
 
         // --- NAVIGATION ---
         function showView(viewId) {
@@ -2028,15 +2134,21 @@
 
         // --- LIVE TEST ---
         function connectWs() {
-            ws = new WebSocket(`ws://${window.location.hostname}:8765`);
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${wsProtocol}://${window.location.hostname}:8765`);
             ws.onopen = () => {
                 document.getElementById('conn-status').innerHTML = '<span style="display:flex; align-items:center; gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Connected</span>';
                 document.getElementById('conn-status').style.color = "var(--success)";
+
+                // Request current system parameters to populate the Axis Matrix
+                ws.send(JSON.stringify({ type: 'get_params' }));
             };
             ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    // Removed legacy Mode and Calibration block code
+                    if (msg.type === 'current_params' && msg.axes) {
+                        renderAxisMatrix(msg.axes);
+                    }
                 } catch (e) {
                     console.error("WS Parse Error:", e);
                 }
@@ -2074,35 +2186,7 @@
         }
 
         function initScenes() {
-            const grid = document.getElementById('scenes-grid');
-            if (!grid) return;
-            grid.innerHTML = '';
-
-            // ZERO ALL Button
-            const btnZero = document.createElement('div');
-            btnZero.className = 'scene-btn';
-            btnZero.style.height = '60px';
-            btnZero.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">ZERO ALL</div>`;
-            btnZero.onclick = async () => {
-                document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
-                btnZero.classList.add('playing');
-                await zeroAllDmx();
-                setTimeout(() => btnZero.classList.remove('playing'), 500);
-            };
-            grid.appendChild(btnZero);
-
-            // SET AS DEFAULT Button
-            const btnDefault = document.createElement('div');
-            btnDefault.className = 'scene-btn';
-            btnDefault.style.height = '60px';
-            btnDefault.innerHTML = `<div class="led"></div><div style="font-size:10px; font-weight:bold; margin-top:5px;">SET AS DEFAULT</div>`;
-            btnDefault.onclick = () => {
-                document.querySelectorAll('.scene-btn').forEach(el => el.classList.remove('playing'));
-                btnDefault.classList.add('playing');
-                setAsDefault();
-                setTimeout(() => btnDefault.classList.remove('playing'), 500);
-            };
-            grid.appendChild(btnDefault);
+            // function content removed, scenes grid is gone
         }
 
         async function zeroAllDmx() {
@@ -2866,33 +2950,31 @@
         function presetRowHtml(pName, pData) {
             const escapedName = pName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             return `
-                <div class="device-row" style="display: grid; grid-template-columns: 2fr 1fr 1fr 80px 36px; gap: 8px; align-items: center;">
-                    <input type="text" value="${pName.replace(/"/g, '&quot;')}" readonly style="background:transparent; border:none; outline:none; font-weight:bold; color:var(--text); font-size:13px;">
-                    <select onchange="updatePresetProfile('${escapedName}', this.value)" style="background:#1a1a24; border-color:#333; color:#ccc; width:100%; font-size:12px; padding:2px 4px;">
+                <div class="device-row" style="display: flex !important; flex-direction: row !important; gap: 4px !important; align-items: center !important; padding: 4px 6px !important; min-height: 28px !important; width: 100% !important;">
+                    <div onclick="playPreset('${escapedName}')" style="flex: 1 !important; min-width: 0 !important; cursor:pointer !important; font-weight:bold !important; color:var(--accent) !important; font-size:12px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important;" title="Play">
+                        ${pName}
+                    </div>
+                    <select onchange="updatePresetProfile('${escapedName}', this.value)" style="width: 80px !important; flex-shrink:0 !important; background:#111 !important; border:1px solid #333 !important; color:#ccc !important; font-size:11px !important; padding:0 2px !important; height:24px !important; border-radius:4px !important;">
                         <option value="" ${!pData.profile ? 'selected' : ''}>Any</option>
                         ${availableProfiles.map(p => `<option value="${p.replace('.json', '')}" ${pData.profile === p.replace('.json', '') ? 'selected' : ''}>${p.replace('.json', '')}</option>`).join('')}
                     </select>
-                    <select onchange="updatePresetVibe('${escapedName}', this.value)" style="background:#1a1a24; border-color:#333; color:#ccc; width:100%; font-size:12px; padding:2px 4px;">
-                        <option value="chill" ${pData.vibe === 'chill' ? 'selected' : ''}>chill</option>
-                        <option value="mid" ${pData.vibe === 'mid' ? 'selected' : ''}>mid</option>
-                        <option value="high" ${pData.vibe === 'high' ? 'selected' : ''}>high</option>
-                        <option value="sub" ${pData.vibe === 'sub' ? 'selected' : ''}>sub</option>
-                        <option value="boots" ${pData.vibe === 'boots' ? 'selected' : ''}>Boots (Bass)</option>
-                        <option value="cats" ${pData.vibe === 'cats' ? 'selected' : ''}>Cats (Treble)</option>
-                        <option value="cha" ${pData.vibe === 'cha' ? 'selected' : ''}>Cha (Mid)</option>
-                        <option value="tearout" ${pData.vibe === 'tearout' ? 'selected' : ''}>tearout</option>
-                        <option value="machine_gun" ${pData.vibe === 'machine_gun' ? 'selected' : ''}>machine_gun</option>
-                        <option value="wonky" ${pData.vibe === 'wonky' ? 'selected' : ''}>wonky</option>
-                        <option value="building" ${pData.vibe === 'building' ? 'selected' : ''}>building</option>
-                        <option value="tension" ${pData.vibe === 'tension' ? 'selected' : ''}>tension</option>
-                        <option value="drop" ${pData.vibe === 'drop' ? 'selected' : ''}>drop</option>
+                    <select onchange="updatePresetVibe('${escapedName}', this.value)" style="width: 80px !important; flex-shrink:0 !important; background:#111 !important; border:1px solid #333 !important; color:#ccc !important; font-size:11px !important; padding:0 2px !important; height:24px !important; border-radius:4px !important;">
+                        <option value="chill" ${pData.vibe === 'chill' ? 'selected' : ''}>Chill</option>
+                        <option value="mid" ${pData.vibe === 'mid' ? 'selected' : ''}>Mid</option>
+                        <option value="high" ${pData.vibe === 'high' ? 'selected' : ''}>High</option>
+                        <option value="sub" ${pData.vibe === 'sub' ? 'selected' : ''}>Sub</option>
+                        <option value="boots" ${pData.vibe === 'boots' ? 'selected' : ''}>Boots</option>
+                        <option value="cats" ${pData.vibe === 'cats' ? 'selected' : ''}>Cats</option>
+                        <option value="cha" ${pData.vibe === 'cha' ? 'selected' : ''}>Cha</option>
+                        <option value="tearout" ${pData.vibe === 'tearout' ? 'selected' : ''}>Tearout</option>
+                        <option value="machine_gun" ${pData.vibe === 'machine_gun' ? 'selected' : ''}>Gun</option>
+                        <option value="wonky" ${pData.vibe === 'wonky' ? 'selected' : ''}>Wonky</option>
+                        <option value="building" ${pData.vibe === 'building' ? 'selected' : ''}>Build</option>
+                        <option value="tension" ${pData.vibe === 'tension' ? 'selected' : ''}>Tension</option>
+                        <option value="drop" ${pData.vibe === 'drop' ? 'selected' : ''}>Drop</option>
                     </select>
-                    <button class="btn" style="padding:3px 6px; font-size:11px; height:26px; display:flex; align-items:center; gap:4px; border-color:var(--accent); color:var(--accent);" onclick="playPreset('${escapedName}')">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        Play
-                    </button>
-                    <button class="kv-remove" onclick="deletePreset('${escapedName}')" style="width:28px; height:26px; display:flex; align-items:center; justify-content:center; margin:0; padding:0;">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <button class="kv-remove" onclick="deletePreset('${escapedName}')" style="width:20px !important; height:20px !important; min-width:20px !important; flex-shrink:0 !important; display:flex !important; align-items:center !important; justify-content:center !important; margin:0 !important; padding:0 !important; border-radius:4px !important; font-size:10px !important; grid-column: auto !important;">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
             `;
@@ -3132,6 +3214,15 @@
         }
 
         window.onload = init;
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW Registered', reg.scope))
+                    .catch(err => console.log('SW Failed', err));
+            });
+        }
     </script>
 </body>
 

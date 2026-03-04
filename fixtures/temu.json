@@ -24,21 +24,15 @@
         "unassigned_ch1": [
             {
                 "min": 0,
-                "center": 0,
-                "max": 0,
-                "vibe": "any"
-            },
-            {
-                "min": 0,
-                "center": 127,
-                "max": 255,
+                "center": 25,
+                "max": 50,
                 "vibe": "high"
             }
         ],
         "unassigned_ch2": [
             {
                 "min": 0,
-                "center": 127,
+                "center": 0,
                 "max": 255,
                 "vibe": "any"
             }
@@ -46,7 +40,7 @@
         "unassigned_ch3": [
             {
                 "min": 0,
-                "center": 127,
+                "center": 0,
                 "max": 255,
                 "vibe": "any"
             }
@@ -54,7 +48,7 @@
         "unassigned_ch4": [
             {
                 "min": 0,
-                "center": 127,
+                "center": 0,
                 "max": 255,
                 "vibe": "any"
             }
@@ -62,15 +56,15 @@
         "unassigned_ch5": [
             {
                 "min": 0,
-                "center": 127,
-                "max": 255,
+                "center": 0,
+                "max": 10,
                 "vibe": "any"
             }
         ],
         "unassigned_ch6": [
             {
                 "min": 0,
-                "center": 127,
+                "center": 0,
                 "max": 255,
                 "vibe": "any"
             }
@@ -78,7 +72,7 @@
         "unassigned_ch7": [
             {
                 "min": 0,
-                "center": 127,
+                "center": 0,
                 "max": 255,
                 "vibe": "any"
             }
@@ -89,6 +83,25 @@
     "macros": {},
     "step_data": {},
     "modifiers": {
-        "unassigned_ch1": "axis_a"
+        "unassigned_ch1": "axis_c",
+        "unassigned_ch2": "axis_c",
+        "unassigned_ch3": "axis_c",
+        "unassigned_ch4": "axis_b",
+        "unassigned_ch5": "axis_c",
+        "unassigned_ch6": "axis_c",
+        "unassigned_ch7": "axis_c"
+    },
+    "state_data": {
+        "unassigned_ch1": {
+            "off": [
+                255,
+                255
+            ],
+            "chill": 255,
+            "mid": 255,
+            "high": 40,
+            "drop": 40,
+            "default": 0
+        }
     }
 }
