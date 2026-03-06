@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Remote Control</title>
+    <title>Gamepad Control</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000" />
@@ -659,6 +659,62 @@
                 grid-column: span 1;
             }
         }
+
+        /* Axis Matrix Styles */
+        .axis-row {
+            display: grid;
+            grid-template-columns: 30px 1fr 1fr 80px;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+
+        .axis-id {
+            font-weight: 900;
+            color: var(--accent-global);
+            font-size: 1.1rem;
+            text-shadow: 0 0 10px rgba(162, 155, 254, 0.3);
+        }
+
+        .axis-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .axis-label-tiny {
+            font-size: 0.55rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .axis-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .axis-val-disp {
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: var(--accent-visual);
+            min-width: 25px;
+        }
+
+        .axis-bin-select {
+            background: #222;
+            color: #eee;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 0.7rem;
+            width: 100%;
+        }
     </style>
 </head>
 
@@ -667,7 +723,7 @@
         <div style="display: flex; align-items: center; gap: 12px;">
             <a href="/manager.html" class="back-btn">←</a>
             <h1>
-                🎮 Remote
+                🕹️ Gamepad Remote
                 <div class="vol-meter" title="Input Volume">
                     <div id="vol-bar" class="vol-bar"></div>
                 </div>
@@ -680,66 +736,68 @@
                 <span id="statusText">Connecting...</span>
             </div>
             <span class="vibe-badge" id="vibeBadge">--</span>
+            <!-- Synth Mode Toggle -->
+            <label style="margin-left:12px; display:flex; align-items:center; font-size:0.9rem;">
+                <input type="checkbox" id="synthToggle" style="margin-right:4px;">
+                Synth Mode
+            </label>
         </div>
     </div>
 
     <div class="control-panel">
 
-        <!-- SYSTEM CONTROLS -->
+        <!-- VIRTUAL GAMEPAD CONTROLS -->
         <div class="section global">
             <div class="section-title">
-                ⚡ System Controls
-                <span id="bpmDisplay" style="color:var(--accent-visual); font-size:0.8rem;">-- BPM</span>
+                🎮 Virtual Controller
+                <span style="color:var(--text-dim); font-size:0.8rem;">Tap buttons if no controller is paired</span>
             </div>
 
-            <div class="slider-group">
-                <div class="slider-label">
-                    <span>Gain (Input Volume)</span>
-                    <span class="slider-value" id="masterSensVal">1.0</span>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items:center;">
+
+                <!-- D-Pad (Left Side) -->
+                <div
+                    style="display: grid; grid-template-columns: 50px 50px 50px; grid-template-rows: 50px 50px 50px; gap: 5px; justify-content: center;">
+                    <div></div>
+                    <button id="vbtn-up" class="btn btn-secondary" style="padding:0; font-size:1.5rem;"
+                        onmousedown="triggerVirtualButton('up')" ontouchstart="triggerVirtualButton('up')">⇧</button>
+                    <div></div>
+                    <button id="vbtn-left" class="btn btn-secondary" style="padding:0; font-size:1.5rem;"
+                        onmousedown="triggerVirtualButton('left')"
+                        ontouchstart="triggerVirtualButton('left')">⇦</button>
+                    <div style="background:#222; border-radius:8px;"></div>
+                    <button id="vbtn-right" class="btn btn-secondary" style="padding:0; font-size:1.5rem;"
+                        onmousedown="triggerVirtualButton('right')"
+                        ontouchstart="triggerVirtualButton('right')">⇨</button>
+                    <div></div>
+                    <button id="vbtn-down" class="btn btn-secondary" style="padding:0; font-size:1.5rem;"
+                        onmousedown="triggerVirtualButton('down')"
+                        ontouchstart="triggerVirtualButton('down')">⇩</button>
+                    <div></div>
                 </div>
-                <input type="range" id="masterSens" min="0.0" max="2.0" step="0.05" value="1.0">
-            </div>
 
-            <div class="slider-group">
-                <div class="slider-label">
-                    <span>Audio Sensitivity (Reactivity)</span>
-                    <span class="slider-value" id="masterFluxVal">0.7</span>
+                <!-- Action Buttons (Right Side) -->
+                <div
+                    style="display: grid; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px 60px; gap: 5px; justify-content: center;">
+                    <div></div>
+                    <button id="vbtn-y" class="btn"
+                        style="background:#f1c40f; color:#000; padding:0; border-radius:50%; font-size:1.2rem; font-weight:bold;"
+                        onmousedown="triggerVirtualButton('Y')" ontouchstart="triggerVirtualButton('Y')">Y</button>
+                    <div></div>
+                    <button id="vbtn-x" class="btn"
+                        style="background:#3498db; color:#000; padding:0; border-radius:50%; font-size:1.2rem; font-weight:bold;"
+                        onmousedown="triggerVirtualButton('X')" ontouchstart="triggerVirtualButton('X')">X</button>
+                    <div></div>
+                    <button id="vbtn-b" class="btn"
+                        style="background:#e74c3c; color:#000; padding:0; border-radius:50%; font-size:1.2rem; font-weight:bold;"
+                        onmousedown="triggerVirtualButton('B')" ontouchstart="triggerVirtualButton('B')">B</button>
+                    <div></div>
+                    <button id="vbtn-a" class="btn"
+                        style="background:#2ecc71; color:#000; padding:0; border-radius:50%; font-size:1.2rem; font-weight:bold;"
+                        onmousedown="triggerVirtualButton('A')" ontouchstart="triggerVirtualButton('A')">A</button>
+                    <div></div>
                 </div>
-                <input type="range" id="masterFlux" min="0.0" max="1.5" step="0.05" value="0.7">
-            </div>
 
-            <div class="slider-group">
-                <div class="slider-label">
-                    <span>Vibe Probability (Mid Bias)</span>
-                    <span class="slider-value" id="masterBiasVal">0.5</span>
-                </div>
-                <input type="range" id="masterBias" min="0.0" max="1.0" step="0.05" value="0.5">
-            </div>
-
-            <div class="slider-group">
-                <div class="slider-label">
-                    <span>Master Speed</span>
-                    <span class="slider-value" id="masterSpeedVal">1.0x</span>
-                </div>
-                <input type="range" id="masterSpeed" min="0.0" max="2.0" step="0.05" value="1.0">
-            </div>
-
-            <div class="slider-group">
-                <div class="slider-label">
-                    <span>Scene Change Rate (Phrase Length)</span>
-                    <span class="slider-value" id="masterSceneFreqVal">Normal</span>
-                </div>
-                <input type="range" id="masterSceneFreq" min="0" max="3" step="1" value="1"
-                    title="0=Slow(32b), 1=Norm(16b), 2=Fast(8b), 3=Frantic(4b)">
-            </div>
-
-            <div class="btn-grid">
-                <a href="gamepad.html" class="btn"
-                    style="background:#8b48f0; text-decoration:none; grid-column: span 2;">🕹️ ENTER GAMEPAD MODE</a>
-                <button id="saveDefaultsBtn" class="btn btn-primary">💾 Save Defaults</button>
-                <button id="refreshAllBtn" class="btn btn-secondary">🔄 Refresh Clients</button>
-                <button id="btnEngineStart" class="btn btn-success">🚀 Start Engine</button>
-                <button id="btnEngineRestart" class="btn btn-danger">♻️ Restart Engine</button>
             </div>
         </div>
 
@@ -844,6 +902,18 @@
         const FREQ_LABELS = ['Slow', 'Normal', 'Fast', 'Frantic'];
         let ws = null;
         let reconnectTimeout = null;
+        // Synth mode flag
+        let synthEnabled = false;
+        // Listen for synth toggle changes
+        document.addEventListener('DOMContentLoaded', () => {
+            const synthToggle = document.getElementById('synthToggle');
+            if (synthToggle) {
+                synthToggle.addEventListener('change', (e) => {
+                    synthEnabled = e.target.checked;
+                    console.log('Synth mode', synthEnabled ? 'enabled' : 'disabled');
+                });
+            }
+        });
 
         function connect() {
             const host = window.location.hostname || 'localhost';
@@ -867,106 +937,40 @@
                     const msg = JSON.parse(event.data);
 
                     if (msg.type === 'current_params') {
-                        syncUI(msg);
+                        if (msg.master) {
+                            state.speed = msg.master.speed || 1.0;
+                            state.gain = msg.master.sensitivity || 1.0;
+                            state.sensitivity = msg.master.flux_sensitivity || 0.5;
+                            state.vibe_bias = msg.master.vibe_bias || 0.5;
+                            state.sceneFreq = msg.master.sceneFreq !== undefined ? msg.master.sceneFreq : 1;
 
-                    }
-
-                    if (msg.type === 'audio') {
-                        const data = msg.data;
-                        if (data.vol !== undefined) {
-                            document.getElementById('vol-bar').style.width = Math.min(100, data.vol * 100) + '%';
-                        }
-                        if (data.vibe) {
-                            const badge = document.getElementById('vibeBadge');
-                            badge.textContent = data.vibe;
-                            badge.className = 'vibe-badge ' + data.vibe;
-                        }
-
-                        // Update Engine Thinking Panels
-                        if (data.spotify) {
-                            const sp = data.spotify;
-                            document.getElementById('spotifyPanel').style.display = 'flex';
-                            document.getElementById('spotTrackName').textContent = sp.name || "Unknown Track";
-
-                            // Progress bar
-                            const progEl = document.getElementById('spotProgress');
-                            if (sp.duration_ms && sp.progress_ms) {
-                                const pct = Math.min(100, (sp.progress_ms / sp.duration_ms) * 100);
-                                progEl.style.width = pct + '%';
-                            } else {
-                                progEl.style.width = '0%';
+                            const masterSpeedInput = document.getElementById('masterSpeed');
+                            if (masterSpeedInput) {
+                                masterSpeedInput.value = state.speed;
+                                document.getElementById('masterSpeedVal').textContent = state.speed.toFixed(1) + 'x';
                             }
-
-                            // Album Art
-                            const artEl = document.getElementById('spotArt');
-                            if (sp.image_low) {
-                                artEl.src = sp.image_low;
-                                artEl.style.display = 'block';
-                            } else {
-                                artEl.style.display = 'none';
-                            }
-
-                        } else {
-                            // If no spotify data is present in the latest audio state, hide the panel
-                            document.getElementById('spotifyPanel').style.display = 'none';
                         }
-
-                        if (data.transient) {
-                            const tVal = document.getElementById('transientVal');
-                            const tStr = data.transient.toUpperCase();
-                            tVal.textContent = tStr;
-                            tVal.className = 'transient-value ' + data.transient;
-                        }
-
-                        if (data.bins) {
-                            const bars = document.querySelectorAll('.bin-bar');
-                            data.bins.forEach((val, i) => {
-                                if (bars[i]) {
-                                    const h = Math.max(2, val * 45); // Max panel height ~50px
-                                    bars[i].style.height = h + 'px';
-
-                                    // Dynamic coloring based on energy
-                                    if (val > 0.8) bars[i].style.background = 'var(--accent-laser)';
-                                    else if (val > 0.4) bars[i].style.background = 'var(--accent-visual)';
-                                    else bars[i].style.background = '#444';
-                                }
-                            });
-                        }
+                    } else if (msg.type === 'status') {
+                        console.log("Status:", msg.message);
+                    } else if (msg.type === 'audio') {
+                        const data = msg.data || {};
 
                         if (data.bpm) {
                             const bpm = Math.round(data.bpm);
-                            document.getElementById('bpmDisplay').textContent = bpm + ' BPM';
-                            document.getElementById('statsBpm').textContent = bpm;
+                            const bpmDisplay = document.getElementById('bpmDisplay');
+                            if (bpmDisplay) bpmDisplay.textContent = bpm + ' BPM';
                         }
 
-                        if (data.confidence !== undefined) {
-                            document.getElementById('statsConf').textContent = Math.round(data.confidence * 100) + '%';
-                        }
-                        if (data.isolation !== undefined) {
-                            document.getElementById('statsIso').textContent = Math.round(data.isolation * 100) + '%';
-                        }
-
+                        // Just enough to show that the connection is active
                         if (data.beat) {
-                            const bt = document.getElementById('beatTrigger');
-                            bt.style.background = 'rgba(162, 155, 254, 0.4)';
-                            setTimeout(() => bt.style.background = '#1a1a1a', 100);
+                            console.log("Beat received");
                         }
-
-                        if (msg.logic) renderLissajous(msg.logic);
-
-                        if (msg.dmx) updateDMXMonitor(msg.dmx);
-                        if (msg.active_scene) document.getElementById('activeSceneTag').innerHTML = `Scene: <b style="color:white">${msg.active_scene.toUpperCase()}</b>`;
-                        if (msg.active_addon_scene) {
-                            document.getElementById('activeAddonSceneTag').innerHTML = `Add-on: <b style="color:var(--accent-visual)">${msg.active_addon_scene.toUpperCase()}</b>`;
-                            document.getElementById('activeAddonSceneTag').style.display = 'block';
-                        } else {
-                            document.getElementById('activeAddonSceneTag').style.display = 'none';
-                        }
-                    }
-                    else if (msg.type === 'force_refresh') {
+                    } else if (msg.type === 'force_refresh') {
                         window.location.reload();
                     }
-                } catch (e) { }
+                } catch (e) {
+                    console.error("Parse Error:", e);
+                }
             };
         }
 
@@ -990,101 +994,17 @@
                 // Propagate global values to laser engine
                 speed: state.speed,
                 audioSensitivity: state.sensitivity,
-                // Specifics
-                pattern: 'auto',
-                color: 'auto'
+                amplitude: state.gain
             }));
-
-            // 3. VISUAL PARAMS (Targeted)
-            ws.send(JSON.stringify({
-                type: 'remote_params',
-                target: 'visual',
-                // Propagate global values to visual engine
-                speed: state.speed,
-                amplitude: 1.0,
-                sensitivity: state.sensitivity, // visual.sensitivity = flux sens
-                // Specifics
-                baseLayer: 'auto',
-                effect: 'auto'
-            }));
-        }
-
-        function syncUI(params) {
-            if (params.master) {
-                const m = params.master;
-                state.speed = m.speed || 1.0;
-                state.gain = m.sensitivity || 1.0; // Analyzer Gain
-                state.sensitivity = m.flux_sensitivity || 0.7; // Flux Sens
-                state.vibe_bias = m.vibe_bias || 0.5;
-                state.sceneFreq = m.sceneFreq !== undefined ? m.sceneFreq : 1;
-
-                updateSlider('masterSpeed', state.speed, 'x');
-                updateSlider('masterSens', state.gain);
-                updateSlider('masterFlux', state.sensitivity);
-                updateSlider('masterBias', state.vibe_bias);
-                updateSlider('masterSceneFreq', state.sceneFreq, '', true);
-            }
-
-
-        }
-
-
-
-        function updateSlider(id, val, suffix = '', isFreq = false) {
-            const el = document.getElementById(id);
-            if (el) {
-                el.value = val;
-                const disp = document.getElementById(id + 'Val');
-                if (disp) {
-                    if (isFreq) disp.textContent = FREQ_LABELS[val] || val;
-                    else disp.textContent = val.toFixed(1) + suffix;
-                }
-            }
         }
 
         // --- LISTENERS ---
-        // Sliders
-        const sliders = [
-            { id: 'masterSpeed', key: 'speed', obj: state },
-            { id: 'masterSens', key: 'gain', obj: state },
-            { id: 'masterFlux', key: 'sensitivity', obj: state },
-            { id: 'masterBias', key: 'vibe_bias', obj: state },
-            { id: 'masterSceneFreq', key: 'sceneFreq', obj: state }
-        ];
 
-        sliders.forEach(def => {
-            document.getElementById(def.id).addEventListener('input', (e) => {
-                def.obj[def.key] = parseFloat(e.target.value);
-                // Update display immediately for responsiveness
-                updateSlider(def.id, def.obj[def.key], def.id.includes('Speed') ? 'x' : '', def.key.includes('Freq'));
-                sendParams();
-            });
-        });
 
 
 
         // Buttons
-        document.getElementById('saveDefaultsBtn').addEventListener('click', () => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'save_defaults' }));
-                alert("Defaults Saved!");
-            }
-        });
 
-        document.getElementById('refreshAllBtn').addEventListener('click', () => {
-            if (confirm("Force refresh all screens?")) {
-                ws.send(JSON.stringify({ type: 'force_refresh' }));
-            }
-        });
-
-        async function engineAction(action) {
-            if (!confirm(`Are you sure you want to ${action} the engine?`)) return;
-            try {
-                await fetch(`/${action}`);
-            } catch (e) { alert(e.message); }
-        }
-        document.getElementById('btnEngineStart').addEventListener('click', () => engineAction('start'));
-        document.getElementById('btnEngineRestart').addEventListener('click', () => engineAction('restart'));
 
         // Monitor
         const lastDMX = {};
@@ -1240,6 +1160,187 @@
                 }
             }
         }
+
+        // --- XBOX CONTROLLER (GAMEPAD API) LOGIC ---
+        let lastButtonStates = {};
+
+        function pollGamepads() {
+            // Check for connected controllers
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            const gp = gamepads[0]; // Grab Player 1
+
+            if (gp && ws && ws.readyState === 1) {
+                // --- LB BUTTON (Button 4) - Toggle Synth Mode ---
+                if (gp.buttons[4].pressed && !lastButtonStates[4]) {
+                    synthEnabled = !synthEnabled;
+                    const toggleEl = document.getElementById('synthToggle');
+                    if (toggleEl) toggleEl.checked = synthEnabled;
+                    console.log("🎮 Synth Mode Toggled:", synthEnabled);
+                }
+                lastButtonStates[4] = gp.buttons[4].pressed;
+
+                // --- SYNTH MODE CONTROLS ---
+                if (synthEnabled) {
+                    // Triggers for Amplitude (Button 6 = LT, Button 7 = RT)
+                    const amp = Math.max(gp.buttons[6].value, gp.buttons[7].value);
+
+                    // Left Joystick for Frequency (Axis 1)
+                    // Map -1.0..1.0 to 100Hz..1000Hz
+                    const freq = 100 + ((gp.axes[1] + 1) / 2) * 900;
+
+                    if (amp > 0.01 || (state.lastSynthAmp && state.lastSynthAmp > 0.01)) {
+                        ws.send(JSON.stringify({
+                            type: 'synth',
+                            freq: freq,
+                            amp: amp
+                        }));
+                    }
+                    state.lastSynthAmp = amp;
+
+                    // If synth is active, we might want to skip some other mapping logic
+                    // but for now let's keep it global.
+                }
+
+                // Button 0 = A, 1 = B, 2 = X, 3 = Y (Standard Xbox Mapping)
+
+                // --- 'A' BUTTON (Example: Trigger a Drop Preset) ---
+                if (gp.buttons[0].pressed && !lastButtonStates[0]) {
+                    console.log("🎮 Xbox 'A' Pressed");
+                    ws.send(JSON.stringify({ type: 'trigger_scene', scene: 'PRESET:Drop' }));
+                }
+                lastButtonStates[0] = gp.buttons[0].pressed;
+
+                // --- 'B' BUTTON (Example: Trigger Tension) ---
+                if (gp.buttons[1].pressed && !lastButtonStates[1]) {
+                    console.log("🎮 Xbox 'B' Pressed");
+                    ws.send(JSON.stringify({ type: 'trigger_scene', scene: 'PRESET:Tension' }));
+                }
+                lastButtonStates[1] = gp.buttons[1].pressed;
+
+                // --- 'X' BUTTON (Example: Return to Math / Clear Scene) ---
+                if (gp.buttons[2].pressed && !lastButtonStates[2]) {
+                    console.log("🎮 Xbox 'X' Pressed");
+                    ws.send(JSON.stringify({ type: 'trigger_scene', scene: 'hold' }));
+                }
+                lastButtonStates[2] = gp.buttons[2].pressed;
+
+                // --- 'Y' BUTTON (Example: Trigger Build) ---
+                if (gp.buttons[3].pressed && !lastButtonStates[3]) {
+                    console.log("🎮 Xbox 'Y' Pressed");
+                    ws.send(JSON.stringify({ type: 'trigger_scene', scene: 'PRESET:Build' }));
+                }
+                lastButtonStates[3] = gp.buttons[3].pressed;
+
+                // --- D-PAD LOGIC (Mapped to Global Speed & Intensity) ---
+                // D-Pad Up (12), Down (13) = Master Speed
+                if (gp.buttons[12].pressed) {
+                    state.speed = Math.min(2.0, state.speed + 0.02);
+                    updateSlider('masterSpeed', state.speed, 'x'); sendParams();
+                } else if (gp.buttons[13].pressed) {
+                    state.speed = Math.max(0.0, state.speed - 0.02);
+                    updateSlider('masterSpeed', state.speed, 'x'); sendParams();
+                }
+
+                // D-Pad Left (14), Right (15) = Master Flux (Sensitivity)
+                if (gp.buttons[15].pressed) {
+                    state.sensitivity = Math.min(1.5, state.sensitivity + 0.02);
+                    updateSlider('masterFlux', state.sensitivity); sendParams();
+                } else if (gp.buttons[14].pressed) {
+                    state.sensitivity = Math.max(0.0, state.sensitivity - 0.02);
+                    updateSlider('masterFlux', state.sensitivity); sendParams();
+                }
+            }
+
+            // Loop forever at display refresh rate (usually 60fps)
+            requestAnimationFrame(pollGamepads);
+        }
+
+        // --- VIRTUAL GAMEPAD LOGIC ---
+        function triggerVirtualButton(btn) {
+            if (!ws || ws.readyState !== 1) return;
+            // Prevent default touch behavior (scrolling/zoom)
+            if (event && event.type === 'touchstart') event.preventDefault();
+
+            // If synth mode is active, handle synth controls via virtual buttons
+            if (synthEnabled) {
+                switch (btn) {
+                    case 'up':
+                        // Increase frequency
+                        const newFreqUp = (state.synthFreq || 440) + 20;
+                        state.synthFreq = Math.min(800, newFreqUp);
+                        ws.send(JSON.stringify({ type: 'synth', freq: state.synthFreq, amp: state.synthAmp || 0.5 }));
+                        console.log('Synth freq up', state.synthFreq);
+                        return;
+                    case 'down':
+                        // Decrease frequency
+                        const newFreqDown = (state.synthFreq || 440) - 20;
+                        state.synthFreq = Math.max(100, newFreqDown);
+                        ws.send(JSON.stringify({ type: 'synth', freq: state.synthFreq, amp: state.synthAmp || 0.5 }));
+                        console.log('Synth freq down', state.synthFreq);
+                        return;
+                    case 'left':
+                        // Decrease amplitude
+                        const newAmpDown = (state.synthAmp || 0.5) - 0.1;
+                        state.synthAmp = Math.max(0.0, newAmpDown);
+                        ws.send(JSON.stringify({ type: 'synth', freq: state.synthFreq || 440, amp: state.synthAmp }));
+                        console.log('Synth amp down', state.synthAmp);
+                        return;
+                    case 'right':
+                        // Increase amplitude
+                        const newAmpUp = (state.synthAmp || 0.5) + 0.1;
+                        state.synthAmp = Math.min(1.0, newAmpUp);
+                        ws.send(JSON.stringify({ type: 'synth', freq: state.synthFreq || 440, amp: state.synthAmp }));
+                        console.log('Synth amp up', state.synthAmp);
+                        return;
+                }
+            }
+
+            // Normal controls when synth mode is off
+            switch (btn) {
+                case 'A':
+                    console.log("🎮 Virtual 'A' Pressed");
+                    ws.send(JSON.stringify({ type: 'trigger_scene', scene: 'PRESET:Drop' }));
+                    break;
+                case 'B':
+                    console.log("🎮 Virtual 'B' Pressed");
+                    ws.send(JSON.stringify({ type: 'trigger_scene', scene: 'PRESET:Tension' }));
+                    break;
+                case 'X':
+                    console.log("🎮 Virtual 'X' Pressed");
+                    ws.send(JSON.stringify({ type: 'trigger_scene', scene: 'hold' }));
+                    break;
+                case 'Y':
+                    console.log("🎮 Virtual 'Y' Pressed");
+                    ws.send(JSON.stringify({ type: 'trigger_scene', scene: 'PRESET:Build' }));
+                    break;
+                case 'up':
+                    state.speed = Math.min(2.0, state.speed + 0.1);
+                    sendParams();
+                    break;
+                case 'down':
+                    state.speed = Math.max(0.0, state.speed - 0.1);
+                    sendParams();
+                    break;
+                case 'left':
+                    state.sensitivity = Math.max(0.0, state.sensitivity - 0.1);
+                    sendParams();
+                    break;
+                case 'right':
+                    state.sensitivity = Math.min(1.5, state.sensitivity + 0.1);
+                    sendParams();
+                    break;
+            }
+
+            // Provide slight visual feedback
+            const el = event.currentTarget || event.target;
+            if (el) {
+                el.style.opacity = '0.5';
+                setTimeout(() => el.style.opacity = '1', 100);
+            }
+        }
+
+        // Start the polling loop
+        pollGamepads();
 
         connect();
 

@@ -12,6 +12,216 @@ import ssl
 import random
 from dmx_engine import DMXEngine
 from vibe_engine import VibeEngine
+import evdev
+from evdev import ecodes
+
+# --- SYNTH ENGINE ---
+class SimpleSynth:
+    """A lightweight, zero-dependency Sine Wave synthesizer for the Easter Egg mode."""
+    def __init__(self, sr=44100):
+        self.sr = sr
+        self.phase = 0.0
+        self.freq = 440.0
+        self.amp = 0.0
+        self.stream = None
+        try:
+            print("🎹 Opening Synth Stream on 'pulse' or default...")
+            # Try to find pulse device index
+            pulse_idx = None
+            try:
+                for i, d in enumerate(sd.query_devices()):
+                    if 'pulse' in d['name'].lower():
+                        pulse_idx = i
+                        break
+            except: pass
+
+            self.stream = sd.OutputStream(
+                device=pulse_idx,
+                samplerate=self.sr,
+                channels=2,
+                callback=self.audio_callback,
+                blocksize=1024
+            )
+            self.stream.start()
+            print(f"🎹 Easter Egg Synth Initialized (Stereo Mode) on device {pulse_idx or 'default'}")
+        except Exception as e:
+            print(f"⚠️ Synth init error: {e}")
+
+    def audio_callback(self, outdata, frames, time_info, status):
+        if self.amp < 0.001:
+            outdata.fill(0)
+            return
+            
+        # Correct FM Synthesis: Phase is the integral of frequency
+        # We calculate the phase increment per sample
+        dt = 1.0 / self.sr
+        # Create an array of phases for this block
+        # New phase = Old phase + (2 * pi * freq * sample_index * dt)
+        indices = np.arange(frames)
+        block_phases = self.phase + (2 * np.pi * self.freq * indices * dt)
+        
+        wave = np.sin(block_phases) * self.amp
+        
+        # Update global phase for next block
+        self.phase = (block_phases[-1] + (2 * np.pi * self.freq * dt)) % (2 * np.pi)
+        
+        try:
+            outdata[:, 0] = wave
+            outdata[:, 1] = wave
+        except IndexError:
+            outdata[:] = wave.reshape(-1, 1)
+
+    def set_tone(self, freq, amp):
+        self.freq = freq
+        self.amp = amp
+
+# synth = SimpleSynth() # Moved inside main()
+hardware_synth_enabled = True # Enabled by default for direct test
+
+def get_gamepad():
+    """Find the first Xbox/Microsoft controller available"""
+    try:
+        devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+        for device in devices:
+            if "Microsoft" in device.name or "Xbox" in device.name:
+                print(f"🎮 Found Gamepad: {device.name}")
+                return device
+    except:
+        pass
+    return None
+
+async def gamepad_task():
+    global hardware_synth_enabled, gamepad_state
+    print("🎮 Gamepad Watchdog Started")
+    
+    while True:
+        device = get_gamepad()
+        if not device:
+            await asyncio.sleep(5)
+            continue
+            
+        try:
+            print(f"🎮 Connected to {device.name}")
+            # Map for state tracking
+            gp_state = {"amp": 0.0, "freq": 440.0}
+            
+            async for event in device.async_read_loop():
+                # Raw event debugging
+                if event.type in [ecodes.EV_KEY, ecodes.EV_ABS]:
+                     print(f"🎮 GP EVENT: Type={hex(event.type)}, Code={hex(event.code)}, Val={event.value}", flush=True)
+
+                if event.type == ecodes.EV_KEY:
+                    # Debug print for keys
+                    print(f"🎮 GP Key: Code={hex(event.code)}, Val={event.value}")
+                    # LB (Left Bumper) = Toggle Synth
+                    if event.code == ecodes.BTN_TL and event.value == 1:
+                        hardware_synth_enabled = not hardware_synth_enabled
+                        print(f"🎮 Hardware Synth: {'ON' if hardware_synth_enabled else 'OFF'}")
+                    
+                    # LS Click = Reset L1/L2 to Auto
+                    elif event.code == ecodes.BTN_THUMBL and event.value == 1:
+                        if dmx_engine:
+                            dmx_engine.clear_device_overrides("L1")
+                            dmx_engine.clear_device_overrides("L2")
+                            print("🎮 L1/L2 Reset to AUTO")
+
+                    # A = Drop
+                    elif event.code == ecodes.BTN_SOUTH and event.value == 1:
+                        if dmx_engine: dmx_engine.current_scene_name = "PRESET:Drop"
+                    # B = Tension
+                    elif event.code == ecodes.BTN_EAST and event.value == 1:
+                        if dmx_engine: dmx_engine.current_scene_name = "PRESET:Tension"
+                    # X = Hold
+                    elif event.code == ecodes.BTN_WEST and event.value == 1:
+                        if dmx_engine: dmx_engine.current_scene_name = "hold"
+                    # Y = Build
+                    elif event.code == ecodes.BTN_NORTH and event.value == 1:
+                        if dmx_engine: dmx_engine.current_scene_name = "PRESET:Build"
+                    
+                    # Update global button states
+                    BTN_MAP = {
+                        ecodes.BTN_SOUTH: "btn_a", ecodes.BTN_EAST: "btn_b", 
+                        ecodes.BTN_WEST: "btn_x", ecodes.BTN_NORTH: "btn_y",
+                        ecodes.BTN_TL: "btn_lb", ecodes.BTN_TR: "btn_rb",
+                        ecodes.BTN_THUMBL: "btn_ls", ecodes.BTN_THUMBR: "btn_rs",
+                        ecodes.BTN_SELECT: "btn_select", ecodes.BTN_START: "btn_start"
+                    }
+                    if event.code in BTN_MAP:
+                        gamepad_state[BTN_MAP[event.code]] = event.value
+
+                elif event.type == ecodes.EV_ABS:
+                    # Debug print for ABS (only for sticks and triggers to avoid spam)
+                    if event.code in [ecodes.ABS_X, ecodes.ABS_Y, ecodes.ABS_Z, ecodes.ABS_RZ]:
+                         print(f"🎮 GP ABS: Code={hex(event.code)}, Val={event.value}")
+
+                    # Left Joystick X (Axis 0) -> L1/L2 X Position
+                    if event.code == ecodes.ABS_X:
+                        abs_info = device.absinfo(event.code)
+                        if abs_info:
+                            v_min, v_max = abs_info.min, abs_info.max
+                            norm = (event.value - v_min) / float(v_max - v_min)
+                            gamepad_state["ls_x"] = norm
+                            x_val = int(norm * 255)
+                            # dmx_engine.apply_overrides([[7, x_val], [24, x_val]])
+                            pass
+
+                    # Left Joystick Y (Axis 1) -> L1/L2 Y Position
+                    elif event.code == ecodes.ABS_Y:
+                        abs_info = device.absinfo(event.code)
+                        if abs_info:
+                            v_min, v_max = abs_info.min, abs_info.max
+                            norm = (event.value - v_min) / float(v_max - v_min)
+                            gamepad_state["ls_y"] = norm
+                            y_val = int(norm * 255)
+                            if dmx_engine:
+                                # dmx_engine.apply_overrides([[8, y_val], [25, y_val]])
+                                pass
+                            
+                            # Synth Pitch: Map norm 0..1 (up to down) to 2000Hz down to 200Hz
+                            gp_state["freq"] = 200 + ((1.0 - norm) * 1800)
+                            if hardware_synth_enabled:
+                                print(f"🎵 Synth Freq Change: {int(gp_state['freq'])}Hz (Norm: {norm:.2f})", flush=True)
+                    
+                    # Triggers = Amplitude (ABS_Z = LT, ABS_RZ = RT)
+                    elif event.code == ecodes.ABS_Z: # LT
+                        abs_info = device.absinfo(event.code)
+                        if abs_info:
+                            norm = event.value / float(abs_info.max)
+                            gp_state["amp"] = norm
+                            gamepad_state["lt"] = norm
+                    elif event.code == ecodes.ABS_RZ: # RT
+                        abs_info = device.absinfo(event.code)
+                        if abs_info:
+                            norm = event.value / float(abs_info.max)
+                            gamepad_state["rt"] = norm
+
+                    # Right Stick
+                    elif event.code == ecodes.ABS_RX:
+                        abs_info = device.absinfo(event.code)
+                        if abs_info:
+                            v_min, v_max = abs_info.min, abs_info.max
+                            gamepad_state["rs_x"] = (event.value - v_min) / float(v_max - v_min)
+                    elif event.code == ecodes.ABS_RY:
+                        abs_info = device.absinfo(event.code)
+                        if abs_info:
+                            v_min, v_max = abs_info.min, abs_info.max
+                            gamepad_state["rs_y"] = (event.value - v_min) / float(v_max - v_min)
+
+                    # D-Pad
+                    elif event.code == ecodes.ABS_HAT0X:
+                        gamepad_state["dpad_left"] = 1 if event.value == -1 else 0
+                        gamepad_state["dpad_right"] = 1 if event.value == 1 else 0
+                    elif event.code == ecodes.ABS_HAT0Y:
+                        gamepad_state["dpad_up"] = 1 if event.value == -1 else 0
+                        gamepad_state["dpad_down"] = 1 if event.value == 1 else 0
+                    
+                    # Update Synth if enabled
+                    if hardware_synth_enabled and synth:
+                        synth.set_tone(gp_state["freq"], gp_state["amp"])
+
+        except Exception as e:
+            print(f"🎮 Gamepad Lost: {e}")
+            await asyncio.sleep(2)
 
 import collections
 import concurrent.futures
@@ -36,6 +246,14 @@ SESSION_ID = str(time.time()) # Unique ID per engine restart
 last_callback_time = time.time()
 dmx_port = None
 audio_state = { "bass": 0.0, "mid": 0.0, "high": 0.0, "vol": 0.0, "flux": 0.0, "beat": False, "device_name": "None", "bpm": 120.0 }
+gamepad_state = {
+    "ls_x": 0.5, "ls_y": 0.5, "rs_x": 0.5, "rs_y": 0.5,
+    "lt": 0.0, "rt": 0.0,
+    "btn_a": 0, "btn_b": 0, "btn_x": 0, "btn_y": 0,
+    "btn_lb": 0, "btn_rb": 0, "btn_ls": 0, "btn_rs": 0,
+    "dpad_up": 0, "dpad_down": 0, "dpad_left": 0, "dpad_right": 0,
+    "btn_select": 0, "btn_start": 0
+}
 visual_states = { "bg": -1, "fg": -1, "ov": -1, "fx": -1 }
 audio_queue = collections.deque(maxlen=50) 
 last_injection_time = 0.0  
@@ -74,7 +292,6 @@ def save_live_defaults():
                 "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0,
                 "amplitude": dmx_engine.intensity if dmx_engine else 1.0
             },
-            "axes": dmx_engine.axis_configs if dmx_engine else {},
             "visual": visual_params_cache
         }
         with open(CONFIG_FILE, "w") as f:
@@ -117,13 +334,7 @@ def load_live_defaults():
             if v_data:
                 visual_params_cache.update(v_data)
                 
-            # 4. Axis Section
-            a_data = data.get("axes", {})
-            if dmx_engine and a_data:
-                # Basic update, ensuring type safety where possible
-                for ax, cfg in a_data.items():
-                    if ax in dmx_engine.axis_configs:
-                        dmx_engine.axis_configs[ax].update(cfg)
+            # (Axes removed - moved to per-channel LFO config in Fixture Profiles)
 
         print(f"📖 [Persistence] Loaded defaults from {CONFIG_FILE}")
     except Exception as e:
@@ -700,16 +911,15 @@ async def process_audio_queue():
             if dmx_engine and (current_time - last_dmx_update) >= dmx_update_interval:
                 try:
                     dt = current_time - last_dmx_update if last_dmx_update > 0 else 0.016
-                    dmx_engine.update(dt, audio_state, visual_states)
+                    dmx_engine.update(dt, audio_state, visual_states, gamepad_state)
                     last_dmx_update = current_time
                     
                     if current_time - last_log > 0.5:
-                        # Corrected Logging: Read from universe directly (Indices are 1-based)
+                        # Corrected Logging: Track L1/L2 Pan and Tilt to verify stability
                         if dmx_port or dmx_engine:
                             universe = dmx_engine.get_universe()
-                            # Monitoring: R1(1), R2(18), L1(35), L2(52), B1(75), B2(92)
-                            # Watching zoom for R2(22) and L2(56) and Lead B1/B2(79, 96)
-                            monitored = {addr: universe[addr] for addr in [1, 5, 18, 22, 52, 56, 75, 79, 92, 96] if addr < len(universe)}
+                            # Monitoring: L1_Dim(1), L1_X(7), L1_Y(8), L2_Dim(18), L2_X(24), L2_Y(25)
+                            monitored = {addr: universe[addr] for addr in [1, 7, 8, 18, 24, 25] if addr < len(universe)}
                             vibe_name = audio_state.get('vibe', 'mid')
                             q_size = len(audio_queue)
                             print(f"DMX_OUT: {monitored} | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Q: {q_size}")
@@ -824,6 +1034,7 @@ async def spotify_poller():
 
 # --- 4. SERVER LOOP ---
 async def ws_handler(websocket):
+    global last_injection_time, visual_states, gamepad_state
     print("Client Connected")
     connected_clients.add(websocket)
     
@@ -858,13 +1069,39 @@ async def ws_handler(websocket):
 
                         elif msg_type == "audio_inject":
                             # Remote audio injection fallback
-                            global last_injection_time
                             inject = data.get("data", {})
                             if inject:
                                 for k, v in inject.items():
                                     if k in audio_state:
                                         audio_state[k] = v
                                 last_injection_time = time.time()
+                                
+                        elif msg_type == "synth":
+                            if synth:
+                                f = float(data.get("freq", 440.0))
+                                a = float(data.get("amp", 0.0))
+                                if a > 0:
+                                    print(f"🎹 Synth Active: {f}Hz @ {a}")
+                                synth.set_tone(f, a)
+                                # Remote audio injection fallback
+                                inject = data.get("data", {})
+                                if inject:
+                                    for k, v in inject.items():
+                                        if k in audio_state:
+                                            audio_state[k] = v
+                                    last_injection_time = time.time()
+                        
+                        elif msg_type == "gamepad_axis":
+                            axis = data.get("axis")
+                            val = data.get("val", 0.0) # 0..1
+                            if axis in gamepad_state:
+                                gamepad_state[axis] = val
+                        
+                        elif msg_type == "gamepad_button":
+                            btn = data.get("button")
+                            state = data.get("state", 0) # 0 or 1
+                            if btn in gamepad_state:
+                                gamepad_state[btn] = state
                         
                         elif msg_type == "params":
                             # Handle Parameter Updates from Frontend
@@ -894,7 +1131,6 @@ async def ws_handler(websocket):
                         
                         elif msg_type == "visual_states":
                             # Update synchronized visual layer indices
-                            global visual_states
                             for k in ["bg", "fg", "ov", "fx"]:
                                 if k in data:
                                     visual_states[k] = int(data[k])
@@ -959,14 +1195,6 @@ async def ws_handler(websocket):
                             if "sceneFreq" in data and dmx_engine:
                                 dmx_engine.scene_freq = int(data["sceneFreq"])
                         
-                        elif msg_type == "axis_param":
-                            # Handle Granular Axis Control (A-F)
-                            axis = data.get("axis")
-                            param = data.get("param")
-                            val = data.get("val")
-                            if dmx_engine and axis and param:
-                                dmx_engine.set_axis_param(axis, param, val)
-
                         elif msg_type == "force_refresh":
                             # Broadcast refresh signal to all clients
                             refresh_msg = json.dumps({"type": "force_refresh"})
@@ -997,7 +1225,6 @@ async def ws_handler(websocket):
                                     "speed": dmx_engine.speed if dmx_engine else 1.0,
                                     "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0
                                 },
-                                "axes": dmx_engine.axis_configs if dmx_engine else {},
                                 "visual": visual_params_cache
                             }
                             await websocket.send(json.dumps(params))
@@ -1056,6 +1283,10 @@ async def main():
         # Now that engines are ready, load persisted defaults
         load_live_defaults()
         
+        # Initialize Synth Easter Egg
+        global synth
+        synth = SimpleSynth()
+        
     except Exception as e:
         print(f"❌ SYSTEM CRITICAL FAILURE: {e}")
         print("🛑 Engine functionality suspended.")
@@ -1085,7 +1316,8 @@ async def main():
         await asyncio.gather(
             process_audio_queue(),
             audio_watchdog(),
-            spotify_poller()
+            spotify_poller(),
+            gamepad_task()
         )
 
 # Global stream variable
