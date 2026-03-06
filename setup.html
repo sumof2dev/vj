@@ -1076,13 +1076,7 @@
             </svg>
             <span class="nav-label">Setup</span>
         </div>
-        <div class="nav-btn" onclick="showView('axes')" title="LFO Matrix">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
-            <span class="nav-label">Matrix</span>
-        </div>
+
         <div class="nav-btn" onclick="showView('presets')" title="Preset Manager">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -1098,21 +1092,7 @@
 
 
         <!-- === LFO MATRIX === -->
-        <div id="view-axes" class="view-panel">
-            <div class="row" style="justify-content:space-between">
-                <h2>LFO Math Matrix</h2>
-                <button class="btn primary" onclick="saveStageConfig()">💾 Save Changes</button>
-            </div>
 
-            <div style="font-size:12px; color:var(--text-dim); margin-bottom:20px; line-height:1.5;">
-                Configure the 6 continuous math waves (A-F) that drive the generative animations.<br>
-                <b>Base Speed:</b> How fast it moves during silence. <b>Reactivity:</b> How much it accelerates when the
-                audio hits.
-            </div>
-
-            <div id="axisMatrixRoot" style="display: flex; flex-direction: column; gap: 12px;">
-            </div>
-        </div>
 
         <!-- === STAGE MANAGER === -->
         <div id="view-stage" class="view-panel active">
@@ -1199,8 +1179,12 @@
                 </div>
             </div>
 
-            <div id="editor-empty-state" style="text-align:center; padding:50px; color:var(--text-dim)">
-                Select or Create a profile to begin editing.
+            <div id="editor-empty-state" style="padding:30px 20px;">
+                <h3 style="text-align:center; color:var(--text-dim); font-weight:normal; margin-bottom:20px;">Or select
+                    an existing profile to edit:</h3>
+                <div id="quick-profile-list"
+                    style="display:flex; flex-direction:column; gap:10px; max-width:400px; margin:0 auto;">
+                </div>
             </div>
         </div>
 
@@ -1353,69 +1337,7 @@
             "10: Brilliance (Air/Sizzle)"
         ];
 
-        function renderAxisMatrix(axes) {
-            const root = document.getElementById('axisMatrixRoot');
-            if (!root) return;
-            root.innerHTML = '';
 
-            const axisList = Object.keys(axes).sort();
-            axisList.forEach(id => {
-                const cfg = axes[id];
-                const row = document.createElement('div');
-
-                // Styling to match setup.html theme
-                row.style.background = 'rgba(255, 255, 255, 0.03)';
-                row.style.border = '1px solid rgba(255, 255, 255, 0.05)';
-                row.style.borderRadius = '8px';
-                row.style.padding = '15px';
-                row.style.display = 'grid';
-                row.style.gridTemplateColumns = '40px 1fr 1fr 1.5fr';
-                row.style.gap = '15px';
-                row.style.alignItems = 'center';
-
-                let binOptions = BIN_LABELS.map((label, i) =>
-                    `<option value="${i}" ${cfg.bin == i ? 'selected' : ''}>${label}</option>`
-                ).join('');
-
-                row.innerHTML = `
-                    <div style="font-weight: 900; color: var(--accent); font-size: 1.5rem; text-align: center;">${id}</div>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Base Speed: <span style="color:white; font-family:monospace;" id="v_speed_${id}">${parseFloat(cfg.speed).toFixed(2)}</span></div>
-                        <input type="range" min="0" max="3" step="0.05" value="${cfg.speed}" style="width:100%; accent-color:var(--accent);" oninput="updateAxis('${id}', 'speed', this.value)">
-                    </div>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Reactivity: <span style="color:white; font-family:monospace;" id="v_react_${id}">${parseFloat(cfg.react).toFixed(2)}</span></div>
-                        <input type="range" min="0" max="4" step="0.1" value="${cfg.react}" style="width:100%; accent-color:var(--accent);" oninput="updateAxis('${id}', 'react', this.value)">
-                    </div>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <div style="font-size: 10px; color: #888; text-transform: uppercase;">Audio Trigger (EQ Bin)</div>
-                        <select style="width:100%; background:#111; border:1px solid #333; color:#ccc; padding:6px; border-radius:4px; font-size:11px;" onchange="updateAxis('${id}', 'bin', this.value)">
-                            ${binOptions}
-                        </select>
-                    </div>
-                `;
-                root.appendChild(row);
-            });
-        }
-
-        window.updateAxis = (axis, param, val) => {
-            const disp = document.getElementById(`v_${param}_${axis}`);
-            if (disp) disp.textContent = parseFloat(val).toFixed(2);
-
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'axis_param',
-                    axis: axis,
-                    param: param,
-                    val: val
-                }));
-                // Also trigger a save defaults command so Axis changes persist across reboots
-                ws.send(JSON.stringify({ type: 'save_defaults' }));
-            }
-        };
 
         // --- NAVIGATION ---
         function showView(viewId) {
@@ -1489,6 +1411,13 @@
                             <input type="number" value="${dev.offset}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" style="width:40px; height: 28px; padding: 0 4px; text-align: center;">
                         </div>
                     </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <select onchange="updateDeviceProp('${key}', 'position', this.value)" style="width:70px; height:28px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); color:#aaa; font-size:10px; border-radius:6px; padding:0 4px;" title="Stereo Audio Positioning">
+                            <option value="center" ${dev.position === 'center' || !dev.position ? 'selected' : ''}>Center</option>
+                            <option value="left" ${dev.position === 'left' ? 'selected' : ''}>Left</option>
+                            <option value="right" ${dev.position === 'right' ? 'selected' : ''}>Right</option>
+                        </select>
+                    </div>
                     <div class="checkbox-group" style="margin: 0; gap: 4px;">
                         <label class="custom-checkbox ${dev.invert_x ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert X">
                             <input type="checkbox" ${dev.invert_x ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_x', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> 
@@ -1549,15 +1478,41 @@
         async function loadProfileList() {
             const res = await fetch(API_BASE);
             const files = await res.json();
-            availableProfiles = files.filter(f => f !== 'stage_config.json');
+            availableProfiles = files.filter(f => f !== 'stage_config.json' && f !== 'presets.json' && f !== 'vibe_config.json');
 
             const sel = document.getElementById('profile-select');
+            const quickList = document.getElementById('quick-profile-list');
+
             sel.innerHTML = '<option value="">-- Select Profile --</option>';
+            if (quickList) quickList.innerHTML = '';
+
             availableProfiles.forEach(f => {
                 const opt = document.createElement('option');
                 opt.value = f;
                 opt.innerText = f;
                 sel.appendChild(opt);
+
+                if (quickList) {
+                    const btn = document.createElement('button');
+                    btn.className = 'card';
+                    btn.style.textAlign = 'left';
+                    btn.style.padding = '15px';
+                    btn.style.cursor = 'pointer';
+                    btn.style.marginBottom = '0';
+                    btn.style.borderLeft = '4px solid var(--accent)';
+                    btn.style.fontSize = '14px';
+                    btn.style.fontWeight = 'bold';
+                    btn.style.background = 'rgba(255,255,255,0.02)';
+                    btn.style.color = 'white';
+                    btn.innerText = f.replace('.json', '');
+                    btn.onclick = () => {
+                        sel.value = f;
+                        loadFixtureProfile(f);
+                    };
+                    btn.onmouseover = () => btn.style.background = 'rgba(124, 77, 255, 0.1)';
+                    btn.onmouseout = () => btn.style.background = 'rgba(255,255,255,0.02)';
+                    quickList.appendChild(btn);
+                }
             });
 
             // Re-render stage devices to populate dropdowns
@@ -1787,14 +1742,36 @@
 
         const KNOWN_MODIFIERS = [
             { id: 'state_machine', label: 'Static Value State Machine / Dimmer' },
-            { id: 'axis_a', label: 'Lissajous: Slow A' },
-            { id: 'axis_d', label: 'Lissajous: Slow D (Offset)' },
-            { id: 'axis_b', label: 'Lissajous: Mid B' },
-            { id: 'axis_c', label: 'Lissajous: Fast C' },
+            { id: 'lfo', label: 'Continuous Wave (Independent LFO)' },
             { id: 'bass', label: 'Direct: Bass Energy' },
             { id: 'flux', label: 'Direct: Transients (Flux)' },
             { id: '4th beat', label: 'Cycle: Rhythm (4th Beat)' },
-            { id: 'beat', label: 'Cycle: rhythm (Beat)' }
+            { id: 'beat', label: 'Cycle: rhythm (Beat)' },
+            { id: 'controller', label: 'Direct: Xbox Controller' }
+        ];
+
+        const KNOWN_CONTROLS = [
+            { id: 'static', label: 'None (Static)' },
+            { id: 'ls_x', label: 'Left Stick X' },
+            { id: 'ls_y', label: 'Left Stick Y' },
+            { id: 'rs_x', label: 'Right Stick X' },
+            { id: 'rs_y', label: 'Right Stick Y' },
+            { id: 'lt', label: 'Left Trigger' },
+            { id: 'rt', label: 'Right Trigger' },
+            { id: 'btn_a', label: 'Button A' },
+            { id: 'btn_b', label: 'Button B' },
+            { id: 'btn_x', label: 'Button X' },
+            { id: 'btn_y', label: 'Button Y' },
+            { id: 'btn_lb', label: 'Bumper LB' },
+            { id: 'btn_rb', label: 'Bumper RB' },
+            { id: 'btn_ls', label: 'Stick Click LS' },
+            { id: 'btn_rs', label: 'Stick Click RS' },
+            { id: 'dpad_up', label: 'D-Pad Up' },
+            { id: 'dpad_down', label: 'D-Pad Down' },
+            { id: 'dpad_left', label: 'D-Pad Left' },
+            { id: 'dpad_right', label: 'D-Pad Right' },
+            { id: 'btn_select', label: 'View/Select' },
+            { id: 'btn_start', label: 'Menu/Start' }
         ];
 
         // ==================== CHANNELS (UNIFIED LFO UI) ====================
@@ -1811,42 +1788,61 @@
             sortedChannels.forEach(([role, offset]) => {
                 const chNum = offset + 1;
 
-                // Get State
+                // Get State and migrate legacy axes
                 let mod = currentProfile.modifiers[role] || 'static';
+                if (mod.startsWith('axis_')) mod = 'lfo';
 
                 html += `<div class="card" style="margin-bottom: 10px; padding: 12px; border-left: 4px solid var(--accent); background:rgba(255,255,255,0.01);">`;
 
-                // --- TOP ROW: Channel Name & Modifier ---
-                html += `<div class="kv-row" style="margin-bottom: 8px;">`;
-                html += `<div style="width:100px; font-weight:bold; color:var(--accent); font-size:14px;">CH ${chNum} <div style="font-size:10px; color:#666; font-weight:normal;">(Offs ${offset})</div></div>`;
+                // --- TOP ROW: Channel Info & Editing ---
+                html += `<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px; flex-wrap:wrap; gap:8px;">`;
+                html += `<div style="font-weight:bold; color:var(--accent); font-size:14px; display:flex; min-width:80px; align-items:center; gap:8px;">
+                            CH ${chNum}
+                            <span style="font-size:10px; color:#666; font-weight:normal;">(Offs ${offset})</span>
+                         </div>`;
 
-                // Subscribing to the LFO Engine
-                html += `<select class="kv-wide" onchange="updateProfileModifier('${role}', this.value)" style="flex:1; background:#222; border:1px solid var(--accent); color:white;">`;
+                // Role Re-name, Offset Adjust, Delete
+                html += `<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">`;
+                html += `<input type="text" value="${role}" style="width:110px; font-size:11px; background:#111; border:none; text-align:right;" onchange="renameProfileChannel('${role}', this.value)" title="Rename Logic Role">`;
+                html += `<input type="number" value="${offset}" min="0" max="512" style="width:50px; font-size:11px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Offset">`;
+                html += `<button class="kv-remove" style="width:30px; height:30px;" onclick="removeProfileChannel('${role}')">×</button>`;
+                html += `</div>`;
+                html += `</div>`;
+
+                // --- MODIFIER DROPDOWN ROW ---
+                html += `<div style="margin-bottom: 12px;">`;
+                html += `<select onchange="updateProfileModifier('${role}', this.value)" style="width:100%; padding:8px; background:#222; border:1px solid var(--accent); color:white; border-radius:4px; font-size:13px;">`;
                 KNOWN_MODIFIERS.forEach(m => {
                     html += `<option value="${m.id}" ${m.id === mod ? 'selected' : ''}>${m.label}</option>`;
                 });
                 html += `</select>`;
-
-                // Role Re-name and Offset Adjust
-                html += `<input type="text" value="${role}" style="width:100px; font-size:11px; background:#111; border:none; text-align:right;" onchange="renameProfileChannel('${role}', this.value)" title="Rename Logic Role">`;
-                html += `<input type="number" value="${offset}" min="0" max="512" style="width:40px; font-size:11px; margin-left:5px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Offset">`;
-                html += `<button class="kv-remove" style="margin-left:8px; width:30px; height:30px;" onclick="removeProfileChannel('${role}')">×</button>`;
                 html += `</div>`;
 
-                // --- BOTTOM ROW: Mult-Range Calibration ---
-                if (mod !== 'state_machine') {
+                // --- BOTTOM ROW: Logic Context ---
+                if (mod === 'state_machine') {
+                    html += renderStateMachineSection(role);
+                }
+                else if (mod === 'lfo') {
+                    html += `<div class="kv-row" style="background: rgba(0,0,0,0.3); padding:8px; border-radius:4px; font-size:11px; flex-direction:column; align-items:stretch;">`;
+                    html += renderLfoSection(role);
+                    html += renderCalibrationRanges(role);
+                    html += `</div>`;
+                }
+                else if (mod === 'controller') {
+                    html += `<div class="kv-row" style="background: rgba(124,77,255,0.1); padding:8px; border-radius:4px; font-size:11px;">`;
+                    html += renderControllerRanges(role);
+                    html += `</div>`;
+                }
+                else {
                     html += `<div class="kv-row" style="background: rgba(0,0,0,0.3); padding:8px; border-radius:4px; font-size:11px;">`;
                     html += renderCalibrationRanges(role);
-                    html += `</div>`; // End Bottom Row
+                    html += `</div>`;
                 }
 
                 // Step Data dictionary inclusion for discrete modifiers
                 if (['4th beat', 'beat'].includes(mod) || role === 'patterns' || role === 'pattern') {
                     html += renderStepDataSection();
                 }
-
-                // State Machine Configuration
-                if (mod === 'state_machine') html += renderStateMachineSection(role);
 
                 html += `</div>`; // End Card
             });
@@ -1901,10 +1897,10 @@
                 // Action Buttons (Add/Remove)
                 html += `<div style="display:flex; gap:4px; align-self:flex-end; margin-bottom:2px;">`;
                 if (cal.length > 1) {
-                    html += `<button class="kv-remove" style="width:24px; height:24px;" onclick="removeCalRange('${role}', ${idx})">×</button>`;
+                    html += `<button class="kv-remove" style="width:16px; height:16px; font-size:12px;" onclick="removeCalRange('${role}', ${idx})" title="Remove">×</button>`;
                 }
                 if (idx === cal.length - 1) {
-                    html += `<button class="btn" style="padding:0 8px; font-size:10px; height:24px; background:var(--accent); border:none; color:white; font-weight:bold; white-space:nowrap;" onclick="addCalRange('${role}')">Add Range</button>`;
+                    html += `<button class="btn" style="width:16px; height:16px; padding:0; display:flex; align-items:center; justify-content:center; background:var(--accent); border:none; color:white; font-weight:bold; font-size:14px;" onclick="addCalRange('${role}')" title="Add Range">+</button>`;
                 }
                 html += `</div>`;
 
@@ -1915,10 +1911,66 @@
             return html;
         }
 
+        function renderLfoSection(role) {
+            if (!currentProfile.lfo_data) currentProfile.lfo_data = {};
+            if (!currentProfile.lfo_data[role]) {
+                currentProfile.lfo_data[role] = { shape: 'sine', bin: 0, speed: 0.5, react: 0.5 };
+            }
+            const cfg = currentProfile.lfo_data[role];
+            let binOptions = BIN_LABELS.map((label, i) =>
+                `<option value="${i}" ${cfg.bin == i ? 'selected' : ''}>${label}</option>`
+            ).join('');
+
+            return `
+            <div style="background:rgba(255, 255, 255, 0.05); padding:10px; margin-bottom:8px; border-radius:4px; border:1px solid rgba(255, 255, 255, 0.1);">
+                <div style="font-size:10px; color:var(--accent); margin-bottom:8px; font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Internal Math Oscillator (LFO)</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">WAVEFORM SHAPE</label>
+                        <select style="width:100%; background:#111; border:1px solid #444; color:#fff; padding:4px; border-radius:4px;" onchange="updateLfoCfg('${role}', 'shape', this.value)">
+                            <option value="sine" ${cfg.shape === 'sine' ? 'selected' : ''}>Sine (Smooth Sweep)</option>
+                            <option value="triangle" ${cfg.shape === 'triangle' ? 'selected' : ''}>Triangle (Linear Bounce)</option>
+                            <option value="sawtooth" ${cfg.shape === 'sawtooth' ? 'selected' : ''}>Sawtooth (Wind-Up & Snap)</option>
+                            <option value="square" ${cfg.shape === 'square' ? 'selected' : ''}>Square (Binary Chop)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">AUDIO TRIGGER (EQ BIN)</label>
+                        <select style="width:100%; background:#111; border:1px solid #444; color:#fff; padding:4px; border-radius:4px;" onchange="updateLfoCfg('${role}', 'bin', parseInt(this.value))">
+                            ${binOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">BASE SPEED: <span style="color:white">${cfg.speed}</span></label>
+                        <input type="range" min="0" max="3" step="0.05" value="${cfg.speed}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'speed', parseFloat(this.value))">
+                    </div>
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">REACTIVITY: <span style="color:white">${cfg.react}</span></label>
+                        <input type="range" min="0" max="4" step="0.1" value="${cfg.react}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'react', parseFloat(this.value))">
+                    </div>
+                    <div style="grid-column: span 2; margin-top: 4px;">
+                        <label style="font-size:10px; color:#aaa; display:flex; align-items:center; gap:8px; cursor:pointer; width: fit-content;">
+                            <input type="checkbox" ${cfg.invert ? 'checked' : ''} onchange="updateLfoCfg('${role}', 'invert', this.checked)" style="width:16px; height:16px; margin:0; accent-color:var(--accent);">
+                            <span style="font-weight:bold; letter-spacing:0.5px; text-transform:uppercase;">Invert Waveform Polarity (Flip Direction)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        function updateLfoCfg(role, key, val) {
+            if (!currentProfile.lfo_data) currentProfile.lfo_data = {};
+            if (!currentProfile.lfo_data[role]) currentProfile.lfo_data[role] = { shape: 'sine', bin: 0, speed: 0.5, react: 0.5 };
+            currentProfile.lfo_data[role][key] = val;
+            syncUiToJson();
+            renderProfileUi();
+        }
+
         function updateCal(role, index, key, val) {
             if (!currentProfile.calibration[role]) return;
             let v = val;
-            if (key !== 'vibe') {
+            if (key !== 'vibe' && key !== 'control') {
                 v = parseInt(val);
                 if (isNaN(v)) {
                     if (key === 'center') v = 127;
@@ -1928,6 +1980,7 @@
             }
             currentProfile.calibration[role][index][key] = v;
             syncUiToJson();
+            if (key === 'control') renderProfileUi();
         }
 
         function addCalRange(role) {
@@ -1937,7 +1990,15 @@
             if (!Array.isArray(currentProfile.calibration[role])) {
                 currentProfile.calibration[role] = [currentProfile.calibration[role]];
             }
-            currentProfile.calibration[role].push({ min: 0, center: 127, max: 255, vibe: 'any' });
+
+            // Check modifier to choose default structure
+            const mod = currentProfile.modifiers[role] || 'static';
+            if (mod === 'controller') {
+                currentProfile.calibration[role].push({ min: 0, max: 255, control: 'static' });
+            } else {
+                currentProfile.calibration[role].push({ min: 0, center: 127, max: 255, vibe: 'any' });
+            }
+
             syncUiToJson();
             renderProfileUi();
         }
@@ -1948,6 +2009,54 @@
                 syncUiToJson();
                 renderProfileUi();
             }
+        }
+
+        // ==================== CONTROLLER HANDLERS ====================
+        function renderControllerRanges(role) {
+            let cal = currentProfile.calibration[role] || { min: 0, max: 255, control: 'static' };
+            if (!Array.isArray(cal)) {
+                cal = [cal];
+                currentProfile.calibration[role] = cal;
+            }
+
+            let html = '<div style="display:flex; flex-direction:column; gap:8px; flex:1;">';
+            cal.forEach((mapping, idx) => {
+                // Ensure control exists
+                if (!mapping.control) mapping.control = 'static';
+
+                html += `<div style="display:flex; gap:10px; align-items:center; background: rgba(0,0,0,0.2); padding:6px; border-radius:4px;">`;
+
+                // Control Selector
+                html += `<div style="display:flex; flex-direction:column; align-items:center; flex:1;">
+                            <label style="margin:0; font-size:9px; color:#888;">CONTROL</label>
+                            <select style="font-size:11px; padding:3px; background:#111; border:1px solid var(--accent); color:#fff;" onchange="updateCal('${role}', ${idx}, 'control', this.value)">
+                                ${KNOWN_CONTROLS.map(c => `<option value="${c.id}" ${mapping.control === c.id ? 'selected' : ''}>${c.label}</option>`).join('')}
+                            </select>
+                         </div>`;
+
+                // Range Values
+                ['min', 'max'].forEach(key => {
+                    html += `<div style="display:flex; flex-direction:column; align-items:center;">
+                                <label style="margin:0; font-size:9px; color:#555;">${key.toUpperCase()}</label>
+                                <input type="number" value="${mapping[key] ?? (key === 'max' ? 255 : 0)}" style="width:70px; text-align:center; font-size:11px;" onchange="updateCal('${role}', ${idx}, '${key}', this.value)">
+                             </div>`;
+                });
+
+                // Action Buttons (Add/Remove)
+                html += `<div style="display:flex; gap:4px; align-self:flex-end; margin-bottom:2px;">`;
+                if (cal.length > 1) {
+                    html += `<button class="kv-remove" style="width:16px; height:16px; font-size:12px;" onclick="removeCalRange('${role}', ${idx})" title="Remove">×</button>`;
+                }
+                if (idx === cal.length - 1) {
+                    html += `<button class="btn" style="width:16px; height:16px; padding:0; display:flex; align-items:center; justify-content:center; background:var(--accent); border:none; color:white; font-weight:bold; font-size:14px;" onclick="addCalRange('${role}')" title="Add Control">+</button>`;
+                }
+                html += `</div>`;
+
+                html += `</div>`;
+            });
+
+            html += '</div>';
+            return html;
         }
 
 
@@ -2038,6 +2147,59 @@
             currentProfile.channels[role] = val;
             syncUiToJson();
             renderProfileUi(); // Force re-sort if offset changed manually
+        }
+
+        function renameProfileChannel(oldName, newName) {
+            if (!newName || newName === oldName) return;
+            if (currentProfile.channels[newName] !== undefined) {
+                alert("Channel name already exists!");
+                return;
+            }
+
+            // Move channel mapping
+            currentProfile.channels[newName] = currentProfile.channels[oldName];
+            delete currentProfile.channels[oldName];
+
+            // Move modifiers
+            if (currentProfile.modifiers && currentProfile.modifiers[oldName]) {
+                currentProfile.modifiers[newName] = currentProfile.modifiers[oldName];
+                delete currentProfile.modifiers[oldName];
+            }
+            // Move calibration
+            if (currentProfile.calibration && currentProfile.calibration[oldName]) {
+                currentProfile.calibration[newName] = currentProfile.calibration[oldName];
+                delete currentProfile.calibration[oldName];
+            }
+            // Move state data
+            if (currentProfile.state_data && currentProfile.state_data[oldName]) {
+                currentProfile.state_data[newName] = currentProfile.state_data[oldName];
+                delete currentProfile.state_data[oldName];
+            }
+
+            syncUiToJson();
+            renderProfileUi();
+        }
+
+        function removeProfileChannel(role) {
+            if (!confirm(`Delete channel mapping for ${role}?`)) return;
+            delete currentProfile.channels[role];
+            if (currentProfile.modifiers) delete currentProfile.modifiers[role];
+            if (currentProfile.calibration) delete currentProfile.calibration[role];
+            if (currentProfile.state_data) delete currentProfile.state_data[role];
+            syncUiToJson();
+            renderProfileUi();
+        }
+
+        function appendNewChannel() {
+            if (!currentProfile.channels) currentProfile.channels = {};
+            let maxOffset = -1;
+            Object.values(currentProfile.channels).forEach(val => {
+                if (val > maxOffset) maxOffset = val;
+            });
+            const newRole = `ch_${maxOffset + 2}`;
+            currentProfile.channels[newRole] = maxOffset + 1;
+            syncUiToJson();
+            renderProfileUi();
         }
 
         // ==================== MODES ====================
@@ -2146,9 +2308,6 @@
             ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    if (msg.type === 'current_params' && msg.axes) {
-                        renderAxisMatrix(msg.axes);
-                    }
                 } catch (e) {
                     console.error("WS Parse Error:", e);
                 }

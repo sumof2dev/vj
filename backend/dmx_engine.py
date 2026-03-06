@@ -13,12 +13,12 @@ import threading
 class LogicMatrix:
     """The modular core. Generates continuous LFOs and Envelopes."""
     def __init__(self):
-        self.phases = {ax: 0.0 for ax in 'ABCDEF'}
+        self.phases = collections.defaultdict(float)
         self.beat_env = 0.0
         self.beat_count = 0
         self.state = {}
 
-    def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, axis_configs=None):
+    def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, active_lfos=None):
         # 1. Update Beat Envelope (Sharp attack, exponential decay)
         if audio.get('beat', False):
             self.beat_env = 1.0
@@ -29,45 +29,39 @@ class LogicMatrix:
         # 2. Extract EQ Bins (0-10)
         bins = audio.get('bins', [0.0]*11)
 
-        # 3. Process 6 Independent Axes (A-F)
-        # Bipolar State (-1.0 to 1.0)
+        # 3. Process dynamic channel-level LFOs
         self.state = {}
-        
-        # Default config if none provided (Matches previous logic ratios roughly)
-        if not axis_configs:
-            axis_configs = {
-                'A': {'speed': 0.2, 'react': 0.4, 'bin': 0},
-                'B': {'speed': 0.5, 'react': 0.75, 'bin': 4},
-                'C': {'speed': 1.0, 'react': 1.5, 'bin': 8},
-                'D': {'speed': 0.2, 'react': 0.4, 'bin': 1, 'phase_offset': math.pi/2}, # Quadrature A
-                'E': {'speed': 0.5, 'react': 0.75, 'bin': 5, 'phase_offset': math.pi/2}, # Quadrature B
-                'F': {'speed': 1.0, 'react': 1.5, 'bin': 10}
-            }
-
-        for ax in 'ABCDEF':
-            cfg = axis_configs.get(ax, {})
-            base_speed = cfg.get('speed', 0.5)
-            reactivity = cfg.get('react', 0.5)
-            bin_idx = cfg.get('bin', 0)
-            offset = cfg.get('phase_offset', 0.0)
-            
-            # Get energy from specific bin
-            bin_energy = bins[bin_idx] if 0 <= bin_idx < len(bins) else 0.0
-            
-            # Frequency Calculation
-            freq = (base_speed + (bin_energy * reactivity)) * speed_mult
-            
-            # Advance Phase
-            self.phases[ax] += dt * freq
-            
-            # Generate bipolar sin output
-            val = math.sin(self.phases[ax] + offset)
-            
-            # Gating: Tension blackout
-            if transient == 'tension':
-                val = 0.0
+        if active_lfos:
+            for lfo_id, cfg in active_lfos.items():
+                shape = cfg.get('shape', 'sine')
+                bin_idx = cfg.get('bin', 0)
+                base_speed = cfg.get('speed', 0.5)
+                reactivity = cfg.get('react', 0.5)
+                invert = cfg.get('invert', False)
                 
-            self.state[f'axis_{ax.lower()}'] = val
+                bin_energy = bins[bin_idx] if 0 <= bin_idx < len(bins) else 0.0
+                freq = (base_speed + (bin_energy * reactivity)) * speed_mult
+                
+                self.phases[lfo_id] += dt * freq
+                p = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
+                
+                # Generate bipolar waveform output (-1.0 to 1.0)
+                if shape == 'sawtooth':
+                    val = (p * 2.0) - 1.0
+                elif shape == 'triangle':
+                    val = 4.0 * abs(p - 0.5) - 1.0
+                elif shape == 'square':
+                    val = 1.0 if p < 0.5 else -1.0
+                else:  # Default to sine
+                    val = math.sin(self.phases[lfo_id])
+                
+                if invert:
+                    val = -val
+
+                if transient == 'tension':
+                    val = 0.0
+                    
+                self.state[lfo_id] = val
 
         # 4. Global State Metadata
         intensity_val = (master_intensity * 2.0) - 1.0
@@ -92,8 +86,10 @@ class DMXEngine:
         self.overrides = {}
         self._dt = 0.016
         
-        # Engines
+        # Engines - 3 Independent Spatial Matrices
         self.logic = LogicMatrix()
+        self.logic_l = LogicMatrix()
+        self.logic_r = LogicMatrix()
         
         # Global Modifiers
         self.intensity = 1.0
@@ -119,23 +115,18 @@ class DMXEngine:
         self._mid_history = collections.deque(maxlen=30)
         self._current_bass_style = None
         self._bass_style_holdoff = 0.0
-
-        # Axis Configs (A-F)
-        # Default mapping roughly matches the previous hardcoded logic
-        self.axis_configs = {
-            'A': {'speed': 0.1, 'react': 0.4, 'bin': 0},
-            'B': {'speed': 0.25, 'react': 0.75, 'bin': 4},
-            'C': {'speed': 0.5, 'react': 1.5, 'bin': 8},
-            'D': {'speed': 0.1, 'react': 0.4, 'bin': 1, 'phase_offset': 1.57}, # ~math.pi/2
-            'E': {'speed': 0.25, 'react': 0.75, 'bin': 5, 'phase_offset': 1.57},
-            'F': {'speed': 0.5, 'react': 1.5, 'bin': 10}
-        }
         
         # Config Storage
         self.fixtures = {}
+        self.active_lfos = {} # Gathered from profiles
         self.stage_config = {}
         self.presets = {}
         self.zone_map = []
+        
+        # Controller Mapping State
+        self.gamepad = {}
+        self.prev_gamepad = {}
+        self.channel_latches = {} # role -> index into calibration list
         
         self._stage_config_path = os.path.join('fixtures', 'stage_config.json')
         self._presets_config_path = os.path.join('fixtures', 'presets.json')
@@ -176,11 +167,21 @@ class DMXEngine:
     def _build_fast_cache(self):
         """Flattens nested dictionaries to prevent CPU overhead in the 60fps render loop."""
         self._fast_cache = {}
+        self.active_lfos = {}
         for fix_name, fixture in self.fixtures.items():
             self._fast_cache[fix_name] = {}
             for role in fixture.get('channels', {}).keys():
                 mods = fixture.get('modifiers', {})
                 mod_name = mods.get(role, 'static')
+                
+                # Auto-migrate legacy axis strings to local LFOs
+                if mod_name.startswith('axis_'):
+                    mod_name = 'lfo'
+                    
+                # Register the channel's LFO if needed
+                lfo_data = fixture.get('lfo_data', {}).get(role, {})
+                if mod_name == 'lfo':
+                    self.active_lfos[f"{fix_name}_{role}"] = lfo_data
                 
                 cals = fixture.get('calibration', {}).get(role, [])
                 if isinstance(cals, dict): cals = [cals]
@@ -225,12 +226,21 @@ class DMXEngine:
             print("🔄 Changes detected in fixtures directory. Reloading profiles...")
             self._load_profiles()
 
-    def update(self, dt: float, audio: Dict, visual_states: Dict = None):
+    def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
+        # print(f"🔄 ENGINE UPDATE: vibe={audio.get('vibe')}")
         self._dt = dt
+        self.prev_gamepad = self.gamepad
+        self.gamepad = gamepad or {}
         self.transient = audio.get('transient', 'steady')
 
-        # 1. Update the pure math core
-        self.logic.update(dt, audio, self.transient, self.speed, self.intensity, self.axis_configs)
+        # 1. Update the pure math core for all 3 spatial fields using the active channel LFOs
+        self.logic.update(dt, audio, self.transient, self.speed, self.intensity, self.active_lfos)
+        if 'left' in audio and 'right' in audio:
+            self.logic_l.update(dt, audio['left'], self.transient, self.speed, self.intensity, self.active_lfos)
+            self.logic_r.update(dt, audio['right'], self.transient, self.speed, self.intensity, self.active_lfos)
+        else:
+            self.logic_l = self.logic
+            self.logic_r = self.logic
         
         # 1.5 Update System Triggers (Bass Styles & Rhythm)
         self._detect_bass_style(audio, dt)
@@ -285,53 +295,45 @@ class DMXEngine:
         for role, ch_offset in fixture.get('channels', {}).items():
             final_addr = base_addr + ch_offset
             
+            # Layer 0: Determine Spatial Position (Left, Right, Center)
+            pos = dev_cfg.get('position', 'center')
+            if pos == 'left':
+                active_audio = audio.get('left', audio)
+                active_logic = self.logic_l
+            elif pos == 'right':
+                active_audio = audio.get('right', audio)
+                active_logic = self.logic_r
+            else:
+                active_audio = audio
+                active_logic = self.logic
+
             # Layer 1: Calculate the pure mapped math value
-            val = self._calculate_channel(role, audio, zone_idx, fixture, dev_cfg, dev_cfg.get('type'))
+            val = self._calculate_channel(role, active_audio, active_logic, zone_idx, fixture, dev_cfg, dev_cfg.get('type'))
             
             # Layer 2: Preset Overrides (Manual UI Triggers & System Triggers)
+            # BYPASS: If the channel is set to 'controller', we skip presets to allow absolute control
+            cache = self._fast_cache.get(dev_cfg.get('type'), {}).get(role, {})
+            is_controller = cache.get('mod_name') == 'controller'
+            
             preset_override_val = None
-            
-            # Helper to verify preset applies to this specific hardware profile, fixture, or behavior
-            def is_preset_applicable(p_data, d_name):
-                target_fixtures = p_data.get('target_fixtures')
-                if target_fixtures is not None:
-                    return d_name in target_fixtures
-                
-                prof_match = p_data.get('profile') is None or p_data.get('profile') == dev_cfg.get('type')
-                beh_match = p_data.get('target_behavior') is None or p_data.get('target_behavior') == dev_cfg.get('behavior', 'lead')
-                
-                return prof_match and beh_match
-            
-            #   A. Check standard active scene first (Base Overlay)
-            scene_name = getattr(self, 'current_scene_name', '')
-            if scene_name.startswith('PRESET:'):
-                p_name = scene_name.replace('PRESET:', '')
-                p_data = self.presets.get(p_name, {})
-                
-                if is_preset_applicable(p_data, dev_name):
-                    # Check for fixture-specific override first, then fallback to global channels
-                    p_fixture_data = p_data.get('fixture_payloads', {}).get(dev_name)
-                    if p_fixture_data and role in p_fixture_data:
-                        preset_override_val = p_fixture_data[role]
-                    elif role in p_data.get('channels', {}):
-                        preset_override_val = p_data['channels'][role]
+            if not is_controller:
+                # Helper to verify preset applies to this specific hardware profile, fixture, or behavior
+                def is_preset_applicable(p_data, d_name):
+                    target_fixtures = p_data.get('target_fixtures')
+                    if target_fixtures is not None:
+                        return d_name in target_fixtures
                     
-            #   B. Check System Triggers (Higher Priority than Base Scene)
-            # Iterate all presets to see if their 'trigger' matches our active_triggers
-            for p_name, p_data in self.presets.items():
-                p_trigger = p_data.get('trigger')
-                # Legacy: presets with only a 'vibe' field and no 'trigger'
-                if not p_trigger and p_data.get('vibe'):
-                    vibe_val = p_data['vibe']
-                    # Map known vibe names to proper trigger format
-                    VIBE_TRIGGER_MAP = {
-                        'drop': 'transient:dropping', 'dropping': 'transient:dropping',
-                        'building': 'transient:building', 'tension': 'transient:tension',
-                        'machine_gun': 'bass_style:machine_gun', 'tearout': 'bass_style:tearout',
-                        'wonky': 'bass_style:wonky', 'sub': 'bass_style:sub',
-                    }
-                    p_trigger = VIBE_TRIGGER_MAP.get(vibe_val, f"vibe:{vibe_val}")
-                if p_trigger and p_trigger in active_triggers:
+                    prof_match = p_data.get('profile') is None or p_data.get('profile') == dev_cfg.get('type')
+                    beh_match = p_data.get('target_behavior') is None or p_data.get('target_behavior') == dev_cfg.get('behavior', 'lead')
+                    
+                    return prof_match and beh_match
+                
+                #   A. Check standard active scene first (Base Overlay)
+                scene_name = getattr(self, 'current_scene_name', '')
+                if scene_name.startswith('PRESET:'):
+                    p_name = scene_name.replace('PRESET:', '')
+                    p_data = self.presets.get(p_name, {})
+                    
                     if is_preset_applicable(p_data, dev_name):
                         # Check for fixture-specific override first, then fallback to global channels
                         p_fixture_data = p_data.get('fixture_payloads', {}).get(dev_name)
@@ -340,8 +342,32 @@ class DMXEngine:
                         elif role in p_data.get('channels', {}):
                             preset_override_val = p_data['channels'][role]
                         
-            if preset_override_val is not None:
-                val = preset_override_val
+                #   B. Check System Triggers (Higher Priority than Base Scene)
+                # Iterate all presets to see if their 'trigger' matches our active_triggers
+                for p_name, p_data in self.presets.items():
+                    p_trigger = p_data.get('trigger')
+                    # Legacy: presets with only a 'vibe' field and no 'trigger'
+                    if not p_trigger and p_data.get('vibe'):
+                        vibe_val = p_data['vibe']
+                        # Map known vibe names to proper trigger format
+                        VIBE_TRIGGER_MAP = {
+                            'drop': 'transient:dropping', 'dropping': 'transient:dropping',
+                            'building': 'transient:building', 'tension': 'transient:tension',
+                            'machine_gun': 'bass_style:machine_gun', 'tearout': 'bass_style:tearout',
+                            'wonky': 'bass_style:wonky', 'sub': 'bass_style:sub',
+                        }
+                        p_trigger = VIBE_TRIGGER_MAP.get(vibe_val, f"vibe:{vibe_val}")
+                    if p_trigger and p_trigger in active_triggers:
+                        if is_preset_applicable(p_data, dev_name):
+                            # Check for fixture-specific override first, then fallback to global channels
+                            p_fixture_data = p_data.get('fixture_payloads', {}).get(dev_name)
+                            if p_fixture_data and role in p_fixture_data:
+                                preset_override_val = p_fixture_data[role]
+                            elif role in p_data.get('channels', {}):
+                                preset_override_val = p_data['channels'][role]
+                            
+                if preset_override_val is not None:
+                    val = preset_override_val
                 
             # Layer 3: Global Override (Live Test Tab - Absolute Highest Priority)
             if final_addr in self.overrides:
@@ -351,14 +377,57 @@ class DMXEngine:
             if 0 < final_addr < len(self.universe):
                 self.universe[final_addr] = max(0, min(255, val))
 
-    def _calculate_channel(self, role, audio, zone_idx, fixture, dev_cfg, fixture_name):
+    def _calculate_channel(self, role, audio, logic_matrix, zone_idx, fixture, dev_cfg, fixture_name):
         """The Universal Mapper: Subscribes to the Logic Matrix and applies 3-point scaling."""
         
         # Fetch Pre-compiled Routing & Calibration Config
         cache = self._fast_cache.get(fixture_name, {}).get(role, {})
         mod_name = cache.get('mod_name', 'static')
         cals = cache.get('cals', [])
-        
+
+        # --- CONTROLLER MODIFIER BYPASS ---
+        # Channels with this selection WON'T be influenced by audio
+        if mod_name == 'controller':
+            if not cals: return 0
+            
+            # Manage latch index for this role
+            if role not in self.channel_latches:
+                self.channel_latches[role] = 0
+            
+            # D-pad Up/Down cycles the active range in the calibration list
+            dpad_up = self.gamepad.get('dpad_up', 0) > 0.5 and not (self.prev_gamepad.get('dpad_up', 0) > 0.5)
+            dpad_down = self.gamepad.get('dpad_down', 0) > 0.5 and not (self.prev_gamepad.get('dpad_down', 0) > 0.5)
+            
+            if dpad_up:
+                self.channel_latches[role] = (self.channel_latches[role] + 1) % len(cals)
+            elif dpad_down:
+                self.channel_latches[role] = (self.channel_latches[role] - 1) % len(cals)
+
+            # Get the currently selected mapping
+            l_idx = self.channel_latches[role]
+            mapping = cals[l_idx % len(cals)]
+            
+            control_id = mapping.get('control', 'static')
+            m_min = int(mapping.get('min', 0))
+            m_max = int(mapping.get('max', 255))
+            
+            # 1. STATIC MODE
+            if control_id == 'static': return m_max
+            
+            # 2. INPUT MAPPING
+            raw_val = self.gamepad.get(control_id, 0.0)
+            
+            # Joysticks: CENTER RESET with Deadzone
+            if control_id in ['ls_x', 'ls_y', 'rs_x', 'rs_y']:
+                norm = abs(raw_val - 0.5) * 2.0
+                if norm < 0.1: norm = 0.0 # 10% Deadzone
+                return int(m_min + (norm * (m_max - m_min)))
+                
+            # Triggers & Buttons: MOMENTARY
+            else:
+                return int(m_min + (raw_val * (m_max - m_min)))
+
+        # --- AUDIO MAPPING LOGIC (Bypassed if Controller Mod active) ---
         current_vibe = audio.get('vibe', 'mid')
         active_range = None
         
@@ -395,11 +464,11 @@ class DMXEngine:
                 # Fallback: slow cycle between min and max if no steps defined
                 span = c_max - c_min
                 cycle_len = 16 # 16 beats per full cycle
-                val = c_min + ((self.logic.beat_count // 4) % 4) * (span // 4)
+                val = c_min + ((logic_matrix.beat_count // 4) % 4) * (span // 4)
                 return max(c_min, min(c_max, int(val)))
                 
             # Random selection every 4 beats (seeded for stability)
-            seed = (self.logic.beat_count // 4) + zone_idx + 42
+            seed = (logic_matrix.beat_count // 4) + zone_idx + 42
             rng = random.Random(seed)
             val = rng.choice(steps)
             return max(c_min, min(c_max, val))
@@ -408,7 +477,7 @@ class DMXEngine:
             steps = cache.get('steps', [])
             if steps:
                 # Random selection every beat (seeded for stability)
-                seed = self.logic.beat_count + zone_idx + 7
+                seed = logic_matrix.beat_count + zone_idx + 7
                 rng = random.Random(seed)
                 val = rng.choice(steps)
                 return max(c_min, min(c_max, val))
@@ -416,7 +485,7 @@ class DMXEngine:
             # Legacy Fallback: Cycle through the range [c_min, c_max]
             if c_max <= c_min: return c_min
             span = c_max - c_min
-            val = c_min + ((self.logic.beat_count * 17 + zone_idx * 13) % (span + 1))
+            val = c_min + ((logic_matrix.beat_count * 17 + zone_idx * 13) % (span + 1))
             return max(c_min, min(c_max, val))
 
         # --- STATE MACHINE HANDLER (For Mode/Dimmer Combo Channels) ---
@@ -430,7 +499,7 @@ class DMXEngine:
 
             # 1. Master Blackout (Tension state or UI Master Intensity slider)
             # The LogicMatrix outputs intensity from -1.0 to 1.0
-            if self.transient == 'tension' or self.logic.state.get('intensity', 1.0) < -0.8:
+            if self.transient == 'tension' or logic_matrix.state.get('intensity', 1.0) < -0.8:
                 off_val = get_state_val('off', 0)
                 if isinstance(off_val, list):
                     return off_val[0] if off_val and off_val[0] is not None else 0
@@ -441,22 +510,27 @@ class DMXEngine:
             current_vibe = audio.get('vibe', 'mid')
             return get_state_val(current_vibe, get_state_val('default', 254))
 
+        # --- THE FOLLOWING LOGIC IS BYPASSED IF CONTROLLER MOD IS ACTIVE ---
+
         # --- CONTINUOUS MATH MAPPING ---
         if mod_name == 'static':
             return c_center
             
-        val_norm = self.logic.state.get(mod_name, 0.0)
-        
-        # Apply Hardware Inversions cleanly via the Logic Matrix Axis instead of string name
-        if mod_name == 'axis_a' and dev_cfg.get('invert_x'):
-            val_norm = -val_norm
-        if mod_name == 'axis_b' and dev_cfg.get('invert_y'):
-            val_norm = -val_norm
-                
-        # PROCEDURAL DROP AMPLITUDE BOOST: Maximize the math sweep if music is intense
-        # (Explicit shapes and macros should now be triggered via UI Presets, not here)
-        if self.transient == 'dropping' or self._one_shot_active:
-            val_norm = max(-1.0, min(1.0, val_norm * 2.0))
+        if mod_name == 'lfo':
+            lfo_id = f"{fixture_name}_{role}"
+            val_norm = logic_matrix.state.get(lfo_id, 0.0)
+            
+            # Apply Hardware Inversions dynamically
+            if dev_cfg.get('invert_x') and ('x' in role.lower()):
+                val_norm = -val_norm
+            if dev_cfg.get('invert_y') and ('y' in role.lower()):
+                val_norm = -val_norm
+                    
+            # PROCEDURAL DROP AMPLITUDE BOOST: Maximize the math sweep if music is intense
+            if self.transient == 'dropping' or self._one_shot_active:
+                val_norm = max(-1.0, min(1.0, val_norm * 2.0))
+        else:
+            val_norm = logic_matrix.state.get(mod_name, 0.0)
 
         # 3-Point Calibration Map
         # Clamps normalized signal to -1.0 to 1.0
@@ -480,16 +554,6 @@ class DMXEngine:
     def set_pattern_mode(self, mode): pass # Deprecated, handled by modifiers now
     def set_color_mode(self, mode): pass # Deprecated, handled by modifiers now
     
-    def set_axis_param(self, axis: str, param: str, val):
-        """Update a specific parameter for one of the 6 axes (A-F)"""
-        axis = axis.upper()
-        if axis in self.axis_configs:
-            # Handle type conversion based on param
-            if param == 'bin':
-                self.axis_configs[axis][param] = int(val)
-            else:
-                self.axis_configs[axis][param] = float(val)
-
     def get_channel_state(self):
         res = {"values": {}, "effects": []}
         for name, cfg in self.stage_config.get('devices', {}).items():

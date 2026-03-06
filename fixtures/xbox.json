@@ -58,9 +58,10 @@
     "calibration": {
         "Dim": [
             {
-                "min": 220,
-                "max": 254,
-                "center": 245
+                "min": 100,
+                "max": 220,
+                "center": 245,
+                "control": "btn_rb"
             }
         ],
         "group": [
@@ -72,157 +73,155 @@
         ],
         "patterns": [
             {
-                "min": 25,
-                "max": 127,
-                "center": 26
+                "min": 1,
+                "max": 255,
+                "center": 5,
+                "vibe": "chill",
+                "control": "dpad_up"
             }
         ],
         "zoom": [
             {
-                "min": 0,
+                "min": 50,
+                "center": 80,
                 "max": 255,
-                "center": 127,
-                "vibe": "any"
+                "vibe": "any",
+                "control": "rt"
             }
         ],
         "rotate z": [
             {
-                "min": 224,
-                "max": 255,
-                "center": 230,
-                "vibe": "high"
-            },
-            {
-                "min": 0,
-                "center": 0,
-                "max": 127,
-                "vibe": "chill"
-            },
-            {
-                "min": 0,
-                "center": 0,
-                "max": 255,
-                "vibe": "mid"
+                "bin": 0,
+                "axis": "axis_a",
+                "width": 49,
+                "floors": [
+                    0,
+                    50,
+                    100
+                ],
+                "control": "lt"
             }
         ],
         "x pos": [
             {
-                "min": 0,
+                "bin": 4,
+                "axis": "axis_a",
+                "width": 49,
+                "floors": [
+                    0,
+                    124,
+                    220
+                ],
                 "center": 64,
-                "max": 255,
-                "vibe": "any"
-            },
-            {
-                "min": 224,
-                "center": 230,
-                "max": 255,
-                "vibe": "high"
+                "max": 96,
+                "vibe": "chill",
+                "control": "ls_x",
+                "min": 32
             }
         ],
         "y pos": [
             {
-                "min": 0,
+                "bin": 6,
+                "axis": "axis_b",
+                "width": 49,
+                "floors": [
+                    0,
+                    124,
+                    220
+                ],
                 "center": 64,
-                "max": 255,
-                "vibe": "any"
-            },
-            {
-                "min": 224,
-                "center": 230,
-                "max": 255,
-                "vibe": "high"
+                "max": 127,
+                "vibe": "chill",
+                "control": "ls_y",
+                "min": 0
             }
         ],
         "x rot": [
             {
                 "min": 0,
                 "max": 255,
-                "center": 127
-            },
-            {
-                "min": 0,
-                "center": 0,
-                "max": 124,
-                "vibe": "chill"
-            },
-            {
-                "min": 224,
-                "center": 230,
-                "max": 255,
-                "vibe": "high"
+                "center": 64,
+                "vibe": "chill",
+                "control": "rs_x"
             }
         ],
         "y rot": [
             {
                 "min": 0,
                 "max": 255,
-                "center": 127
-            },
-            {
-                "min": 0,
-                "center": 0,
-                "max": 124,
-                "vibe": "chill"
+                "center": 64,
+                "vibe": "chill",
+                "control": "rs_y"
             }
         ],
         "dots": [
             {
                 "min": 0,
-                "center": 127,
-                "max": 255,
-                "vibe": "any"
+                "center": 63,
+                "max": 63,
+                "vibe": "high",
+                "control": "btn_b"
             }
         ],
         "drawing": [
             {
                 "min": 0,
-                "max": 255,
-                "center": 127
+                "max": 64,
+                "center": 0,
+                "vibe": "chill",
+                "control": "btn_b"
             }
         ],
         "grating": [
             {
                 "min": 0,
                 "max": 255,
-                "center": 0,
-                "vibe": "high"
+                "center": 224,
+                "vibe": "high",
+                "control": "dpad_right"
             }
         ],
         "clip": [
             {
-                "min": 0,
-                "center": 25,
-                "max": 49
+                "min": 50,
+                "center": 5,
+                "max": 50,
+                "control": "static"
             }
         ],
         "twist": [
             {
                 "min": 0,
-                "center": 10,
-                "max": 127
+                "center": 0,
+                "max": 255,
+                "control": "btn_y"
             }
         ],
         "draw": [
             {
                 "min": 0,
-                "center": 127,
-                "max": 255
+                "center": 0,
+                "max": 63,
+                "vibe": "chill",
+                "control": "btn_a"
             }
         ],
         "color1": [
             {
                 "min": 0,
                 "center": 127,
-                "max": 255,
-                "vibe": "any"
+                "max": 1,
+                "vibe": "any",
+                "control": "static"
             }
         ],
         "color2": [
             {
                 "min": 0,
                 "center": 127,
-                "max": 255,
-                "vibe": "any"
+                "max": 1,
+                "vibe": "any",
+                "control": "static"
             }
         ]
     },
@@ -230,31 +229,31 @@
     "dynamics": {},
     "macros": {},
     "modifiers": {
-        "patterns": "axis_b",
-        "zoom": "bass",
-        "rotate z": "axis_c",
-        "x pos": "axis_a",
-        "y pos": "axis_b",
-        "x rot": "axis_d",
-        "y rot": "axis_b",
-        "color1": "axis_b",
-        "color2": "axis_d",
-        "dots": "axis_c",
-        "Dim": "state_machine",
+        "patterns": "controller",
+        "zoom": "controller",
+        "rotate z": "controller",
+        "x pos": "controller",
+        "y pos": "controller",
+        "x rot": "controller",
+        "y rot": "controller",
+        "color1": "controller",
+        "color2": "controller",
+        "dots": "controller",
+        "Dim": "controller",
         "group": "mode",
-        "clip": "state_machine",
-        "draw": "axis_a",
-        "twist": "axis_a",
-        "grating": "axis_c",
-        "drawing": "axis_d"
+        "clip": "controller",
+        "draw": "controller",
+        "twist": "controller",
+        "grating": "controller",
+        "drawing": "controller"
     },
     "channel_macros": {},
     "step_data": {},
     "state_data": {
         "Dim": {
             "off": [
-                0,
-                0
+                254,
+                254
             ],
             "chill": 254,
             "mid": 220,
@@ -268,10 +267,10 @@
                 0
             ],
             "chill": 0,
-            "mid": 149,
-            "high": 149,
+            "mid": 0,
+            "high": 50,
             "drop": 0,
-            "default": 149
+            "default": 0
         }
     }
 }

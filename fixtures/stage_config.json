@@ -6,7 +6,8 @@
             "address": 1,
             "offset": 0,
             "invert_x": false,
-            "invert_y": false
+            "invert_y": false,
+            "position": "left"
         },
         "L2": {
             "type": "Ehahorythym",
@@ -14,7 +15,8 @@
             "address": 1,
             "offset": 17,
             "invert_x": false,
-            "invert_y": false
+            "invert_y": false,
+            "position": "left"
         },
         "R1": {
             "type": "Ehaho4",
@@ -22,15 +24,17 @@
             "address": 35,
             "offset": 0,
             "invert_x": false,
-            "invert_y": false
+            "invert_y": false,
+            "position": "right"
         },
         "R2": {
             "type": "Ehahorythym",
             "category": "laser",
             "address": 35,
             "offset": 17,
-            "invert_x": true,
-            "invert_y": true
+            "invert_x": false,
+            "invert_y": false,
+            "position": "right"
         },
         "T1": {
             "type": "Ehaho2",
