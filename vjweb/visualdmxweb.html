@@ -1349,9 +1349,9 @@
         let vibeTrebleHistory = new Array(5).fill(0);
 
         const DEFAULT_MODIFIERS = {
-            "aliens": { forceChannel: true, targetChannel: 104, minVal: 150, maxVal: 150, forceStrobe: true, strobeSpeed: 240, speedMult: 2.5 },
-            "filthy": { forceChannel: false, targetChannel: 1, minVal: 0, maxVal: 0, forceStrobe: false, strobeSpeed: 0, speedMult: 0.2 },
-            "heavy": { forceChannel: false, targetChannel: 1, minVal: 0, maxVal: 0, forceStrobe: true, strobeSpeed: 0, speedMult: 1.0 },
+            "aliens": { forceChannel: true, targetChannel: 104, minVal: 150, maxVal: 150, forceStrobe: true, strobeSpeed: 240, speedMult: 2.0 },
+            "filthy": { forceChannel: false, targetChannel: 1, minVal: 0, maxVal: 0, forceStrobe: false, strobeSpeed: 0, speedMult: 0.8 },
+            "heavy": { forceChannel: false, targetChannel: 1, minVal: 0, maxVal: 0, forceStrobe: true, strobeSpeed: 0, speedMult: 1.2 },
             "clean": { forceChannel: false, targetChannel: 1, minVal: 0, maxVal: 0, forceStrobe: false, strobeSpeed: 0, speedMult: 1.0 }
         };
 
@@ -2119,7 +2119,7 @@
                         else if (type === 'pattern_ranges' || type === 'hybrid') {
                             state.lastUpdate += dt;
                             let canSwitch = false;
-                            let baseInterval = 2.0 / Math.max(0.1, speedMult);
+                            let baseInterval = 1.0 / Math.max(0.2, speedMult);
                             if (audioLevel > 0.5) baseInterval *= 0.5;
                             if (isDrop) baseInterval = 0.1;
 
@@ -3882,7 +3882,7 @@
                 for (let i = 0; i < bassEndIdx; i++) { bassSum += dataArray[i]; }
                 bassSum *= normFactor;
 
-                let rawBass = (bassSum / bassEndIdx / 255.0);
+                let rawBass = (bassSum / bassEndIdx / 128.0);
 
                 // [FIX] Capture history for Flux
                 lastRawBassLevel = rawBassLevel;
