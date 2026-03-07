@@ -2113,14 +2113,17 @@
 
         // ========== ANIMATION LOOP ==========
         const clock = new THREE.Clock();
+        let accumulatedTime = 0;
 
         // Helper to get trigger-based audio value
 
 
         function animate() {
             requestAnimationFrame(animate);
+            const delta = clock.getDelta();
             const rawTime = clock.getElapsedTime();
-            const time = rawTime * remoteParams.speed;
+            accumulatedTime += delta * remoteParams.speed;
+            const time = accumulatedTime;
 
             // --- HYBRID TRANSIENT LOGIC ---
             let smoothFactor = 0.12;
@@ -2146,7 +2149,7 @@
             // Since main.py now sends clean 0.0-1.0 data, we apply a base multiplier here 
             // to make the shaders "pop", scaling it further with your UI Amplitude slider.
             // We completely ignore the Master Sensitivity slider to decouple from the lasers.
-            const VISUAL_BASE_GAIN = 2.0;
+            const VISUAL_BASE_GAIN = 3.0;
             const visualPower = VISUAL_BASE_GAIN * amp;
 
             // --- DMX HARDWARE SYNC ---
@@ -2204,7 +2207,7 @@
             const fluxPulse = 1.0 + (visualBeatPulse * 0.3 + smoothedMods.flux * 0.1) * visualPower;
 
             // Update uniforms - apply sensitivity boost
-            uniforms.u_time.value = time;
+            uniforms.u_time.value = rawTime;
 
             // Brightness/Color Uniforms: Use CLAMPED modulators
             // This prevents the "washed out" white screen
@@ -2221,7 +2224,7 @@
             uniforms.u_dmxRot.value = dmxRotRad; // Hard-sync shader rotation
 
             // Update effect pass uniforms
-            kaleidPass.uniforms.u_time.value = time;
+            kaleidPass.uniforms.u_time.value = rawTime;
             kaleidPass.uniforms.u_bass.value = zoomMod;
             kaleidPass.uniforms.u_segments.value = 6.0 + Math.floor(modFlux * 4.0);
 
@@ -2287,7 +2290,7 @@
                 shootingMesh.visible = (oldXMode === 2);
 
                 if (oldXMode === 0) {
-                    gearsMat.uniforms.u_time.value = time;
+                    gearsMat.uniforms.u_time.value = rawTime;
                     gearsMat.uniforms.u_audioLevel.value = smoothedMods.vol * amp;
                     gearsMat.uniforms.u_bass.value = smoothedMods.bass * amp;
                     gearsMat.uniforms.u_mids.value = smoothedMods.flux * amp;
