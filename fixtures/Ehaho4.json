@@ -398,13 +398,13 @@
             "shape": "sine",
             "bin": 3,
             "speed": 0.05,
-            "react": 1.1
+            "react": 0.7
         },
         "y pos": {
             "shape": "sine",
             "bin": 6,
             "speed": 0.5,
-            "react": 0.5
+            "react": 0.3
         },
         "x rot": {
             "shape": "sine",
@@ -443,7 +443,7 @@
             "react": 0.5
         },
         "drawing": {
-            "shape": "sine",
+            "shape": "square",
             "bin": 0,
             "speed": 0.5,
             "react": 0.5
@@ -455,7 +455,7 @@
             "react": 0.5
         },
         "zoom": {
-            "shape": "triangle",
+            "shape": "sawtooth",
             "bin": 0,
             "speed": 0.05,
             "react": 1.1

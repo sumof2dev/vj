@@ -105,6 +105,7 @@ class DMXEngine:
         self.current_fx_layer = 6  
         self.rot_state = 'IDLE' 
         self._last_scene_switch_beat = 0
+        self._last_vibe = 'mid'
         
         # System State Detectors (Bass Styles & Rhythm)
         self.rhythm_state = {'boots': False, 'cats': False, 'cha': False}
@@ -251,17 +252,40 @@ class DMXEngine:
         self.rhythm_state['cats'] = high_hit and not bass_hit
         self.rhythm_state['cha'] = bass_hit and high_hit
         
-        # 2. Check for EDM Drops
+        # 2. Check for EDM Drops & Scene Changes
+        current_vibe = audio.get('vibe', 'mid')
+        should_switch = False
+
         if self.transient == 'dropping' and not self._one_shot_active:
             if time.time() - self._last_drop_time > 8.0:
                 self._one_shot_active = True
                 self._last_drop_time = time.time()
-                # Randomize visual layers on drop
-                self.current_base_layer = random.choice([0,1,2,3,4,5,6,7,8,9,10])
-                self.current_fx_layer = random.choice([0,1,2,3,5,6])
+                should_switch = True
                 
         if self._one_shot_active and time.time() - self._last_drop_time > 2.0:
             self._one_shot_active = False
+
+        # Interval-based scene switching
+        current_beat = audio.get('beat_count', 0)
+        beats_passed = current_beat - self._last_scene_switch_beat
+        
+        if self.scene_freq == 0 and beats_passed >= 1: # Every Beat
+            should_switch = True
+        elif self.scene_freq == 1 and beats_passed >= 4: # 4th Beat
+            should_switch = True
+        elif self.scene_freq == 2 and beats_passed >= 8: # 2 Bars
+            should_switch = True
+        elif self.scene_freq == 3 and beats_passed >= 16: # 4 Bars
+            should_switch = True
+        elif self.scene_freq == 4 and current_vibe != self._last_vibe: # On Vibe Change
+            should_switch = True
+
+        if should_switch:
+            self.current_base_layer = random.choice([0,1,2,3,4,5,6,7,8,9,10])
+            self.current_fx_layer = random.choice([0,1,2,3,5,6])
+            self._last_scene_switch_beat = current_beat
+            
+        self._last_vibe = current_vibe
 
         # 3. Process All Devices
         for i, (dev_name, dev_cfg) in enumerate(self.stage_config.get('devices', {}).items()):

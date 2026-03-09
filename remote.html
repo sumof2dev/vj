@@ -726,11 +726,15 @@
 
             <div class="slider-group">
                 <div class="slider-label">
-                    <span>Scene Change Rate (Phrase Length)</span>
-                    <span class="slider-value" id="masterSceneFreqVal">Normal</span>
+                    <span>Scene Change Rate</span>
                 </div>
-                <input type="range" id="masterSceneFreq" min="0" max="3" step="1" value="1"
-                    title="0=Slow(32b), 1=Norm(16b), 2=Fast(8b), 3=Frantic(4b)">
+                <select id="masterSceneFreq">
+                    <option value="0">Every Beat</option>
+                    <option value="1">4th Beat (1 Bar)</option>
+                    <option value="2">2 Bars</option>
+                    <option value="3">4 Bars</option>
+                    <option value="4">On Vibe Change</option>
+                </select>
             </div>
 
             <div class="btn-grid">
@@ -1048,8 +1052,7 @@
             { id: 'masterSpeed', key: 'speed', obj: state },
             { id: 'masterSens', key: 'gain', obj: state },
             { id: 'masterFlux', key: 'sensitivity', obj: state },
-            { id: 'masterBias', key: 'vibe_bias', obj: state },
-            { id: 'masterSceneFreq', key: 'sceneFreq', obj: state }
+            { id: 'masterBias', key: 'vibe_bias', obj: state }
         ];
 
         sliders.forEach(def => {
@@ -1059,6 +1062,12 @@
                 updateSlider(def.id, def.obj[def.key], def.id.includes('Speed') ? 'x' : '', def.key.includes('Freq'));
                 sendParams();
             });
+        });
+
+        // Ensure the dropdown handles changes for masterSceneFreq specifically
+        document.getElementById('masterSceneFreq').addEventListener('change', (e) => {
+            state.sceneFreq = parseInt(e.target.value);
+            sendParams();
         });
 
 
