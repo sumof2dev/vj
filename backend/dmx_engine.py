@@ -58,15 +58,15 @@ class LogicMatrix:
                 if invert:
                     val = -val
 
-                if transient == 'tension':
-                    val = 0.0
+                # if transient == 'tension':
+                #     val = 0.0
                     
                 self.state[lfo_id] = val
 
         # 4. Global State Metadata
         intensity_val = (master_intensity * 2.0) - 1.0
-        if transient == 'tension':
-            intensity_val = -1.0
+        # if transient == 'tension':
+        #     intensity_val = -1.0
             
         self.state.update({
             'intensity': intensity_val,
@@ -256,14 +256,14 @@ class DMXEngine:
         current_vibe = audio.get('vibe', 'mid')
         should_switch = False
 
-        if self.transient == 'dropping' and not self._one_shot_active:
-            if time.time() - self._last_drop_time > 8.0:
-                self._one_shot_active = True
-                self._last_drop_time = time.time()
-                should_switch = True
+        # if self.transient == 'dropping' and not self._one_shot_active:
+        #     if time.time() - self._last_drop_time > 8.0:
+        #         self._one_shot_active = True
+        #         self._last_drop_time = time.time()
+        #         should_switch = True
                 
-        if self._one_shot_active and time.time() - self._last_drop_time > 2.0:
-            self._one_shot_active = False
+        # if self._one_shot_active and time.time() - self._last_drop_time > 2.0:
+        #     self._one_shot_active = False
 
         # Interval-based scene switching
         current_beat = audio.get('beat_count', 0)
@@ -301,8 +301,8 @@ class DMXEngine:
         active_triggers = []
         
         # 1. Transients (Drops, Tension, Building)
-        if self.transient and self.transient != 'steady':
-            active_triggers.append(f"transient:{self.transient}")
+        # if self.transient and self.transient != 'steady':
+        #     active_triggers.append(f"transient:{self.transient}")
             
         # 2. Bass Styles (Machine Gun, Tearout, Wonky, Sub)
         if self._current_bass_style:
@@ -375,8 +375,8 @@ class DMXEngine:
                         vibe_val = p_data['vibe']
                         # Map known vibe names to proper trigger format
                         VIBE_TRIGGER_MAP = {
-                            'drop': 'transient:dropping', 'dropping': 'transient:dropping',
-                            'building': 'transient:building', 'tension': 'transient:tension',
+                            # 'drop': 'transient:dropping', 'dropping': 'transient:dropping',
+                            # 'building': 'transient:building', 'tension': 'transient:tension',
                             'machine_gun': 'bass_style:machine_gun', 'tearout': 'bass_style:tearout',
                             'wonky': 'bass_style:wonky', 'sub': 'bass_style:sub',
                         }
@@ -466,7 +466,7 @@ class DMXEngine:
                     active_range = c
                     break
         
-        # 3. Gating Logic: If no match, return 0 (ignores modifier until match)
+        # 3. Gating Logic: If no match, return 0 (ignores modifier until match) 
         if not active_range:
             return 0
             
@@ -523,7 +523,8 @@ class DMXEngine:
 
             # 1. Master Blackout (Tension state or UI Master Intensity slider)
             # The LogicMatrix outputs intensity from -1.0 to 1.0
-            if self.transient == 'tension' or logic_matrix.state.get('intensity', 1.0) < -0.8:
+            # if self.transient == 'tension' or logic_matrix.state.get('intensity', 1.0) < -0.8:
+            if logic_matrix.state.get('intensity', 1.0) < -0.8:
                 off_val = get_state_val('off', 0)
                 if isinstance(off_val, list):
                     return off_val[0] if off_val and off_val[0] is not None else 0
@@ -544,15 +545,9 @@ class DMXEngine:
             lfo_id = f"{fixture_name}_{role}"
             val_norm = logic_matrix.state.get(lfo_id, 0.0)
             
-            # Apply Hardware Inversions dynamically
-            if dev_cfg.get('invert_x') and ('x' in role.lower()):
-                val_norm = -val_norm
-            if dev_cfg.get('invert_y') and ('y' in role.lower()):
-                val_norm = -val_norm
+
                     
-            # PROCEDURAL DROP AMPLITUDE BOOST: Maximize the math sweep if music is intense
-            if self.transient == 'dropping' or self._one_shot_active:
-                val_norm = max(-1.0, min(1.0, val_norm * 2.0))
+
         else:
             val_norm = logic_matrix.state.get(mod_name, 0.0)
 

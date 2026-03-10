@@ -15,12 +15,12 @@
             "twist": 178,
             "grating": 255
         },
-        "profile": "Ehaho"
+        "profile": "temu"
     },
     "maxrotate": {
         "vibe": "high",
         "target_category": "laser",
-        "profile": "Ehaho",
+        "profile": "temu",
         "channels": {
             "Dim": 220,
             "patterns": 123,
@@ -40,7 +40,7 @@
     "wonky": {
         "vibe": "wonky",
         "target_category": "laser",
-        "profile": "Ehaho",
+        "profile": "temu",
         "channels": {
             "Dim": 220,
             "zoom": 0,
@@ -61,7 +61,7 @@
     "machinegun": {
         "vibe": "machine_gun",
         "target_category": "laser",
-        "profile": "Ehaho",
+        "profile": "temu",
         "channels": {
             "Dim": 220,
             "zoom": 0,
@@ -98,7 +98,7 @@
         "vibe": "drop",
         "trigger": "transient:dropping",
         "target_category": "laser",
-        "profile": "Ehaho2",
+        "profile": "temu",
         "channels": {
             "Dim": 220,
             "patterns": 75,

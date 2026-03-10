@@ -2,15 +2,14 @@
     "type": "temu",
     "name": "New Fixture",
     "channels": {
-        "unassigned_ch1": 0,
-        "unassigned_ch2": 1,
-        "unassigned_ch3": 2,
+        "1": 0,
+        "2": 1,
+        "3": 2,
         "unassigned_ch4": 3,
         "unassigned_ch5": 4,
         "unassigned_ch6": 5,
         "unassigned_ch7": 6
     },
-    "modes": {},
     "defaults": {
         "unassigned_ch1": 0,
         "unassigned_ch2": 0,
@@ -21,23 +20,23 @@
         "unassigned_ch7": 0
     },
     "calibration": {
-        "unassigned_ch1": [
+        "1": [
             {
                 "min": 0,
                 "center": 25,
                 "max": 50,
-                "vibe": "high"
-            }
-        ],
-        "unassigned_ch2": [
-            {
-                "min": 0,
-                "center": 0,
-                "max": 255,
                 "vibe": "any"
             }
         ],
-        "unassigned_ch3": [
+        "2": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 55,
+                "vibe": "any"
+            }
+        ],
+        "3": [
             {
                 "min": 0,
                 "center": 0,
@@ -80,19 +79,18 @@
     },
     "ranges": {},
     "dynamics": {},
-    "macros": {},
     "step_data": {},
     "modifiers": {
-        "unassigned_ch1": "axis_c",
-        "unassigned_ch2": "axis_c",
-        "unassigned_ch3": "axis_c",
+        "1": "lfo",
+        "2": "beat",
+        "3": "axis_c",
         "unassigned_ch4": "axis_b",
         "unassigned_ch5": "axis_c",
         "unassigned_ch6": "axis_c",
         "unassigned_ch7": "axis_c"
     },
     "state_data": {
-        "unassigned_ch1": {
+        "1": {
             "off": [
                 255,
                 255
@@ -102,6 +100,64 @@
             "high": 40,
             "drop": 40,
             "default": 0
+        }
+    },
+    "modes": {},
+    "macros": {},
+    "lfo_data": {
+        "1": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "3": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "unassigned_ch1": {
+            "shape": "sawtooth",
+            "bin": 8,
+            "speed": 0.55,
+            "react": 3.1
+        },
+        "unassigned_ch2": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "unassigned_ch3": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "unassigned_ch4": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "unassigned_ch5": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "unassigned_ch6": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "unassigned_ch7": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
         }
     }
 }

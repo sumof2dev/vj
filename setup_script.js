@@ -1163,11 +1163,15 @@ function connectWs() {
         document.getElementById('conn-status').innerText = "🟢 Connected";
         document.getElementById('conn-status').style.color = "var(--success)";
     };
+    let latestDmxState = {};
     ws.onmessage = (event) => {
         try {
             const msg = JSON.parse(event.data);
             if (msg.type === "force_refresh") {
                 window.location.reload();
+            }
+            if (msg.dmx) {
+                latestDmxState = msg.dmx;
             }
         } catch (e) { }
     };
@@ -1985,6 +1989,212 @@ async function savePresetsFile() {
         console.error(e);
         alert("❌ Error saving presets.");
     }
+}
+
+// --- RECORD TEST VISUALIZER ---
+let recordTestActive = false;
+let recordTestMaxFrames = 30 * 60; // Up to 60 seconds at roughly 30 fps
+let recordTestInterval = null;
+let recordTestChannelsInfo = []; // { role, addr, data: [] }
+let recordTestDevName = null;
+
+function showRecordTestOverlay() {
+    if (!currentProfile || !currentProfile.type) {
+        alert("Please load or save a profile first.");
+        return;
+    }
+
+    // Find a device on stage matching this profile
+    let targetDevName = null;
+    let targetDevCfg = null;
+    const allDevices = { ...(stageConfig.devices || {}), ...(stageConfig.lasers || {}) };
+    for (const [dName, cfg] of Object.entries(allDevices)) {
+        if (cfg.type === currentProfile.type) {
+            targetDevName = dName;
+            targetDevCfg = cfg;
+            break;
+        }
+    }
+
+    if (!targetDevName) {
+        alert("Hold up! The engine needs an actual fixture placed on the stage (in Manager) to simulate values for this profile. Please add one first.");
+        return;
+    }
+
+    recordTestDevName = targetDevName;
+    document.getElementById('record-test-subtitle').innerText = `Simulating via ${targetDevName}`;
+
+    const container = document.getElementById('record-test-channels');
+    container.innerHTML = '';
+
+    recordTestChannelsInfo = [];
+
+    // Sort channels by offset
+    const sortedChans = Object.entries(currentProfile.channels).sort((a, b) => {
+        const offA = typeof a[1] === 'object' ? a[1].offset : a[1];
+        const offB = typeof b[1] === 'object' ? b[1].offset : b[1];
+        return offA - offB;
+    });
+
+    sortedChans.forEach(([role, val]) => {
+        const offset = typeof val === 'object' ? val.offset : val;
+        const absAddr = targetDevCfg.address + targetDevCfg.offset + offset;
+
+        recordTestChannelsInfo.push({ role, addr: absAddr, data: [] });
+
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '20px';
+        row.style.alignItems = 'center';
+        row.style.background = 'rgba(255,255,255,0.02)';
+        row.style.padding = '10px';
+        row.style.borderRadius = '8px';
+        row.style.border = '1px solid rgba(255,255,255,0.05)';
+
+        const labelDiv = document.createElement('div');
+        labelDiv.style.width = '120px';
+        labelDiv.style.flexShrink = '0';
+        labelDiv.style.fontSize = '12px';
+        labelDiv.style.fontWeight = 'bold';
+        labelDiv.style.color = 'var(--text-dim)';
+        labelDiv.style.textTransform = 'uppercase';
+        labelDiv.innerHTML = `${role}<br><span style="font-size:10px; color:#666; font-weight:normal">CH ${absAddr}</span>`;
+
+        const canvasContainer = document.createElement('div');
+        canvasContainer.style.flex = '1';
+        canvasContainer.style.height = '60px'; // Set height for the graph
+        canvasContainer.style.position = 'relative';
+
+        const canvas = document.createElement('canvas');
+        canvas.id = `canvas-${absAddr}`;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.display = 'block';
+        canvas.style.background = '#0a0a0f';
+        canvas.style.border = '1px inset #222';
+        canvas.style.borderRadius = '4px';
+        canvasContainer.appendChild(canvas);
+
+        row.appendChild(labelDiv);
+        row.appendChild(canvasContainer);
+        container.appendChild(row);
+    });
+
+    document.getElementById('recordTestOverlay').style.display = 'flex';
+
+    // Initial draw to clear canvases
+    requestAnimationFrame(drawRecordTest);
+}
+
+function closeRecordTestOverlay() {
+    if (recordTestActive) toggleRecordTest();
+    document.getElementById('recordTestOverlay').style.display = 'none';
+}
+
+function toggleRecordTest() {
+    const btn = document.getElementById('record-test-btn');
+    if (!recordTestActive) {
+        // Start Recording
+        recordTestActive = true;
+        btn.innerText = 'Stop Recording';
+        btn.className = 'btn';
+
+        // Clear old data
+        recordTestChannelsInfo.forEach(ch => ch.data = []);
+
+        // Start loop roughly 30 times a second
+        if (recordTestInterval) clearInterval(recordTestInterval);
+        recordTestInterval = setInterval(recordTestTick, 1000 / 30);
+    } else {
+        // Stop
+        recordTestActive = false;
+        btn.innerText = 'Record (Max 60s)';
+        btn.className = 'btn danger';
+
+        if (recordTestInterval) clearInterval(recordTestInterval);
+        recordTestInterval = null;
+    }
+}
+
+function recordTestTick() {
+    if (!recordTestActive) return;
+
+    const dmx = latestDmxState || {};
+    let isFull = false;
+
+    recordTestChannelsInfo.forEach(ch => {
+        const stateKey = `${recordTestDevName}_${ch.role}`;
+        const val = dmx[stateKey] !== undefined ? dmx[stateKey] : 0;
+        ch.data.push(val);
+        if (ch.data.length >= recordTestMaxFrames) {
+            isFull = true;
+        }
+    });
+
+    requestAnimationFrame(drawRecordTest);
+
+    if (isFull) {
+        toggleRecordTest(); // Auto-stop
+    }
+}
+
+function drawRecordTest() {
+    recordTestChannelsInfo.forEach(ch => {
+        const canvas = document.getElementById(`canvas-${ch.addr}`);
+        if (!canvas) return;
+
+        // Match internal resolution to display size for sharp lines
+        if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
+        if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
+
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw center line
+        ctx.beginPath();
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 1;
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+
+        if (ch.data.length === 0) return;
+
+        ctx.beginPath();
+        ctx.strokeStyle = 'var(--accent)';
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+
+        const xStep = w / recordTestMaxFrames;
+
+        for (let i = 0; i < ch.data.length; i++) {
+            const val = ch.data[i];
+            const px = i * xStep;
+            // Invert Y so 255 is top, 0 is bottom
+            const py = h - ((val / 255) * h);
+
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+        }
+
+        ctx.stroke();
+
+        // Draw current value playhead/dot
+        const lastVal = ch.data[ch.data.length - 1];
+        const lastX = (ch.data.length - 1) * xStep;
+        const lastY = h - ((lastVal / 255) * h);
+
+        ctx.beginPath();
+        ctx.fillStyle = '#fff';
+        ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+        ctx.fill();
+    });
 }
 
 window.onload = init;

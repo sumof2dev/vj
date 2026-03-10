@@ -1181,7 +1181,10 @@
                 <div class="card">
                     <h3>Raw JSON (Advanced)</h3>
                     <textarea id="json-editor" style="height:300px; font-family:monospace; color:#a29bfe"></textarea>
-                    <button class="btn" style="margin-top:10px" onclick="parseJsonToUi()">Update UI from JSON</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                        <button class="btn" onclick="parseJsonToUi()">Update UI from JSON</button>
+                        <button class="btn primary" onclick="showRecordTestOverlay()">Record Test</button>
+                    </div>
                 </div>
             </div>
 
@@ -1304,10 +1307,12 @@
                             or kick-drum synced dimmers</em>.</li>
                     <li style="margin-bottom:8px;"><strong style="color:var(--accent);">Direct: Transients
                             (Flux):</strong> Reacts strictly to sharp changes in audio (snares, plucks, drops). Best for
-                        <em>fast strobes, blinder blasts, or rapid resets</em>.</li>
+                        <em>fast strobes, blinder blasts, or rapid resets</em>.
+                    </li>
                     <li style="margin-bottom:8px;"><strong style="color:var(--accent);">Cycle: Rhythm
                             (Beat/4th):</strong> Steps forward sequentially every beat or 4th beat. Use this for
-                        <em>Gobo wheels, Color wheels, or step-based parameters</em> that should advance musically.</li>
+                        <em>Gobo wheels, Color wheels, or step-based parameters</em> that should advance musically.
+                    </li>
                 </ul>
 
                 <h4 style="color:var(--text); margin-top:20px; margin-bottom:10px;">Recommended Setups</h4>
@@ -1353,6 +1358,27 @@
             </div>
         </div>
     </div>
+
+    <!-- Record Test Overlay -->
+    <div id="recordTestOverlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:20000; flex-direction:column;">
+        <div
+            style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h2 style="margin:0; border:none; padding:0;" id="record-test-title">Record Test</h2>
+                <div style="font-size:12px; color:var(--text-dim); margin-top:5px;" id="record-test-subtitle">Waiting...
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button id="record-test-btn" class="btn danger" onclick="toggleRecordTest()">Record (Max 60s)</button>
+                <button class="btn" onclick="closeRecordTestOverlay()">Close</button>
+            </div>
+        </div>
+        <div id="record-test-channels"
+            style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:20px;">
+        </div>
+    </div>
+
 
     <script>
         // --- STATE ---

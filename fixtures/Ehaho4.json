@@ -20,22 +20,6 @@
         "twist": 15,
         "grating": 16
     },
-    "modes": {
-        "zoom": {
-            "manual": {
-                "range": [
-                    0,
-                    127
-                ]
-            },
-            "oscillation": {
-                "range": [
-                    128,
-                    255
-                ]
-            }
-        }
-    },
     "defaults": {
         "Dim": 0,
         "patterns": 0,
@@ -93,21 +77,9 @@
         "zoom": [
             {
                 "min": 0,
-                "center": 80,
-                "max": 127,
-                "vibe": "any"
-            },
-            {
-                "min": 224,
-                "center": 224,
-                "max": 255,
-                "vibe": "high"
-            },
-            {
-                "min": 0,
                 "center": 64,
-                "max": 200,
-                "vibe": "mid"
+                "max": 255,
+                "vibe": "any"
             }
         ],
         "rotate z": [
@@ -120,126 +92,46 @@
                     50,
                     100
                 ]
-            },
-            {
-                "min": 0,
-                "center": 64,
-                "max": 200,
-                "vibe": "mid"
-            },
-            {
-                "min": 225,
-                "center": 240,
-                "max": 255,
-                "vibe": "high"
             }
         ],
         "x pos": [
             {
-                "bin": 4,
-                "axis": "axis_a",
-                "width": 49,
-                "floors": [
-                    0,
-                    124,
-                    220
-                ],
-                "center": 64,
-                "max": 96,
-                "vibe": "chill"
-            },
-            {
                 "min": 0,
                 "center": 64,
                 "max": 127,
-                "vibe": "mid"
-            },
-            {
-                "min": 127,
-                "center": 127,
-                "max": 255,
-                "vibe": "high"
+                "vibe": "any"
             }
         ],
         "y pos": [
             {
-                "bin": 6,
-                "axis": "axis_b",
-                "width": 49,
-                "floors": [
-                    0,
-                    124,
-                    220
-                ],
-                "center": 64,
-                "max": 96,
-                "vibe": "chill"
-            },
-            {
                 "min": 0,
                 "center": 64,
                 "max": 127,
-                "vibe": "mid"
-            },
-            {
-                "min": 127,
-                "center": 127,
-                "max": 255,
-                "vibe": "high"
+                "vibe": "any"
             }
         ],
         "x rot": [
             {
                 "min": 0,
-                "max": 96,
-                "center": 64,
-                "vibe": "chill"
-            },
-            {
-                "min": 0,
-                "center": 64,
-                "max": 127,
-                "vibe": "mid"
-            },
-            {
-                "min": 127,
-                "center": 127,
+                "center": 0,
                 "max": 255,
-                "vibe": "high"
+                "vibe": "any"
             }
         ],
         "y rot": [
             {
                 "min": 0,
-                "max": 96,
-                "center": 64,
-                "vibe": "chill"
-            },
-            {
-                "min": 0,
-                "center": 64,
-                "max": 127,
-                "vibe": "mid"
-            },
-            {
-                "min": 127,
-                "center": 127,
+                "center": 0,
                 "max": 255,
-                "vibe": "high"
+                "vibe": "any"
             }
         ],
         "dots": [
             {
                 "min": 0,
-                "max": 0,
-                "center": 0,
-                "vibe": "chill"
-            },
-            {
-                "min": 0,
                 "center": 20,
                 "max": 63,
-                "vibe": "mid"
+                "vibe": "any"
             },
             {
                 "min": 63,
@@ -251,21 +143,9 @@
         "drawing": [
             {
                 "min": 0,
-                "max": 64,
-                "center": 0,
-                "vibe": "chill"
-            },
-            {
-                "min": 0,
-                "center": 64,
-                "max": 127,
-                "vibe": "mid"
-            },
-            {
-                "min": 0,
-                "center": 127,
                 "max": 255,
-                "vibe": "high"
+                "center": 0,
+                "vibe": "any"
             }
         ],
         "grating": [
@@ -280,34 +160,22 @@
             {
                 "min": 0,
                 "center": 5,
-                "max": 124
+                "max": 50
             }
         ],
         "twist": [
             {
                 "min": 0,
                 "center": 0,
-                "max": 255
+                "max": 25
             }
         ],
         "draw": [
             {
                 "min": 0,
                 "center": 0,
-                "max": 0,
-                "vibe": "chill"
-            },
-            {
-                "min": 0,
-                "center": 10,
-                "max": 64,
-                "vibe": "mid"
-            },
-            {
-                "min": 0,
-                "center": 127,
-                "max": 255,
-                "vibe": "high"
+                "max": 10,
+                "vibe": "any"
             }
         ],
         "color1": [
@@ -329,33 +197,31 @@
     },
     "ranges": {},
     "dynamics": {},
-    "macros": {},
     "modifiers": {
-        "patterns": "axis_b",
+        "patterns": "lfo",
         "zoom": "lfo",
         "rotate z": "axis_b",
         "x pos": "axis_a",
         "y pos": "axis_b",
         "x rot": "axis_d",
         "y rot": "axis_c",
-        "color1": "axis_a",
-        "color2": "axis_c",
+        "color1": "4th beat",
+        "color2": "bass",
         "dots": "axis_c",
-        "Dim": "state_machine",
+        "Dim": "4th beat",
         "group": "mode",
         "clip": "lfo",
-        "draw": "axis_a",
-        "twist": "bass",
+        "draw": "flux",
+        "twist": "lfo",
         "grating": "axis_c",
-        "drawing": "axis_c"
+        "drawing": "4th beat"
     },
-    "channel_macros": {},
     "step_data": {},
     "state_data": {
         "Dim": {
             "off": [
-                254,
-                254
+                0,
+                0
             ],
             "chill": 254,
             "mid": 220,
@@ -373,55 +239,67 @@
             "high": 50,
             "drop": 0,
             "default": 50
+        },
+        "draw": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 0,
+            "mid": 5,
+            "high": 10,
+            "drop": 0,
+            "default": 0
         }
     },
     "lfo_data": {
         "clip": {
             "shape": "sawtooth",
-            "bin": 5,
-            "speed": 0.5,
-            "react": 0.5
+            "bin": 10,
+            "speed": 0,
+            "react": 1.5
         },
         "patterns": {
             "shape": "sine",
-            "bin": 0,
-            "speed": 1.25,
-            "react": 0
+            "bin": 3,
+            "speed": 0.35,
+            "react": 0.1
         },
         "rotate z": {
-            "shape": "triangle",
-            "bin": 3,
-            "speed": 0.05,
-            "react": 0.5
+            "shape": "sine",
+            "bin": 7,
+            "speed": 0,
+            "react": 2.3
         },
         "x pos": {
             "shape": "sine",
-            "bin": 3,
+            "bin": 1,
             "speed": 0.05,
-            "react": 0.7
+            "react": 0.3
         },
         "y pos": {
             "shape": "sine",
             "bin": 6,
-            "speed": 0.5,
-            "react": 0.3
+            "speed": 0.05,
+            "react": 0.3,
+            "invert": false
         },
         "x rot": {
-            "shape": "sine",
-            "bin": 8,
+            "shape": "sawtooth",
+            "bin": 10,
             "speed": 0.05,
             "react": 0.5
         },
         "y rot": {
-            "shape": "sine",
-            "bin": 6,
+            "shape": "square",
+            "bin": 5,
             "speed": 0.1,
             "react": 0.5
         },
         "color1": {
-            "shape": "triangle",
-            "bin": 6,
-            "speed": 0.5,
+            "shape": "sine",
+            "bin": 1,
+            "speed": 0.1,
             "react": 0.5
         },
         "color2": {
@@ -433,32 +311,47 @@
         "dots": {
             "shape": "sawtooth",
             "bin": 8,
-            "speed": 0.5,
+            "speed": 0,
             "react": 0.5
         },
         "draw": {
-            "shape": "sine",
-            "bin": 0,
-            "speed": 0.5,
+            "shape": "square",
+            "bin": 9,
+            "speed": 0.05,
             "react": 0.5
         },
         "drawing": {
             "shape": "square",
             "bin": 0,
-            "speed": 0.5,
+            "speed": 0.1,
             "react": 0.5
         },
         "grating": {
+            "shape": "square",
+            "bin": 10,
+            "speed": 0,
+            "react": 0.5
+        },
+        "zoom": {
+            "shape": "triangle",
+            "bin": 0,
+            "speed": 0,
+            "react": 1.5,
+            "invert": false
+        },
+        "twist": {
+            "shape": "sine",
+            "bin": 5,
+            "speed": 0,
+            "react": 0.3
+        },
+        "Dim": {
             "shape": "sine",
             "bin": 0,
             "speed": 0.5,
             "react": 0.5
-        },
-        "zoom": {
-            "shape": "sawtooth",
-            "bin": 0,
-            "speed": 0.05,
-            "react": 1.1
         }
-    }
+    },
+    "modes": {},
+    "macros": {}
 }

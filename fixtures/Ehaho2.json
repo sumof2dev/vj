@@ -20,22 +20,6 @@
         "twist": 15,
         "grating": 16
     },
-    "modes": {
-        "zoom": {
-            "manual": {
-                "range": [
-                    0,
-                    127
-                ]
-            },
-            "oscillation": {
-                "range": [
-                    128,
-                    255
-                ]
-            }
-        }
-    },
     "defaults": {
         "Dim": 0,
         "patterns": 0,
@@ -72,7 +56,7 @@
         ],
         "patterns": [
             {
-                "min": 25,
+                "min": 0,
                 "max": 127,
                 "center": 26
             }
@@ -228,9 +212,8 @@
     },
     "ranges": {},
     "dynamics": {},
-    "macros": {},
     "modifiers": {
-        "patterns": "axis_b",
+        "patterns": "4th beat",
         "zoom": "bass",
         "rotate z": "axis_c",
         "x pos": "axis_a",
@@ -243,12 +226,11 @@
         "Dim": "state_machine",
         "group": "mode",
         "clip": "state_machine",
-        "draw": "axis_a",
+        "draw": "state_machine",
         "twist": "axis_a",
         "grating": "axis_c",
-        "drawing": "axis_d"
+        "drawing": "state_machine"
     },
-    "channel_macros": {},
     "step_data": {},
     "state_data": {
         "Dim": {
@@ -257,9 +239,9 @@
                 0
             ],
             "chill": 254,
-            "mid": 220,
-            "high": 220,
-            "drop": 220,
+            "mid": 254,
+            "high": 254,
+            "drop": 254,
             "default": 254
         },
         "clip": {
@@ -268,10 +250,112 @@
                 0
             ],
             "chill": 0,
-            "mid": 149,
-            "high": 149,
+            "mid": 0,
+            "high": 0,
             "drop": 0,
-            "default": 149
+            "default": 0
+        },
+        "draw": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 0,
+            "mid": 0,
+            "high": 0,
+            "drop": 0,
+            "default": 0
+        },
+        "drawing": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 0,
+            "mid": 0,
+            "high": 0,
+            "drop": 0,
+            "default": 0
+        }
+    },
+    "lfo_data": {
+        "patterns": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "rotate z": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "x pos": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "y pos": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "x rot": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "y rot": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "color1": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "color2": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "dots": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "draw": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "drawing": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "twist": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
+        },
+        "grating": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5
         }
     }
 }

@@ -37,7 +37,7 @@
             "position": "right"
         },
         "T1": {
-            "type": "Ehaho2",
+            "type": "Ehaho5",
             "category": "laser",
             "address": 75,
             "offset": 0,
@@ -45,12 +45,19 @@
             "invert_y": true
         },
         "T2": {
-            "type": "Ehahorythym",
+            "type": "Ehaho4",
             "category": "laser",
             "address": 75,
             "offset": 17,
             "invert_x": true,
             "invert_y": true
+        },
+        "temu ": {
+            "type": "temu",
+            "address": 160,
+            "offset": 0,
+            "invert_x": false,
+            "invert_y": false
         }
     }
 }

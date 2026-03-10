@@ -20,22 +20,6 @@
         "twist": 15,
         "grating": 16
     },
-    "modes": {
-        "zoom": {
-            "manual": {
-                "range": [
-                    0,
-                    127
-                ]
-            },
-            "oscillation": {
-                "range": [
-                    128,
-                    255
-                ]
-            }
-        }
-    },
     "defaults": {
         "Dim": 0,
         "patterns": 0,
@@ -58,35 +42,36 @@
     "calibration": {
         "Dim": [
             {
-                "min": 100,
+                "min": 0,
                 "max": 220,
                 "center": 245,
-                "control": "btn_rb"
+                "control": "ls_x"
             }
         ],
         "group": [
             {
-                "min": 250,
+                "min": 0,
                 "max": 250,
-                "center": 250
+                "center": 250,
+                "control": "rs_x"
             }
         ],
         "patterns": [
             {
-                "min": 1,
+                "min": 0,
                 "max": 255,
                 "center": 5,
                 "vibe": "chill",
-                "control": "dpad_up"
+                "control": "rs_y"
             }
         ],
         "zoom": [
             {
-                "min": 50,
+                "min": 0,
                 "center": 80,
                 "max": 255,
                 "vibe": "any",
-                "control": "rt"
+                "control": "lt"
             }
         ],
         "rotate z": [
@@ -99,7 +84,7 @@
                     50,
                     100
                 ],
-                "control": "lt"
+                "control": "rt"
             }
         ],
         "x pos": [
@@ -113,10 +98,10 @@
                     220
                 ],
                 "center": 64,
-                "max": 96,
+                "max": 255,
                 "vibe": "chill",
-                "control": "ls_x",
-                "min": 32
+                "control": "btn_lb",
+                "min": 0
             }
         ],
         "y pos": [
@@ -130,9 +115,9 @@
                     220
                 ],
                 "center": 64,
-                "max": 127,
+                "max": 255,
                 "vibe": "chill",
-                "control": "ls_y",
+                "control": "btn_rb",
                 "min": 0
             }
         ],
@@ -142,7 +127,7 @@
                 "max": 255,
                 "center": 64,
                 "vibe": "chill",
-                "control": "rs_x"
+                "control": "static"
             }
         ],
         "y rot": [
@@ -183,10 +168,10 @@
         ],
         "clip": [
             {
-                "min": 50,
+                "min": 0,
                 "center": 5,
-                "max": 50,
-                "control": "static"
+                "max": 220,
+                "control": "ls_y"
             }
         ],
         "twist": [
@@ -227,7 +212,6 @@
     },
     "ranges": {},
     "dynamics": {},
-    "macros": {},
     "modifiers": {
         "patterns": "controller",
         "zoom": "controller",
@@ -240,14 +224,13 @@
         "color2": "controller",
         "dots": "controller",
         "Dim": "controller",
-        "group": "mode",
+        "group": "controller",
         "clip": "controller",
         "draw": "controller",
         "twist": "controller",
         "grating": "controller",
         "drawing": "controller"
     },
-    "channel_macros": {},
     "step_data": {},
     "state_data": {
         "Dim": {
@@ -272,5 +255,7 @@
             "drop": 0,
             "default": 0
         }
-    }
+    },
+    "modes": {},
+    "macros": {}
 }

@@ -5,6 +5,7 @@ import subprocess
 import json
 import os
 import urllib.parse
+import ssl
 
 PORT = 8001
 
@@ -121,8 +122,19 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     socketserver.ThreadingTCPServer.allow_reuse_address = True
     with socketserver.ThreadingTCPServer(("0.0.0.0", PORT), LauncherHandler) as httpd:
-        print(f"🚀 Launcher Service running at port {PORT}")
-        print(f"👉 Manager UI: http://localhost:{PORT}/manager.html")
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        cert_path = os.path.join(BASE_DIR, 'cert.pem')
+        key_path = os.path.join(BASE_DIR, 'key.pem')
+        protocol = "http"
+        if os.path.exists(cert_path) and os.path.exists(key_path):
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(certfile=cert_path, keyfile=key_path)
+            httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+            protocol = "https"
+            print(f"🔒 SSL Enabled (Using {cert_path})")
+
+        print(f"🚀 Launcher Service running at port {PORT} ({protocol})")
+        print(f"👉 Manager UI: {protocol}://localhost:8000/manager.html")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

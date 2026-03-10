@@ -393,6 +393,16 @@
         <div id="loader" class="loading-spinner"></div>
 
         <!-- LIVE DASHBOARD (Mirrored from Remote) -->
+        <div id="wsCertWarning"
+            style="display:none; background:rgba(255,51,102,0.2); padding:10px; border-radius:10px; margin-top:10px; border:1px solid var(--error);">
+            <p style="margin:0; color:#fff; font-size:0.85rem;">Live Data is blocked. Your browser needs you to accept
+                the security certificate for port 8765.</p>
+            <a href="#" id="certAcceptLink" target="_blank" class="btn btn-restart"
+                style="margin-top:10px; font-size:0.8rem; padding:0.5rem; display:inline-block; text-decoration:none;"
+                onclick="setTimeout(()=>document.getElementById('wsCertWarning').style.display='none', 1000)">Click to
+                Accept Cert</a>
+        </div>
+
         <div class="dashboard-grid" id="liveDashboard" style="display:none; opacity:0; transition: opacity 0.5s;">
 
             <!-- Audio State Overview -->
@@ -524,15 +534,28 @@
         // --- DASHBOARD WEBSOCKET ---
         let ws = null;
         let currentBgUrl = '';
+        let wsErrorCount = 0;
 
         function connectLiveDashboard() {
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            ws = new WebSocket(`${wsProtocol}://${host}:8765`);
+            const wsUrl = `${wsProtocol}://${host}:8765`;
+            ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
+                wsErrorCount = 0;
+                document.getElementById('wsCertWarning').style.display = 'none';
                 document.getElementById('liveDashboard').style.display = 'flex';
                 // Trigger reflow to fade in
                 setTimeout(() => document.getElementById('liveDashboard').style.opacity = '1', 50);
+            };
+
+            ws.onerror = (err) => {
+                wsErrorCount++;
+                if (wsProtocol === 'wss' && wsErrorCount > 0) {
+                    const certLink = document.getElementById('certAcceptLink');
+                    certLink.href = `https://${host}:8765`;
+                    document.getElementById('wsCertWarning').style.display = 'block';
+                }
             };
 
             ws.onclose = () => {

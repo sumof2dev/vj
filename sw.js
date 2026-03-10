@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ravebox-vj-v4';
+const CACHE_NAME = 'ravebox-vj-v6';
 const ASSETS = [
     '/',
     '/index.html',
@@ -37,6 +37,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
+
+    // Bypass API routes completely
+    const url = new URL(event.request.url);
+    if (url.pathname.startsWith('/status') ||
+        url.pathname.startsWith('/start') ||
+        url.pathname.startsWith('/stop') ||
+        url.pathname.startsWith('/restart') ||
+        url.pathname.startsWith('/api')) {
+        return; // Let the browser handle these normally
+    }
 
     // For navigation requests, try network first, then cache
     if (event.request.mode === 'navigate') {
