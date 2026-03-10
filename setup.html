@@ -1396,6 +1396,7 @@
         let currentProfile = null;
         let availableProfiles = [];
         let ws = null;
+        let latestDmxState = {};
 
         // Fixture Setup Enhancements State
         let activeTestDevices = []; // Array of devNames
@@ -2417,6 +2418,9 @@
             ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
+                    if (msg.dmx) {
+                        latestDmxState = msg.dmx;
+                    }
                 } catch (e) {
                     console.error("WS Parse Error:", e);
                 }
@@ -3479,6 +3483,146 @@
                 console.error(e);
                 alert("❌ Error saving presets.");
             }
+        }
+
+        // --- RECORD TEST VISUALIZER ---
+        let recordTestActive = false;
+        let recordTestMaxFrames = 30 * 60;
+        let recordTestInterval = null;
+        let recordTestChannelsInfo = [];
+        let recordTestDevName = null;
+
+        function showRecordTestOverlay() {
+            if (!currentProfile) {
+                alert('Please load or save a profile first.');
+                return;
+            }
+            const profileFileName = document.getElementById('fix-filename').value;
+            if (!profileFileName) {
+                alert('Please load or save a profile first.');
+                return;
+            }
+            let targetDevName = null;
+            let targetDevCfg = null;
+            const allDevices = stageConfig.devices || {};
+            for (const [dName, cfg] of Object.entries(allDevices)) {
+                if (cfg.type === profileFileName) {
+                    targetDevName = dName;
+                    targetDevCfg = cfg;
+                    break;
+                }
+            }
+            if (!targetDevName) {
+                alert('No fixture on stage uses this profile. Add one in the Manager tab first.');
+                return;
+            }
+            recordTestDevName = targetDevName;
+            document.getElementById('record-test-subtitle').innerText = 'Simulating via ' + targetDevName;
+            const container = document.getElementById('record-test-channels');
+            container.innerHTML = '';
+            recordTestChannelsInfo = [];
+            const sortedChans = Object.entries(currentProfile.channels).sort((a, b) => {
+                const offA = typeof a[1] === 'object' ? a[1].offset : a[1];
+                const offB = typeof b[1] === 'object' ? b[1].offset : b[1];
+                return offA - offB;
+            });
+            sortedChans.forEach(([role, val]) => {
+                const offset = typeof val === 'object' ? val.offset : val;
+                const absAddr = targetDevCfg.address + targetDevCfg.offset + offset;
+                recordTestChannelsInfo.push({ role, addr: absAddr, data: [] });
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; gap:20px; align-items:center; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);';
+                const labelDiv = document.createElement('div');
+                labelDiv.style.cssText = 'width:120px; flex-shrink:0; font-size:12px; font-weight:bold; color:var(--text-dim); text-transform:uppercase;';
+                labelDiv.innerHTML = role + '<br><span style="font-size:10px; color:#666; font-weight:normal">CH ' + absAddr + '</span>';
+                const canvasContainer = document.createElement('div');
+                canvasContainer.style.cssText = 'flex:1; height:60px; position:relative;';
+                const canvas = document.createElement('canvas');
+                canvas.id = 'canvas-' + absAddr;
+                canvas.style.cssText = 'width:100%; height:100%; display:block; background:#0a0a0f; border:1px inset #222; border-radius:4px;';
+                canvasContainer.appendChild(canvas);
+                row.appendChild(labelDiv);
+                row.appendChild(canvasContainer);
+                container.appendChild(row);
+            });
+            document.getElementById('recordTestOverlay').style.display = 'flex';
+            requestAnimationFrame(drawRecordTest);
+        }
+
+        function closeRecordTestOverlay() {
+            if (recordTestActive) toggleRecordTest();
+            document.getElementById('recordTestOverlay').style.display = 'none';
+        }
+
+        function toggleRecordTest() {
+            const btn = document.getElementById('record-test-btn');
+            if (!recordTestActive) {
+                recordTestActive = true;
+                btn.innerText = 'Stop Recording';
+                btn.className = 'btn';
+                recordTestChannelsInfo.forEach(ch => ch.data = []);
+                if (recordTestInterval) clearInterval(recordTestInterval);
+                recordTestInterval = setInterval(recordTestTick, 1000 / 30);
+            } else {
+                recordTestActive = false;
+                btn.innerText = 'Record (Max 60s)';
+                btn.className = 'btn danger';
+                if (recordTestInterval) clearInterval(recordTestInterval);
+                recordTestInterval = null;
+            }
+        }
+
+        function recordTestTick() {
+            if (!recordTestActive) return;
+            const dmx = latestDmxState || {};
+            let isFull = false;
+            recordTestChannelsInfo.forEach(ch => {
+                const stateKey = recordTestDevName + '_' + ch.role;
+                const val = dmx[stateKey] !== undefined ? dmx[stateKey] : 0;
+                ch.data.push(val);
+                if (ch.data.length >= recordTestMaxFrames) isFull = true;
+            });
+            requestAnimationFrame(drawRecordTest);
+            if (isFull) toggleRecordTest();
+        }
+
+        function drawRecordTest() {
+            recordTestChannelsInfo.forEach(ch => {
+                const canvas = document.getElementById('canvas-' + ch.addr);
+                if (!canvas) return;
+                if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
+                if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                ctx.beginPath();
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 1;
+                ctx.moveTo(0, h / 2);
+                ctx.lineTo(w, h / 2);
+                ctx.stroke();
+                if (ch.data.length === 0) return;
+                ctx.beginPath();
+                ctx.strokeStyle = '#7c4dff';
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+                const xStep = w / recordTestMaxFrames;
+                for (let i = 0; i < ch.data.length; i++) {
+                    const px = i * xStep;
+                    const py = h - ((ch.data[i] / 255) * h);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+                const lastVal = ch.data[ch.data.length - 1];
+                const lastX = (ch.data.length - 1) * xStep;
+                const lastY = h - ((lastVal / 255) * h);
+                ctx.beginPath();
+                ctx.fillStyle = '#fff';
+                ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
         }
 
         window.onload = init;

@@ -18,6 +18,7 @@ let currentProfile = null;
 let availableProfiles = [];
 let ws = null;
 let testProfiles = {}; // Cache of loaded profiles for testing
+let latestDmxState = {}; // Live DMX values from engine (for Record Test)
 
 // --- INIT ---
 async function init() {
@@ -1163,7 +1164,6 @@ function connectWs() {
         document.getElementById('conn-status').innerText = "🟢 Connected";
         document.getElementById('conn-status').style.color = "var(--success)";
     };
-    let latestDmxState = {};
     ws.onmessage = (event) => {
         try {
             const msg = JSON.parse(event.data);
@@ -2164,7 +2164,7 @@ function drawRecordTest() {
         if (ch.data.length === 0) return;
 
         ctx.beginPath();
-        ctx.strokeStyle = 'var(--accent)';
+        ctx.strokeStyle = '#7c4dff';
         ctx.lineWidth = 2;
         ctx.lineJoin = 'round';
 
