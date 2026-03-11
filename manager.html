@@ -373,6 +373,33 @@
             font-weight: bold;
             font-size: 0.85rem;
         }
+
+        /* Modal / Advanced Popup */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-content {
+            transform: scale(0.9);
+            animation: modalIn 0.3s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes modalIn {
+            to {
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 
@@ -393,14 +420,10 @@
         <div id="loader" class="loading-spinner"></div>
 
         <!-- LIVE DASHBOARD (Mirrored from Remote) -->
-        <div id="wsCertWarning"
-            style="display:none; background:rgba(255,51,102,0.2); padding:10px; border-radius:10px; margin-top:10px; border:1px solid var(--error);">
-            <p style="margin:0; color:#fff; font-size:0.85rem;">Live Data is blocked. Your browser needs you to accept
-                the security certificate for port 8765.</p>
-            <a href="#" id="certAcceptLink" target="_blank" class="btn btn-restart"
-                style="margin-top:10px; font-size:0.8rem; padding:0.5rem; display:inline-block; text-decoration:none;"
-                onclick="setTimeout(()=>document.getElementById('wsCertWarning').style.display='none', 1000)">Click to
-                Accept Cert</a>
+        <div id="wsCertWarning" style="display:none; padding:10px; margin-top:10px;">
+            <p style="margin:0; color:#fff; font-size:1rem; font-weight:600;">Loading... Please wait</p>
+            <a href="#" onclick="openAdvancedModal(); return false;"
+                style="font-size:0.6rem; color:var(--text-dim); opacity:0.6; text-decoration:none; display:block; margin-top:4px;">(advanced)</a>
         </div>
 
         <div class="dashboard-grid" id="liveDashboard" style="display:none; opacity:0; transition: opacity 0.5s;">
@@ -452,6 +475,22 @@
             <a id="link-visual" href="#">Visualizer</a>
             <a id="link-remote" href="#">Remote</a>
             <a id="link-setup" href="#">Setup</a>
+        </div>
+    </div>
+
+    <!-- Advanced Settings Modal -->
+    <div id="advancedModal" class="modal-overlay">
+        <div class="container modal-content">
+            <h2 style="font-size:1.3rem; margin-bottom:1rem;">Advanced Connection</h2>
+            <div style="text-align:left; margin: 15px 0;">
+                <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">WebSocket Port</label>
+                <input type="number" id="wsPortInput" class="dash-panel"
+                    style="width:100%; border:1px solid rgba(255,255,255,0.1); margin-top:5px; padding:12px; color:#fff; font-size:1rem;"
+                    placeholder="8765">
+            </div>
+            <button class="btn btn-start" style="width:100%; margin-bottom:10px;" onclick="saveAdvancedPort()">Save & Reconnect</button>
+            <button class="btn btn-restart" style="width:100%; margin-bottom:10px;" onclick="signCert()">Sign Certificate</button>
+            <button class="btn" style="width:100%; background:transparent; color:var(--text-dim);" onclick="closeAdvancedModal()">Cancel</button>
         </div>
     </div>
 
@@ -536,9 +575,33 @@
         let currentBgUrl = '';
         let wsErrorCount = 0;
 
+        function openAdvancedModal() {
+            document.getElementById('advancedModal').style.display = 'flex';
+        }
+
+        function closeAdvancedModal() {
+            document.getElementById('advancedModal').style.display = 'none';
+        }
+
+        function saveAdvancedPort() {
+            const port = document.getElementById('wsPortInput').value;
+            if (port) {
+                localStorage.setItem('vj_ws_port', port);
+                location.reload();
+            }
+        }
+
+        function signCert() {
+            const port = document.getElementById('wsPortInput').value || '8765';
+            window.open(`https://${host}:${port}`, '_blank');
+        }
+
         function connectLiveDashboard() {
+            const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+            document.getElementById('wsPortInput').value = savedPort;
+            
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            const wsUrl = `${wsProtocol}://${host}:8765`;
+            const wsUrl = `${wsProtocol}://${host}:${savedPort}`;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
@@ -552,8 +615,6 @@
             ws.onerror = (err) => {
                 wsErrorCount++;
                 if (wsProtocol === 'wss' && wsErrorCount > 0) {
-                    const certLink = document.getElementById('certAcceptLink');
-                    certLink.href = `https://${host}:8765`;
                     document.getElementById('wsCertWarning').style.display = 'block';
                 }
             };

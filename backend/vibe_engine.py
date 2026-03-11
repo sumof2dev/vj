@@ -85,20 +85,18 @@ class VibeEngine:
         self.energy_history.append(energy)
         
         if len(self.energy_history) >= 60 and len(self.impact_history) >= 15:
-            e_list = list(self.energy_history)
-            old_energy = e_list[-60]
+            old_energy = self.energy_history[-60]
             trend_long = energy - old_energy
             
-            i_list = list(self.impact_history)
-            old_impact = i_list[0]
+            old_impact = self.impact_history[0]
             impact_spike = impact - old_impact
 
             # Minimum hold durations per state (seconds)
             HOLD_TIMES = {"building": 1.0, "tension": 1.5, "dropping": 2.0}
             
             # Sustained spike check: average of last 5 impact samples vs 5 oldest
-            recent_avg = sum(i_list[-5:]) / 5.0
-            old_avg = sum(i_list[:5]) / 5.0
+            recent_avg = sum(self.impact_history[i] for i in range(-5, 0)) / 5.0
+            old_avg = sum(self.impact_history[i] for i in range(0, 5)) / 5.0
             sustained_spike = recent_avg - old_avg
             
             # If we're still in a hold period, don't override

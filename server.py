@@ -188,11 +188,14 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_error(500, str(e))
 
-# Add manifest mime-type
+# Add MIME types for PWA and assets
 http.server.SimpleHTTPRequestHandler.extensions_map.update({
     '.json': 'application/json',
     '.manifest': 'application/manifest+json',
-    '.webmanifest': 'application/manifest+json'
+    '.webmanifest': 'application/manifest+json',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.svg': 'image/svg+xml'
 })
 
 if __name__ == '__main__':

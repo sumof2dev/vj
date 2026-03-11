@@ -15,12 +15,12 @@
             "twist": 178,
             "grating": 255
         },
-        "profile": "temu"
+        "profile": "none"
     },
     "maxrotate": {
-        "vibe": "high",
+        "vibe": "drop",
         "target_category": "laser",
-        "profile": "temu",
+        "profile": "none",
         "channels": {
             "Dim": 220,
             "patterns": 123,
@@ -35,12 +35,14 @@
             "drawing": 0,
             "twist": 0,
             "grating": 0
-        }
+        },
+        "trigger": "transient:dropping",
+        "category": "intense shit"
     },
     "wonky": {
         "vibe": "wonky",
         "target_category": "laser",
-        "profile": "temu",
+        "profile": "none",
         "channels": {
             "Dim": 220,
             "zoom": 0,
@@ -61,7 +63,7 @@
     "machinegun": {
         "vibe": "machine_gun",
         "target_category": "laser",
-        "profile": "temu",
+        "profile": "none",
         "channels": {
             "Dim": 220,
             "zoom": 0,
@@ -83,7 +85,7 @@
         "vibe": "tearout",
         "trigger": "bass_style:tearout",
         "target_category": "laser",
-        "profile": "temu",
+        "profile": "none",
         "channels": {
             "unassigned_ch1": 157,
             "unassigned_ch2": 255,
@@ -95,10 +97,10 @@
         }
     },
     "purpletriangle": {
-        "vibe": "drop",
-        "trigger": "transient:dropping",
+        "vibe": "high",
+        "trigger": "vibe:high",
         "target_category": "laser",
-        "profile": "temu",
+        "profile": "none",
         "channels": {
             "Dim": 220,
             "patterns": 75,

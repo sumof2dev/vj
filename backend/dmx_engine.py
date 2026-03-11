@@ -10,6 +10,22 @@ import collections
 from typing import Dict
 import threading
 
+
+class ChannelConfig:
+    """Pre-resolved channel configuration for hot-loop performance."""
+    __slots__ = ['mod_name', 'vibe_map', 'any_cal', 'states', 'steps', 'default_val', 'is_controller']
+    def __init__(self, mod_name, vibe_map, any_cal, states, steps, default_val):
+        self.mod_name = mod_name
+        self.vibe_map = vibe_map # Map[vibe_str] -> (min, center, max)
+        self.any_cal = any_cal   # (min, center, max) or None
+        self.states = states
+        self.steps = steps
+        self.default_val = default_val
+        self.is_controller = (mod_name == 'controller')
+
+    def get_cal(self, vibe):
+        return self.vibe_map.get(vibe, self.any_cal)
+
 class LogicMatrix:
     """The modular core. Generates continuous LFOs and Envelopes."""
     def __init__(self):
@@ -106,6 +122,8 @@ class DMXEngine:
         self.rot_state = 'IDLE' 
         self._last_scene_switch_beat = 0
         self._last_vibe = 'mid'
+        self._last_transient = 'steady'
+        self._preset_holds = {}
         
         # System State Detectors (Bass Styles & Rhythm)
         self.rhythm_state = {'boots': False, 'cats': False, 'cha': False}
@@ -133,7 +151,8 @@ class DMXEngine:
         self._presets_config_path = os.path.join('fixtures', 'presets.json')
         self._last_reload_check = 0
         self._fixture_mtimes = {} 
-        self._fast_cache = {}
+        self._fixture_mtimes = {} 
+        self._fast_cache = {} # Map[fixture_type][role] -> ChannelConfig
         
         self._load_profiles()
         
@@ -175,29 +194,47 @@ class DMXEngine:
                 mods = fixture.get('modifiers', {})
                 mod_name = mods.get(role, 'static')
                 
-                # Auto-migrate legacy axis strings to local LFOs
                 if mod_name.startswith('axis_'):
                     mod_name = 'lfo'
                     
-                # Register the channel's LFO if needed
                 lfo_data = fixture.get('lfo_data', {}).get(role, {})
                 if mod_name == 'lfo':
                     self.active_lfos[f"{fix_name}_{role}"] = lfo_data
                 
-                cals = fixture.get('calibration', {}).get(role, [])
-                if isinstance(cals, dict): cals = [cals]
+                raw_cals = fixture.get('calibration', {}).get(role, [])
+                if isinstance(raw_cals, dict): raw_cals = [raw_cals]
                     
-                states = fixture.get('state_data', {}).get(role, {})
                 steps = list(fixture.get('step_data', {}).values())
                 default_val = fixture.get('defaults', {}).get(role, 127)
+                states = fixture.get('state_data', {}).get(role, {})
+
+                # Pre-resolve vibe mappings
+                vibe_map = {}
+                any_cal = None
+                for c in raw_cals:
+                    v = c.get('vibe', 'any')
+                    c_min = int(c.get('min', 0))
+                    c_center = int(c.get('center', default_val))
+                    c_max = int(c.get('max', 255))
+                    cal_tuple = (c_min, c_center, c_max)
+                    
+                    if v == 'any':
+                        any_cal = cal_tuple
+                    else:
+                        vibe_map[v] = cal_tuple
                 
-                self._fast_cache[fix_name][role] = {
-                    'mod_name': mod_name,
-                    'cals': cals,
-                    'states': states,
-                    'steps': steps,
-                    'default_val': default_val
-                }
+                # If any_cal is missing, ensure we have a fallback
+                if any_cal is None:
+                    any_cal = (0, default_val, 255)
+
+                self._fast_cache[fix_name][role] = ChannelConfig(
+                    mod_name=mod_name,
+                    vibe_map=vibe_map,
+                    any_cal=any_cal,
+                    states=states,
+                    steps=steps,
+                    default_val=default_val
+                )
 
     def _hot_reload_loop(self):
         """Background thread to check for file changes without blocking the render loop."""
@@ -277,7 +314,7 @@ class DMXEngine:
             should_switch = True
         elif self.scene_freq == 3 and beats_passed >= 16: # 4 Bars
             should_switch = True
-        elif self.scene_freq == 4 and current_vibe != self._last_vibe: # On Vibe Change
+        elif self.scene_freq == 4 and self.transient != self._last_transient and self.transient in ['dropping', 'building']: # On Spectral Shift
             should_switch = True
 
         if should_switch:
@@ -286,6 +323,7 @@ class DMXEngine:
             self._last_scene_switch_beat = current_beat
             
         self._last_vibe = current_vibe
+        self._last_transient = self.transient
 
         # 3. Process All Devices
         for i, (dev_name, dev_cfg) in enumerate(self.stage_config.get('devices', {}).items()):
@@ -331,13 +369,15 @@ class DMXEngine:
                 active_audio = audio
                 active_logic = self.logic
 
-            # Layer 1: Calculate the pure mapped math value
-            val = self._calculate_channel(role, active_audio, active_logic, zone_idx, fixture, dev_cfg, dev_cfg.get('type'))
-            
             # Layer 2: Preset Overrides (Manual UI Triggers & System Triggers)
             # BYPASS: If the channel is set to 'controller', we skip presets to allow absolute control
-            cache = self._fast_cache.get(dev_cfg.get('type'), {}).get(role, {})
-            is_controller = cache.get('mod_name') == 'controller'
+            cache = self._fast_cache.get(dev_cfg.get('type'), {}).get(role)
+            if not cache: continue # Should not happen with built cache
+            
+            # Layer 1: Calculate the pure mapped math value
+            val = self._calculate_channel(role, active_audio, active_logic, zone_idx, cache, dev_cfg.get('type'))
+
+            is_controller = cache.is_controller
             
             preset_override_val = None
             if not is_controller:
@@ -375,13 +415,31 @@ class DMXEngine:
                         vibe_val = p_data['vibe']
                         # Map known vibe names to proper trigger format
                         VIBE_TRIGGER_MAP = {
-                            # 'drop': 'transient:dropping', 'dropping': 'transient:dropping',
-                            # 'building': 'transient:building', 'tension': 'transient:tension',
                             'machine_gun': 'bass_style:machine_gun', 'tearout': 'bass_style:tearout',
                             'wonky': 'bass_style:wonky', 'sub': 'bass_style:sub',
                         }
                         p_trigger = VIBE_TRIGGER_MAP.get(vibe_val, f"vibe:{vibe_val}")
+                    
+                    is_active = False
                     if p_trigger and p_trigger in active_triggers:
+                        is_active = True
+                    elif p_trigger and p_trigger.startswith('bin:'):
+                        # Parse dynamic bin thresholds e.g., "bin:4>0.8"
+                        try:
+                            parts = p_trigger.split('>')
+                            bin_idx = int(parts[0].split(':')[1])
+                            threshold = float(parts[1])
+                            bins = audio.get('bins', [0.0]*11)
+                            
+                            if bin_idx < len(bins) and bins[bin_idx] > threshold:
+                                is_active = True
+                                self._preset_holds[p_trigger] = time.time() + 0.4 # 400ms hold/decay
+                            elif p_trigger in self._preset_holds and time.time() < self._preset_holds[p_trigger]:
+                                is_active = True
+                        except Exception:
+                            pass # Fail silently on malformed triggers
+
+                    if is_active:
                         if is_preset_applicable(p_data, dev_name):
                             # Check for fixture-specific override first, then fallback to global channels
                             p_fixture_data = p_data.get('fixture_payloads', {}).get(dev_name)
@@ -401,24 +459,22 @@ class DMXEngine:
             if 0 < final_addr < len(self.universe):
                 self.universe[final_addr] = max(0, min(255, val))
 
-    def _calculate_channel(self, role, audio, logic_matrix, zone_idx, fixture, dev_cfg, fixture_name):
+    def _calculate_channel(self, role, audio, logic_matrix, zone_idx, cache, fixture_name):
         """The Universal Mapper: Subscribes to the Logic Matrix and applies 3-point scaling."""
-        
-        # Fetch Pre-compiled Routing & Calibration Config
-        cache = self._fast_cache.get(fixture_name, {}).get(role, {})
-        mod_name = cache.get('mod_name', 'static')
-        cals = cache.get('cals', [])
+        mod_name = cache.mod_name
 
         # --- CONTROLLER MODIFIER BYPASS ---
-        # Channels with this selection WON'T be influenced by audio
-        if mod_name == 'controller':
+        if cache.is_controller:
+            # Controller mode still uses raw calibration dictionaries from fixture for complex mapping
+            # (Keeping controller logic mostly as is, but could be optimized further)
+            fixture = self.fixtures.get(fixture_name, {})
+            cals = fixture.get('calibration', {}).get(role, [])
+            if isinstance(cals, dict): cals = [cals]
             if not cals: return 0
             
-            # Manage latch index for this role
             if role not in self.channel_latches:
                 self.channel_latches[role] = 0
             
-            # D-pad Up/Down cycles the active range in the calibration list
             dpad_up = self.gamepad.get('dpad_up', 0) > 0.5 and not (self.prev_gamepad.get('dpad_up', 0) > 0.5)
             dpad_down = self.gamepad.get('dpad_down', 0) > 0.5 and not (self.prev_gamepad.get('dpad_down', 0) > 0.5)
             
@@ -427,7 +483,6 @@ class DMXEngine:
             elif dpad_down:
                 self.channel_latches[role] = (self.channel_latches[role] - 1) % len(cals)
 
-            # Get the currently selected mapping
             l_idx = self.channel_latches[role]
             mapping = cals[l_idx % len(cals)]
             
@@ -435,107 +490,60 @@ class DMXEngine:
             m_min = int(mapping.get('min', 0))
             m_max = int(mapping.get('max', 255))
             
-            # 1. STATIC MODE
             if control_id == 'static': return m_max
             
-            # 2. INPUT MAPPING
             raw_val = self.gamepad.get(control_id, 0.0)
-            
-            # Joysticks: CENTER RESET with Deadzone
             if control_id in ['ls_x', 'ls_y', 'rs_x', 'rs_y']:
                 norm = abs(raw_val - 0.5) * 2.0
-                if norm < 0.1: norm = 0.0 # 10% Deadzone
+                if norm < 0.1: norm = 0.0 
                 return int(m_min + (norm * (m_max - m_min)))
-                
-            # Triggers & Buttons: MOMENTARY
             else:
                 return int(m_min + (raw_val * (m_max - m_min)))
 
-        # --- AUDIO MAPPING LOGIC (Bypassed if Controller Mod active) ---
+        # --- AUDIO MAPPING LOGIC ---
         current_vibe = audio.get('vibe', 'mid')
-        active_range = None
-        
-        # Priority: Specific Vibe match, then 'any'
-        for c in cals:
-            if c.get('vibe') == current_vibe:
-                active_range = c
-                break
-        if not active_range:
-            for c in cals:
-                if c.get('vibe', 'any') == 'any':
-                    active_range = c
-                    break
-        
-        # 3. Gating Logic: If no match, return 0 (ignores modifier until match) 
-        if not active_range:
-            return 0
+        cal = cache.get_cal(current_vibe)
+        if not cal: return 0
             
-        c_min = active_range.get('min')
-        if c_min is None: c_min = 0
+        c_min, c_center, c_max = cal
         
-        default_val = cache.get('default_val', 127)
+        # Force to minimum if volume is zero
+        if audio.get('vol', 1.0) <= 0.0:
+            return c_min
             
-        c_center = active_range.get('center')
-        if c_center is None: c_center = default_val
-        
-        c_max = active_range.get('max')
-        if c_max is None: c_max = 255
-        
-        # --- DISCRETE HANDLERS (Arrays/Lookups) ---
+        # --- DISCRETE HANDLERS ---
         if mod_name == '4th beat':
-            steps = cache.get('steps', [])
+            steps = cache.steps
             if not steps: 
-                # Fallback: slow cycle between min and max if no steps defined
                 span = c_max - c_min
-                cycle_len = 16 # 16 beats per full cycle
                 val = c_min + ((logic_matrix.beat_count // 4) % 4) * (span // 4)
                 return max(c_min, min(c_max, int(val)))
-                
-            # Random selection every 4 beats (seeded for stability)
             seed = (logic_matrix.beat_count // 4) + zone_idx + 42
             rng = random.Random(seed)
             val = rng.choice(steps)
             return max(c_min, min(c_max, val))
             
         if mod_name == 'beat':
-            steps = cache.get('steps', [])
+            steps = cache.steps
             if steps:
-                # Random selection every beat (seeded for stability)
                 seed = logic_matrix.beat_count + zone_idx + 7
                 rng = random.Random(seed)
                 val = rng.choice(steps)
                 return max(c_min, min(c_max, val))
-
-            # Legacy Fallback: Cycle through the range [c_min, c_max]
             if c_max <= c_min: return c_min
             span = c_max - c_min
             val = c_min + ((logic_matrix.beat_count * 17 + zone_idx * 13) % (span + 1))
             return max(c_min, min(c_max, val))
 
-        # --- STATE MACHINE HANDLER (For Mode/Dimmer Combo Channels) ---
+        # --- STATE MACHINE HANDLER ---
         if mod_name == 'state_machine':
-            states = cache.get('states', {})
-            
-            # Helper to get sanitized state value
-            def get_state_val(key, default):
-                v = states.get(key)
-                return v if v is not None else default
-
-            # 1. Master Blackout (Tension state or UI Master Intensity slider)
-            # The LogicMatrix outputs intensity from -1.0 to 1.0
-            # if self.transient == 'tension' or logic_matrix.state.get('intensity', 1.0) < -0.8:
+            states = cache.states
             if logic_matrix.state.get('intensity', 1.0) < -0.8:
-                off_val = get_state_val('off', 0)
+                off_val = states.get('off', 0)
                 if isinstance(off_val, list):
                     return off_val[0] if off_val and off_val[0] is not None else 0
                 return off_val
-            
-            # 2. Standard Playback (Vibe based selection)
-            # (Note: Drops are now handled via Preset Overlays rather than hardcoded logic)
-            current_vibe = audio.get('vibe', 'mid')
-            return get_state_val(current_vibe, get_state_val('default', 254))
-
-        # --- THE FOLLOWING LOGIC IS BYPASSED IF CONTROLLER MOD IS ACTIVE ---
+            return states.get(current_vibe, states.get('default', 254))
 
         # --- CONTINUOUS MATH MAPPING ---
         if mod_name == 'static':
@@ -544,25 +552,16 @@ class DMXEngine:
         if mod_name == 'lfo':
             lfo_id = f"{fixture_name}_{role}"
             val_norm = logic_matrix.state.get(lfo_id, 0.0)
-            
-
-                    
-
         else:
             val_norm = logic_matrix.state.get(mod_name, 0.0)
 
         # 3-Point Calibration Map
-        # Clamps normalized signal to -1.0 to 1.0
         val_norm = max(-1.0, min(1.0, val_norm))
-        
         if val_norm < 0:
-            # Scale -1.0 to 0.0 against Min -> Center
             out = c_center + val_norm * (c_center - c_min)
         else:
-            # Scale 0.0 to 1.0 against Center -> Max
             out = c_center + val_norm * (c_max - c_center)
             
-        # Final safety clamp to hardware calibration bounds
         return max(c_min, min(c_max, int(out)))
 
     # --- STANDARD ENGINE FUNCTIONS ---

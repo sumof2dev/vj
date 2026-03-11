@@ -43,8 +43,8 @@
         "Dim": [
             {
                 "min": 0,
-                "max": 255,
-                "center": 245
+                "max": 254,
+                "center": 220
             }
         ],
         "group": [
@@ -169,8 +169,8 @@
         "color1": [
             {
                 "min": 0,
-                "center": 127,
-                "max": 255,
+                "center": 64,
+                "max": 127,
                 "vibe": "any"
             }
         ],
@@ -193,8 +193,8 @@
         "y pos": "axis_b",
         "x rot": "axis_d",
         "y rot": "axis_c",
-        "color1": "4th beat",
-        "color2": "bass",
+        "color1": "lfo",
+        "color2": "lfo",
         "dots": "axis_c",
         "Dim": "lfo",
         "group": "mode",
@@ -286,13 +286,13 @@
         },
         "color1": {
             "shape": "sine",
-            "bin": 1,
-            "speed": 0.1,
-            "react": 0.5
+            "bin": 8,
+            "speed": 0.05,
+            "react": 0.1
         },
         "color2": {
             "shape": "sine",
-            "bin": 0,
+            "bin": 6,
             "speed": 0.5,
             "react": 0.5
         },
@@ -335,9 +335,9 @@
         },
         "Dim": {
             "shape": "sine",
-            "bin": 0,
-            "speed": 0.5,
-            "react": 0.5
+            "bin": 4,
+            "speed": 0,
+            "react": 0.8
         }
     },
     "modes": {},

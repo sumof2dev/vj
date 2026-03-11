@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
@@ -272,12 +272,17 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            height: 180px;
+            max-height: 300px;
             overflow-y: auto;
             border: 1px solid #222;
             padding: 8px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 8px;
+        }
+
+        details.debug-section[open] .monitor-grid {
+            max-height: none;
+            overflow-y: visible;
         }
 
         .monitor-group {
@@ -483,8 +488,9 @@
             background: #111;
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 12px;
+            padding: 0;
             margin-bottom: 16px;
+            overflow: hidden;
         }
 
         details.debug-section>summary {
@@ -494,41 +500,57 @@
             letter-spacing: 1px;
             cursor: pointer;
             list-style: none;
-            /* Hide default arrow in some browsers */
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        .summary-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 12px 16px;
+            background: #111;
+            border-bottom: 1px solid #222;
+        }
+
+        details.debug-section[open] .summary-header {
+            background: #1a1a1a;
+            padding: 16px 20px;
         }
 
         details.debug-section>summary::-webkit-details-marker {
             display: none;
         }
 
-        details.debug-section>summary::after {
+        .summary-header::after {
             content: '▼';
             font-size: 0.8em;
             transition: transform 0.2s;
         }
 
-        details.debug-section[open]>summary::after {
+        details.debug-section[open] .summary-header::after {
             transform: rotate(180deg);
         }
 
-        details.debug-section>summary:hover {
+        details.debug-section>summary:hover .summary-header {
             color: #fff;
         }
 
         /* --- ENGINE THINKING PANEL --- */
         .thinking-panel {
-            background: linear-gradient(135deg, #111, #080808);
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 16px;
+            background: #080808;
+            padding: 10px 15px;
             display: grid;
             grid-template-columns: 100px 1fr 150px;
             gap: 15px;
             align-items: center;
+            border-bottom: 1px solid #222;
+        }
+
+        details.debug-section[open] .thinking-panel {
+            background: #111;
+            padding: 15px 20px;
         }
 
         @media(max-width: 600px) {
@@ -626,38 +648,111 @@
             font-weight: bold;
         }
 
-        /* Lissajous Visualization */
-        .lissajous-container {
-            grid-column: span 3;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #222;
-            border-radius: 8px;
-            height: 120px;
+        /* --- LIVE GRAPH STYLES --- */        /* Lissajous Visualization Removed */
+
+        .live-graph-container {
             display: flex;
-            position: relative;
-            overflow: hidden;
-            margin-top: 10px;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
         }
 
-        .lissajous-canvas {
+
+        .live-graph-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .live-graph-label {
+            width: 120px;
+            flex-shrink: 0;
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        .live-graph-canvas-wrap {
+            flex: 1;
+            height: 60px;
+            position: relative;
+        }
+
+        .live-graph-canvas {
             width: 100%;
             height: 100%;
+            display: block;
+            background: #0a0a0f;
+            border: 1px inset #222;
+            border-radius: 4px;
         }
 
-        .lissajous-label {
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            font-size: 0.6rem;
-            color: #555;
-            text-transform: uppercase;
-            pointer-events: none;
+        .recording-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #eb4d4b;
+            font-size: 0.75rem;
+            font-weight: bold;
+            letter-spacing: 1px;
         }
 
-        @media(max-width: 600px) {
-            .lissajous-container {
-                grid-column: span 1;
-            }
+        .recording-dot {
+            width: 8px;
+            height: 8px;
+            background: #eb4d4b;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(235, 77, 75, 0.8);
+            animation: pulse-red 1s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Conditional Hiding for "Full Screen" effect */
+        details.debug-section[open] ~ * {
+            display: none !important;
+        }
+
+        /* Hide specific ancestors/siblings when open */
+        body:has(details.debug-section[open]) .header,
+        body:has(details.debug-section[open]) .section.global,
+        body:has(details.debug-section[open]) .spotify-panel {
+            display: none !important;
+        }
+
+        details.debug-section[open] {
+            margin: 0;
+            border: none;
+            background: transparent;
+        }
+
+        details.debug-section[open] > summary {
+            position: sticky;
+            top: 0;
+            z-index: 10001;
+            background: #000;
+            border-bottom: 1px solid #333;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .debug-scroll-area {
+            padding: 20px;
+            background: #000;
+            padding-bottom: 15vh;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            box-sizing: border-box;
         }
     </style>
 </head>
@@ -771,11 +866,9 @@
             </div>
         </div>
 
-        <!-- DEBUG & LIVE MONITOR -->
-        <details class="debug-section">
-            <summary>🛠️ Live Debugger & Engine Data</summary>
-
-            <div style="margin-top: 15px;">
+        <details class="debug-section" id="debugSection">
+            <summary id="debugSummary">
+                <div class="summary-header">🛠️ Live Debugger & Engine Data</div>
                 <!-- ENGINE THINKING DASHBOARD -->
                 <div class="thinking-panel">
                     <div class="transient-display">
@@ -816,14 +909,19 @@
                         </div>
                     </div>
                 </div>
+            </summary>
 
-                <div class="lissajous-container">
-                    <div class="lissajous-label">Lissajous Live (Phase / Oscillator State)</div>
-                    <canvas id="lissajousCanvas" class="lissajous-canvas"></canvas>
+            <div class="debug-scroll-area">
+                <!-- LIVE GRAPHICAL DISPLAY (RECORD TEST MERGED) -->
+                <div class="section" style="margin-top:20px;">
+                    <div class="section-title">
+                        📈 Live DMX Performance (60s Scale)
+                    </div>
+                    <div id="liveGraphContainer" class="live-graph-container"></div>
                 </div>
 
                 <!-- MONITOR -->
-                <div class="section" style="margin-top:16px;">
+                <div class="section" style="margin-top:24px;">
                     <div class="section-title">📊 Live Monitor</div>
                     <div id="activeSceneTag" style="font-size:0.8rem; margin-bottom:5px; color:#aaa;">Scene: --</div>
                     <div id="activeAddonSceneTag"
@@ -832,6 +930,7 @@
                 </div>
             </div>
         </details>
+
 
     </div>
 
@@ -848,6 +947,106 @@
         const FREQ_LABELS = ['Slow', 'Normal', 'Fast', 'Frantic'];
         let ws = null;
         let reconnectTimeout = null;
+
+        // --- LIVE RECORD STATE ---
+        let liveRecordActive = false;
+        let liveRecordMaxFrames = 30 * 60; // 60 seconds history
+        let liveRecordHistory = {}; // rolling buffers
+        let liveRecordInterval = null;
+        let lastDmxData = null;
+
+        function initLiveRecord() {
+            const debugSection = document.getElementById('debugSection');
+            const summary = document.getElementById('debugSummary');
+
+            debugSection.addEventListener('toggle', () => {
+                const header = summary.querySelector('.summary-header');
+                if (debugSection.open) {
+                    liveRecordActive = true;
+                    header.innerHTML = '🛠️ Live Debugger & Recording <div class="recording-indicator"><div class="recording-dot"></div>RECORDING</div>';
+                    if (!liveRecordInterval) liveRecordInterval = setInterval(liveRecordTick, 1000 / 30);
+                    requestAnimationFrame(drawLiveGraphs);
+                } else {
+                    liveRecordActive = false;
+                    header.innerHTML = '🛠️ Live Debugger & Engine Data';
+                    if (liveRecordInterval) clearInterval(liveRecordInterval);
+                    liveRecordInterval = null;
+                }
+            });
+        }
+
+        function liveRecordTick() {
+            if (!liveRecordActive || !lastDmxData) return;
+            for (const key in lastDmxData) {
+                if (!liveRecordHistory[key]) liveRecordHistory[key] = [];
+                liveRecordHistory[key].push(lastDmxData[key]);
+                if (liveRecordHistory[key].length > liveRecordMaxFrames) liveRecordHistory[key].shift();
+            }
+        }
+
+        function drawLiveGraphs() {
+            if (!liveRecordActive) return;
+
+            const container = document.getElementById('liveGraphContainer');
+            const keys = Object.keys(liveRecordHistory).sort();
+
+            keys.forEach(key => {
+                let row = document.getElementById('graph-row-' + key);
+                if (!row) {
+                    row = document.createElement('div');
+                    row.className = 'live-graph-row';
+                    row.id = 'graph-row-' + key;
+                    const label = key.replace(/_/g, ' ');
+                    row.innerHTML = `<div class="live-graph-label">${label}</div><div class="live-graph-canvas-wrap"><canvas id="canvas-${key}" class="live-graph-canvas"></canvas></div>`;
+                    container.appendChild(row);
+                }
+
+                const canvas = document.getElementById('canvas-' + key);
+                if (!canvas) return;
+
+                if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
+                if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
+
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                const data = liveRecordHistory[key];
+
+                ctx.clearRect(0, 0, w, h);
+                ctx.beginPath();
+                ctx.strokeStyle = '#222';
+                ctx.moveTo(0, h / 2);
+                ctx.lineTo(w, h / 2);
+                ctx.stroke();
+
+                if (data.length === 0) return;
+
+                ctx.beginPath();
+                ctx.strokeStyle = '#7c4dff';
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+                const xStep = w / liveRecordMaxFrames;
+                const offset = liveRecordMaxFrames - data.length;
+
+                for (let i = 0; i < data.length; i++) {
+                    const px = (i + offset) * xStep;
+                    const py = h - ((data[i] / 255) * h);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                const lastVal = data[data.length - 1];
+                const lastX = (data.length - 1 + offset) * xStep;
+                const lastY = h - ((lastVal / 255) * h);
+                ctx.beginPath();
+                ctx.fillStyle = '#fff';
+                ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            requestAnimationFrame(drawLiveGraphs);
+        }
 
         function connect() {
             const host = window.location.hostname || 'localhost';
@@ -956,9 +1155,12 @@
                             setTimeout(() => bt.style.background = '#1a1a1a', 100);
                         }
 
-                        if (msg.logic) renderLissajous(msg.logic);
 
-                        if (msg.dmx) updateDMXMonitor(msg.dmx);
+
+                        if (msg.dmx) {
+                            lastDmxData = msg.dmx;
+                            updateDMXMonitor(msg.dmx);
+                        }
                         if (msg.active_scene) document.getElementById('activeSceneTag').innerHTML = `Scene: <b style="color:white">${msg.active_scene.toUpperCase()}</b>`;
                         if (msg.active_addon_scene) {
                             document.getElementById('activeAddonSceneTag').innerHTML = `Add-on: <b style="color:var(--accent-visual)">${msg.active_addon_scene.toUpperCase()}</b>`;
@@ -1106,68 +1308,7 @@
             updateDMXMonitor(lastDMX, true); // Force re-render
         }
 
-        // Lissajous Renderer
-        const lCanvas = document.getElementById('lissajousCanvas');
-        const lCtx = lCanvas.getContext('2d');
-        const trails = [
-            { points: [], color: 'rgba(162, 155, 254, 1.0)', glow: 'rgba(162, 155, 254, 0.4)' }, // A/B (Primary)
-            { points: [], color: 'rgba(0, 206, 201, 1.0)', glow: 'rgba(0, 206, 201, 0.4)' },   // D/E (Secondary)
-            { points: [], color: 'rgba(253, 121, 168, 1.0)', glow: 'rgba(253, 121, 168, 0.4)' } // C/F (Tertiary)
-        ];
-
-        function renderLissajous(logic) {
-            if (!lCanvas.width || lCanvas.width !== lCanvas.clientWidth) {
-                lCanvas.width = lCanvas.clientWidth;
-                lCanvas.height = lCanvas.clientHeight;
-            }
-
-            const w = lCanvas.width;
-            const h = lCanvas.height;
-            const centerX = w / 2;
-            const centerY = h / 2;
-            const zoom = Math.min(w, h) * 0.4;
-
-            lCtx.fillStyle = 'rgba(0,0,0,0.15)';
-            lCtx.fillRect(0, 0, w, h);
-
-            // Group axes for visualization
-            const pairs = [
-                { x: logic.axis_a, y: logic.axis_b },
-                { x: logic.axis_d, y: logic.axis_e },
-                { x: logic.axis_c, y: logic.axis_f }
-            ];
-
-            pairs.forEach((pair, i) => {
-                if (pair.x === undefined || pair.y === undefined) return;
-
-                const px = centerX + (pair.x * zoom);
-                const py = centerY + (pair.y * zoom);
-
-                trails[i].points.push({ x: px, y: py });
-                if (trails[i].points.length > 25) trails[i].points.shift();
-
-                lCtx.beginPath();
-                lCtx.strokeStyle = trails[i].color;
-                lCtx.lineWidth = 2.5 - (i * 0.5);
-                lCtx.shadowBlur = 8;
-                lCtx.shadowColor = trails[i].glow;
-
-                for (let j = 0; j < trails[i].points.length; j++) {
-                    const p = trails[i].points[j];
-                    if (j === 0) lCtx.moveTo(p.x, p.y);
-                    else lCtx.lineTo(p.x, p.y);
-                }
-                lCtx.stroke();
-
-                // Draw Head
-                lCtx.beginPath();
-                lCtx.arc(px, py, 4 - i, 0, Math.PI * 2);
-                lCtx.fillStyle = i === 0 ? 'white' : trails[i].color;
-                lCtx.fill();
-            });
-
-            lCtx.shadowBlur = 0;
-        }
+        // Lissajous Removed
 
         function updateDMXMonitor(dmx, force = false) {
             const grid = document.getElementById('dmxGrid');
@@ -1250,6 +1391,7 @@
             }
         }
 
+        initLiveRecord();
         connect();
 
         // PWA Service Worker Registration

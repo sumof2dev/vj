@@ -749,22 +749,34 @@ def find_best_audio_device():
         return None, "System Default"
 
 # --- 3. DMX HARDWARE ---
-DIR_PIN = 18 # Common RS485 HAT Transmit Enable pin
+# Waveshare 14882 RS485 CAN HAT: SP3485 handles auto TX/RX direction.
+# Manual RSE pin = GPIO 4 (NOT GPIO 18 — that's the I2S BCK for the DAC HAT).
+# GPIO direction control is disabled by default since the HAT is auto-sensing.
+DIR_PIN = 4  # Waveshare 14882 RSE pin (GPIO 4), only used if manual mode soldered
 use_gpio = False
+_gpio_req = None
 
-try:
-    import RPi.GPIO as GPIO
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(DIR_PIN, GPIO.OUT)
-    GPIO.output(DIR_PIN, GPIO.LOW) # Default to Read
-    use_gpio = True
-    print(f"📟 RS485: GPIO {DIR_PIN} initialized for Transmit Enable")
-except:
-    pass
+# Set to True ONLY if you solder the 0-ohm resistor for manual RS485 direction
+ENABLE_MANUAL_RS485_DIR = False
+
+if ENABLE_MANUAL_RS485_DIR:
+    try:
+        import gpiod
+        _gpio_req = gpiod.request_lines(
+            '/dev/gpiochip0',
+            consumer='vj-dmx',
+            config={DIR_PIN: gpiod.LineSettings(direction=gpiod.line.Direction.OUTPUT, output_value=gpiod.line.Value.INACTIVE)}
+        )
+        use_gpio = True
+        print(f"📟 RS485: GPIO {DIR_PIN} initialized for Transmit Enable (gpiod v2)")
+    except Exception as e:
+        print(f"⚠️ RS485 GPIO Init Error: {e}")
+else:
+    print("📟 RS485: Auto direction mode (Waveshare 14882 SP3485)")
 
 def set_rs485_tx(enabled):
-    if use_gpio:
-        GPIO.output(DIR_PIN, GPIO.HIGH if enabled else GPIO.LOW)
+    if use_gpio and _gpio_req:
+        _gpio_req.set_value(DIR_PIN, gpiod.line.Value.ACTIVE if enabled else gpiod.line.Value.INACTIVE)
 
 def send_dmx_break(port):
     """Send DMX512 break signal.

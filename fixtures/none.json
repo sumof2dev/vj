@@ -1,0 +1,15 @@
+{
+    "type": "none",
+    "name": "New Fixture",
+    "channels": {},
+    "modes": {},
+    "defaults": {
+        "unassigned_ch1": 0
+    },
+    "calibration": {},
+    "ranges": {},
+    "dynamics": {},
+    "macros": {},
+    "step_data": {},
+    "modifiers": {}
+}
