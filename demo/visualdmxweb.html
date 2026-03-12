@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaveBox | Demo Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+        }
+
+        #canvas-wrap {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .hud-panel {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            pointer-events: auto;
+            transition: all 0.3s;
+        }
+
+        .top-left { top: 20px; left: 20px; }
+        .top-right { top: 20px; right: 20px; }
+        .bottom-right { bottom: 20px; right: 20px; }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            margin-bottom: 5px;
+            display: block;
+            width: 100%;
+            text-align: center;
+        }
+
+        .btn:hover { background: rgba(255, 255, 255, 0.2); }
+        .btn.active { background: #a29bfe; color: #000; border-color: #a29bfe; }
+
+        .slider-group { margin-bottom: 12px; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 0.7rem; margin-bottom: 5px; text-transform: uppercase; color: #aaa; }
+        input[type="range"] { width: 100%; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            font-weight: 900;
+            background: #ff7675;
+            color: #000;
+            margin-left: 10px;
+        }
+
+        .alert-popup {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #a29bfe;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 900;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+        .alert-popup.visible { transform: translateX(-50%) translateY(0); }
+
+        /* Custom Shaders Containers */
+        #sharedBasicVertex, #tunnelFragment, #liquidFragment { display: none; }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-wrap"></div>
+
+    <div id="ui-overlay">
+        <div class="hud-panel top-left">
+            <div style="font-weight: 900; font-size: 1.1rem; margin-bottom: 15px; display: flex; align-items: center;">
+                RAVEBOX <span class="badge">DEMO</span>
+            </div>
+            <a href="manager.html" class="btn" style="text-decoration: none;">← Home</a>
+            <button class="btn active">Ghost Audio On</button>
+            <button class="btn" onclick="triggerAlert('no-hardware')">Connect Laser</button>
+        </div>
+
+        <div class="hud-panel top-right">
+            <div class="slider-group">
+                <div class="slider-label"><span>Intensity</span><span id="int-val">1.0</span></div>
+                <input type="range" id="intensity" min="0" max="3" step="0.1" value="1.5">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label"><span>Speed</span><span id="spd-val">1.0</span></div>
+                <input type="range" id="speed" min="0.1" max="2" step="0.1" value="1.0">
+            </div>
+        </div>
+
+        <div class="hud-panel bottom-right" style="width: 200px;">
+            <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 8px;">Analysis (Ghost)</div>
+            <div style="display: flex; height: 40px; gap: 4px; align-items: flex-end;" id="visualizer-bars">
+                <!-- Bars generated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="alert-popup" id="alert-popup">You need the RaveBox for this function</div>
+
+    <!-- Shaders -->
+    <script id="sharedVertex" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = vec4(position, 1.0);
+        }
+    </script>
+
+    <script id="tunnelFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_audio;
+        uniform float u_bass;
+        uniform float u_intensity;
+        uniform vec2 u_resolution;
+
+        void main() {
+            vec2 uv = (vUv - 0.5) * 2.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            
+            float a = atan(uv.y, uv.x);
+            float r = length(uv);
+            
+            float zoom = 0.5 + u_bass * 0.2;
+            float s = 1.0 / (r * zoom + 0.01);
+            
+            vec3 col = 0.5 + 0.5 * cos(u_time + a + vec3(0,2,4));
+            col *= sin(s * 10.0 - u_time * 5.0);
+            
+            float f = smoothstep(0.1, 0.9, col.r * u_audio * u_intensity);
+            gl_FragColor = vec4(col * f, 1.0);
+        }
+    </script>
+
+    <script id="liquidFragment" type="x-shader/x-fragment">
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_audio;
+        uniform float u_mids;
+        uniform float u_intensity;
+        uniform vec2 u_resolution;
+
+        void main() {
+            vec2 uv = vUv * 2.0 - 1.0;
+            uv.x *= u_resolution.x / u_resolution.y;
+            
+            for(float i = 1.0; i < 4.0; i++) {
+                uv.x += 0.6 / i * sin(i * 3.0 * uv.y + u_time + u_mids * 2.0);
+                uv.y += 0.6 / i * sin(i * 3.0 * uv.x + u_time + u_audio);
+            }
+            
+            vec3 col = 0.5 + 0.5 * cos(u_time + uv.xyx + vec3(0, 2, 4));
+            gl_FragColor = vec4(col * (0.2 + u_audio * 0.8), 1.0);
+        }
+    </script>
+
+    <script>
+        // --- Ghost Audio Class ---
+        class GhostAudio {
+            constructor() {
+                this.bass = 0; this.mid = 0; this.high = 0;
+                this.targets = [0.5, 0.5, 0.5];
+            }
+            update(time) {
+                if (Math.random() < 0.05) {
+                    this.targets = [Math.random(), Math.random(), Math.random()];
+                }
+                const lerp = (a, b, t) => a + (b - a) * t;
+                this.bass = lerp(this.bass, this.targets[0], 0.05);
+                this.mid = lerp(this.mid, this.targets[1], 0.08);
+                this.high = lerp(this.high, this.targets[2], 0.1);
+                
+                // Add rhythm
+                const kick = Math.pow(Math.sin(time * 3.0), 10.0) * 0.5;
+                const snare = Math.pow(Math.cos(time * 1.5), 20.0) * 0.3;
+                
+                return {
+                    bass: Math.min(1, this.bass + kick),
+                    mid: Math.min(1, this.mid + snare),
+                    high: this.high,
+                    level: (this.bass + this.mid + this.high) / 3
+                };
+            }
+        }
+
+        // --- Three.js Setup ---
+        let scene, camera, renderer, composer;
+        let tunnelMaterial, liquidMaterial;
+        let ghost = new GhostAudio();
+        const clock = new THREE.Clock();
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-wrap').appendChild(renderer.domElement);
+
+            const res = new THREE.Vector2(window.innerWidth, window.innerHeight);
+            
+            tunnelMaterial = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('sharedVertex').textContent,
+                fragmentShader: document.getElementById('tunnelFragment').textContent,
+                uniforms: {
+                    u_time: { value: 0 },
+                    u_audio: { value: 0 },
+                    u_bass: { value: 0 },
+                    u_intensity: { value: 1.5 },
+                    u_resolution: { value: res }
+                },
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+
+            liquidMaterial = new THREE.ShaderMaterial({
+                vertexShader: document.getElementById('sharedVertex').textContent,
+                fragmentShader: document.getElementById('liquidFragment').textContent,
+                uniforms: {
+                    u_time: { value: 0 },
+                    u_audio: { value: 0 },
+                    u_mids: { value: 0 },
+                    u_intensity: { value: 1.5 },
+                    u_resolution: { value: res }
+                },
+                transparent: true
+            });
+
+            const bgGeo = new THREE.PlaneGeometry(2, 2);
+            const liquidPlane = new THREE.Mesh(bgGeo, liquidMaterial);
+            scene.add(liquidPlane);
+
+            const tunnelPlane = new THREE.Mesh(bgGeo, tunnelMaterial);
+            scene.add(tunnelPlane);
+
+            // Audio bars UI
+            const barContainer = document.getElementById('visualizer-bars');
+            for(let i=0; i<8; i++) {
+                const b = document.createElement('div');
+                b.style.flex = "1";
+                b.style.background = "#fff";
+                b.style.minHeight = "2px";
+                b.style.borderRadius = "2px";
+                barContainer.appendChild(b);
+            }
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
+            const spd = parseFloat(document.getElementById('speed').value);
+            const intensity = parseFloat(document.getElementById('intensity').value);
+            
+            const data = ghost.update(elapsed * spd);
+            
+            tunnelMaterial.uniforms.u_time.value = elapsed * spd;
+            tunnelMaterial.uniforms.u_audio.value = data.level;
+            tunnelMaterial.uniforms.u_bass.value = data.bass;
+            tunnelMaterial.uniforms.u_intensity.value = intensity;
+
+            liquidMaterial.uniforms.u_time.value = elapsed * 0.5 * spd;
+            liquidMaterial.uniforms.u_audio.value = data.level;
+            liquidMaterial.uniforms.u_mids.value = data.mid;
+            liquidMaterial.uniforms.u_intensity.value = intensity;
+
+            // Update UI bars
+            const bars = document.getElementById('visualizer-bars').children;
+            for(let i=0; i<8; i++) {
+                const h = (i < 3 ? data.bass : (i < 6 ? data.mid : data.high));
+                bars[i].style.height = (h * 40 + Math.random()*5) + 'px';
+                bars[i].style.opacity = 0.3 + h * 0.7;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function triggerAlert() {
+            const popup = document.getElementById('alert-popup');
+            popup.classList.add('visible');
+            setTimeout(() => { popup.classList.remove('visible'); }, 3000);
+        }
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            tunnelMaterial.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+            liquidMaterial.uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+        });
+
+        init();
+    </script>
+</body>
+
+</html>

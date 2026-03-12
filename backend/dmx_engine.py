@@ -58,6 +58,23 @@ class LogicMatrix:
                 bin_energy = bins[bin_idx] if 0 <= bin_idx < len(bins) else 0.0
                 freq = (base_speed + (bin_energy * reactivity)) * speed_mult
                 
+                # If base speed is zero, we want the wave to complete its cycle to the bottom
+                # instead of hanging at a peak when the bin trigger is inactive.
+                if base_speed == 0 and freq < 0.05:
+                    p_current = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
+                    should_complete = False
+                    if shape == 'sawtooth' and p_current > 0.05:
+                        should_complete = True
+                    elif shape == 'triangle' and abs(p_current - 0.5) > 0.05:
+                        should_complete = True
+                    elif shape == 'square' and p_current < 0.5:
+                        should_complete = True
+                    
+                    if should_complete:
+                        freq = 10.0 * speed_mult
+                    else:
+                        freq = 0.0
+
                 self.phases[lfo_id] += dt * freq
                 p = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
                 

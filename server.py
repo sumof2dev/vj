@@ -168,7 +168,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             '/config.json': 'config.json',
             '/shapes.json': 'shapes.json',
             '/roles.json': 'roles.json',
-            '/vj/roles.json': 'roles.json'
+            '/vj/roles.json': 'roles.json',
+            '/spotify_creds.json': 'spotify_creds.json'
         }
         
         target_file = valid_paths.get(parsed_path.path)

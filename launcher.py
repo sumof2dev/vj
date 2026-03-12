@@ -22,7 +22,8 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             self.run_systemd('restart')
         elif self.path == '/status':
             self.run_systemd('is-active', 'vj-engine.service')
-            
+        elif self.path.startswith('/api/spotify/auth'):
+            self.handle_spotify_auth()
         elif self.path.startswith('/api/smart/control'):
             self.handle_smart_control()
             
@@ -99,6 +100,38 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
                 "success": result.returncode == 0,
                 "ip": ip,
                 "state": action,
+                "output": result.stdout,
+                "error": result.stderr
+            }
+            self.wfile.write(json.dumps(response).encode())
+        except Exception as e:
+            self.error_response(str(e))
+
+    def handle_spotify_auth(self):
+        parsed = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(parsed.query)
+        code = query.get('code', [None])[0]
+        
+        if not code:
+            self.error_response("Missing code parameter")
+            return
+            
+        try:
+            print(f"🎬 Running Spotify Auth with code: {code[:10]}...")
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+            script_path = os.path.join(BASE_DIR, "spotify_auth.py")
+            
+            # Run the auth script
+            cmd = ['python3', script_path, code]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            response = {
+                "success": result.returncode == 0,
                 "output": result.stdout,
                 "error": result.stderr
             }

@@ -237,10 +237,25 @@ BLOCK_SIZE = 2048  # Increased to 2048 to prevent dropouts under load
 # --- GLOBAL STATE ---
 # --- GLOBAL STATE ---
 CONFIG_FILE = "vj_remote_settings.json"
+SPOT_CREDS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "spotify_creds.json")
+
+# Default credentials (fallback)
 SPOT_CLIENT_ID = 'SCRUBBED_ID'
 SPOT_CLIENT_SECRET = 'SCRUBBED_SECRET'
-# Standard loopback URI for Spotipy auth
 SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:8888/callback'
+
+# try to load from spotify_creds.json
+if os.path.exists(SPOT_CREDS_FILE):
+    try:
+        with open(SPOT_CREDS_FILE, 'r') as f:
+            creds = json.load(f)
+            if creds.get("SPOT_CLIENT_ID"): SPOT_CLIENT_ID = creds["SPOT_CLIENT_ID"]
+            if creds.get("SPOT_CLIENT_SECRET"): SPOT_CLIENT_SECRET = creds["SPOT_CLIENT_SECRET"]
+            if creds.get("SPOTIFY_REDIRECT_URI"): SPOTIFY_REDIRECT_URI = creds["SPOTIFY_REDIRECT_URI"]
+            print(f"🎵 Spotify: Loaded custom credentials from {SPOT_CREDS_FILE}")
+    except Exception as e:
+        print(f"⚠️ Spotify: Failed to load {SPOT_CREDS_FILE}: {e}")
+
 SPOTIFY_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".spotify_cache")
 SESSION_ID = str(time.time()) # Unique ID per engine restart
 last_callback_time = time.time()

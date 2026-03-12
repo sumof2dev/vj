@@ -1,7 +1,7 @@
 {
     "devices": {
         "L1": {
-            "type": "Ehaho4",
+            "type": "Ehaho5",
             "category": "laser",
             "address": 1,
             "offset": 0,
@@ -19,7 +19,7 @@
             "position": "left"
         },
         "R1": {
-            "type": "Ehaho4",
+            "type": "Ehaho6",
             "category": "laser",
             "address": 35,
             "offset": 0,
@@ -37,7 +37,7 @@
             "position": "right"
         },
         "T1": {
-            "type": "Ehaho5",
+            "type": "Ehaho4",
             "category": "laser",
             "address": 75,
             "offset": 0,
@@ -45,7 +45,7 @@
             "invert_y": true
         },
         "T2": {
-            "type": "Ehaho4",
+            "type": "Ehaho5",
             "category": "laser",
             "address": 75,
             "offset": 17,
@@ -53,7 +53,7 @@
             "invert_y": true
         },
         "temu ": {
-            "type": "temu",
+            "type": "none",
             "address": 160,
             "offset": 0,
             "invert_x": false,

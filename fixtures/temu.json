@@ -106,15 +106,15 @@
     "macros": {},
     "lfo_data": {
         "1": {
-            "shape": "sine",
+            "shape": "sawtooth",
             "bin": 0,
-            "speed": 0.5,
+            "speed": 0,
             "react": 0.5
         },
         "3": {
-            "shape": "sine",
+            "shape": "sawtooth",
             "bin": 0,
-            "speed": 0.5,
+            "speed": 0,
             "react": 0.5
         },
         "unassigned_ch1": {

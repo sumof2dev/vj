@@ -2,14 +2,30 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth, CacheFileHandler
 import os
+import json
 
-# Spotify Credentials
+# Default Spotify Credentials
 SPOT_CLIENT_ID = 'SCRUBBED_ID'
 SPOT_CLIENT_SECRET = 'SCRUBBED_SECRET'
 SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:8888/callback' 
 
+# Load from file if exists
+SPOT_CREDS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "spotify_creds.json")
+if os.path.exists(SPOT_CREDS_FILE):
+    try:
+        with open(SPOT_CREDS_FILE, 'r') as f:
+            creds = json.load(f)
+            if creds.get("SPOT_CLIENT_ID"): SPOT_CLIENT_ID = creds["SPOT_CLIENT_ID"]
+            if creds.get("SPOT_CLIENT_SECRET"): SPOT_CLIENT_SECRET = creds["SPOT_CLIENT_SECRET"]
+            if creds.get("SPOTIFY_REDIRECT_URI"): SPOTIFY_REDIRECT_URI = creds["SPOTIFY_REDIRECT_URI"]
+            print(f"🎵 Using credentials from {SPOT_CREDS_FILE}")
+    except Exception as e:
+        print(f"⚠️ Failed to load credentials from file: {e}")
+
 # Explicit Cache Path
 CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".spotify_cache")
+
+import sys
 
 def main():
     print("🎵 Initializing Standalone Spotify Authentication...")
@@ -28,10 +44,23 @@ def main():
             open_browser=False
         )
         
-        # We manually get the code instead of using get_access_token interactively
-        # to bypass the hanging input() prompt bug
-        code = "SCRUBBED_CODE"
-        print(f"Bypassing prompt, using hardcoded auth code: {code[:10]}...")
+        # Priority 1: Command line argument
+        code = sys.argv[1] if len(sys.argv) > 1 else None
+        
+        if not code:
+            # Priority 2: Hardcoded fallback (unlikely to work for long)
+            code = "SCRUBBED_CODE"
+            print(f"⚠️ No code provided via CLI. Using fallback: {code[:10]}...")
+        else:
+            # If the user pasted the whole URL, extract the code
+            if 'code=' in code:
+                import urllib.parse
+                parsed = urllib.parse.urlparse(code)
+                query = urllib.parse.parse_qs(parsed.query)
+                code = query.get('code', [code])[0]
+            
+            print(f"📦 Using provided auth code: {code[:10]}...")
+
         token_info = auth_manager.get_access_token(code=code, as_dict=False)
         
         if token_info:

@@ -58,13 +58,13 @@
             {
                 "min": 0,
                 "max": 96,
-                "center": 50,
+                "center": 0,
                 "vibe": "any"
             }
         ],
         "zoom": [
             {
-                "min": 0,
+                "min": 10,
                 "max": 255,
                 "center": 40,
                 "vibe": "any"
@@ -202,7 +202,7 @@
         "dots": "state_machine",
         "Dim": "state_machine",
         "group": "mode",
-        "clip": "beat",
+        "clip": "flux",
         "draw": "state_machine",
         "twist": "state_machine",
         "grating": "flux",

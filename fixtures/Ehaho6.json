@@ -56,8 +56,8 @@
         ],
         "patterns": [
             {
-                "min": 0,
-                "center": 50,
+                "min": 1,
+                "center": 20,
                 "max": 96,
                 "vibe": "any"
             }
@@ -127,8 +127,7 @@
                 "min": 0,
                 "max": 255,
                 "center": 0,
-                "vibe": "any",
-                "control": "ls_y"
+                "vibe": "any"
             }
         ],
         "grating": [
@@ -150,17 +149,15 @@
             {
                 "min": 0,
                 "center": 0,
-                "max": 255,
-                "control": "ls_y"
+                "max": 255
             }
         ],
         "draw": [
             {
                 "min": 0,
                 "center": 0,
-                "max": 255,
-                "vibe": "any",
-                "control": "ls_x"
+                "max": 10,
+                "vibe": "any"
             }
         ],
         "color1": [
@@ -196,10 +193,10 @@
         "Dim": "lfo",
         "group": "mode",
         "clip": "lfo",
-        "draw": "lfo",
+        "draw": "flux",
         "twist": "lfo",
         "grating": "lfo",
-        "drawing": "lfo"
+        "drawing": "4th beat"
     },
     "step_data": {},
     "state_data": {
@@ -274,7 +271,7 @@
             "shape": "sawtooth",
             "bin": 10,
             "speed": 0.05,
-            "react": 4
+            "react": 0.5
         },
         "y rot": {
             "shape": "square",
@@ -301,26 +298,26 @@
             "react": 0.9
         },
         "draw": {
-            "shape": "sawtooth",
-            "bin": 1,
+            "shape": "square",
+            "bin": 9,
             "speed": 0.05,
-            "react": 1.9
+            "react": 0.5
         },
         "drawing": {
-            "shape": "sawtooth",
-            "bin": 2,
+            "shape": "square",
+            "bin": 0,
             "speed": 0.1,
-            "react": 0.2
+            "react": 0.5
         },
         "grating": {
-            "shape": "sawtooth",
-            "bin": 9,
+            "shape": "triangle",
+            "bin": 8,
             "speed": 0,
-            "react": 2.3
+            "react": 0.5
         },
         "zoom": {
             "shape": "triangle",
-            "bin": 1,
+            "bin": 0,
             "speed": 0.05,
             "react": 0.4,
             "invert": false
@@ -329,7 +326,7 @@
             "shape": "sine",
             "bin": 5,
             "speed": 0,
-            "react": 0.4
+            "react": 0.3
         },
         "Dim": {
             "shape": "sine",

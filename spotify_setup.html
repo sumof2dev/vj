@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify API Setup | RaveBox</title>
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --surface: #16161a;
+            --primary: #1DB954; /* Spotify Green */
+            --secondary: #7000ff;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('background.png') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(22, 22, 26, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            margin: 0 0 1rem;
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--primary), #ffffff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 0.5rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 1rem;
+        }
+
+        .btn-save {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(29, 185, 84, 0.4);
+        }
+
+        .btn-back {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            margin-top: 0.5rem;
+        }
+
+        .btn-back:hover {
+            border-color: var(--text);
+            color: var(--text);
+        }
+
+        .instructions {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .instructions a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .instructions ol {
+            padding-left: 1.2rem;
+            margin-top: 0.5rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        .status-msg {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            text-align: center;
+            height: 1.2rem;
+        }
+
+        .status-msg.success { color: #00ff88; }
+        .status-msg.error { color: #ff3366; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Spotify API Setup</h1>
+        <p>Connect your own Spotify Developer account to enable rich metadata and track analysis. This will bypass the built-in credentials.</p>
+
+        <div id="setup-step-1">
+            <h2 style="font-size:1.2rem; color:var(--primary); margin-bottom:1rem;">1. API Credentials</h2>
+            <div class="form-group">
+                <label for="clientId">Client ID</label>
+                <input type="text" id="clientId" placeholder="Enter your Spotify Client ID">
+            </div>
+
+            <div class="form-group">
+                <label for="clientSecret">Client Secret</label>
+                <input type="password" id="clientSecret" placeholder="Enter your Spotify Client Secret">
+            </div>
+
+            <div class="form-group" style="display:none;">
+                <label for="redirectUri">Redirect URI</label>
+                <input type="text" id="redirectUri" value="http://127.0.0.1:8888/callback">
+            </div>
+
+            <button class="btn btn-save" onclick="saveCreds()">Save Credentials</button>
+        </div>
+
+        <div id="setup-step-2" style="margin-top:2rem; padding-top:2rem; border-top:1px solid var(--border);">
+            <h2 style="font-size:1.2rem; color:var(--primary); margin-bottom:1rem;">2. Authorize Account</h2>
+            <p style="font-size:0.8rem;">Click authorize to open Spotify login, then paste the URL you are redirected to below.</p>
+            
+            <button class="btn btn-save" style="background:#fff; color:#000;" onclick="openAuth()">Open Spotify Auth</button>
+            
+            <div class="form-group" style="margin-top:1.5rem;">
+                <label for="authCode">Callback URL or Code</label>
+                <input type="text" id="authCode" placeholder="Paste the redirected URL here">
+            </div>
+            
+            <button class="btn btn-save" onclick="finalizeAuth()">Login & Generate Token</button>
+        </div>
+
+        <button class="btn btn-back" onclick="window.location.href='/manager.html'">Back to Manager</button>
+
+        <div id="statusMsg" class="status-msg"></div>
+
+        <div class="instructions">
+            <strong>Setup Guide:</strong>
+            <ol>
+                <li>Go to the <a href="https://developer.spotify.com/dashboard" target="_blank">Spotify Dev Dashboard</a>.</li>
+                <li>Create an App. In Settings, find <strong>ID</strong> and <strong>Secret</strong>.</li>
+                <li>Add <code>http://127.0.0.1:8888/callback</code> to <strong>Redirect URIs</strong>.</li>
+                <li>Enter credentials in Step 1 and Save.</li>
+                <li>Click <strong>Open Spotify Auth</strong> in Step 2.</li>
+                <li>Login, then copy the URL of the error/blank page you land on.</li>
+                <li>Paste it in <strong>Callback URL</strong> and click <strong>Login</strong>.</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        async function loadCreds() {
+            try {
+                const res = await fetch('/spotify_creds.json');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('clientId').value = data.SPOT_CLIENT_ID || '';
+                    document.getElementById('clientSecret').value = data.SPOT_CLIENT_SECRET || '';
+                    document.getElementById('redirectUri').value = data.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:8888/callback';
+                }
+            } catch (e) {
+                console.error("Failed to load credentials", e);
+            }
+        }
+
+        async function saveCreds() {
+            const statusMsg = document.getElementById('statusMsg');
+            statusMsg.textContent = "Saving...";
+            statusMsg.className = "status-msg";
+
+            const data = {
+                SPOT_CLIENT_ID: document.getElementById('clientId').value.trim(),
+                SPOT_CLIENT_SECRET: document.getElementById('clientSecret').value.trim(),
+                SPOTIFY_REDIRECT_URI: document.getElementById('redirectUri').value.trim()
+            };
+
+            try {
+                const res = await fetch('/spotify_creds.json', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    statusMsg.textContent = "✅ Credentials saved! Proceed to Step 2.";
+                    statusMsg.className = "status-msg success";
+                } else {
+                    const err = await res.text();
+                    statusMsg.textContent = "❌ Failed to save: " + err;
+                    statusMsg.className = "status-msg error";
+                }
+            } catch (e) {
+                statusMsg.textContent = "❌ Error: " + e.message;
+                statusMsg.className = "status-msg error";
+            }
+        }
+
+        function openAuth() {
+            const clientId = document.getElementById('clientId').value.trim();
+            const redirectUri = encodeURIComponent(document.getElementById('redirectUri').value.trim());
+            const scope = encodeURIComponent("user-read-currently-playing");
+            
+            if (!clientId) {
+                alert("Please enter a Client ID in Step 1 first.");
+                return;
+            }
+            
+            const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scope}`;
+            window.open(url, '_blank');
+        }
+
+        async function finalizeAuth() {
+            const code = document.getElementById('authCode').value.trim();
+            const statusMsg = document.getElementById('statusMsg');
+            
+            if (!code) {
+                statusMsg.textContent = "❌ Please paste the callback URL/code.";
+                statusMsg.className = "status-msg error";
+                return;
+            }
+
+            statusMsg.textContent = "🔐 Authenticating...";
+            statusMsg.className = "status-msg";
+
+            try {
+                // Use the launcher API on port 8001 (or current port if same)
+                const host = window.location.hostname;
+                const apiPort = 8001; 
+                const protocol = window.location.protocol;
+                
+                const res = await fetch(`${protocol}//${host}:${apiPort}/api/spotify/auth?code=${encodeURIComponent(code)}`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    statusMsg.textContent = "✅ Login Successful! Token cached.";
+                    statusMsg.className = "status-msg success";
+                } else {
+                    statusMsg.textContent = "❌ Auth Failed: " + (data.error || "Check console");
+                    statusMsg.className = "status-msg error";
+                    console.error("Auth detail:", data);
+                }
+            } catch (e) {
+                statusMsg.textContent = "❌ Connection Error: " + e.message;
+                statusMsg.className = "status-msg error";
+            }
+        }
+
+        loadCreds();
+    </script>
+</body>
+</html>

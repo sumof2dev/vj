@@ -15,7 +15,7 @@
             "twist": 178,
             "grating": 255
         },
-        "profile": "none"
+        "profile": "Ehaho5"
     },
     "maxrotate": {
         "vibe": "drop",
@@ -82,10 +82,10 @@
         }
     },
     "temu": {
-        "vibe": "tearout",
-        "trigger": "bass_style:tearout",
+        "vibe": "tension",
+        "trigger": "transient:tension",
         "target_category": "laser",
-        "profile": "none",
+        "profile": "xbox",
         "channels": {
             "unassigned_ch1": 157,
             "unassigned_ch2": 255,
@@ -97,10 +97,10 @@
         }
     },
     "purpletriangle": {
-        "vibe": "high",
-        "trigger": "vibe:high",
+        "vibe": "tearout",
+        "trigger": "bass_style:tearout",
         "target_category": "laser",
-        "profile": "none",
+        "profile": "Ehaho5",
         "channels": {
             "Dim": 220,
             "patterns": 75,

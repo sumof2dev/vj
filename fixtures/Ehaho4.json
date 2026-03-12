@@ -76,7 +76,7 @@
         ],
         "zoom": [
             {
-                "min": 0,
+                "min": 10,
                 "center": 64,
                 "max": 255,
                 "vibe": "any"
@@ -158,9 +158,15 @@
         ],
         "clip": [
             {
-                "min": 0,
-                "center": 5,
-                "max": 50
+                "min": 1,
+                "center": 25,
+                "max": 49
+            },
+            {
+                "min": 40,
+                "center": 40,
+                "max": 40,
+                "vibe": "chill"
             }
         ],
         "twist": [
@@ -206,7 +212,7 @@
         "x rot": "axis_d",
         "y rot": "axis_c",
         "color1": "4th beat",
-        "color2": "bass",
+        "color2": "lfo",
         "dots": "axis_c",
         "Dim": "4th beat",
         "group": "mode",
@@ -254,15 +260,15 @@
     },
     "lfo_data": {
         "clip": {
-            "shape": "sawtooth",
+            "shape": "triangle",
             "bin": 10,
             "speed": 0,
             "react": 1.5
         },
         "patterns": {
             "shape": "sine",
-            "bin": 3,
-            "speed": 0.35,
+            "bin": 6,
+            "speed": 0.2,
             "react": 0.1
         },
         "rotate z": {
@@ -287,13 +293,13 @@
         "x rot": {
             "shape": "sawtooth",
             "bin": 10,
-            "speed": 0.05,
+            "speed": 0,
             "react": 0.5
         },
         "y rot": {
             "shape": "square",
             "bin": 5,
-            "speed": 0.1,
+            "speed": 0,
             "react": 0.5
         },
         "color1": {
@@ -304,7 +310,7 @@
         },
         "color2": {
             "shape": "sine",
-            "bin": 0,
+            "bin": 2,
             "speed": 0.5,
             "react": 0.5
         },
@@ -333,11 +339,11 @@
             "react": 0.5
         },
         "zoom": {
-            "shape": "triangle",
+            "shape": "sawtooth",
             "bin": 0,
-            "speed": 0,
+            "speed": 0.05,
             "react": 1.5,
-            "invert": false
+            "invert": true
         },
         "twist": {
             "shape": "sine",

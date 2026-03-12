@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RaveBox | Demo Remote</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: #121214;
+            --accent: #a29bfe;
+            --primary: #00f2ff;
+            --text: #eee;
+            --text-dim: #888;
+            --border: #222;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(18, 18, 20, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .back-btn {
+            text-decoration: none;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: var(--primary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .content {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+            letter-spacing: 1.5px;
+            font-weight: 800;
+        }
+
+        .slider-group {
+            margin-bottom: 24px;
+        }
+
+        .slider-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .slider-val {
+            font-family: monospace;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 10px;
+            background: #222;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            border: 4px solid var(--primary);
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .btn-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .btn-card.active {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+        }
+
+        .btn-card .icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .btn-card .label {
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .alert-popup {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent);
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 800;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+            white-space: nowrap;
+        }
+
+        .alert-popup.visible {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .vibe-meter {
+            height: 60px;
+            background: #000;
+            border-radius: 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            padding: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .vibe-bar {
+            flex: 1;
+            background: var(--text-dim);
+            min-height: 2px;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.1s ease-out;
+        }
+
+        .vibe-bar.active {
+            background: var(--primary);
+            box-shadow: 0 0 5px var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="manager.html" class="back-btn">← Home</a>
+            <h1>RaveBox Remote</h1>
+        </div>
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            Demo Mode
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="section">
+            <div class="section-title">Visual Energy</div>
+            <div class="vibe-meter" id="vibeMeter">
+                <!-- Bars generated by JS -->
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">
+                <span>Steady</span>
+                <span id="transientText">Building</span>
+                <span>Drop</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Master Controls</div>
+            <div class="slider-group">
+                <div class="slider-info">
+                    <span>Brightness</span>
+                    <span class="slider-val" id="brightnessVal">100%</span>
+                </div>
+                <input type="range" min="0" max="100" value="100" class="slider" oninput="updateVal('brightness', this.value)">
+            </div>
+            <div class="slider-group">
+                <div class="slider-info">
+                    <span>Speed Multiplier</span>
+                    <span class="slider-val" id="speedVal">1.0x</span>
+                </div>
+                <input type="range" min="50" max="200" value="100" class="slider" oninput="updateVal('speed', this.value/100)">
+            </div>
+            <div class="control-grid">
+                <div class="btn-card" onclick="triggerAlert()">
+                    <span class="icon">💾</span>
+                    <span class="label">Save Preset</span>
+                </div>
+                <div class="btn-card" onclick="triggerAlert()">
+                    <span class="icon">🔌</span>
+                    <span class="label">Hardware Sync</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Mode Selection</div>
+            <div class="control-grid">
+                <div class="btn-card active">
+                    <span class="label">Intelligent Auto</span>
+                </div>
+                <div class="btn-card" onclick="triggerAlert()">
+                    <span class="label">Manual Override</span>
+                </div>
+                <div class="btn-card" onclick="triggerAlert()">
+                    <span class="label">Chill Out</span>
+                </div>
+                <div class="btn-card" onclick="triggerAlert()">
+                    <span class="label">Chaos Mode</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert-popup" id="alertPopup">You need the RaveBox for this function</div>
+
+    <script>
+        function updateVal(id, val) {
+            document.getElementById(id + 'Val').innerText = val + (id==='speed' ? 'x' : '%');
+        }
+
+        function triggerAlert() {
+            const popup = document.getElementById('alertPopup');
+            popup.classList.add('visible');
+            setTimeout(() => {
+                popup.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Dummy vibe meter animation
+        const meter = document.getElementById('vibeMeter');
+        const transientText = document.getElementById('transientText');
+        const bars = [];
+        for(let i=0; i<20; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'vibe-bar';
+            meter.appendChild(bar);
+            bars.push(bar);
+        }
+
+        let time = 0;
+        function animate() {
+            time += 0.05;
+            bars.forEach((bar, i) => {
+                const wave = Math.sin(time + i * 0.3) * 0.5 + 0.5;
+                const jitter = Math.random() * 0.2;
+                const height = (wave + jitter) * 100;
+                bar.style.height = Math.max(5, height) + '%';
+                bar.classList.toggle('active', height > 60);
+            });
+
+            const phases = ['Steady', 'Building', 'Tension', 'Dropping'];
+            transientText.innerText = phases[Math.floor((Math.sin(time*0.5)*0.5+0.5) * phases.length)];
+
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+
+</html>

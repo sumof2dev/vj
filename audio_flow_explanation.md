@@ -1,62 +1,95 @@
-# VJ Engine Audio and Data Flow Analysis
+# VJ Engine: Technical Documentation
 
-This document provides a detailed breakdown of how audio is captured, analyzed, and translated into physical light/laser movements in the VJ Engine.
+This document serves as the technical source-of-truth for the VJ Engine's architecture, data pipeline, and system setup on Raspberry Pi 5.
 
-## 1. Audio Capture (`main.py`)
-- **Capture Logic:** Audio is captured using the `sounddevice` library in `main.py` (`audio_callback`). It reads directly from the system's default audio input or a designated PulseAudio monitor (e.g., catching system output like Spotify).
-- **Buffering:** Captured frames (blocks of 2048 samples at 44.1kHz) are pushed into a thread-safe `collections.deque` named `audio_queue`. 
-- **Watchdog:** An `audio_watchdog()` routine monitors the callback; if it stops firing for 4 seconds, the stream is automatically restarted to prevent silent failures.
+---
 
-## 2. Audio Analysis (`main.py` - `AudioAnalyzer`)
-The `process_audio_queue()` asyncio loops pops frames from the queue and sends them to the `AudioAnalyzer.process()` method for heavy mathematical analysis:
-- **FFT & Binning:** The raw audio is converted to mono, mean-centered (DC offset removal), and processed via Fast Fourier Transform (FFT). The frequencies are mapped into 16 bins designed to match WLED ranges.
-- **Bands:** The bins are grouped into three primary raw bands: `raw_bass` (bins 0-3), `raw_mid` (bins 4-10), and `raw_high` (bins 11-15).
-- **Rolling Normalization:** To account for quiet vs. loud songs dynamically, the engine keeps a history of the last 300 frames (~5-10s). It normalizes current values against the historical min/max, mapping them to a clean `0.0` to `1.0` range (`out_bass`, `out_mid`, `out_high`, and `vol`).
-- **Spectral Flux & Onset Detection:** Flux is calculated by measuring the *positive change* in energy across the bands compared to the previous frame. This identifies "hits" or transients. Independent onset flags are generated for bass (`bass_onset`) and high frequencies (`high_onset`).
-- **Beat & BPM Detection:** An adaptive threshold (based on average flux history) determines if a given frame constitutes a beat. If triggered, it calculates BPM and tracks the `beat_phase` (a 0.0-1.0 value representing the current progress between beats).
-- **Confidence Metrics:** The engine scores the "confidence" and "isolation" of the audio signal based on beat interval stability, peak-to-average ratio of the bins, and transient sharpness.
+## 1. Audio Pipeline (`main.py`)
 
-## 3. Vibe Determination (`vibe_engine.py`)
-The raw analyzed dictionary is passed to the `VibeEngine`:
-- **Density:** It tracks how many beats occurred in the last 3 seconds.
-- **Vibe Bucketing ("Chill", "Mid", "High"):** Based on density, volume, confidence, and optionally Spotify API energy metrics (if a track is playing), it categorizes the current musical mood. 
-- **Energy Trend & Transients:** It tracks long-term energy and short-term "impact" (heavy bass weighting). By analyzing the difference (derivative), it classifies the musical structure into four transient states:
-  - `steady`
-  - `building` (energy steadily rising)
-  - `tension` (sudden drop in impact while energy was high – the "pre-drop" silence)
-  - `dropping` (massive sudden spike in bass/impact)
-- **Mod Smoothing:** It applies specific decay filters to create smoother modifier variables (`mods.bass`, `mods.high`, `mods.flux`) for downstream animation.
+### Capture & Monitoring
+- **Source Selection:** The engine uses the `sounddevice` library. At startup, it automatically probes for a **PulseAudio Monitor** device (usually the monitor for the default HifiBerry DAC output).
+- **Dynamic Routing:** A background routine (`route_stream_to_monitor`) uses `pulsectl` to find the Python recording stream during initialization and physically moves it to the system loopback. This ensures the engine "hears" exactly what Spotify or VLC is playing.
+- **Watchdog:** If the audio callback hangs for 4 seconds, the stream is automatically destroyed and recreated.
 
-## 4. Scene Selection & The DMX Engine (`dmx_engine.py`)
-The `DMXEngine` receives the final structured data (`dt`, `audio_state`, `visual_states`) 60 times a second:
-- **Accumulators & Timers:** Internal clocks (`_lfo_time`, `color_timer`, `beat_pulse`, `acc_bass`, etc.) are advanced based on `dt` and modulated by audio factors (like `speed` and `flux`).
-- **Rhythmic Switching:** On a beat, a master `rot_state_timer` increments. Depending on the `scene_freq` setting and the current `vibe`, it decides when to automatically switch the `current_scene_name` (e.g., switching from `scroll` to `chase`) and randomize visual layers.
-- **The Playhead ("The Time Scrubber"):** Each lighting zone has a "drone" with a virtual playhead (`drone['t']`). The speed of this playhead determines the speed of the physical effect and is aggressively warped by the music (e.g., slamming in reverse during a `dropping` state, or slowing down during `tension`).
-- **Rhythm Envelopes:** The `rhythm_state` handles short, punchy animations (like drum hits). It prioritizes kicks (`bass_hit` -> "BOOTS/CHA") and snares (`high_hit` -> "CATS"), selecting pre-assigned shapes and colors from the `roles.json` configuration.
+### Analysis (`AudioAnalyzer`)
+- **Visual Frequency Bins (11 Bins):** Unlike WLED's linear bins, the engine calculates 11 logarithmic bins for high-fidelity visualization:
+  - `Sub-bass`, `Bass`, `Low-mid`, `Mid`, `Upper-mid`, `Presence`, `Upper presence`, `Low treble`, `Treble`, `High treble`, `Brilliance`.
+- **Smoothing:** All bins use a **70/30 peak-hold decay** (70% previous frame, 30% current) to eliminate flicker while maintaining reactivity.
+- **Normalization:** A rolling 300-frame (~5s) history window tracks local min/max. This maps variable inputs to a perfect `0.0 - 1.0` range, regardless of song volume.
+- **Beat Tracking:** Uses **Spectral Flux** (positive change in energy) rather than simple volume peaks.
+  - **Beat Phase:** Predicts the next beat arrival, providing a `0.0` (on beat) to `1.0` (next beat) ramp for synced shaders.
+  - **Confidence:** Scores signal quality based on interval stability and frequency isolation.
 
-## 5. DMX Channel Mapping & Fixture Profiles (JSON)
-Before outputting, the engine maps the logical scene/rhythm decisions to physical DMX values. It relies on JSON definitions configured and saved via the Web UI (e.g., `setup.html` -> `fixtures/ehaho_laser.json`):
-- **Stage Config (`stage_config.json`):** Defines what physical fixtures exist, their DMX start address, and their assigned "behavior" role (e.g., `lead` vs `rhythm`).
-- **Role Config (`roles.json`):** Stores user-defined limits (e.g., bounding the X/Y movement of a specific laser) and color/shape assignments for rhythmic hits.
-- **Fixture Profiles (e.g., `ehaho_laser.json`):** 
-  - `channels`: Maps logical roles (like `zoom` or `pattern`) to relative DMX offsets.
-  - `modes` and `ranges`: Defines what DMX value block triggers manual control vs. macro effects.
-  - `calibration`: Stores specific hardware quirks (e.g., where "center" is for a pan/tilt motor, or max safe sweep degrees).
-  - `shapes` / `macros`: Maps human-readable names to specific DMX integer values for patterns or built-in fixture macros.
-  - `dynamics`: Sets parameter thresholds for how audio metrics (like `flux` or `bass`) modulate specific effects in `_calculate_channel`.
+---
 
-## 6. Output Translation (`dmx_engine.py` -> `main.py`)
-- Inside `dmx_engine.py`, the `_process_device` loop calculates the final 0-255 integer value for every defined channel based on the active scene, the audio modifiers, and the JSON constraints, applying master overrides or blackouts (like forcing the `dimmer` to 0 during a `tension` transient).
-- These integers are written to an internal 513-byte `universe` array.
-- Back in `main.py`, the universe is dispatched to a background thread (`sync_send_dmx`), which calculates the strict serial timing (Break, MAB) and flushes the buffer out through the RS485 hat or USB-DMX adapter at 250k baud, physically creating light.
+## 2. Vibe & Transient States (`vibe_engine.py`)
 
-## 7. Web Interface Interaction (`setup.html` & `server.py`)
-- **`server.py`:** Provides a REST API to list, read, and write JSON fixture profiles and stage configurations to the disk.
-- **`setup.html`:** Serves as the configuration dashboard.
-  - The **Fixture Editor** creates the JSON map of what DMX channels control what feature.
-  - The **Stage Manager** creates `stage_config.json`, assigning a profile to a starting DMX address.
-  - The **Roles Config** defines bounding boxes for movement, saving to `roles.json`.
-  - The **Live Test** UI communicates via WebSockets to `main.py`, sending parameter changes (`intensity`, `speed`, `overrides`) directly into the running engine, bypassing the normal audio flow for manual calibration.
+The engine categorizes the musical "emotional state" using a hybrid state machine:
+- **Vibe (Bucket):** `chill`, `mid`, or `high`. Determined by beat density (beats per 3 seconds) and volume, modified by a user-controlled `vibe_bias`.
+- **Transient (The EDM Intelligence):**
+  - `steady`: Consistent energy.
+  - `building`: Energy is rising over a ~2s trend.
+  - `tension`: Sudden drop in "impact" (heavy bass) while energy was previously high. Used for the "pre-drop" silence.
+  - `dropping`: Massive spike in impact following a tension state or sudden bass onset.
 
-## Summary of the Pipeline
-Capture (Monitor) -> Clean & FFT -> Extract Bands & Flux -> Normalization -> Beat Detection & Confidence -> Vibe & Transient Classification (Build/Drop) -> Update Virtual Playheads & Accumulators -> Scene Generation (Lissajous/Scroll/Rhythm) -> JSON Profile Resolution & Constraint Bounding -> Universe Array Write -> Serial Port RS485 Flush -> Physical Beam.
+---
+
+## 3. DMX Logic Engine (`dmx_engine.py`)
+
+### 3-Field Spatial Engine
+The engine maintains three independent `LogicMatrix` math cores:
+- **Logic Matrix (Master):** Global calculations.
+- **Logic L / Logic R:** Independent spatial fields that allow fixtures on the left of the room to react to different LFO phases or bin energies than those on the right.
+
+### The 4-Layer Priority Stack
+Before a final DMX value is sent, it passes through four priority layers:
+1.  **Spatial Logic:** Raw LFOs (Sine, Tri, Saw, Square) mapped to the 3-point calibration (Min/Center/Max).
+2.  **Base Layer (Presets):** The active background scene (e.g., "Lissajous") provides a default overlay.
+3.  **System Triggers (High Priority):** Automatic overlays triggered by musical events:
+    - **Bass Styles:** Detects `machine_gun` (rapid sub-hits), `tearout` (distorted high-energy mid), `wonky` (swinging rhythmic shifts), and `sub`.
+    - **Rhythms:** `Boots` (Kick), `Cats` (Snare), `Cha` (Fused).
+4.  **Manual Overrides:** Absolute highest priority. Direct injections from the Setup UI or Live Test tab.
+
+### Preset Logic
+Presets stored in `fixtures/presets.json` use the `trigger` field (e.g., `vibe:high`, `bass_style:wonky`, or `bin:0>0.8`) to automatically override specific fixture roles when conditions are met.
+
+---
+
+## 4. Hardware Translation
+
+### Timing & Transmission (`main.py`)
+Accurate DMX timing is critical on the Pi 5. The engine uses two methods based on the host:
+- **Pi 5 Native UART:** Uses a **Baud Rate Trick**. To send the DMX **BREAK**, it drops the baud to 57600, sends a `0x00`, then slams back to 250k. This creates a hardware-precise 100us Break consistent with the DMX512 standard.
+- **USB-DMX (FTDI):** Uses `port.break_condition = True` for high-level driver control.
+
+---
+
+## 5. System Setup Guide
+
+### 1. Hardware Config (`/boot/firmware/config.txt`)
+Essential for unlocking WaveShare RS485 HATS and HifiBerry DACs.
+```ini
+# Unlocks UART0 pins on Pi 5 GPIO
+dtparam=uart0=on
+dtoverlay=disable-bt
+enable_uart=1
+dtoverlay=uart0-pi5
+
+# Configures I2S for HifiBerry
+dtparam=audio=off
+dtoverlay=hifiberry-dacplus
+```
+
+### 2. OS Dependencies
+```bash
+sudo apt update && sudo apt install -y python3-venv libasound2-dev libpulse0 pulseaudio-utils gpiod libgpiod-dev openssl fuser
+```
+
+### 3. Permissions & Persistence
+- **Sudoers:** `/etc/sudoers.d/vj-launcher` must exist to allow the Web UI to issue `systemctl restart` commands without a password.
+- **Services:** Run `./setup_service.sh` to install the `vj-server`, `vj-launcher`, and `vj-engine` systemd units.
+- **SSL:** Run `./generate_cert.sh` to enable SSL (HTTPS/WSS), which is required for mobile PWA standalone support.
+
+---
+*Technical Ref: DMX_ENGINE v2.5 / PI5-LABWC Optimized*
+

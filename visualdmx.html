@@ -1210,39 +1210,28 @@
         void main() {
             vec2 uv = vUv;
             
-            // --- DROPPING: Camera Shake (UV Offset) ---
-            if (u_transient_state == 3.0 && u_drop_time >= 0.0 && u_drop_time < 2.0) {
-                float shakeIntensity = (2.0 - u_drop_time) * 0.02;
-                uv.x += (rand(vec2(u_time, 0.0)) - 0.5) * shakeIntensity;
-                uv.y += (rand(vec2(0.0, u_time)) - 0.5) * shakeIntensity;
-            }
 
+
+/*
             // --- TENSION: Glitch (UV Offset) ---
             if (u_transient_state == 2.0) {
                 if (rand(vec2(u_time, floor(uv.y * 10.0))) > 0.98) {
                     uv.x += (rand(vec2(u_time)) - 0.5) * 0.1;
                 }
             }
+*/
 
             vec4 color;
             
-            // --- DROPPING: Chromatic Aberration ---
-            if (u_transient_state == 3.0 && u_drop_time >= 0.0 && u_drop_time < 2.0) {
-                float caAmount = (2.0 - u_drop_time) * 0.05;
-                vec2 dist = uv - 0.5;
-                color.r = texture2D(tDiffuse, uv + dist * caAmount).r;
-                color.g = texture2D(tDiffuse, uv).g;
-                color.b = texture2D(tDiffuse, uv - dist * caAmount).b;
-                color.a = 1.0;
-            } else {
-                color = texture2D(tDiffuse, uv);
-            }
+            color = texture2D(tDiffuse, uv);
             
+/*
             // --- TENSION: B&W and Invert ---
             if (u_transient_state == 2.0) {
                 float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
                 color.rgb = vec3(1.0 - gray); // Inverted B&W
             }
+*/
 
             // --- Existing Black Point Logic ---
             float denominator = 1.0 - u_blackPoint;
@@ -1370,12 +1359,53 @@
 
         // --- UNIFORMS ---
         const pixelRatio = 0.5; // Forced for Pi 5 performance
-        // --- NOISE MAP GENERATION (Pi 5 Optimization) ---
+        // --- NOISE MAP GENERATION (Pi 5 Optimization: Smooth Value Noise) ---
         const noiseSize = 256;
         const noiseData = new Uint8Array(noiseSize * noiseSize * 4);
-        for (let i = 0; i < noiseSize * noiseSize * 4; i += 4) {
-            const v = Math.floor(Math.random() * 256);
-            noiseData[i] = v; noiseData[i+1] = v; noiseData[i+2] = v; noiseData[i+3] = 255;
+        
+        // Simple Value Noise implementation for smooth texture
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+        
+        const pSize = 256;
+        const p = new Uint8Array(pSize * 2);
+        const grad = new Float32Array(pSize);
+        for(let i = 0; i < pSize; i++) {
+            p[i] = i;
+            grad[i] = Math.random();
+        }
+        for(let i = pSize - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [p[i], p[j]] = [p[j], p[i]];
+        }
+        for(let i = 0; i < pSize; i++) p[i + pSize] = p[i];
+
+        function getNoise(x, y) {
+            const X = Math.floor(x) & 255;
+            const Y = Math.floor(y) & 255;
+            const xf = x - Math.floor(x);
+            const yf = y - Math.floor(y);
+            const u = fade(xf);
+            const v = fade(yf);
+            
+            const aa = grad[p[p[X] + Y]];
+            const ba = grad[p[p[(X + 1) & 255] + Y]];
+            const ab = grad[p[p[X] + ((Y + 1) & 255)]];
+            const bb = grad[p[p[(X + 1) & 255] + ((Y + 1) & 255)]];
+            
+            return lerp(lerp(aa, ba, u), lerp(ab, bb, u), v);
+        }
+
+        for (let y = 0; y < noiseSize; y++) {
+            for (let x = 0; x < noiseSize; x++) {
+                const i = (y * noiseSize + x) * 4;
+                // Layer multiple frequencies for "organic" look
+                let val = getNoise(x * 0.05, y * 0.05) * 0.7;
+                val += getNoise(x * 0.1, y * 0.1) * 0.3;
+                
+                const v = Math.floor(val * 255);
+                noiseData[i] = v; noiseData[i+1] = v; noiseData[i+2] = v; noiseData[i+3] = 255;
+            }
         }
         const noiseTexture = new THREE.DataTexture(noiseData, noiseSize, noiseSize, THREE.RGBAFormat);
         noiseTexture.wrapS = THREE.RepeatWrapping;
@@ -2188,20 +2218,26 @@
             accumulatedTime += delta * remoteParams.speed;
             const time = accumulatedTime;
 
+/*
             // --- TRANSIENT STATE TRACKING ---
             if (currentTransient === 'dropping' && lastTransient !== 'dropping') {
                 dropStartTime = rawTime;
             }
             lastTransient = currentTransient;
+*/
 
+/*
             let transInt = 0;
             if (currentTransient === 'building') transInt = 1;
             else if (currentTransient === 'tension') transInt = 2;
             else if (currentTransient === 'dropping') transInt = 3;
+*/
+            let transInt = 0;
             
             const dropDuration = (dropStartTime > 0) ? (rawTime - dropStartTime) : -1;
             const pixelRatio = 0.5; // Shared logic for u_resolution
 
+/*
             // --- HYBRID TRANSIENT LOGIC ---
             let smoothFactor = 0.12;
             let amp = remoteParams.amplitude;
@@ -2216,6 +2252,10 @@
                 amp *= 2.0;          // Exaggerate displacement
                 currentSpeed *= 3.0; // Accelerate rotation
             }
+*/
+            let smoothFactor = 0.12;
+            let amp = remoteParams.amplitude;
+            let currentSpeed = remoteParams.speed;
 
             smoothedMods.flux += (targetMods.flux - smoothedMods.flux) * smoothFactor;
             smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * smoothFactor;
@@ -2251,6 +2291,7 @@
             let modHigh = Math.min(1.5, smoothedMods.high * visualPower);
             let modVol = Math.min(1.5, smoothedMods.vol * visualPower);
 
+/*
             // TENSION BLACKOUT: Force all audio reactivity to zero for a clean dark build
             if (currentTransient === "tension") {
                 modFlux = 0.0;
@@ -2258,6 +2299,7 @@
                 modHigh = 0.0;
                 modVol = 0.0;
             }
+*/
 
             // Triggers
             const zoomMod = dmxZoomMod;
@@ -2468,6 +2510,7 @@
             // unless we want to manually rotate meshes (which the shaders handle mostly)
 
             // TENSION BLACKOUT OVERRIDE: Skip rendering or force clear if in tension
+            /*
             if (currentTransient === "tension") {
                 renderer.setClearColor(0x000000, 1);
                 renderer.clear();
@@ -2475,6 +2518,8 @@
             } else {
                 composer.render();
             }
+            */
+            composer.render();
         }
         animate();
 
