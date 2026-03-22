@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify API Setup | RaveBox</title>
+    <title>Help & Setup | RaveBox</title>
     <style>
         :root {
             --bg: #0a0a0c;
             --surface: #16161a;
-            --primary: #1DB954; /* Spotify Green */
+            --primary: #1DB954;
+            /* Spotify Green */
             --secondary: #7000ff;
+            --accent: #00f2ff;
             --text: #ffffff;
             --text-dim: #a0a0b0;
             --border: rgba(255, 255, 255, 0.1);
+            --sidebar-width: 260px;
         }
 
         * {
@@ -21,7 +25,7 @@
         }
 
         body {
-            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('background.png') no-repeat center center fixed;
+            background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9)), url('background.png') no-repeat center center fixed;
             background-size: cover;
             color: var(--text);
             margin: 0;
@@ -36,31 +40,155 @@
             background: rgba(22, 22, 26, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            padding: 2.5rem;
             border-radius: 24px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
             width: 100%;
-            max-width: 500px;
+            max-width: 1000px;
+            height: 85vh;
+            display: flex;
+            overflow: hidden;
             border: 1px solid var(--border);
         }
 
-        h1 {
-            margin: 0 0 1rem;
-            font-size: 1.8rem;
-            font-weight: 800;
-            background: linear-gradient(45deg, var(--primary), #ffffff);
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgba(0, 0, 0, 0.3);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 0 1rem 2rem;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.2rem;
+            margin: 0;
+            background: linear-gradient(45deg, var(--accent), var(--secondary));
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .nav-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex: 1;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-dim);
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent);
+            box-shadow: inset 4px 0 0 var(--accent);
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+        }
+
+        .btn-back {
+            width: 100%;
+            padding: 0.8rem;
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-back:hover {
+            border-color: var(--text);
+            color: var(--text);
+        }
+
+        /* --- CONTENT AREA --- */
+        .main-content {
+            flex: 1;
+            padding: 2.5rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            margin: 0 0 1.5rem;
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .help-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .help-card h3 {
+            margin-top: 0;
+            color: var(--accent);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         p {
             color: var(--text-dim);
             font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 2rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
         }
 
+        /* Spotify Form Styles */
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -89,137 +217,309 @@
         input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2);
         }
 
         .btn {
-            width: 100%;
             padding: 1rem;
             border: none;
             border-radius: 12px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-top: 1rem;
         }
 
         .btn-save {
             background: var(--primary);
             color: #000;
-            box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+            width: 100%;
         }
 
-        .btn-save:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(29, 185, 84, 0.4);
-        }
-
-        .btn-back {
-            background: transparent;
-            color: var(--text-dim);
-            border: 1px solid var(--border);
-            margin-top: 0.5rem;
-        }
-
-        .btn-back:hover {
-            border-color: var(--text);
-            color: var(--text);
-        }
-
-        .instructions {
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border);
-            font-size: 0.85rem;
-            color: var(--text-dim);
-        }
-
-        .instructions a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-
-        .instructions ol {
-            padding-left: 1.2rem;
-            margin-top: 0.5rem;
-        }
-
-        .instructions li {
-            margin-bottom: 0.5rem;
+        .btn-spotify {
+            background: #fff;
+            color: #000;
+            width: 100%;
+            margin-top: 1rem;
         }
 
         .status-msg {
             margin-top: 1rem;
             font-size: 0.85rem;
-            text-align: center;
-            height: 1.2rem;
+            min-height: 1.2rem;
         }
 
-        .status-msg.success { color: #00ff88; }
-        .status-msg.error { color: #ff3366; }
+        .status-msg.success {
+            color: #00ff88;
+        }
+
+        .status-msg.error {
+            color: #ff3366;
+        }
+
+        /* Code Blocks */
+        pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            color: #d1d1d1;
+            font-family: monospace;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+        }
+
+        code {
+            font-family: monospace;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+                max-height: 90vh;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 1rem;
+                flex-direction: row;
+                overflow-x: auto;
+            }
+
+            .sidebar-header,
+            .sidebar-footer {
+                display: none;
+            }
+
+            .nav-list {
+                display: flex;
+                gap: 10px;
+            }
+
+            .nav-item {
+                margin-bottom: 0;
+                white-space: nowrap;
+            }
+
+            .main-content {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Floating Toggle for Sidebar visibility on very small screens could go here */
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h1>Spotify API Setup</h1>
-        <p>Connect your own Spotify Developer account to enable rich metadata and track analysis. This will bypass the built-in credentials.</p>
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>RaveBox Help</h2>
+            </div>
+            <ul class="nav-list">
+                <li class="nav-item active" onclick="showSection('spotify')">
+                    <span>🎵</span> Spotify API
+                </li>
+                <li class="nav-item" onclick="showSection('raves')">
+                    <span>⚡</span> How it Raves
+                </li>
+                <li class="nav-item" onclick="showSection('setup')">
+                    <span>🛠️</span> Initial Setup
+                </li>
+                <li class="nav-item" onclick="showSection('debug')">
+                    <span>🐞</span> Debug
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <button class="btn-back" onclick="window.location.href='/manager.html'">← Back to Manager</button>
+            </div>
+        </aside>
 
-        <div id="setup-step-1">
-            <h2 style="font-size:1.2rem; color:var(--primary); margin-bottom:1rem;">1. API Credentials</h2>
-            <div class="form-group">
-                <label for="clientId">Client ID</label>
-                <input type="text" id="clientId" placeholder="Enter your Spotify Client ID">
+        <main class="main-content">
+            <!-- SECTION: SPOTIFY API -->
+            <div id="section-spotify" class="section active">
+                <h1>Spotify API Setup</h1>
+                <p>Connect your own Spotify Developer account to enable rich metadata and track analysis. This bypasses
+                    built-in credentials for higher reliability.</p>
+
+                <div class="help-card">
+                    <h3>1. API Credentials</h3>
+                    <div class="form-group">
+                        <label for="clientId">Client ID</label>
+                        <input type="text" id="clientId" placeholder="Enter your Spotify Client ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="clientSecret">Client Secret</label>
+                        <input type="password" id="clientSecret" placeholder="Enter your Spotify Client Secret">
+                    </div>
+                    <div class="form-group" style="display:none;">
+                        <input type="text" id="redirectUri" value="http://127.0.0.1:8888/callback">
+                    </div>
+                    <button class="btn btn-save" onclick="saveCreds()">Save Credentials</button>
+                </div>
+
+                <div class="help-card">
+                    <h3>2. Authorize Account</h3>
+                    <p style="font-size:0.85rem;">Click authorize to open Spotify login, then paste the URL you are
+                        redirected to below.</p>
+                    <button class="btn btn-spotify" onclick="openAuth()">Open Spotify Auth</button>
+                    <div class="form-group" style="margin-top:1.5rem;">
+                        <label for="authCode">Callback URL or Code</label>
+                        <input type="text" id="authCode" placeholder="Paste the redirected URL here">
+                    </div>
+                    <button class="btn btn-save" onclick="finalizeAuth()">Login & Generate Token</button>
+                    <div id="statusMsg" class="status-msg"></div>
+                </div>
+
+                <div class="help-card" style="border-color: var(--primary);">
+                    <h3>Quick Guide</h3>
+                    <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.85rem;">
+                        <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank"
+                                style="color:var(--primary)">Spotify Dev Dashboard</a>.</li>
+                        <li>Add <code>http://127.0.0.1:8888/callback</code> to Redirect URIs.</li>
+                        <li>Copy ID and Secret into Step 1 above.</li>
+                    </ul>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="clientSecret">Client Secret</label>
-                <input type="password" id="clientSecret" placeholder="Enter your Spotify Client Secret">
+            <!-- SECTION: HOW IT RAVES (Audio Flow) -->
+            <div id="section-raves" class="section">
+                <h1>How the RaveBox Raves</h1>
+                <p>The engine uses a sophisticated multi-stage pipeline to turn raw sound into coordinated light shows.
+                </p>
+
+                <div class="help-card">
+                    <h3>⚡ The Audio Pipeline</h3>
+                    <p>The engine captures system audio using PulseAudio and performs real-time analysis:</p>
+                    <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
+                        <li><strong>11 Frequency Bins:</strong> From Sub-bass to Brilliance, mapped logarithmically for
+                            high fidelity.</li>
+                        <li><strong>Spectral Flux Tracking:</strong> Detects physical "impact" rather than just volume.
+                        </li>
+                        <li><strong>Normalization:</strong> A rolling 5-second window ensures the show is "full"
+                            regardless of track volume.</li>
+                    </ul>
+                </div>
+
+                <div class="help-card">
+                    <h3>🧠 EDM Intelligence</h3>
+                    <p>RaveBox understands track structure by tracking musical "Transients":</p>
+                    <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
+                        <li><strong>Building:</strong> Detected when cumulative energy is rising fast.</li>
+                        <li><strong>Tension:</strong> The "Pre-Drop" state where volume/energy is high but bass
+                            vanishes.</li>
+                        <li><strong>Dropping:</strong> The massive impact state that triggers high-intensity patterns.
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="help-card">
+                    <h3>🎨 Layered DMX Logic</h3>
+                    <p>Commands pass through a 4-layer priority stack:</p>
+                    <ol style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
+                        <li><strong>Spatial Logic:</strong> Sine/Square LFOs mapped to your stage dimensions.</li>
+                        <li><strong>Base Presets:</strong> Animated scenes like "Lissajous" or "Neon Tunnel".</li>
+                        <li><strong>System Triggers:</strong> Styles like "Machine Gun" or "Tearout" that override the
+                            base.</li>
+                        <li><strong>Manual:</strong> Your overrides from the Setup UI.</li>
+                    </ol>
+                </div>
             </div>
 
-            <div class="form-group" style="display:none;">
-                <label for="redirectUri">Redirect URI</label>
-                <input type="text" id="redirectUri" value="http://127.0.0.1:8888/callback">
+            <!-- SECTION: INITIAL SETUP -->
+            <div id="section-setup" class="section">
+                <h1>Initial Setup</h1>
+                <p>Advanced configuration for Raspberry Pi 5 hardware and system services.</p>
+
+                <div class="help-card">
+                    <h3>1. Hardware Config</h3>
+                    <p>Edit <code>/boot/firmware/config.txt</code> to enable UART for RS485 and HifiBerry audio:</p>
+                    <pre>dtparam=uart0=on
+dtoverlay=disable-bt
+enable_uart=1
+dtoverlay=uart0-pi5
+dtoverlay=hifiberry-dacplus</pre>
+                </div>
+
+                <div class="help-card">
+                    <h3>2. System Services</h3>
+                    <p>The engine runs as three independent systemd units:</p>
+                    <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
+                        <li><strong>vj-server:</strong> Main DMX logic and WebSocket relay.</li>
+                        <li><strong>vj-launcher:</strong> The Flask API that starts/stops the engine.</li>
+                        <li><strong>vj-engine:</strong> The raw python processing core.</li>
+                    </ul>
+                    <p>Run <code>./setup_service.sh</code> to re-install or update these services.</p>
+                </div>
+
+                <div class="help-card">
+                    <h3>3. SSL & Mobile Standalone</h3>
+                    <p>To use the Remote view on mobile without browser chrome, you must enable SSL. Run
+                        <code>./generate_cert.sh</code> then accept the risk once in your mobile browser. This unlocks
+                        the "Install App" PWA features.
+                    </p>
+                </div>
             </div>
 
-            <button class="btn btn-save" onclick="saveCreds()">Save Credentials</button>
-        </div>
+            <!-- SECTION: DEBUG -->
+            <div id="section-debug" class="section">
+                <h1>Debug & Maintenance</h1>
+                <p>Direct system commands to resolve common issues with audio routing and Spotify connectivity.</p>
 
-        <div id="setup-step-2" style="margin-top:2rem; padding-top:2rem; border-top:1px solid var(--border);">
-            <h2 style="font-size:1.2rem; color:var(--primary); margin-bottom:1rem;">2. Authorize Account</h2>
-            <p style="font-size:0.8rem;">Click authorize to open Spotify login, then paste the URL you are redirected to below.</p>
-            
-            <button class="btn btn-save" style="background:#fff; color:#000;" onclick="openAuth()">Open Spotify Auth</button>
-            
-            <div class="form-group" style="margin-top:1.5rem;">
-                <label for="authCode">Callback URL or Code</label>
-                <input type="text" id="authCode" placeholder="Paste the redirected URL here">
+                <div class="help-card">
+                    <h3>🎵 Raspotify (Spotify Connect)</h3>
+                    <p>If Spotify doesn't appear as a device, or the engine isn't picking up audio from it, try these:
+                    </p>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <button class="btn"
+                            style="background:rgba(29, 185, 84, 0.2); color:var(--primary); font-size:0.75rem;"
+                            onclick="runDebug('sudo systemctl restart raspotify')">Restart Raspotify</button>
+                        <button class="btn"
+                            style="background:rgba(255,255,255,0.05); color:var(--text-dim); font-size:0.75rem;"
+                            onclick="runDebug('sudo systemctl status raspotify')">Check Status</button>
+                    </div>
+                </div>
+
+                <div class="help-card">
+                    <h3>🔊 Audio Engine (ALSA)</h3>
+                    <p>If there is no audio capture or the sound device is busy/locked:</p>
+                    <button class="btn" style="background:rgba(255, 51, 102, 0.2); color:#ff3366; width:100%;"
+                        onclick="runDebug('sudo alsa force-reload')">Force ALSA Reload</button>
+                </div>
+
+                <div id="debugOutputContainer" style="display:none; margin-top:2rem;">
+                    <label style="color:var(--accent); font-size:0.7rem;">Terminal Output:</label>
+                    <pre id="debugConsoleText"
+                        style="margin-top:8px; border-color:var(--accent); color:#0f0; font-size:0.75rem; white-space:pre-wrap;"></pre>
+                </div>
             </div>
-            
-            <button class="btn btn-save" onclick="finalizeAuth()">Login & Generate Token</button>
-        </div>
-
-        <button class="btn btn-back" onclick="window.location.href='/manager.html'">Back to Manager</button>
-
-        <div id="statusMsg" class="status-msg"></div>
-
-        <div class="instructions">
-            <strong>Setup Guide:</strong>
-            <ol>
-                <li>Go to the <a href="https://developer.spotify.com/dashboard" target="_blank">Spotify Dev Dashboard</a>.</li>
-                <li>Create an App. In Settings, find <strong>ID</strong> and <strong>Secret</strong>.</li>
-                <li>Add <code>http://127.0.0.1:8888/callback</code> to <strong>Redirect URIs</strong>.</li>
-                <li>Enter credentials in Step 1 and Save.</li>
-                <li>Click <strong>Open Spotify Auth</strong> in Step 2.</li>
-                <li>Login, then copy the URL of the error/blank page you land on.</li>
-                <li>Paste it in <strong>Callback URL</strong> and click <strong>Login</strong>.</li>
-            </ol>
-        </div>
+        </main>
     </div>
 
     <script>
+        function showSection(id) {
+            // Update Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // Update Sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById('section-' + id).classList.add('active');
+        }
+
+        // --- ORIGINAL SPOTIFY LOGIC ---
         async function loadCreds() {
             try {
                 const res = await fetch('/spotify_creds.json');
@@ -227,7 +527,7 @@
                     const data = await res.json();
                     document.getElementById('clientId').value = data.SPOT_CLIENT_ID || '';
                     document.getElementById('clientSecret').value = data.SPOT_CLIENT_SECRET || '';
-                    document.getElementById('redirectUri').value = data.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:8888/callback';
+                    if (data.SPOTIFY_REDIRECT_URI) document.getElementById('redirectUri').value = data.SPOTIFY_REDIRECT_URI;
                 }
             } catch (e) {
                 console.error("Failed to load credentials", e);
@@ -270,12 +570,12 @@
             const clientId = document.getElementById('clientId').value.trim();
             const redirectUri = encodeURIComponent(document.getElementById('redirectUri').value.trim());
             const scope = encodeURIComponent("user-read-currently-playing");
-            
+
             if (!clientId) {
-                alert("Please enter a Client ID in Step 1 first.");
+                alert("Please enter a Client ID first.");
                 return;
             }
-            
+
             const url = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scope}`;
             window.open(url, '_blank');
         }
@@ -283,7 +583,7 @@
         async function finalizeAuth() {
             const code = document.getElementById('authCode').value.trim();
             const statusMsg = document.getElementById('statusMsg');
-            
+
             if (!code) {
                 statusMsg.textContent = "❌ Please paste the callback URL/code.";
                 statusMsg.className = "status-msg error";
@@ -294,21 +594,19 @@
             statusMsg.className = "status-msg";
 
             try {
-                // Use the launcher API on port 8001 (or current port if same)
-                const host = window.location.hostname;
-                const apiPort = 8001; 
+                const host = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'api.ravebox.love' : (window.location.hostname + ':8001');
                 const protocol = window.location.protocol;
-                
-                const res = await fetch(`${protocol}//${host}:${apiPort}/api/spotify/auth?code=${encodeURIComponent(code)}`);
+                const baseUrl = (host === 'api.ravebox.love') ? `${protocol}//${host}` : `${protocol}//${host}`;
+
+                const res = await fetch(`${baseUrl}/api/spotify/auth?code=${encodeURIComponent(code)}`);
                 const data = await res.json();
-                
+
                 if (data.success) {
                     statusMsg.textContent = "✅ Login Successful! Token cached.";
                     statusMsg.className = "status-msg success";
                 } else {
                     statusMsg.textContent = "❌ Auth Failed: " + (data.error || "Check console");
                     statusMsg.className = "status-msg error";
-                    console.error("Auth detail:", data);
                 }
             } catch (e) {
                 statusMsg.textContent = "❌ Connection Error: " + e.message;
@@ -316,7 +614,40 @@
             }
         }
 
+        async function runDebug(cmd) {
+            const container = document.getElementById('debugOutputContainer');
+            const output = document.getElementById('debugConsoleText');
+
+            container.style.display = 'block';
+            output.textContent = "> Executing: " + cmd + "\n...";
+            output.style.color = "#aaa";
+
+            try {
+                const host = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'api.ravebox.love' : (window.location.hostname + ':8001');
+                const protocol = window.location.protocol;
+                const baseUrl = (host === 'api.ravebox.love') ? `${protocol}//${host}` : `${protocol}//${host}`;
+
+                const res = await fetch(`${baseUrl}/shell?cmd=${encodeURIComponent(cmd)}`);
+                const data = await res.json();
+
+                output.textContent = (data.stdout || '') + (data.stderr || '');
+                if (!output.textContent.trim()) {
+                    output.textContent = "> Command finished with exit code " + data.exit_code;
+                }
+                output.style.color = data.exit_code === 0 ? "#0f0" : "#ff3366";
+
+                // Scroll to bottom
+                const mainContent = document.querySelector('.main-content');
+                mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' });
+
+            } catch (e) {
+                output.textContent = "❌ Connection Error: " + e.message;
+                output.style.color = "#ff3366";
+            }
+        }
+
         loadCreds();
     </script>
 </body>
+
 </html>

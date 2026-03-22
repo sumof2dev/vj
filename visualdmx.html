@@ -35,12 +35,19 @@
 
         #debug {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 12px;
+            right: 15px;
             color: #0f0;
             font-family: monospace;
-            pointer-events: none;
-            z-index: 100;
+            pointer-events: auto;
+            z-index: 1000;
+            text-decoration: none;
+            opacity: 0.6;
+            font-size: 13px;
+        }
+
+        #debug:hover {
+            opacity: 1;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -51,7 +58,7 @@
 </head>
 
 <body>
-    <div id="debug">Initializing...</div>
+    <a id="debug" href="manager.html">Initializing...</a>
 
     <!-- SHARED VERTEX SHADER -->
     <script id="vertexShader" type="x-shader/x-vertex">
@@ -750,10 +757,10 @@
         uniform vec2 u_resolution;
         uniform float u_dmxRot;
 
-        vec3 hslToRgb(float h, float s, float l) {
-            l = min(0.6, l);
+        // Simplified color conversion for performance
+        vec3 quickHue(float h) {
             vec3 rgb = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-            return l + s * (rgb - 0.5) * (1.0 - abs(2.0 * l - 1.0));
+            return rgb * 0.6; // Scale brightness slightly
         }
 
         void main() {
@@ -761,56 +768,45 @@
             uv.x *= u_resolution.x / u_resolution.y;
             vec3 color = vec3(0.0);
 
-            // 4 Zones mirroring the hardware laser array
-            float clampedFlux = min(u_flux, 0.6);
-            float clampedBass = min(u_bass, 0.8);
-            float clampedVol = min(u_vol, 0.8);
+            // Pre-calculate loop invariants
+            float flux = min(u_flux, 0.6);
+            float bass = min(u_bass, 0.8);
+            float vol = min(u_vol, 0.8);
+            
+            float speed_mult = 1.0 + flux * 1.5;
+            vec3 freq = vec3(3.0, 2.0, 2.5) * speed_mult;
+            vec3 radius = vec3(0.6 + bass * 0.4, 0.5 + bass * 0.3, 0.4 + bass * 0.3);
+            
+            float ca = cos(u_dmxRot);
+            float sa = sin(u_dmxRot);
+            mat2 rot = mat2(ca, -sa, sa, ca);
+            
+            float intensityBase = (0.005 + flux * 0.008) * (0.4 + vol * 0.6);
 
+            // Reduced zones and trail steps for performance (from 4x30 to 4x12)
             for(float z_idx = 0.0; z_idx < 4.0; z_idx++) {
-                float phase = z_idx * 1.570796; // PI/2 phase shift per zone
+                float phase = z_idx * 1.570796;
                 
-                // Draw a glowing trail for each zone
-                for(float i = 0.0; i < 30.0; i++) {
-                    // Time offset for the trail effect
-                    float t = (u_time * 0.4) - (i * 0.015);
+                for(float i = 0.0; i < 12.0; i++) {
+                    float t = (u_time * 0.4) - (i * 0.03);
                     
-                    // Mirror backend Lissajous math exactly
-                    float speed_mult = 1.0 + clampedFlux * 1.5;
-                    float freq_x = 3.0 * speed_mult;
-                    float freq_y = 2.0 * speed_mult;
-                    float freq_z = 2.5 * speed_mult; // 3rd axis for depth
-                    
-                    float radius_x = 0.6 + clampedBass * 0.4;
-                    float radius_y = 0.5 + clampedBass * 0.3;
-                    float radius_z = 0.4 + clampedBass * 0.3;
-                    
-                    // ... (rest of the loop) ...
                     vec3 pos = vec3(
-                        sin(t * freq_x + phase) * radius_x,
-                        sin(t * freq_y) * radius_y,
-                        sin(t * freq_z + phase * 0.5) * radius_z
+                        sin(t * freq.x + phase) * radius.x,
+                        sin(t * freq.y) * radius.y,
+                        sin(t * freq.z + phase * 0.5) * radius.z
                     );
                     
-                    // HARD-SYNC: Direct DMX Laser Rotation
-                    float ca = cos(u_dmxRot);
-                    float sa = sin(u_dmxRot);
-                    pos.xy = mat2(ca, -sa, sa, ca) * pos.xy;
+                    pos.xy = rot * pos.xy;
                     
-                    // 3D to 2D Perspective Projection
                     float z = pos.z + 1.2; 
                     vec2 p2d = pos.xy / z;
                     
                     float dist = length(uv - p2d);
                     
-                    // Dynamic Hue: shifts with time, zone, and depth
-                    float hue = fract(u_time * 0.1 + z_idx * 0.25 + pos.z * 0.2);
-                    vec3 col = hslToRgb(hue, 1.0, 0.5);
-                    
-                    // Glow falloff
-                    float intensity = (0.003 + clampedFlux * 0.005) / (dist + 0.002);
-                    float fade = 1.0 - (i / 30.0);
-                    
-                    color += col * intensity * fade * (0.4 + clampedVol * 0.6);
+                    // Optimized Glow & Color
+                    float hue = fract(u_time * 0.1 + z_idx * 0.25 + pos.z * 0.1);
+                    float fade = 1.0 - (i / 12.0);
+                    color += quickHue(hue) * (intensityBase * fade / (dist + 0.003));
                 }
             }
             
@@ -1362,23 +1358,23 @@
         // --- NOISE MAP GENERATION (Pi 5 Optimization: Smooth Value Noise) ---
         const noiseSize = 256;
         const noiseData = new Uint8Array(noiseSize * noiseSize * 4);
-        
+
         // Simple Value Noise implementation for smooth texture
         const lerp = (a, b, t) => a + (b - a) * t;
         const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
-        
+
         const pSize = 256;
         const p = new Uint8Array(pSize * 2);
         const grad = new Float32Array(pSize);
-        for(let i = 0; i < pSize; i++) {
+        for (let i = 0; i < pSize; i++) {
             p[i] = i;
             grad[i] = Math.random();
         }
-        for(let i = pSize - 1; i > 0; i--) {
+        for (let i = pSize - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [p[i], p[j]] = [p[j], p[i]];
         }
-        for(let i = 0; i < pSize; i++) p[i + pSize] = p[i];
+        for (let i = 0; i < pSize; i++) p[i + pSize] = p[i];
 
         function getNoise(x, y) {
             const X = Math.floor(x) & 255;
@@ -1387,12 +1383,12 @@
             const yf = y - Math.floor(y);
             const u = fade(xf);
             const v = fade(yf);
-            
+
             const aa = grad[p[p[X] + Y]];
             const ba = grad[p[p[(X + 1) & 255] + Y]];
             const ab = grad[p[p[X] + ((Y + 1) & 255)]];
             const bb = grad[p[p[(X + 1) & 255] + ((Y + 1) & 255)]];
-            
+
             return lerp(lerp(aa, ba, u), lerp(ab, bb, u), v);
         }
 
@@ -1402,9 +1398,9 @@
                 // Layer multiple frequencies for "organic" look
                 let val = getNoise(x * 0.05, y * 0.05) * 0.7;
                 val += getNoise(x * 0.1, y * 0.1) * 0.3;
-                
+
                 const v = Math.floor(val * 255);
-                noiseData[i] = v; noiseData[i+1] = v; noiseData[i+2] = v; noiseData[i+3] = 255;
+                noiseData[i] = v; noiseData[i + 1] = v; noiseData[i + 2] = v; noiseData[i + 3] = 255;
             }
         }
         const noiseTexture = new THREE.DataTexture(noiseData, noiseSize, noiseSize, THREE.RGBAFormat);
@@ -2076,99 +2072,187 @@
 
         // If no server param, use the current hostname (works for both local and remote)
         if (!serverIP) {
-            serverIP = window.location.hostname || 'localhost';
+            serverIP = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'wss.ravebox.love' : (window.location.hostname || 'localhost');
         }
 
-        console.log(`🔌 Connecting to WebSocket at ${serverIP}:8765`);
         const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const ws = new WebSocket(`${wsProtocol}://${serverIP}:8765`);
-        ws.onopen = () => {
-            console.log("✅ WebSocket Connected");
-            ws.send(JSON.stringify({ type: "get_params" }));
-        };
+        let ws = null;
+        let wsReconnectDelay = 1000; // Start at 1 second
+        const WS_MAX_RECONNECT_DELAY = 10000; // Cap at 10 seconds
+        let wsReconnectTimer = null;
+        let wsConnected = false;
 
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
+        // Connection status overlay (non-intrusive, bottom-left)
+        const wsStatusOverlay = document.createElement('div');
+        wsStatusOverlay.id = 'ws-status-overlay';
+        wsStatusOverlay.style.cssText = 'position:fixed;bottom:12px;left:12px;padding:6px 14px;border-radius:6px;font-family:monospace;font-size:13px;z-index:9999;pointer-events:none;transition:opacity 0.5s;opacity:0;background:rgba(0,0,0,0.7);color:#ff6b6b;';
+        document.body.appendChild(wsStatusOverlay);
 
-            if (msg.type === "current_params") {
-                if (msg.visual) {
-                    const v = msg.visual;
-                    if (v.speed !== undefined) remoteParams.speed = v.speed;
-                    if (v.amplitude !== undefined) remoteParams.amplitude = v.amplitude;
-                    if (v.sensitivity !== undefined) remoteParams.sensitivity = v.sensitivity;
-                    if (v.layerFreq !== undefined) remoteParams.layerFreq = v.layerFreq;
-                    if (v.baseLayer !== undefined) remoteParams.baseLayer = v.baseLayer;
-                    if (v.effect !== undefined) remoteParams.effect = v.effect;
-                    console.log("📥 Loaded Persisted Visual Params:", remoteParams);
-                }
+        function showWsStatus(msg, color) {
+            wsStatusOverlay.textContent = msg;
+            wsStatusOverlay.style.color = color || '#ff6b6b';
+            wsStatusOverlay.style.opacity = '1';
+        }
+
+        function hideWsStatus() {
+            wsStatusOverlay.style.opacity = '0';
+        }
+
+        let currentSessionId = null;
+
+        function connectWS() {
+            // Prevent multiple simultaneous connection attempts
+            if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+
+            if (wsReconnectTimer) {
+                clearTimeout(wsReconnectTimer);
+                wsReconnectTimer = null;
             }
 
-            else if (msg.type === "audio") {
-                if (msg.dmx) dmxState = msg.dmx; // Capture incoming DMX state
-                if (msg.logic) logicState = msg.logic; // Capture LogicMatrix axes
-                const data = msg.data;
-                if (data.vibe) currentVibe = data.vibe;
-                if (data.transient) currentTransient = data.transient;
-                if (data.mods) {
-                    targetMods.flux = data.mods.flux || 0;
-                    targetMods.bass = data.mods.bass || 0;
-                    targetMods.high = data.mods.high || 0;
-                    targetMods.vol = data.mods.vol || 0;
-                }
-                // Capture the instant transient trigger, bypassing smoothed mods
-                if (data.beat !== undefined) {
-                    if (data.beat === true) isBeat = true;
-                }
+            const wsUrl = (serverIP === 'wss.ravebox.love') ? `${wsProtocol}://${serverIP}` : `${wsProtocol}://${serverIP}:8765`;
+            console.log(`🔌 Connecting to WebSocket at ${wsUrl}`);
+            showWsStatus('⏳ Connecting...', '#ffcc00');
 
-                // Spotify Background Image integration
-                if (data.spotify) {
-                    const sp = data.spotify;
+            try {
+                ws = new WebSocket(wsUrl);
+            } catch (e) {
+                console.error('❌ WebSocket creation failed:', e);
+                scheduleReconnect();
+                return;
+            }
 
-                    // Use image_high if available, fallback to image_low
-                    const newImageUrl = sp.image_high || sp.image_low;
+            ws.onopen = () => {
+                console.log("✅ WebSocket Connected");
+                wsConnected = true;
+                wsReconnectDelay = 1000; // Reset backoff on success
+                showWsStatus('✅ Connected', '#66ff66');
+                setTimeout(hideWsStatus, 2000); // Fade out after 2s
+                ws.send(JSON.stringify({ type: "get_params" }));
+            };
 
-                    if (newImageUrl && newImageUrl !== window._currentSpotifyBgUrl) {
-                        window._currentSpotifyBgUrl = newImageUrl;
+            ws.onclose = (event) => {
+                console.log(`🔌 WebSocket closed (code: ${event.code})`);
+                wsConnected = false;
+                scheduleReconnect();
+            };
 
-                        // Load texture
-                        new THREE.TextureLoader().load(newImageUrl, (texture) => {
-                            // Ensure wrapping is set correctly for shaders
-                            texture.wrapS = THREE.ClampToEdgeWrapping;
-                            texture.wrapT = THREE.ClampToEdgeWrapping;
-                            texture.minFilter = THREE.LinearFilter;
+            ws.onerror = (error) => {
+                console.error('❌ WebSocket error:', error);
+                // onclose will fire after this, which handles reconnect
+            };
 
-                            // Assign to the mesh's uniform
-                            if (bgSpotifyMesh && bgSpotifyMesh.material.uniforms.tDiffuse) {
-                                bgSpotifyMesh.material.uniforms.tDiffuse.value = texture;
-                            }
-                        });
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+
+                if (msg.type === "current_params") {
+                    if (msg.visual) {
+                        const v = msg.visual;
+                        if (v.speed !== undefined) remoteParams.speed = v.speed;
+                        if (v.amplitude !== undefined) remoteParams.amplitude = v.amplitude;
+                        if (v.sensitivity !== undefined) remoteParams.sensitivity = v.sensitivity;
+                        if (v.layerFreq !== undefined) remoteParams.layerFreq = v.layerFreq;
+                        if (v.baseLayer !== undefined) remoteParams.baseLayer = v.baseLayer;
+                        if (v.effect !== undefined) remoteParams.effect = v.effect;
+                        console.log("📥 Loaded Persisted Visual Params", remoteParams);
                     }
                 }
 
-                // Track rotation state for visual sync
-                if (data.rot_state) rotState = data.rot_state;
-                if (msg.rot_state) rotState = msg.rot_state; // Handle if sent at root level
-                if (msg.base_layer !== undefined) serverBaseLayer = msg.base_layer;
-                if (msg.fx_layer !== undefined) serverFxLayer = msg.fx_layer;
-                if (msg.fg_layer !== undefined) serverFgLayer = msg.fg_layer;
-                if (data.beat_count !== undefined) beatCount = data.beat_count;
-            }
+                else if (msg.type === "audio") {
+                    // Session Management: Detect server restart
+                    if (msg.session_id && msg.session_id !== currentSessionId) {
+                        currentSessionId = msg.session_id;
+                        ws.send(JSON.stringify({ type: "get_params" })); // Refresh defaults
+                    }
 
-            // Handle visual params from remote control
-            else if (msg.type === "visual_params") {
-                if (msg.speed !== undefined) remoteParams.speed = msg.speed;
-                if (msg.amplitude !== undefined) remoteParams.amplitude = msg.amplitude;
-                if (msg.sensitivity !== undefined) remoteParams.sensitivity = msg.sensitivity;
-                if (msg.layerFreq !== undefined) remoteParams.layerFreq = msg.layerFreq;
-                if (msg.baseLayer !== undefined) remoteParams.baseLayer = msg.baseLayer;
-                if (msg.effect !== undefined) remoteParams.effect = msg.effect;
-                if (msg.rot_state) rotState = msg.rot_state;
-                if (msg.base_layer !== undefined) serverBaseLayer = msg.base_layer;
-            }
-            else if (msg.type === "force_refresh") {
-                window.location.reload();
-            }
-        };
+                    // Optimized Binary DMX (Optional: visualizer doesn't strictly need the raw universe now)
+                    if (msg.dmx_b64) {
+                        const binary = atob(msg.dmx_b64);
+                        dmxState = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) {
+                            dmxState[i] = binary.charCodeAt(i);
+                        }
+                    }
+                    
+                    if (msg.logic) logicState = msg.logic; // Capture LogicMatrix axes
+                    const data = msg.data;
+                    if (data.vibe) currentVibe = data.vibe;
+                    if (data.transient) currentTransient = data.transient;
+                    if (data.mods) {
+                        targetMods.flux = data.mods.flux || 0;
+                        targetMods.bass = data.mods.bass || 0;
+                        targetMods.high = data.mods.high || 0;
+                        targetMods.vol = data.mods.vol || 0;
+                    }
+                    // Capture the instant transient trigger, bypassing smoothed mods
+                    if (data.beat !== undefined) {
+                        if (data.beat === true) isBeat = true;
+                    }
+
+                    // Spotify Background Image integration
+                    if (data.spotify) {
+                        const sp = data.spotify;
+
+                        // Use image_high if available, fallback to image_low
+                        const newImageUrl = sp.image_high || sp.image_low;
+
+                        if (newImageUrl && newImageUrl !== window._currentSpotifyBgUrl) {
+                            window._currentSpotifyBgUrl = newImageUrl;
+
+                            // Load texture
+                            new THREE.TextureLoader().load(newImageUrl, (texture) => {
+                                // Ensure wrapping is set correctly for shaders
+                                texture.wrapS = THREE.ClampToEdgeWrapping;
+                                texture.wrapT = THREE.ClampToEdgeWrapping;
+                                texture.minFilter = THREE.LinearFilter;
+
+                                // Assign to the mesh's uniform
+                                if (bgSpotifyMesh && bgSpotifyMesh.material.uniforms.tDiffuse) {
+                                    bgSpotifyMesh.material.uniforms.tDiffuse.value = texture;
+                                }
+                            });
+                        }
+                    }
+
+                    // Track rotation state for visual sync
+                    if (data.rot_state) rotState = data.rot_state;
+                    if (msg.rot_state) rotState = msg.rot_state; // Handle if sent at root level
+                    if (msg.base_layer !== undefined) serverBaseLayer = msg.base_layer;
+                    if (msg.fx_layer !== undefined) serverFxLayer = msg.fx_layer;
+                    if (msg.fg_layer !== undefined) serverFgLayer = msg.fg_layer;
+                    if (data.beat_count !== undefined) beatCount = data.beat_count;
+                }
+
+                // Handle visual params from remote control
+                else if (msg.type === "visual_params") {
+                    if (msg.speed !== undefined) remoteParams.speed = msg.speed;
+                    if (msg.amplitude !== undefined) remoteParams.amplitude = msg.amplitude;
+                    if (msg.sensitivity !== undefined) remoteParams.sensitivity = msg.sensitivity;
+                    if (msg.layerFreq !== undefined) remoteParams.layerFreq = msg.layerFreq;
+                    if (msg.baseLayer !== undefined) remoteParams.baseLayer = msg.baseLayer;
+                    if (msg.effect !== undefined) remoteParams.effect = msg.effect;
+                    if (msg.rot_state) rotState = msg.rot_state;
+                    if (msg.base_layer !== undefined) serverBaseLayer = msg.base_layer;
+                }
+                else if (msg.type === "force_refresh") {
+                    window.location.reload();
+                }
+            };
+        }
+
+        function scheduleReconnect() {
+            if (wsReconnectTimer) return; // Already scheduled
+            showWsStatus(`🔄 Reconnecting in ${(wsReconnectDelay / 1000).toFixed(0)}s...`, '#ff6b6b');
+            console.log(`🔄 Reconnecting in ${wsReconnectDelay}ms...`);
+            wsReconnectTimer = setTimeout(() => {
+                wsReconnectTimer = null;
+                connectWS();
+            }, wsReconnectDelay);
+            // Exponential backoff: 1s -> 2s -> 4s -> 8s -> 10s (capped)
+            wsReconnectDelay = Math.min(wsReconnectDelay * 2, WS_MAX_RECONNECT_DELAY);
+        }
+
+        // Initial connection
+        connectWS();
 
         // ========== HELPER FUNCTIONS ==========
         function randomInt(max) {
@@ -2218,26 +2302,20 @@
             accumulatedTime += delta * remoteParams.speed;
             const time = accumulatedTime;
 
-/*
             // --- TRANSIENT STATE TRACKING ---
             if (currentTransient === 'dropping' && lastTransient !== 'dropping') {
                 dropStartTime = rawTime;
             }
             lastTransient = currentTransient;
-*/
 
-/*
             let transInt = 0;
             if (currentTransient === 'building') transInt = 1;
             else if (currentTransient === 'tension') transInt = 2;
             else if (currentTransient === 'dropping') transInt = 3;
-*/
-            let transInt = 0;
-            
+
             const dropDuration = (dropStartTime > 0) ? (rawTime - dropStartTime) : -1;
             const pixelRatio = 0.5; // Shared logic for u_resolution
 
-/*
             // --- HYBRID TRANSIENT LOGIC ---
             let smoothFactor = 0.12;
             let amp = remoteParams.amplitude;
@@ -2252,10 +2330,6 @@
                 amp *= 2.0;          // Exaggerate displacement
                 currentSpeed *= 3.0; // Accelerate rotation
             }
-*/
-            let smoothFactor = 0.12;
-            let amp = remoteParams.amplitude;
-            let currentSpeed = remoteParams.speed;
 
             smoothedMods.flux += (targetMods.flux - smoothedMods.flux) * smoothFactor;
             smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * smoothFactor;
@@ -2269,13 +2343,11 @@
             const VISUAL_BASE_GAIN = 3.0;
             const visualPower = VISUAL_BASE_GAIN * amp;
 
-            // --- DMX HARDWARE SYNC ---
-            // Fix: Match fixture profile role name "rotate z" instead of "rot_z"
-            const rawZoom = dmxState["L1_zoom"] !== undefined ? dmxState["L1_zoom"] : 127;
-            const dmxZoomMod = (1.0 - (rawZoom / 255.0)) * visualPower;
-
-            const rawRotZ = dmxState["L1_rotate z"] !== undefined ? dmxState["L1_rotate z"] : 0;
-            const dmxRotRad = (rawRotZ / 255.0) * Math.PI * 2.0;
+            // --- PROCEDURAL SYNC (Axis Matrix) ---
+            // Visualizer now syncs its zoom/rotation to the Master Logic Matrix axes
+            // which are shared by all fixtures. (Axis A = Zoom, Axis B = Rotation)
+            const dmxZoomMod = (0.5 + (logicState.axis_a || 0) * 0.5) * visualPower;
+            const dmxRotRad = (logicState.axis_b || 0) * Math.PI;
 
             // --- PROCEDURAL LOGIC AXES ---
             uniforms.u_axis_a.value = logicState.axis_a || 0;
@@ -2291,15 +2363,13 @@
             let modHigh = Math.min(1.5, smoothedMods.high * visualPower);
             let modVol = Math.min(1.5, smoothedMods.vol * visualPower);
 
-/*
             // TENSION BLACKOUT: Force all audio reactivity to zero for a clean dark build
             if (currentTransient === "tension") {
-                modFlux = 0.0;
-                modBass = 0.0;
-                modHigh = 0.0;
-                modVol = 0.0;
+                modFlux *= 0.1;
+                modBass *= 0.1;
+                modHigh *= 0.1;
+                modVol *= 0.1;
             }
-*/
 
             // Triggers
             const zoomMod = dmxZoomMod;
@@ -2341,7 +2411,7 @@
             uniforms.u_audioLevel.value = intensityMod; // Intensity trigger
             uniforms.u_speed.value = remoteParams.speed;
             uniforms.u_dmxRot.value = dmxRotRad; // Hard-sync shader rotation
-            
+
             uniforms.u_transient_state.value = transInt;
             uniforms.u_drop_time.value = dropDuration;
 
@@ -2379,7 +2449,7 @@
             // Update Debug UI (Throttled for performance)
             if (Math.floor(rawTime * 10) % 2 === 0) {
                 document.getElementById('debug').innerText =
-                    `Vibe: ${currentVibe.toUpperCase()} | Base: ${currentBaseLayer} | FX: ${currentFxLayer} | State: ${currentTransient.toUpperCase()}`;
+                    `(${currentVibe.toUpperCase()} | ${currentBaseLayer} | ${currentFxLayer})`;
             }
 
             // Update Base 2 (old2x) when visible
@@ -2519,6 +2589,14 @@
                 composer.render();
             }
             */
+            // === ENGINE HEARTBEAT SIMULATION (Emergency Fallback) ===
+            // If we lose the backend, oscillate slightly but keep it dim to reflect "IDLE" state
+            if (!wsConnected) {
+                targetMods.flux = 0.02 + Math.sin(rawTime * 0.2) * 0.01;
+                targetMods.bass = 0.02 + Math.cos(rawTime * 0.1) * 0.01;
+                targetMods.vol = 0.02;
+            }
+
             composer.render();
         }
         animate();

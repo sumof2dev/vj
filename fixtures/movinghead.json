@@ -1,0 +1,225 @@
+{
+    "type": "movinghead",
+    "name": "movinghead",
+    "channels": {
+        "horizontal": 0,
+        "reset": 8,
+        "auto??": 7,
+        "hor+vert op": 6,
+        "dimming": 5,
+        "strobe": 4,
+        "patterns": 3,
+        "colors": 2,
+        "vert": 1
+    },
+    "modes": {},
+    "defaults": {
+        "unassigned_ch1": 0,
+        "unassigned_ch2": 0,
+        "unassigned_ch3": 0,
+        "unassigned_ch4": 0,
+        "unassigned_ch5": 0,
+        "unassigned_ch6": 0,
+        "unassigned_ch7": 0,
+        "unassigned_ch8": 0,
+        "unassigned_ch9": 0,
+        "unassigned_ch10": 0,
+        "unassigned_ch11": 0,
+        "unassigned_ch12": 0
+    },
+    "calibration": {
+        "horizontal": [
+            {
+                "min": 150,
+                "center": 172,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "reset": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            }
+        ],
+        "auto??": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 0,
+                "vibe": "any"
+            }
+        ],
+        "hor+vert op": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "dimming": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "strobe": [
+            {
+                "min": 0,
+                "center": 0,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "patterns": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "colors": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "vert": [
+            {
+                "min": 0,
+                "center": 50,
+                "max": 255,
+                "vibe": "any"
+            }
+        ]
+    },
+    "ranges": {},
+    "dynamics": {},
+    "macros": {},
+    "step_data": {},
+    "modifiers": {
+        "horizontal": "flux",
+        "reset": "state_machine",
+        "hor+vert op": "flux",
+        "dimming": "flux",
+        "strobe": "lfo",
+        "patterns": "4th beat",
+        "colors": "bass",
+        "vert": "lfo"
+    },
+    "lfo_data": {
+        "horizontal": {
+            "shape": "sawtooth",
+            "bin": 1,
+            "speed": 0.76,
+            "react": 0.6,
+            "return_to_min": false,
+            "threshold": 0,
+            "hold": 0,
+            "smoothing": 0
+        },
+        "horizontalfine": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.04,
+            "react": 0.5,
+            "return_to_min": false,
+            "threshold": 0.1,
+            "hold": 0
+        },
+        "vert": {
+            "shape": "triangle",
+            "bin": 1,
+            "speed": 0.22,
+            "react": 0.45,
+            "return_to_min": true,
+            "threshold": 0,
+            "hold": 0
+        },
+        "vertfine": {
+            "shape": "sine",
+            "bin": 2,
+            "speed": 0.02,
+            "react": 0.5,
+            "return_to_min": false,
+            "threshold": 0.1,
+            "hold": 0
+        },
+        "colors": {
+            "shape": "sine",
+            "bin": 2,
+            "speed": 0.79,
+            "react": 0.95,
+            "return_to_min": false,
+            "threshold": 0,
+            "hold": 0
+        },
+        "patterns": {
+            "shape": "sine",
+            "bin": 2,
+            "speed": 0.5,
+            "react": 1,
+            "return_to_min": false,
+            "threshold": 0.1,
+            "hold": 0
+        },
+        "strobe": {
+            "smoothing": 0,
+            "threshold": 0,
+            "bin": 1,
+            "react": 0.4,
+            "speed": 0.7,
+            "return_to_min": true,
+            "shape": "sawtooth"
+        },
+        "speed": {
+            "smoothing": 0,
+            "threshold": 0
+        },
+        "hor+vert op": {
+            "smoothing": 0,
+            "threshold": 0
+        },
+        "dimming": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0.5,
+            "react": 0.5,
+            "return_to_min": false,
+            "threshold": 0.12,
+            "hold": 0
+        }
+    },
+    "state_data": {
+        "reset": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 0,
+            "mid": 0,
+            "high": 0,
+            "drop": 0,
+            "default": 0
+        },
+        "dimming": {
+            "off": [
+                0,
+                0
+            ],
+            "chill": 254,
+            "mid": 120,
+            "high": 220,
+            "drop": 220,
+            "default": 254
+        }
+    }
+}

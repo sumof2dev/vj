@@ -10,6 +10,7 @@ import time
 import os
 import ssl
 import random
+import base64
 from dmx_engine import DMXEngine
 from vibe_engine import VibeEngine
 import evdev
@@ -278,6 +279,8 @@ connected_clients = set()
 dmx_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 audio_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 is_usb_dmx = False
+last_serialized_state = "{}" # Pre-serialized broadcast message
+last_broadcast_time = 0.0 # Signal all handlers to send when updated
 
 # Cache for visualizer params to persist them even if frontend isn't active
 visual_params_cache = {
@@ -371,6 +374,7 @@ class AudioAnalyzer:
         self.history_mid  = collections.deque(maxlen=self.rolling_window_size)
         self.history_high = collections.deque(maxlen=self.rolling_window_size)
         self.history_flux = collections.deque(maxlen=self.rolling_window_size)
+        self.history_raw_max = collections.deque(maxlen=self.rolling_window_size)
 
         # Beat Detection State
         self.last_beat_time = 0.0
@@ -498,7 +502,15 @@ class AudioAnalyzer:
         out_mid  = self._normalize(raw_mid, self.history_mid)
         out_high = self._normalize(raw_high, self.history_high)
         
-        # Apply Logic Gain Slider (User preference)
+        # Track Global Raw Peak for sync'd bin/vol scaling
+        current_raw_max = max(raw_bass, raw_mid, raw_high)
+        self.history_raw_max.append(current_raw_max)
+        global_peak = max(0.4, max(self.history_raw_max) if self.history_raw_max else 0.4)
+        
+        # Consistent Vol scaling (relative to shared peak)
+        out_vol = min(1.0, (current_raw_max / global_peak) * self.gain)
+
+        # Apply Logic Gain Slider (User preference) to bands
         out_bass = min(1.0, out_bass * self.gain)
         out_mid  = min(1.0, out_mid * self.gain)
         out_high = min(1.0, out_high * self.gain)
@@ -519,13 +531,18 @@ class AudioAnalyzer:
 
         self.prev_bands = [out_bass, out_mid, out_high]
         
-        # Normalize 11 bins (simple smoothing against previous frame)
+        # Normalize 11 bins AGAINST THE GLOBAL PEAK (Saves UI consistency)
         out_bins = [0.0] * 11
         for bi in range(11):
-            # Simple peak-hold with decay for each bin
-            raw_val = float(raw_bins[bi]) * self.gain
+            val = float(raw_bins[bi])
+            # Attenuate Sub-Bass (Bin 0) to handle rumble/DC noise and make UI less overwhelming
+            if bi == 0: val *= 0.75 
+            
+            # Use shared global peak for consistent scaling with Volume indicator
+            normalized = min(1.0, (val / global_peak) * self.gain)
+            
             # Smooth: 70% previous + 30% new (prevents jitter)
-            out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * 0.7 + raw_val * 0.3))
+            out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * 0.7 + normalized * 0.3))
         self.prev_bins = out_bins
         
         # Maintain Flux History for Adaptive Threshold
@@ -617,7 +634,7 @@ class AudioAnalyzer:
             "bass": float(out_bass),
             "mid": float(out_mid),
             "high": float(out_high),
-            "vol":  float(max(out_bass, out_mid, out_high)),
+            "vol":  float(out_vol),
             "flux": float(flux),
             "beat": bool(is_beat),
             "bass_onset": bool(bass_onset),
@@ -819,6 +836,9 @@ def sync_send_dmx(port, universe):
         if port:
             set_rs485_tx(True)
             send_dmx_break(port)
+            if universe[1] > 0 or universe[10] > 0: # Log some activity
+                # print(f"📡 Sending DMX: {universe[1:20].hex(' ')}")
+                pass
             port.write(universe)
             port.flush()
             set_rs485_tx(False)
@@ -908,30 +928,29 @@ async def process_audio_queue():
     
     while True:
         try:
-            if not audio_queue:
-                await asyncio.sleep(0.005)
-                continue
-            
-            # Get oldest frame
-            indata = audio_queue.popleft()
-            
-            # --- HEAVY ANALYSIS ---
-            # indata is float32 array (Frames, Channels) from sounddevice
-            
-            # Process (Analysis includes mean-subtraction DC filter)
-            loop = asyncio.get_running_loop()
-            new_audio_state = await loop.run_in_executor(audio_executor, analyzer.process, indata)
-            
-            # Preserve Spotify metadata injected by the async poller
-            if 'spotify' in audio_state:
-                new_audio_state['spotify'] = audio_state['spotify']
+            if audio_queue:
+                # Get oldest frame
+                indata = audio_queue.popleft()
                 
-            audio_state = new_audio_state
-            
-            # --- VIBE ENGINE DETERMINATION ---
-            if vibe_engine:
-                vibe_results = vibe_engine.update(audio_state)
-                audio_state.update(vibe_results) # This adds 'vibe' and 'mods' to audio_state
+                # --- HEAVY ANALYSIS ---
+                # indata is float32 array (Frames, Channels) from sounddevice
+                
+                # Process (Analysis includes mean-subtraction DC filter)
+                loop = asyncio.get_running_loop()
+                new_audio_state = await loop.run_in_executor(audio_executor, analyzer.process, indata)
+                
+                # Preserve Spotify metadata injected by the async poller
+                if 'spotify' in audio_state:
+                    new_audio_state['spotify'] = audio_state['spotify']
+                    
+                audio_state = new_audio_state
+                
+                # --- VIBE ENGINE DETERMINATION ---
+                if vibe_engine:
+                    vibe_results = vibe_engine.update(audio_state)
+                    audio_state.update(vibe_results) # This adds 'vibe' and 'mods' to audio_state
+            else:
+                await asyncio.sleep(0.005)
             
             # DMX Update (Rate Limited)
             current_time = time.time()
@@ -945,8 +964,8 @@ async def process_audio_queue():
                         # Corrected Logging: Track L1/L2 Pan and Tilt to verify stability
                         if dmx_port or dmx_engine:
                             universe = dmx_engine.get_universe()
-                            # Monitoring: L1_Dim(1), L1_X(7), L1_Y(8), L2_Dim(18), L2_X(24), L2_Y(25)
-                            monitored = {addr: universe[addr] for addr in [1, 7, 8, 18, 24, 25] if addr < len(universe)}
+                            # Monitoring: L1_Dim(1), L1_X(7), L1_Y(8), MH_H(175), MH_Dim(182)
+                            monitored = {addr: universe[addr] for addr in [1, 7, 8, 175, 182] if addr < len(universe)}
                             vibe_name = audio_state.get('vibe', 'mid')
                             q_size = len(audio_queue)
                             print(f"DMX_OUT: {monitored} | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Q: {q_size}")
@@ -961,9 +980,70 @@ async def process_audio_queue():
                             last_log = current_time
 
                     if dmx_port:
-                        universe = bytearray(dmx_engine.get_universe()) # Snapshot
+                        # Optimization: Only send as many channels as actually used in stage_config
+                        # This allows 60fps throughput for smaller setups (Full 512 needs 25ms @ 250k)
+                        full_u = dmx_engine.get_universe()
+                        max_addr = 0
+                        for dev in dmx_engine.stage_config.get('devices', {}).values():
+                            fixture = dmx_engine.fixtures.get(dev.get('type'))
+                            if fixture:
+                                # Address + Offset + max channel offset
+                                ch_offsets = fixture.get('channels', {}).values()
+                                if ch_offsets:
+                                    dev_max = dev['address'] + dev['offset'] + max(ch_offsets)
+                                    if dev_max > max_addr: max_addr = dev_max
+                        
+                        # Truncate to max used (min 32 for stability, max 513)
+                        # Ensure we also include any active manual overrides that might be past the device range
+                        if dmx_engine and dmx_engine.overrides:
+                            max_o = max(dmx_engine.overrides.keys())
+                            if max_o > max_addr: max_addr = max_o
+                            
+                        send_len = max(32, min(513, max_addr + 1))
+                        universe = bytearray(full_u[:send_len])
+                        
+                        if current_time - last_log > 0.5:
+                            print(f"📊 DMX STATS: SendLen={send_len} | Overrides={len(dmx_engine.overrides)}")
+                        
                         loop = asyncio.get_running_loop()
                         loop.run_in_executor(dmx_executor, sync_send_dmx, dmx_port, universe)
+
+                   # --- BROADCAST PRE-SERIALIZATION ---
+                    # Serialize the state ONCE per frame for all clients
+                    global last_serialized_state, last_broadcast_time
+                    
+                    # Adaptive Throttle: Only broadcast at 60fps if there is activity
+                    # Otherwise, drop to ~10fps or less for background idle
+                    is_active = audio_state.get('vol', 0.0) > 0.01 or audio_state.get('beat', False)
+                    broadcast_interval = 0.016 if is_active else 0.2 # 60Hz or 5Hz
+                    
+                    if (current_time - last_broadcast_time) >= broadcast_interval:
+                        # Optimization: Encode DMX as binary/base64 to save ~60% bandwidth
+                        # Integer list: ~1600 bytes. Base64: ~700 bytes.
+                        universe = dmx_engine.get_universe() if dmx_engine else bytes([0]*513)
+                        dmx_b64 = base64.b64encode(universe).decode()
+                        
+                        # Further Pruning: logic only needs specific axis/states for the UI/Visualizer
+                        logic_whitelist = [
+                            'axis_a', 'axis_b', 'axis_c', 'axis_d', 'axis_e', 
+                            'beat', 'intensity', 'bass', 'flux', 'zero', 'static'
+                        ]
+                        full_logic = dmx_engine.logic.state if dmx_engine else {}
+                        pruned_logic = {k: full_logic[k] for k in logic_whitelist if k in full_logic}
+                        
+                        last_serialized_state = json.dumps({
+                            "type": "audio",
+                            "session_id": SESSION_ID,
+                            "data": audio_state.copy(),
+                            "dmx_b64": dmx_b64, # Optimized representation (visualizer)
+                            "logic": pruned_logic,
+                            "base_layer": dmx_engine.current_base_layer if dmx_engine else 0,
+                            "fx_layer": dmx_engine.current_fx_layer if dmx_engine else 0,
+                            "fg_layer": dmx_engine.current_fg_layer if dmx_engine else 0
+                        })
+                        last_broadcast_time = current_time
+
+                    # Clear redundant dmx_info logic if not used elsewhere in this loop
                 except ValueError as ve:
                     # STRICT ERROR CAUGHT DURING RUNTIME
                     if not critical_error_sent:
@@ -999,7 +1079,6 @@ async def spotify_poller():
             client_secret=SPOT_CLIENT_SECRET,
             redirect_uri=SPOTIFY_REDIRECT_URI,
             scope="user-read-currently-playing",
-            cache_handler=handler,
             open_browser=False # Important for headless Pi
         )
         sp = spotipy.Spotify(auth_manager=auth_manager)
@@ -1061,9 +1140,10 @@ async def spotify_poller():
 
 # --- 4. SERVER LOOP ---
 async def ws_handler(websocket):
-    global last_injection_time, visual_states, gamepad_state
+    global connected_clients, visual_params_cache
     print("Client Connected")
     connected_clients.add(websocket)
+    last_sent_time = 0.0 # Per-client tracking of high-frequency broadcast
     
     try:
         while True:
@@ -1077,6 +1157,8 @@ async def ws_handler(websocket):
                     try:
                         data = json.loads(msg)
                         msg_type = data.get("type")
+                        if msg_type not in ["audio_inject", "synth"]: # Skip spammy ones
+                             print(f"📥 WS RX: {msg_type} from {websocket.remote_address}")
                         
                         if msg_type == "get_audio_devices":
                             devices = []
@@ -1148,13 +1230,21 @@ async def ws_handler(websocket):
                         elif msg_type == "laser_override":
                             # Apply direct channel overrides from Vibe Mapper
                             if dmx_engine:
-                                dmx_engine.apply_overrides(data.get("overrides", []), data.get("style_overrides", []))
+                                overrides = data.get("overrides", [])
+                                print(f"🔦 Applying {len(overrides)} overrides")
+                                dmx_engine.apply_overrides(overrides, data.get("style_overrides", []))
 
                         elif msg_type == "clear_overrides":
                             # Clear overrides for a specific device (zone)
                             dev_name = data.get("device")
                             if dmx_engine and dev_name:
                                 dmx_engine.clear_device_overrides(dev_name)
+                        
+                        elif msg_type == "clear_channel_overrides":
+                            # Clear specific channel overrides
+                            addresses = data.get("addresses", [])
+                            if dmx_engine:
+                                dmx_engine.clear_address_overrides(addresses)
                         
                         elif msg_type == "visual_states":
                             # Update synchronized visual layer indices
@@ -1230,6 +1320,19 @@ async def ws_handler(websocket):
                                     await client.send(refresh_msg)
                                 except:
                                     pass
+
+                        elif msg_type == "system_volume":
+                            # Adjust host system volume
+                            delta = data.get("delta", 0.0)
+                            try:
+                                with pulsectl.Pulse('volume-control') as p:
+                                    sink = p.get_sink_by_name(p.server_info().default_sink_name)
+                                    volume = sink.volume
+                                    new_vol = max(0.0, min(1.0, volume.value_flat + delta))
+                                    p.volume_set_all_chans(sink, new_vol)
+                                    print(f"🔊 System Volume: {int(new_vol * 100)}% (Delta: {delta})")
+                            except Exception as e:
+                                print(f"⚠️ System Volume Error: {e}")
                         
                         elif msg_type == "save_defaults":
                             # Persist current state as power-on default
@@ -1259,34 +1362,20 @@ async def ws_handler(websocket):
                     except json.JSONDecodeError:
                         pass
             except asyncio.TimeoutError:
-                pass  # No message, continue
+                pass  # No message, check for broadcast
             except websockets.exceptions.ConnectionClosed:
                 raise
             
-            # Tx to Browser: Audio Analysis + DMX State
-            dmx_info = dmx_engine.get_channel_state() if dmx_engine else {"values": {}, "effects": []}
-            rot_state = dmx_engine.rot_state if dmx_engine else 'IDLE'
-            active_scene = 'none'
-            active_addon_scene = None
-            vibe = audio_state.get("vibe", "mid")
+            # Tx to Browser: Only send if we have fresh data to broadcast
+            global last_broadcast_time, last_serialized_state
+            if last_broadcast_time > last_sent_time:
+                try:
+                    await websocket.send(last_serialized_state)
+                    last_sent_time = last_broadcast_time
+                except: pass
             
-            await websocket.send(json.dumps({
-                "type": "audio", 
-                "session_id": SESSION_ID,
-                "data": audio_state,
-                "logic": dmx_engine.logic.state if dmx_engine else {},
-                "dmx": dmx_info["values"],
-                "effects": dmx_info["effects"],
-                "active_scene": active_scene,
-                "active_addon_scene": active_addon_scene,
-                "rot_state": rot_state,
-                "base_layer": dmx_engine.current_base_layer if dmx_engine else 0,
-                "fg_layer": dmx_engine.current_fx_layer if dmx_engine else -1,
-                "fx_layer": dmx_engine.current_fx_layer if dmx_engine else 6
-            }))
-            
-            # Tiny sleep to yield control if needed, though await_for handles this
-            # await asyncio.sleep(0) 
+            # Yield control
+            await asyncio.sleep(0.008) # 120Hz check frequency
 
     except websockets.exceptions.ConnectionClosed:
         print("Client Disconnected")

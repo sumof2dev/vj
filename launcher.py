@@ -13,7 +13,12 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
     def address_string(self):
         return str(self.client_address[0])
 
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.end_headers()
+
     def do_GET(self):
+        print(f"📥 Launcher GET: {self.path}")
         if self.path == '/start':
             self.run_systemd('start')
         elif self.path == '/stop':
@@ -26,6 +31,9 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_spotify_auth()
         elif self.path.startswith('/api/smart/control'):
             self.handle_smart_control()
+        elif self.path.startswith('/shell'):
+            self.handle_shell_command()
+            return
             
         elif self.path in ['/', '/manager', '/manager.html', '/setup.html', '/visualdmx.html', '/remote.html']:
             # Redirect frontend apps to the main engine port (8000)
@@ -49,7 +57,6 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             
             # Helper for status checks
@@ -93,7 +100,6 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             
             response = {
@@ -127,7 +133,6 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             
             response = {
@@ -139,10 +144,44 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.error_response(str(e))
 
+    def handle_shell_command(self):
+        """
+        [SECURITY WARNING]
+        This endpoint allows arbitrary shell command execution. 
+        It is intended for local maintenance on RaveBox hardware.
+        Do NOT expose this to the public internet.
+        """
+        parsed = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(parsed.query)
+        cmd = query.get('cmd', [None])[0]
+        
+        if not cmd:
+            self.error_response("Missing cmd parameter")
+            return
+            
+        try:
+            print(f"📟 Remote Shell execution: {cmd}")
+            # Security Note: This allows arbitrary command execution on the host. 
+            # In local ravebox scenarios this is highly convenient but use with caution.
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            
+            response = {
+                "success": True,
+                "exit_code": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr
+            }
+            self.wfile.write(json.dumps(response).encode())
+        except Exception as e:
+            self.error_response(f"Execution Error: {str(e)}")
+
     def error_response(self, message):
         self.send_response(500)
         self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps({"error": message}).encode())
 

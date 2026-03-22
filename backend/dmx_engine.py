@@ -13,15 +13,16 @@ import threading
 
 class ChannelConfig:
     """Pre-resolved channel configuration for hot-loop performance."""
-    __slots__ = ['mod_name', 'vibe_map', 'any_cal', 'states', 'steps', 'default_val', 'is_controller']
-    def __init__(self, mod_name, vibe_map, any_cal, states, steps, default_val):
+    __slots__ = ['mod_name', 'vibe_map', 'any_cal', 'states', 'default_val', 'is_controller', 'smoothing', 'threshold']
+    def __init__(self, mod_name, vibe_map, any_cal, states, default_val, smoothing=0.0, threshold=0.0):
         self.mod_name = mod_name
         self.vibe_map = vibe_map # Map[vibe_str] -> (min, center, max)
         self.any_cal = any_cal   # (min, center, max) or None
         self.states = states
-        self.steps = steps
         self.default_val = default_val
         self.is_controller = (mod_name == 'controller')
+        self.smoothing = smoothing
+        self.threshold = threshold
 
     def get_cal(self, vibe):
         return self.vibe_map.get(vibe, self.any_cal)
@@ -33,6 +34,8 @@ class LogicMatrix:
         self.beat_env = 0.0
         self.beat_count = 0
         self.state = {}
+        self.hold_timers = collections.defaultdict(float)
+        self.hold_values = collections.defaultdict(float)
 
     def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, active_lfos=None):
         # 1. Update Beat Envelope (Sharp attack, exponential decay)
@@ -55,45 +58,91 @@ class LogicMatrix:
                 reactivity = cfg.get('react', 0.5)
                 invert = cfg.get('invert', False)
                 
-                bin_energy = bins[bin_idx] if 0 <= bin_idx < len(bins) else 0.0
-                freq = (base_speed + (bin_energy * reactivity)) * speed_mult
+                # New 6-bin simplification mapping
+                # Frontend 0 -> Raw 0 (Sub)
+                # Frontend 1 -> Raw 1,2,3 (Bass/Low-Mid)
+                # Frontend 2 -> Raw 4,5 (Mid)
+                # Frontend 3 -> Raw 6,7 (Presence)
+                # Frontend 4 -> Raw 8,9 (Treble)
+                # Frontend 5 -> Raw 10 (Air)
+                raw_bin_map = {
+                    0: [0],
+                    1: [1, 2, 3],
+                    2: [4, 5],
+                    3: [6, 7],
+                    4: [8, 9],
+                    5: [10]
+                }
                 
-                # If base speed is zero, we want the wave to complete its cycle to the bottom
-                # instead of hanging at a peak when the bin trigger is inactive.
-                if base_speed == 0 and freq < 0.05:
-                    p_current = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
-                    should_complete = False
-                    if shape == 'sawtooth' and p_current > 0.05:
-                        should_complete = True
-                    elif shape == 'triangle' and abs(p_current - 0.5) > 0.05:
-                        should_complete = True
-                    elif shape == 'square' and p_current < 0.5:
-                        should_complete = True
+                target_bins = raw_bin_map.get(bin_idx, [0])
+                bin_energy = sum(bins[i] for i in target_bins) / len(target_bins) if bins else 0.0
+                
+                return_to_min = cfg.get('return_to_min', False)
+                threshold = cfg.get('threshold', 0.1)
+                
+                if return_to_min and bin_energy < threshold:
+                    # Move towards base value based on reactivity
+                    # If inverted, base is +1.0. If normal, base is -1.0.
+                    target_val = 1.0 if invert else -1.0
+                    current_val = self.state.get(lfo_id, 0.0)
+                    decay_rate = dt * reactivity * 10.0
                     
-                    if should_complete:
-                        freq = 10.0 * speed_mult
+                    if current_val < target_val:
+                        val = min(target_val, current_val + decay_rate)
                     else:
-                        freq = 0.0
-
-                self.phases[lfo_id] += dt * freq
-                p = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
-                
-                # Generate bipolar waveform output (-1.0 to 1.0)
-                if shape == 'sawtooth':
-                    val = (p * 2.0) - 1.0
-                elif shape == 'triangle':
-                    val = 4.0 * abs(p - 0.5) - 1.0
-                elif shape == 'square':
-                    val = 1.0 if p < 0.5 else -1.0
-                else:  # Default to sine
-                    val = math.sin(self.phases[lfo_id])
-                
-                if invert:
-                    val = -val
-
-                # if transient == 'tension':
-                #     val = 0.0
+                        val = max(target_val, current_val - decay_rate)
+                    freq = 0
+                else:
+                    freq = (base_speed + (bin_energy * reactivity)) * speed_mult
                     
+                    if base_speed == 0 and freq < 0.05:
+                        p_current = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
+                        should_complete = False
+                        if shape == 'sawtooth' and p_current > 0.05:
+                            should_complete = True
+                        elif shape == 'triangle' and abs(p_current - 0.5) > 0.05:
+                            should_complete = True
+                        elif shape == 'square' and p_current < 0.5:
+                            should_complete = True
+                        
+                        if should_complete:
+                            freq = 10.0 * speed_mult
+                        else:
+                            freq = 0.0
+
+                    self.phases[lfo_id] += dt * freq
+                    p = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
+                    
+                    if shape == 'sawtooth':
+                        val = (p * 2.0) - 1.0
+                    elif shape == 'triangle':
+                        val = 4.0 * abs(p - 0.5) - 1.0
+                    elif shape == 'square':
+                        val = 1.0 if p < 0.5 else -1.0
+                    else:  # Default to sine
+                        val = math.sin(self.phases[lfo_id])
+
+                    if invert:
+                        val = -val
+
+                    # Apply audio-reactive amplitude scaling.
+                    # If reactivity is 0, amplitude is 1.0 (constant moving LFO).
+                    # If reactivity > 0, the amplitude crushes to 0.0 (Center) when silent.
+                    # We multiply bin_energy by 2.0 so average hits easily push it to full scale.
+                    amp_scale = (1.0 - reactivity) + (bin_energy * reactivity * 2.0)
+                    val = val * max(0.0, min(1.0, amp_scale))
+                    
+                hold_time = cfg.get('hold', 0.0)
+                if hold_time > 0:
+                    self.hold_timers[lfo_id] += dt
+                    if self.hold_timers[lfo_id] >= hold_time or lfo_id not in self.hold_values:
+                        self.hold_timers[lfo_id] = 0
+                        self.hold_values[lfo_id] = val
+                    val = self.hold_values[lfo_id]
+                else:
+                    self.hold_timers.pop(lfo_id, None)
+                    self.hold_values.pop(lfo_id, None)
+
                 self.state[lfo_id] = val
 
         # 4. Global State Metadata
@@ -136,11 +185,13 @@ class DMXEngine:
         self._last_drop_time = 0.0
         self.current_base_layer = 0 
         self.current_fx_layer = 6  
+        self.current_fg_layer = 0
         self.rot_state = 'IDLE' 
         self._last_scene_switch_beat = 0
         self._last_vibe = 'mid'
         self._last_transient = 'steady'
         self._preset_holds = {}
+        self._silence_start = None
         
         # System State Detectors (Bass Styles & Rhythm)
         self.rhythm_state = {'boots': False, 'cats': False, 'cha': False}
@@ -163,6 +214,7 @@ class DMXEngine:
         self.gamepad = {}
         self.prev_gamepad = {}
         self.channel_latches = {} # role -> index into calibration list
+        self.prev_vals = collections.defaultdict(float) # Store previous smoothed values
         
         self._stage_config_path = os.path.join('fixtures', 'stage_config.json')
         self._presets_config_path = os.path.join('fixtures', 'presets.json')
@@ -188,6 +240,7 @@ class DMXEngine:
                     if 'devices' not in self.stage_config: self.stage_config['devices'] = {}
                     self.stage_config['devices'].update(self.stage_config['lasers'])
                 self.zone_map = list(self.stage_config.get('devices', {}).keys())
+                print(f"📦 DMX Engine Loaded Devices: {self.zone_map}")
 
         if os.path.exists(self._presets_config_path):
             with open(self._presets_config_path, 'r') as f:
@@ -221,7 +274,7 @@ class DMXEngine:
                 raw_cals = fixture.get('calibration', {}).get(role, [])
                 if isinstance(raw_cals, dict): raw_cals = [raw_cals]
                     
-                steps = list(fixture.get('step_data', {}).values())
+                steps = list(fixture.get('step_data', {}).values()) # Still kept in cache build if needed for other logic, but removed from ChannelConfig if unused
                 default_val = fixture.get('defaults', {}).get(role, 127)
                 states = fixture.get('state_data', {}).get(role, {})
 
@@ -249,8 +302,9 @@ class DMXEngine:
                     vibe_map=vibe_map,
                     any_cal=any_cal,
                     states=states,
-                    steps=steps,
-                    default_val=default_val
+                    default_val=default_val,
+                    smoothing=float(lfo_data.get('smoothing', 0.0)),
+                    threshold=float(lfo_data.get('threshold', 0.0))
                 )
 
     def _hot_reload_loop(self):
@@ -334,9 +388,17 @@ class DMXEngine:
         elif self.scene_freq == 4 and self.transient != self._last_transient and self.transient in ['dropping', 'building']: # On Spectral Shift
             should_switch = True
 
+        if visual_states:
+            if visual_states.get("bg", -1) != -1: self.current_base_layer = visual_states["bg"]
+            if visual_states.get("fx", -1) != -1: self.current_fx_layer = visual_states["fx"]
+            if visual_states.get("fg", -1) != -1: self.current_fg_layer = visual_states["fg"]
+
         if should_switch:
-            self.current_base_layer = random.choice([0,1,2,3,4,5,6,7,8,9,10])
-            self.current_fx_layer = random.choice([0,1,2,3,5,6])
+            # Only auto-switch if not overridden
+            if not visual_states or visual_states.get("bg", -1) == -1:
+                self.current_base_layer = random.choice([0,1,2,3,4,5,6,7,8,9,10])
+            if not visual_states or visual_states.get("fx", -1) == -1:
+                self.current_fx_layer = random.choice([0,1,2,3,5,6])
             self._last_scene_switch_beat = current_beat
             
         self._last_vibe = current_vibe
@@ -345,6 +407,11 @@ class DMXEngine:
         # 3. Process All Devices
         for i, (dev_name, dev_cfg) in enumerate(self.stage_config.get('devices', {}).items()):
             self._process_device(dev_name, dev_cfg, i, audio)
+
+        # 4. Global Overrides (ensure they win no matter what)
+        for addr, val in self.overrides.items():
+            if 0 < addr < len(self.universe):
+                self.universe[addr] = max(0, min(255, int(val)))
 
     def _process_device(self, dev_name, dev_cfg, zone_idx, audio):
         fixture = self.fixtures.get(dev_cfg.get('type'))
@@ -468,9 +535,6 @@ class DMXEngine:
                 if preset_override_val is not None:
                     val = preset_override_val
                 
-            # Layer 3: Global Override (Live Test Tab - Absolute Highest Priority)
-            if final_addr in self.overrides:
-                val = self.overrides[final_addr]
 
             # Write to DMX buffer safely
             if 0 < final_addr < len(self.universe):
@@ -524,33 +588,28 @@ class DMXEngine:
             
         c_min, c_center, c_max = cal
         
-        # Force to minimum if volume is zero
+        # Force to minimum only after 2 seconds of sustained silence
         if audio.get('vol', 1.0) <= 0.0:
-            return c_min
+            now = time.time()
+            if self._silence_start is None:
+                self._silence_start = now
+            if now - self._silence_start >= 2.0:
+                return c_min
+        else:
+            self._silence_start = None
             
         # --- DISCRETE HANDLERS ---
         if mod_name == '4th beat':
-            steps = cache.steps
-            if not steps: 
-                span = c_max - c_min
-                val = c_min + ((logic_matrix.beat_count // 4) % 4) * (span // 4)
-                return max(c_min, min(c_max, int(val)))
+            if c_max <= c_min: return c_min
             seed = (logic_matrix.beat_count // 4) + zone_idx + 42
             rng = random.Random(seed)
-            val = rng.choice(steps)
-            return max(c_min, min(c_max, val))
+            return rng.randint(c_min, c_max)
             
         if mod_name == 'beat':
-            steps = cache.steps
-            if steps:
-                seed = logic_matrix.beat_count + zone_idx + 7
-                rng = random.Random(seed)
-                val = rng.choice(steps)
-                return max(c_min, min(c_max, val))
             if c_max <= c_min: return c_min
-            span = c_max - c_min
-            val = c_min + ((logic_matrix.beat_count * 17 + zone_idx * 13) % (span + 1))
-            return max(c_min, min(c_max, val))
+            seed = logic_matrix.beat_count + zone_idx + 7
+            rng = random.Random(seed)
+            return rng.randint(c_min, c_max)
 
         # --- STATE MACHINE HANDLER ---
         if mod_name == 'state_machine':
@@ -572,6 +631,17 @@ class DMXEngine:
         else:
             val_norm = logic_matrix.state.get(mod_name, 0.0)
 
+        # Apply Threshold (Gate)
+        if abs(val_norm) < cache.threshold:
+            val_norm = 0.0 if mod_name != 'intensity' else -1.0 # Intensity base is -1.0
+            
+        # Apply Smoothing (Temporal Low-pass)
+        prev_id = f"{fixture_name}_{role}_{zone_idx}"
+        prev = self.prev_vals[prev_id]
+        if cache.smoothing > 0:
+            val_norm = (val_norm * (1.0 - cache.smoothing)) + (prev * cache.smoothing)
+        self.prev_vals[prev_id] = val_norm
+
         # 3-Point Calibration Map
         val_norm = max(-1.0, min(1.0, val_norm))
         if val_norm < 0:
@@ -588,17 +658,6 @@ class DMXEngine:
     def set_audio_sensitivity(self, val): self.audio_sensitivity = float(val)
     def set_pattern_mode(self, mode): pass # Deprecated, handled by modifiers now
     def set_color_mode(self, mode): pass # Deprecated, handled by modifiers now
-    
-    def get_channel_state(self):
-        res = {"values": {}, "effects": []}
-        for name, cfg in self.stage_config.get('devices', {}).items():
-            fixture = self.fixtures.get(cfg.get('type'))
-            if not fixture: continue
-            base = cfg['address'] + cfg['offset']
-            for role, off in fixture.get('channels', {}).items():
-                addr = base + off
-                if 0 < addr < len(self.universe): res["values"][f"{name}_{role}"] = self.universe[addr]
-        return res
 
     def _detect_bass_style(self, audio, dt):
         bins = audio.get('bins', [0.0] * 11)
@@ -661,3 +720,8 @@ class DMXEngine:
         base = dev_cfg['address'] + dev_cfg['offset']
         for ch_offset in fixture.get('channels', {}).values():
             if base + ch_offset in self.overrides: del self.overrides[base + ch_offset]
+
+    def clear_address_overrides(self, addresses):
+        for addr in addresses:
+            if int(addr) in self.overrides:
+                del self.overrides[int(addr)]

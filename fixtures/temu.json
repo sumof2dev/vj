@@ -24,7 +24,7 @@
             {
                 "min": 0,
                 "center": 25,
-                "max": 50,
+                "max": 255,
                 "vibe": "any"
             }
         ],
@@ -32,7 +32,7 @@
             {
                 "min": 0,
                 "center": 0,
-                "max": 55,
+                "max": 258,
                 "vibe": "any"
             }
         ],
@@ -82,7 +82,7 @@
     "step_data": {},
     "modifiers": {
         "1": "lfo",
-        "2": "beat",
+        "2": "lfo",
         "3": "axis_c",
         "unassigned_ch4": "axis_b",
         "unassigned_ch5": "axis_c",
@@ -107,15 +107,25 @@
     "lfo_data": {
         "1": {
             "shape": "sawtooth",
-            "bin": 0,
+            "bin": 10,
             "speed": 0,
-            "react": 0.5
+            "react": 1.2,
+            "return_to_min": true,
+            "threshold": 0.31
+        },
+        "2": {
+            "shape": "triangle",
+            "bin": 1,
+            "speed": 0,
+            "react": 1.85,
+            "return_to_min": true
         },
         "3": {
             "shape": "sawtooth",
             "bin": 0,
             "speed": 0,
-            "react": 0.5
+            "react": 1.85,
+            "return_to_min": true
         },
         "unassigned_ch1": {
             "shape": "sawtooth",
@@ -137,26 +147,26 @@
         },
         "unassigned_ch4": {
             "shape": "sine",
-            "bin": 0,
-            "speed": 0.5,
+            "bin": 3,
+            "speed": 0,
             "react": 0.5
         },
         "unassigned_ch5": {
             "shape": "sine",
-            "bin": 0,
-            "speed": 0.5,
+            "bin": 7,
+            "speed": 0,
             "react": 0.5
         },
         "unassigned_ch6": {
             "shape": "sine",
-            "bin": 0,
-            "speed": 0.5,
+            "bin": 8,
+            "speed": 0,
             "react": 0.5
         },
         "unassigned_ch7": {
             "shape": "sine",
-            "bin": 0,
-            "speed": 0.5,
+            "bin": 2,
+            "speed": 0,
             "react": 0.5
         }
     }
