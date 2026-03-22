@@ -4,10 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RaveBox | Remote Manager</title>
+    <title>RaveBox</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
@@ -38,7 +39,7 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            padding: 20px;
+            padding: 10px;
             overflow: hidden;
             /* Prevent scrolling */
             touch-action: none;
@@ -49,7 +50,7 @@
             background: rgba(22, 22, 26, 0.7);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            padding: 2rem;
+            padding: 1.2rem;
             border-radius: 24px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
             width: 100%;
@@ -61,13 +62,13 @@
 
         @media (max-width: 480px) {
             .container {
-                padding: 1.2rem;
-                max-width: 86%;
+                padding: 1rem;
+                max-width: 90%;
                 border-radius: 20px;
             }
 
             h1 {
-                font-size: 1.5rem;
+                font-size: 1.3rem;
             }
 
             .dash-panel {
@@ -81,7 +82,7 @@
         }
 
         h1 {
-            margin: 0 0 0.5rem;
+            margin: 0 0 0.8rem;
             font-weight: 800;
             letter-spacing: -1px;
             background: linear-gradient(45deg, var(--primary), var(--secondary));
@@ -92,12 +93,12 @@
 
         p {
             color: var(--text-dim);
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
         }
 
         .status-badge {
-            display: inline-block;
+            display: none;
             padding: 6px 12px;
             border-radius: 50px;
             font-size: 0.75rem;
@@ -105,7 +106,7 @@
             font-weight: bold;
             letter-spacing: 1px;
             background: rgba(255, 255, 255, 0.05);
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         .status-badge.active {
@@ -121,16 +122,16 @@
         .action-btns {
             display: flex;
             gap: 10px;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .btn {
             display: block;
             flex: 1;
-            padding: 0.9rem 1rem;
-            border: none;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            font-size: 0.95rem;
+            font-size: 0.8rem;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -139,25 +140,42 @@
             white-space: nowrap;
         }
 
+        .btn:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
         .btn:active {
-            transform: scale(0.98);
+            transform: scale(0.96);
         }
 
         .btn-start {
-            background: var(--primary);
-            color: #000;
-            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+            background: rgba(0, 242, 255, 0.12);
+            color: var(--primary);
+            border-color: rgba(0, 242, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-start:hover {
+            background: rgba(0, 242, 255, 0.2);
+            color: #fff;
         }
 
         .btn-stop {
-            background: var(--error);
-            color: #fff;
-            box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
+            background: rgba(255, 51, 102, 0.12);
+            color: var(--error);
+            border-color: rgba(255, 51, 102, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-stop:hover {
+            background: rgba(255, 51, 102, 0.2);
         }
 
         .btn-restart {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            border-color: rgba(255, 255, 255, 0.08);
         }
 
         .btn:disabled {
@@ -187,7 +205,7 @@
         }
 
         .links {
-            margin-top: 2rem;
+            margin-top: 1.2rem;
             font-size: 0.8rem;
         }
 
@@ -206,10 +224,10 @@
 
         /* --- DASHBOARD WIDGETS --- */
         .dashboard-grid {
-            margin-top: 1.5rem;
+            margin-top: 0.8rem;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             text-align: left;
         }
 
@@ -217,7 +235,7 @@
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
-            padding: 15px;
+            padding: 12px;
         }
 
         .dash-header {
@@ -286,6 +304,28 @@
             transition: width 0.05s ease-out;
         }
 
+        .vol-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .vol-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.9);
+        }
+
         .vibe-badge {
             padding: 4px 12px;
             border-radius: 12px;
@@ -344,19 +384,20 @@
         .bin-viz {
             display: flex;
             align-items: flex-end;
-            gap: 2px;
-            height: 40px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 4px;
-            border-radius: 4px;
+            gap: 3px;
+            height: 54px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 6px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .bin-bar {
             flex: 1;
             background: #444;
             min-height: 2px;
-            border-radius: 1px 1px 0 0;
-            transition: height 0.05s ease-out;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.05s ease-out, background 0.1s;
         }
 
         .sys-stats {
@@ -400,6 +441,72 @@
                 transform: scale(1);
             }
         }
+
+        /* --- SLIDER CONTROLS --- */
+        .sys-controls-panel {
+            background: rgba(22, 22, 26, 0.9) !important;
+            border-top: none !important;
+            border-radius: 0 0 16px 16px !important;
+            padding: 15px 12px !important;
+            text-align: left;
+        }
+
+        .slider-group {
+            margin-bottom: 15px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 6px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-value {
+            font-family: monospace;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.4);
+        }
+
+        select.dash-panel {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+
+        .hide-forced {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -409,32 +516,27 @@
         <h1>RaveBox Control</h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
+        <div id="wsCertWarning" class="status-badge" style="display:none; background:rgba(255,193,7,0.1); color:#ffc107; margin-top:10px; font-size:0.7rem; border:1px solid rgba(255,193,7,0.3); text-transform: none;">
+            ⚠️ SSL Issue? <a href="#" onclick="signCert()" style="color:#ffc107; text-decoration:underline;">Authorize Certificate</a>
+        </div>
 
         <div class="action-btns">
             <button id="btnToggle" class="btn btn-start" onclick="toggleEngine()">Launch Engine</button>
-            <button id="btnRestart" class="btn btn-restart" onclick="doAction('restart')">Restart</button>
         </div>
 
 
 
         <div id="loader" class="loading-spinner"></div>
 
-        <!-- LIVE DASHBOARD (Mirrored from Remote) -->
-        <div id="wsCertWarning" style="display:none; padding:10px; margin-top:10px;">
-            <p style="margin:0; color:#fff; font-size:1rem; font-weight:600;">Loading... Please wait</p>
-            <a href="#" onclick="openAdvancedModal(); return false;"
-                style="font-size:0.6rem; color:var(--text-dim); opacity:0.6; text-decoration:none; display:block; margin-top:4px;">(advanced)</a>
-        </div>
-
         <div class="dashboard-grid" id="liveDashboard" style="display:none; opacity:0; transition: opacity 0.5s;">
 
             <!-- Audio State Overview -->
-            <div class="dash-panel" style="display: flex; align-items: center;">
-                <span style="font-size: 0.8rem; color: #888;">VOL</span>
+            <div class="dash-panel" style="display: flex; align-items: center; justify-content: space-between;">
+                <button class="vol-btn" onclick="changeSystemVolume(-0.05)">−</button>
                 <div class="vol-meter">
                     <div class="vol-bar" id="hubVol"></div>
                 </div>
-                <span class="vibe-badge" id="hubVibe">--</span>
+                <button class="vol-btn" onclick="changeSystemVolume(0.05)">+</button>
             </div>
 
             <!-- Spotify Overlay -->
@@ -451,15 +553,17 @@
                 </div>
             </div>
 
-            <div class="dash-panel">
+            <div class="dash-panel" id="eqToggle" style="cursor: pointer; transition: background 0.2s;"
+                onclick="toggleSysControls()">
                 <div class="thinking-grid">
                     <div class="logic-state" id="hubTransient">STEADY</div>
                     <div class="bin-viz" id="hubBins">
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
-                        <div class="bin-bar"></div>
+                        <div class="bin-bar" title="Sub-Bass"></div>
+                        <div class="bin-bar" title="Bass"></div>
+                        <div class="bin-bar" title="Mid"></div>
+                        <div class="bin-bar" title="Presence"></div>
+                        <div class="bin-bar" title="Treble"></div>
+                        <div class="bin-bar" title="Air"></div>
                     </div>
                 </div>
                 <div class="sys-stats">
@@ -469,13 +573,66 @@
                 </div>
             </div>
 
+            <!-- COLLAPSIBLE SYSTEM CONTROLS -->
+            <div id="sysControls" class="dash-panel sys-controls-panel"
+                style="display: none; margin-top: -20px; z-index: 1;">
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Speed</span>
+                        <span class="slider-value" id="masterSpeedVal">1.0x</span>
+                    </div>
+                    <input type="range" id="masterSpeed" min="0.0" max="2.0" step="0.05" value="1.0">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Input Gain</span>
+                        <span class="slider-value" id="masterSensVal">1.0</span>
+                    </div>
+                    <input type="range" id="masterSens" min="0.0" max="2.0" step="0.05" value="1.0">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Reactivity</span>
+                        <span class="slider-value" id="masterFluxVal">0.7</span>
+                    </div>
+                    <input type="range" id="masterFlux" min="0.0" max="1.5" step="0.05" value="0.7">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Vibe Bias</span>
+                        <span class="slider-value" id="masterBiasVal">0.5</span>
+                    </div>
+                    <input type="range" id="masterBias" min="0.0" max="1.0" step="0.05" value="0.5">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Phrasing</span>
+                    </div>
+                    <select id="masterSceneFreq" class="dash-panel">
+                        <option value="0">Every Beat</option>
+                        <option value="1">4th Beat (1 Bar)</option>
+                        <option value="2">2 Bars</option>
+                        <option value="3">4 Bars</option>
+                        <option value="4">On Vibe Change</option>
+                    </select>
+                </div>
+
+                <button id="saveDefaultsBtn" class="btn"
+                    style="width:100%; height: 36px; padding: 0; font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); margin-top: 10px; color: var(--text-dim);">
+                    💾 Save Defaults
+                </button>
+            </div>
+
         </div>
 
         <div class="links">
             <a id="link-visual" href="#">Visualizer</a>
-            <a id="link-remote" href="#">Remote</a>
             <a id="link-setup" href="#">Setup</a>
-            <a id="link-spotify" href="#">Spotify</a>
+            <a id="link-spotify" href="#">Help</a>
         </div>
     </div>
 
@@ -484,32 +641,59 @@
         <div class="container modal-content">
             <h2 style="font-size:1.3rem; margin-bottom:1rem;">Advanced Connection</h2>
             <div style="text-align:left; margin: 15px 0;">
-                <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">WebSocket Port</label>
+                <label
+                    style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">WebSocket
+                    Port</label>
                 <input type="number" id="wsPortInput" class="dash-panel"
                     style="width:100%; border:1px solid rgba(255,255,255,0.1); margin-top:5px; padding:12px; color:#fff; font-size:1rem;"
                     placeholder="8765">
             </div>
-            <button class="btn btn-start" style="width:100%; margin-bottom:10px;" onclick="saveAdvancedPort()">Save & Reconnect</button>
-            <button class="btn btn-restart" style="width:100%; margin-bottom:10px;" onclick="signCert()">Sign Certificate</button>
-            <button class="btn" style="width:100%; background:transparent; color:var(--text-dim);" onclick="closeAdvancedModal()">Cancel</button>
+            <button class="btn btn-start" style="width:100%; margin-bottom:10px;" onclick="saveAdvancedPort()">Save &
+                Reconnect</button>
+            <button class="btn btn-restart" style="width:100%; margin-bottom:10px;" onclick="signCert()">Sign
+                Certificate</button>
+            <div
+                style="text-align:left; margin: 15px 0; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
+                <label
+                    style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Remote
+                    Console</label>
+                <div style="display:flex; gap:5px; margin-top:8px;">
+                    <input type="text" id="shellInput" class="dash-panel"
+                        style="flex:1; border:1px solid rgba(255,255,255,0.1); padding:10px; color:#fff; font-family:monospace;"
+                        placeholder="e.g. ls, df -h, tail..." onkeyup="if(event.key==='Enter') runShell()">
+                    <button class="btn btn-start"
+                        style="flex:0; padding:10px 15px; background:rgba(255,255,255,0.05); color:white;"
+                        onclick="runShell()">Run</button>
+                </div>
+                <pre id="shellOutput"
+                    style="font-size:0.7rem; background:rgba(0,0,0,0.5); padding:10px; border-radius:10px; margin-top:10px; max-height:150px; overflow:auto; display:none; border:1px solid rgba(255,255,255,0.1); font-family:monospace; color:#0f0;"></pre>
+            </div>
+            <button class="btn" style="width:100%; background:transparent; color:var(--text-dim);"
+                onclick="closeAdvancedModal()">Cancel</button>
         </div>
     </div>
 
     <script>
-        const host = window.location.hostname;
-        const LAUNCHER_API = '';
+        const host = localStorage.getItem('vj_backend_host') || 'api.ravebox.love';
+        const LAUNCHER_API = `https://${host}`;
 
         // Point links within the same origin (Port Independent)
         document.getElementById('link-visual').href = `/visualdmx.html`;
-        document.getElementById('link-remote').href = `/remote.html`;
         document.getElementById('link-setup').href = `/setup.html`;
-        document.getElementById('link-spotify').href = `/spotify_setup.html`;
-
-
-
+        document.getElementById("link-spotify").href = "/spotify_setup.html";
         let engineActive = false;
 
+
+        let statusPollingRate = 3000;
+        let lastKnownActive = false;
+
         async function updateStatus() {
+            // Optimization: If tab is hidden, poll much slower (e.g. 10s)
+            if (document.hidden) {
+                setTimeout(updateStatus, 10000);
+                return;
+            }
+
             try {
                 const res = await fetch(`${LAUNCHER_API}/status`);
                 const data = await res.json();
@@ -517,19 +701,31 @@
                 const btn = document.getElementById('btnToggle');
 
                 engineActive = data.active;
-                badge.innerText = data.active ? `Engine: ${data.status}` : "Engine: ready to party";
-                badge.className = `status-badge ${data.active ? 'active' : 'inactive'}`;
+                statusPollingRate = data.active ? 3000 : 8000; // Slow down if inactive
+
+                if (badge) {
+                    badge.innerText = data.active ? `Engine: ${data.status}` : "Engine: ready to party";
+                    badge.className = `status-badge ${data.active ? 'active' : 'inactive'}`;
+                }
 
                 if (data.active) {
                     btn.innerText = "Kill Engine";
                     btn.className = "btn btn-stop";
+                    if (!lastKnownActive) connectLiveDashboard(); // Restore WS if it was dead
                 } else {
                     btn.innerText = "Launch Engine";
                     btn.className = "btn btn-start";
                 }
+                lastKnownActive = data.active;
             } catch (e) {
                 console.error("Status check failed", e);
+                statusPollingRate = 12000; // Major backup on failure
+                const badge = document.getElementById('status');
+                if (badge) badge.innerText = "Searching for controller...";
             }
+
+            // Adaptive Loop instead of setInterval
+            setTimeout(updateStatus, statusPollingRate);
         }
 
         async function toggleEngine() {
@@ -547,35 +743,54 @@
                 console.log(action, data);
 
                 if (action === 'start' && data.success) {
-                    // Give the engine a moment to start the web server on 8000 (Legacy comment, keeping 8001)
                     const badge = document.getElementById('status');
-                    badge.innerText = "Launching Visualizer...";
-                    badge.className = "status-badge active";
-
-                    setTimeout(() => {
-                        // Redirect to the visualizer on the same port
-                        window.location.href = `/visualdmx.html`;
-                    }, 5000);
-                    return; // Don't hide loader yet
+                    if (badge) {
+                        badge.innerText = "Engine Starting...";
+                        badge.className = "status-badge active";
+                    }
                 }
             } catch (e) {
                 alert(`Error: ${e.message}`);
             } finally {
                 if (action !== 'start') {
                     loader.style.display = 'none';
-                    setTimeout(updateStatus, 1000);
                 }
             }
         }
 
-        // Poll every 3 seconds
-        setInterval(updateStatus, 3000);
         updateStatus();
 
         // --- DASHBOARD WEBSOCKET ---
         let ws = null;
         let currentBgUrl = '';
         let wsErrorCount = 0;
+
+        const FREQ_LABELS = ['Beat', '1 Bar', '2 Bars', '4 Bars', 'Vibe'];
+        const state = {
+            speed: 1.0,
+            gain: 1.0,
+            sensitivity: 0.7,
+            vibe_bias: 0.5,
+            sceneFreq: 1
+        };
+
+        function toggleSysControls() {
+            const panel = document.getElementById('sysControls');
+            const toggle = document.getElementById('eqToggle');
+            const spotify = document.getElementById('hubSpotify');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                toggle.style.background = 'rgba(255, 255, 255, 0.08)';
+                toggle.style.borderRadius = '16px 16px 0 0';
+                if (spotify) spotify.classList.add('hide-forced');
+                ws.send(JSON.stringify({ type: 'get_params' }));
+            } else {
+                panel.style.display = 'none';
+                toggle.style.background = 'rgba(0, 0, 0, 0.4)';
+                toggle.style.borderRadius = '16px';
+                if (spotify) spotify.classList.remove('hide-forced');
+            }
+        }
 
         function openAdvancedModal() {
             document.getElementById('advancedModal').style.display = 'flex';
@@ -598,26 +813,170 @@
             window.open(`https://${host}:${port}`, '_blank');
         }
 
+        async function runShell() {
+            const input = document.getElementById('shellInput');
+            const output = document.getElementById('shellOutput');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            output.style.display = 'block';
+            output.textContent = '> Processing...';
+            output.style.color = '#fff';
+
+            try {
+                const res = await fetch(`${LAUNCHER_API}/shell?cmd=${encodeURIComponent(cmd)}`);
+                const data = await res.json();
+
+                if (data.stdout || data.stderr) {
+                    output.textContent = (data.stdout || '') + (data.stderr || '');
+                    output.style.color = data.exit_code === 0 ? '#0f0' : '#f55';
+                } else {
+                    output.textContent = '> Command finished with code ' + data.exit_code;
+                }
+            } catch (e) {
+                output.textContent = '❌ Error: ' + e.message;
+                output.style.color = '#f55';
+            }
+        }
+
+        function changeSystemVolume(delta) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "system_volume",
+                    delta: delta
+                }));
+            }
+        }
+
         function connectLiveDashboard() {
+            // Prevent multiple simultaneous connection attempts
+            if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+
             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
             document.getElementById('wsPortInput').value = savedPort;
-            
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            const wsUrl = `${wsProtocol}://${host}:${savedPort}`;
+
+            const wsProtocol = 'wss';
+            const wsHost = (host === 'api.ravebox.love') ? 'wss.ravebox.love' : host;
+            const wsUrl = (host === 'api.ravebox.love') ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
                 wsErrorCount = 0;
-                document.getElementById('wsCertWarning').style.display = 'none';
+                const warning = document.getElementById('wsCertWarning');
+                if (warning) warning.style.display = 'none';
                 document.getElementById('liveDashboard').style.display = 'flex';
                 // Trigger reflow to fade in
                 setTimeout(() => document.getElementById('liveDashboard').style.opacity = '1', 50);
+
+                // Request initial params
+                ws.send(JSON.stringify({ type: 'get_params' }));
+
+                // Setup Slider Listeners
+                setupControlListeners();
             };
+
+            function setupControlListeners() {
+                const sliders = [
+                    { id: 'masterSpeed', key: 'speed', suffix: 'x' },
+                    { id: 'masterSens', key: 'gain', suffix: '' },
+                    { id: 'masterFlux', key: 'sensitivity', suffix: '' },
+                    { id: 'masterBias', key: 'vibe_bias', suffix: '' }
+                ];
+
+                sliders.forEach(def => {
+                    const el = document.getElementById(def.id);
+                    el.oninput = (e) => {
+                        const val = parseFloat(e.target.value);
+                        state[def.key] = val;
+                        document.getElementById(def.id + 'Val').textContent = val.toFixed(1) + def.suffix;
+                        sendParams();
+                    };
+                });
+
+                document.getElementById('masterSceneFreq').onchange = (e) => {
+                    state.sceneFreq = parseInt(e.target.value);
+                    sendParams();
+                };
+
+                // Save Defaults Button
+                const saveBtn = document.getElementById('saveDefaultsBtn');
+                if (saveBtn) {
+                    saveBtn.onclick = () => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'save_defaults' }));
+                            alert("Defaults Saved!");
+                        }
+                    };
+                }
+            }
+
+            function sendParams() {
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+                // 1. MASTER PARAMS
+                ws.send(JSON.stringify({
+                    type: 'master_params',
+                    speed: state.speed,
+                    sensitivity: state.gain,
+                    flux_sensitivity: state.sensitivity,
+                    vibe_bias: state.vibe_bias,
+                    sceneFreq: state.sceneFreq
+                }));
+
+                // 2. LASER PARAMS (Targeted propagation)
+                ws.send(JSON.stringify({
+                    type: 'remote_params',
+                    target: 'laser',
+                    speed: state.speed,
+                    audioSensitivity: state.sensitivity,
+                    pattern: 'auto',
+                    color: 'auto'
+                }));
+
+                // 3. VISUAL PARAMS (Targeted propagation)
+                ws.send(JSON.stringify({
+                    type: 'remote_params',
+                    target: 'visual',
+                    speed: state.speed,
+                    amplitude: 1.0,
+                    sensitivity: state.sensitivity,
+                    baseLayer: 'auto',
+                    effect: 'auto'
+                }));
+            }
+
+            function syncUI(params) {
+                if (params.master) {
+                    const m = params.master;
+                    state.speed = m.speed || 1.0;
+                    state.gain = m.sensitivity || 1.0;
+                    state.sensitivity = m.flux_sensitivity || 0.7;
+                    state.vibe_bias = m.vibe_bias || 0.5;
+                    state.sceneFreq = m.sceneFreq !== undefined ? m.sceneFreq : 1;
+
+                    updateSliderUI('masterSpeed', state.speed, 'x');
+                    updateSliderUI('masterSens', state.gain);
+                    updateSliderUI('masterFlux', state.sensitivity);
+                    updateSliderUI('masterBias', state.vibe_bias);
+                    document.getElementById('masterSceneFreq').value = state.sceneFreq;
+                }
+            }
+
+            function updateSliderUI(id, val, suffix = '') {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = val;
+                    const disp = document.getElementById(id + 'Val');
+                    if (disp) disp.textContent = val.toFixed(1) + suffix;
+                }
+            }
 
             ws.onerror = (err) => {
                 wsErrorCount++;
-                if (wsProtocol === 'wss' && wsErrorCount > 0) {
-                    document.getElementById('wsCertWarning').style.display = 'block';
+                console.error("WebSocket Error:", err);
+                const warning = document.getElementById('wsCertWarning');
+                if (warning && wsProtocol === 'wss' && wsErrorCount > 1) {
+                    warning.style.display = 'block';
                 }
             };
 
@@ -630,16 +989,14 @@
             ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
+                    if (msg.type === 'current_params') {
+                        syncUI(msg);
+                    }
                     if (msg.type === 'audio') {
                         const d = msg.data;
 
                         // Vol & Vibe
                         if (d.vol !== undefined) document.getElementById('hubVol').style.width = Math.min(100, d.vol * 100) + '%';
-                        if (d.vibe) {
-                            const vb = document.getElementById('hubVibe');
-                            vb.textContent = d.vibe;
-                            vb.className = 'vibe-badge ' + d.vibe;
-                        }
 
                         // Engine
                         if (d.transient) {
@@ -656,10 +1013,31 @@
                         }
                         if (d.bins) {
                             const bars = document.getElementById('hubBins').children;
-                            for (let i = 0; i < bars.length; i++) {
-                                if (d.bins[i] !== undefined) {
-                                    bars[i].style.height = Math.max(2, d.bins[i] * 38) + 'px';
-                                    bars[i].style.background = d.bins[i] > 0.6 ? 'var(--primary)' : '#444';
+                            // Map 11 Raw -> 6 Logical Bins (Per dmx_engine.py logic)
+                            // 0: Sub, 1: Bass/Low-Mid, 2: Mid, 3: Presence, 4: Treble, 5: Air
+                            const mapping = [[0], [1, 2, 3], [4, 5], [6, 7], [8, 9], [10]];
+
+                            for (let i = 0; i < mapping.length; i++) {
+                                if (!bars[i]) continue;
+                                let energy = 0;
+                                let indices = mapping[i];
+                                for (let idx of indices) energy += (d.bins[idx] || 0);
+                                energy /= indices.length;
+
+                                // Internal height: 54px - (6px * 2 padding) = 42px
+                                bars[i].style.height = Math.max(2, energy * 42) + 'px';
+
+                                const isActive = energy > 0.05;
+                                const isPeak = energy > 0.85;
+                                const barColor = isPeak ? '#f200ff' : (isActive ? 'var(--primary)' : '#333');
+
+                                bars[i].style.background = barColor;
+                                bars[i].style.opacity = 0.4 + (energy * 0.6);
+
+                                if (isActive) {
+                                    bars[i].style.boxShadow = `0 0 10px ${isPeak ? '#f200ff55' : 'var(--primary-glow, #00f2ff44)'}`;
+                                } else {
+                                    bars[i].style.boxShadow = 'none';
                                 }
                             }
                         }
@@ -702,18 +1080,18 @@
         // Start live dashboard listener
         connectLiveDashboard();
 
-        // Gesture Support: Swipe Up -> Remote, Swipe Down -> Setup
-        let touchStartY = 0;
+        // Gesture Support: Swipe Left -> VisualDMX, Swipe Right -> Setup
+        let touchStartX = 0;
         document.addEventListener('touchstart', e => {
-            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
         }, { passive: true });
 
         document.addEventListener('touchend', e => {
-            const touchEndY = e.changedTouches[0].clientY;
-            const deltaY = touchEndY - touchStartY;
-            if (Math.abs(deltaY) > 80) { // Threshold for swipe
-                if (deltaY < -80) window.location.href = '/remote.html'; // Swipe Up
-                if (deltaY > 80) window.location.href = '/setup.html'; // Swipe Down
+            const touchEndX = e.changedTouches[0].clientX;
+            const deltaX = touchEndX - touchStartX;
+            if (Math.abs(deltaX) > 100) { // Threshold for swipe
+                if (deltaX < -100) window.location.href = '/visualdmx.html'; // Swipe Left
+                if (deltaX > 100) window.location.href = '/setup.html'; // Swipe Right
             }
         }, { passive: true });
 

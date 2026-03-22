@@ -46,15 +46,6 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             fname = path.split('/')[-1]
             self._handle_get_fixture(fname)
             return
-            
-
-        # API: Launcher Stubs (Manual Mode)
-        if path == '/status':
-            self._handle_status()
-            return
-        if path in ['/start', '/stop', '/restart']:
-            self._handle_lifecycle_stub(path)
-            return
 
         return super().do_GET()
 
@@ -62,42 +53,24 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        # API: Save Fixture or Stage Config
+        # API: Save Fixture
         if path.startswith('/api/fixtures/'):
             fname = path.split('/')[-1]
             self._handle_save_fixture(fname)
             return
-        
-        # Legacy save support for root files
-        self.handle_save_legacy()
 
-    def _handle_status(self):
-        try:
-            cmd = ['sudo', 'systemctl', 'is-active', 'vj-engine.service']
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            status = result.stdout.strip()
-            self._send_json({
-                "status": status,
-                "active": status == 'active',
-                "service": "vj-engine.service"
-            })
-        except Exception as e:
-            self.send_error(500, str(e))
+        # API: Save Direct Fixture (no path)
+        if path == '/api/fixtures':
+             # Maybe it expects a filename in headers or just saves default? 
+             # Usually it's /api/fixtures/NAME.json
+             pass
 
-    def _handle_lifecycle_stub(self, action):
-        action = action.lstrip('/')
-        try:
-            cmd = ['sudo', 'systemctl', action, 'vj-engine.service']
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            self._send_json({
-                "success": result.returncode == 0,
-                "action": action,
-                "service": "vj-engine.service",
-                "output": result.stdout,
-                "error": result.stderr
-            })
-        except Exception as e:
-            self.send_error(500, str(e))
+        # Legacy saves (config.json, etc)
+        if not self.handle_save_legacy():
+            self.send_error(501, "Not Implemented")
+
+    def do_POST(self):
+        self.do_PUT()
 
     def _handle_list_fixtures(self):
         """List all .json files in fixtures/"""
@@ -186,8 +159,11 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(b"Saved successfully")
+                return True
             except Exception as e:
                 self.send_error(500, str(e))
+                return True # We technically handled it (with error)
+        return False
 
 # Add MIME types for PWA and assets
 http.server.SimpleHTTPRequestHandler.extensions_map.update({

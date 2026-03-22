@@ -1,10 +1,9 @@
-const CACHE_NAME = 'ravebox-vj-v6';
+const CACHE_NAME = 'ravebox-vj-v9';
 const ASSETS = [
     '/',
     '/index.html',
     '/manager.html',
     '/visualdmx.html',
-    '/remote.html',
     '/setup.html',
     '/manifest.json',
     '/icon.png',

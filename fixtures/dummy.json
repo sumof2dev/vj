@@ -1,0 +1,119 @@
+{
+    "type": "dummy",
+    "name": "dummy",
+    "channels": {
+        "unassigned_ch1": 0,
+        "unassigned_ch2": 1,
+        "unassigned_ch3": 2,
+        "unassigned_ch4": 3,
+        "unassigned_ch5": 4
+    },
+    "modes": {},
+    "defaults": {
+        "unassigned_ch1": 0,
+        "unassigned_ch2": 0,
+        "unassigned_ch3": 0,
+        "unassigned_ch4": 0,
+        "unassigned_ch5": 0
+    },
+    "calibration": {
+        "unassigned_ch1": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch2": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch3": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch4": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ],
+        "unassigned_ch5": [
+            {
+                "min": 0,
+                "center": 127,
+                "max": 255,
+                "vibe": "any"
+            }
+        ]
+    },
+    "ranges": {},
+    "dynamics": {},
+    "macros": {},
+    "step_data": {},
+    "modifiers": {
+        "unassigned_ch5": "lfo",
+        "unassigned_ch1": "lfo",
+        "unassigned_ch2": "lfo",
+        "unassigned_ch3": "lfo",
+        "unassigned_ch4": "lfo"
+    },
+    "lfo_data": {
+        "unassigned_ch5": {
+            "shape": "sine",
+            "bin": 4,
+            "speed": 0,
+            "react": 0.5,
+            "return_to_min": true,
+            "threshold": 0.1,
+            "hold": 0
+        },
+        "unassigned_ch1": {
+            "shape": "sine",
+            "bin": 0,
+            "speed": 0,
+            "react": 0.5,
+            "return_to_min": true,
+            "threshold": 0.1,
+            "hold": 0
+        },
+        "unassigned_ch2": {
+            "shape": "sine",
+            "bin": 1,
+            "speed": 0,
+            "react": 0.5,
+            "return_to_min": true,
+            "threshold": 0.1,
+            "hold": 0
+        },
+        "unassigned_ch3": {
+            "shape": "sine",
+            "bin": 2,
+            "speed": 0,
+            "react": 0.5,
+            "return_to_min": true,
+            "threshold": 0.1,
+            "hold": 0
+        },
+        "unassigned_ch4": {
+            "shape": "sine",
+            "bin": 3,
+            "speed": 0,
+            "react": 0.5,
+            "return_to_min": true,
+            "threshold": 0.1,
+            "hold": 0
+        }
+    }
+}

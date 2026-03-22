@@ -916,9 +916,10 @@
         });
 
         function connect() {
-            const host = window.location.hostname || 'localhost';
+            const host = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'wss.ravebox.love' : (window.location.hostname || 'localhost');
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            ws = new WebSocket(`${wsProtocol}://${host}:8765`);
+            const wsUrl = (host === 'wss.ravebox.love') ? `${wsProtocol}://${host}` : `${wsProtocol}://${host}:8765`;
+            ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
                 document.getElementById('statusDot').classList.add('connected');

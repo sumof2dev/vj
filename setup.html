@@ -227,12 +227,81 @@
         }
 
         .device-header {
-            display: none;
-            /* Header is redundant with internal labels/icons */
+            display: flex;
+            gap: 15px;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 2px solid var(--border);
+            border-radius: 10px 10px 0 0;
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 700;
+        }
+
+        .device-header div {
+            flex: 1;
+        }
+
+        .device-header div:last-child {
+            width: 32px;
+            flex: none;
+        }
+
+        .device-header div.small-col {
+            width: 70px;
+            flex: none;
+            text-align: center;
+        }
+
+        .device-row {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            position: relative;
+            transition: transform 0.2s, border-color 0.2s;
         }
 
         .device-row:hover {
-            border-color: #444;
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .device-row-desktop {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .device-row-desktop .dev-meta {
+            display: flex;
+            flex: 2;
+            gap: 12px;
+        }
+
+        .device-row-desktop input,
+        .device-row-desktop select {
+            height: 40px;
+            font-size: 14px;
+            padding: 0 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+        }
+
+        .dev-numeric input {
+            text-align: center;
+            width: 100%;
+        }
+
+        .dev-pos select {
+            text-align: center;
+            width: 100%;
         }
 
         /* --- FIXTURE EDITOR --- */
@@ -730,6 +799,12 @@
             min-width: 80px;
         }
 
+        @keyframes pulse-red {
+            0% { opacity: 0.5; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.5; transform: scale(0.9); }
+        }
+
         .kv-row .kv-val {
             width: 70px;
         }
@@ -801,8 +876,47 @@
             font-family: monospace;
         }
 
-        /* --- MOBILE OPTIMIZATION --- */
+        /* --- DESKTOP REFINEMENTS --- */
+        @media (min-width: 769px) {
+            .device-row-mobile {
+                display: none;
+            }
+
+            .device-row-desktop {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                width: 100%;
+            }
+
+            .device-row-desktop .dev-meta {
+                display: flex;
+                flex: 2;
+                gap: 10px;
+            }
+
+            .device-row-desktop input,
+            .device-row-desktop select {
+                height: 36px;
+                font-size: 13px;
+                padding: 0 10px;
+            }
+
+            .dev-numeric input {
+                text-align: center;
+                width: 100%;
+            }
+        }
+
         @media (max-width: 768px) {
+            .device-row-desktop {
+                display: none;
+            }
+
+            .device-header {
+                display: none;
+            }
+
             body {
                 flex-direction: column-reverse;
                 /* Nav at bottom */
@@ -1125,11 +1239,11 @@
             <div class="card">
                 <h3>Devices</h3>
                 <div class="device-header">
-                    <div>Name</div>
-                    <div>Profile</div>
-                    <div>Addr</div>
-                    <div>Offs</div>
-                    <div>Inverses</div>
+                    <div>Name / Profile</div>
+                    <div class="small-col">Addr</div>
+                    <div class="small-col">Offs</div>
+                    <div class="small-col">Pos</div>
+                    <div style="flex: 1.5; text-align:center;">Inverses</div>
                     <div></div>
                 </div>
                 <div id="device-list"></div>
@@ -1158,22 +1272,10 @@
             </div>
 
             <div id="editor-container" style="display:none">
-                <div class="card">
-                    <h3>Basic Info</h3>
-                    <div class="row">
-                        <div class="col">
-                            <label>Filename (No Extension)</label>
-                            <input type="text" id="fix-filename" readonly style="color:var(--text-dim)">
-                        </div>
-                        <div class="col">
-                            <label>Fixture Type ID</label>
-                            <input type="text" id="fix-type">
-                        </div>
-                        <div class="col">
-                            <label>Display Name</label>
-                            <input type="text" id="fix-name">
-                        </div>
-                    </div>
+                <div id="basic-info-hidden" style="display:none">
+                    <input type="hidden" id="fix-filename">
+                    <input type="hidden" id="fix-type">
+                    <input type="hidden" id="fix-name">
                 </div>
 
                 <div id="profile-sections"></div>
@@ -1391,12 +1493,16 @@
             alert(`[ASYNC ERROR] ${event.reason}`);
         };
 
+        const host = localStorage.getItem('vj_backend_host') || window.location.hostname || 'api.ravebox.love';
+        const savedPort = localStorage.getItem('vj_ws_port') || '8765';
         const API_BASE = '/api/fixtures';
         let stageConfig = { devices: {} };
         let currentProfile = null;
         let availableProfiles = [];
         let ws = null;
         let latestDmxState = {};
+        let activeLiveTesters = {}; // Key: role, Value: { devName: string, data: [], raf: int }
+        let liveTesterMaxFrames = 60 * 30; // 30 seconds at 60fps
 
         // Fixture Setup Enhancements State
         let activeTestDevices = []; // Array of devNames
@@ -1421,16 +1527,11 @@
 
         const BIN_LABELS = [
             "0: Sub-Bass (Heavy Kicks/808)",
-            "1: Bass (Basslines)",
-            "2: Low-Mid (Warmth/Mud)",
-            "3: Mid (Low Vocals/Snare)",
-            "4: Upper-Mid (Main Synths)",
-            "5: Presence (High Vocals)",
-            "6: Upper-Pres (Claps)",
-            "7: Low-Treble (Percussion)",
-            "8: Treble (Hi-Hats)",
-            "9: High-Treble (Cymbals)",
-            "10: Brilliance (Air/Sizzle)"
+            "1: Bass & Low-Mid (Basslines/Warmth)",
+            "2: Mid & Upper-Mid (Vocals/Synths)",
+            "3: Presence (High Vocals/Claps)",
+            "4: Treble (Percussion/Hats)",
+            "5: Air (Cymbals/Sizzle)"
         ];
 
 
@@ -1505,40 +1606,74 @@
                 ).join('');
 
                 row.innerHTML = `
-                <div class="device-row-line">
-                    <input type="text" value="${key}" onchange="updateDeviceKey('${key}', this.value)" style="font-weight:bold; flex: 1;" placeholder="Name">
-                    <select onchange="updateDeviceProp('${key}', 'type', this.value)" style="flex: 1;">${profOptions}</select>
-                    <button class="kv-remove" onclick="deleteDevice('${key}')" style="width: 32px; height: 32px; margin: 0;">×</button>
-                </div>
-                <div class="device-row-line" style="justify-content: space-between; font-size: 11px; color: var(--text-dim);">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <div style="display:flex; align-items:center; gap:2px;" title="DMX Address">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                            <input type="number" value="${dev.address}" onchange="updateDeviceProp('${key}', 'address', parseInt(this.value))" style="width:45px; height: 28px; padding: 0 4px; text-align: center;">
-                        </div>
-                        <div style="display:flex; align-items:center; gap:2px;" title="Channel Offset">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            <input type="number" value="${dev.offset}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" style="width:40px; height: 28px; padding: 0 4px; text-align: center;">
-                        </div>
+                <div class="device-row-desktop">
+                    <div class="dev-meta">
+                        <input type="text" value="${key}" onchange="updateDeviceKey('${key}', this.value)" style="font-weight:bold;" placeholder="Name">
+                        <select onchange="updateDeviceProp('${key}', 'type', this.value)">${profOptions}</select>
                     </div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <select onchange="updateDeviceProp('${key}', 'position', this.value)" style="width:70px; height:28px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); color:#aaa; font-size:10px; border-radius:6px; padding:0 4px;" title="Stereo Audio Positioning">
-                            <option value="center" ${dev.position === 'center' || !dev.position ? 'selected' : ''}>Center</option>
-                            <option value="left" ${dev.position === 'left' ? 'selected' : ''}>Left</option>
-                            <option value="right" ${dev.position === 'right' ? 'selected' : ''}>Right</option>
+                    
+                    <div class="dev-numeric small-col">
+                        <input type="number" value="${dev.address}" onchange="updateDeviceProp('${key}', 'address', parseInt(this.value))" title="DMX Address">
+                    </div>
+                    
+                    <div class="dev-numeric small-col">
+                        <input type="number" value="${dev.offset}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" title="Channel Offset">
+                    </div>
+                    
+                    <div class="dev-pos small-col">
+                        <select onchange="updateDeviceProp('${key}', 'position', this.value)" title="Audio Position">
+                            <option value="center" ${dev.position === 'center' || !dev.position ? 'selected' : ''}>C</option>
+                            <option value="left" ${dev.position === 'left' ? 'selected' : ''}>L</option>
+                            <option value="right" ${dev.position === 'right' ? 'selected' : ''}>R</option>
                         </select>
                     </div>
-                    <div class="checkbox-group" style="margin: 0; gap: 4px;">
-                        <label class="custom-checkbox ${dev.invert_x ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert X">
-                            <input type="checkbox" ${dev.invert_x ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_x', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> 
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 13 2 18 7 23"/><polyline points="17 11 22 6 17 1"/><line x1="2" y1="18" x2="15" y2="5"/><line x1="9" y1="19" x2="22" y2="6"/></svg>
-                            X
-                        </label>
-                        <label class="custom-checkbox ${dev.invert_y ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert Y">
-                            <input type="checkbox" ${dev.invert_y ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_y', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> 
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 7 18 2 23 7"/><polyline points="11 17 6 22 1 17"/><line x1="18" y1="2" x2="5" y2="15"/><line x1="19" y1="9" x2="6" y2="22"/></svg>
-                            Y
-                        </label>
+                    
+                    <div class="dev-inverses" style="flex: 1.5;">
+                        <div class="checkbox-group" style="margin:0; justify-content:center;">
+                            <label class="custom-checkbox ${dev.invert_x ? 'checked' : ''}" title="Invert X">
+                                <input type="checkbox" ${dev.invert_x ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_x', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> X
+                            </label>
+                            <label class="custom-checkbox ${dev.invert_y ? 'checked' : ''}" title="Invert Y">
+                                <input type="checkbox" ${dev.invert_y ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_y', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> Y
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button class="kv-remove" onclick="deleteDevice('${key}')" style="width: 32px; height: 32px; margin: 0; flex:none;">×</button>
+                </div>
+
+                <div class="device-row-mobile">
+                    <div class="device-row-line">
+                        <input type="text" value="${key}" onchange="updateDeviceKey('${key}', this.value)" style="font-weight:bold; flex: 1;" placeholder="Name">
+                        <select onchange="updateDeviceProp('${key}', 'type', this.value)" style="flex: 1;">${profOptions}</select>
+                        <button class="kv-remove" onclick="deleteDevice('${key}')" style="width: 32px; height: 32px; margin: 0;">×</button>
+                    </div>
+                    <div class="device-row-line" style="justify-content: space-between; font-size: 11px; color: var(--text-dim);">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <div style="display:flex; align-items:center; gap:2px;" title="DMX Address">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <input type="number" value="${dev.address}" onchange="updateDeviceProp('${key}', 'address', parseInt(this.value))" style="width:45px; height: 28px; padding: 0 4px; text-align: center;">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:2px;" title="Channel Offset">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                <input type="number" value="${dev.offset}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" style="width:40px; height: 28px; padding: 0 4px; text-align: center;">
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <select onchange="updateDeviceProp('${key}', 'position', this.value)" style="width:70px; height:28px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); color:#aaa; font-size:10px; border-radius:6px; padding:0 4px;" title="Stereo Audio Positioning">
+                                <option value="center" ${dev.position === 'center' || !dev.position ? 'selected' : ''}>Center</option>
+                                <option value="left" ${dev.position === 'left' ? 'selected' : ''}>Left</option>
+                                <option value="right" ${dev.position === 'right' ? 'selected' : ''}>Right</option>
+                            </select>
+                        </div>
+                        <div class="checkbox-group" style="margin: 0; gap: 4px;">
+                            <label class="custom-checkbox ${dev.invert_x ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert X">
+                                <input type="checkbox" ${dev.invert_x ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_x', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> X
+                            </label>
+                            <label class="custom-checkbox ${dev.invert_y ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert Y">
+                                <input type="checkbox" ${dev.invert_y ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_y', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> Y
+                            </label>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1683,7 +1818,7 @@
             document.getElementById('fix-filename').value = name;
             currentProfile = {
                 type: name,
-                name: "New Fixture",
+                name: name,
                 channels: {},
                 modes: {},
                 defaults: {},
@@ -1702,12 +1837,27 @@
             }
 
             document.getElementById('fix-type').value = name;
-            document.getElementById('fix-name').value = "New Fixture";
+            document.getElementById('fix-name').value = name;
             syncUiToJson();
 
             document.getElementById('editor-container').style.display = 'block';
             document.getElementById('editor-empty-state').style.display = 'none';
             renderProfileUi();
+        }
+
+        async function duplicateProfile() {
+            if (!currentProfile) return;
+            const newName = prompt("Enter new filename for duplicate (no extension):");
+            if (!newName) return;
+
+            // Update identifying fields
+            document.getElementById('fix-filename').value = newName;
+            currentProfile.name = newName;
+            currentProfile.type = newName;
+
+            // Save as new file
+            await saveFixtureProfile();
+            alert(`Profile duplicated as ${newName}.json`);
         }
 
         function parseJsonToUi() {
@@ -1840,9 +1990,12 @@
             let html = '';
 
             // Unified Channels Block (Contains Defaults, Calibration, Modes, etc.)
+            let profileDisplayName = p.name || document.getElementById('fix-filename').value;
+            if (profileDisplayName === "New Fixture") profileDisplayName = document.getElementById('fix-filename').value;
             html += `<div class="card" style="padding:15px; margin-bottom:20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-                            <h3 style="margin:0; color:var(--accent);">📡 Channels & Behaviors</h3>
+                            <h3 style="margin:0; color:var(--accent);">📡 Channels & Behaviors: <span style="color:white; font-size:0.9em;">${profileDisplayName}</span></h3>
+                            <button class="btn" style="padding:2px 8px; font-size:10px; height:22px; opacity:0.7;" onclick="duplicateProfile()" title="Duplicate this profile">Duplicate</button>
                         </div>
                         ${renderChannelsSection()}
                      </div>`;
@@ -1911,13 +2064,54 @@
                             <span style="font-size:10px; color:#666; font-weight:normal;">(Offs ${offset})</span>
                          </div>`;
 
-                // Role Re-name, Offset Adjust, Delete
+                // Role Re-name, Offset Adjust, Live Test, Delete
                 html += `<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">`;
                 html += `<input type="text" value="${role}" style="width:110px; font-size:11px; background:#111; border:none; text-align:right;" onchange="renameProfileChannel('${role}', this.value)" title="Rename Logic Role">`;
                 html += `<input type="number" value="${offset}" min="0" max="512" style="width:50px; font-size:11px;" onchange="updateProfileChannel('${role}', parseInt(this.value))" title="Offset">`;
+                html += `<button class="btn" style="width:30px; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-color:#444;" onclick="toggleLiveChannelTest('${role}')" title="Live Waveform">📈</button>`;
                 html += `<button class="kv-remove" style="width:30px; height:30px;" onclick="removeProfileChannel('${role}')">×</button>`;
                 html += `</div>`;
                 html += `</div>`;
+
+                // Live Test Waveform Display
+                const tester = activeLiveTesters[role];
+                const isTesting = !!tester;
+                let fixtureSelectHtml = '';
+                let fixtureContainerDisplay = 'none';
+
+                if (isTesting) {
+                    const profileFileName = (document.getElementById('fix-filename').value || "").trim();
+                    const profileType = (currentProfile.type || "").trim();
+                    const allDevices = { ...(stageConfig.devices || {}), ...(stageConfig.lasers || {}) };
+                    const fixtureEntries = Object.entries(allDevices).filter(([name, cfg]) => {
+                        const cfgType = (cfg.type || "").trim().toLowerCase();
+                        return cfgType === profileFileName.toLowerCase() || (profileType && cfgType === profileType.toLowerCase());
+                    });
+
+                    if (fixtureEntries.length > 1) {
+                        fixtureContainerDisplay = 'flex';
+                        fixtureSelectHtml = fixtureEntries.map(([name, _]) =>
+                            `<option value="${name}" ${tester.devName === name ? 'selected' : ''}>${name}</option>`
+                        ).join('');
+                    }
+                }
+
+                html += `<div id="live-tester-${role}" style="display:${isTesting ? 'block' : 'none'}; width:100%; margin-top:10px; background:#050508; border:1px solid #222; border-radius:4px; padding:10px; flex-basis:100%;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <div style="width:8px; height:8px; background:var(--danger); border-radius:50%; box-shadow:0 0 8px var(--danger); animation: pulse-red 1s infinite;"></div>
+                                    <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Live DMX:</span>
+                                    <span id="live-val-${role}" style="font-family:'Courier New', monospace; font-weight:900; color:var(--accent); font-size:18px; text-shadow:0 0 10px rgba(124,77,255,0.3);">--</span>
+                                </div>
+                                <div id="fixture-select-container-${role}" style="display:${fixtureContainerDisplay}; align-items:center; gap:6px;">
+                                    <span style="font-size:9px; color:#555;">FIXTURE:</span>
+                                    <select id="fixture-select-${role}" onchange="changeLiveTesterFixture('${role}', this.value)" style="background:#111; border:1px solid #333; color:#ccc; font-size:10px; padding:2px; height:20px; border-radius:3px;">
+                                        ${fixtureSelectHtml}
+                                    </select>
+                                </div>
+                            </div>
+                            <canvas id="live-canvas-${role}" style="width:100%; height:80px; background:#000; border-radius:2px;"></canvas>
+                        </div>`;
 
                 // --- MODIFIER DROPDOWN ROW ---
                 html += `<div style="margin-bottom: 12px;">`;
@@ -1944,7 +2138,10 @@
                     html += `</div>`;
                 }
                 else {
-                    html += `<div class="kv-row" style="background: rgba(0,0,0,0.3); padding:8px; border-radius:4px; font-size:11px;">`;
+                    html += `<div class="kv-row" style="background: rgba(0,0,0,0.3); padding:8px; border-radius:4px; font-size:11px; flex-direction:column; align-items:stretch;">`;
+                    if (['bass', 'flux', 'intensity'].includes(mod)) {
+                        html += renderAudioModifierParams(role);
+                    }
                     html += renderCalibrationRanges(role);
                     html += `</div>`;
                 }
@@ -2021,10 +2218,33 @@
             return html;
         }
 
+        function renderAudioModifierParams(role) {
+            if (!currentProfile.lfo_data) currentProfile.lfo_data = {};
+            if (!currentProfile.lfo_data[role]) {
+                currentProfile.lfo_data[role] = { smoothing: 0.0, threshold: 0.0 };
+            }
+            const cfg = currentProfile.lfo_data[role];
+            return `
+            <div style="background:rgba(255, 255, 255, 0.05); padding:10px; margin-bottom:8px; border-radius:4px; border:1px solid rgba(255, 255, 255, 0.1);">
+                <div style="font-size:10px; color:var(--accent); margin-bottom:8px; font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Audio Modifier Tuning</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">SMOOTHING: <span style="color:white">${cfg.smoothing ?? 0}</span></label>
+                        <input type="range" min="0" max="0.99" step="0.01" value="${cfg.smoothing ?? 0}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'smoothing', parseFloat(this.value))">
+                    </div>
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">THRESHOLD: <span style="color:white">${cfg.threshold ?? 0}</span></label>
+                        <input type="range" min="0" max="1" step="0.01" value="${cfg.threshold ?? 0}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'threshold', parseFloat(this.value))">
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
         function renderLfoSection(role) {
             if (!currentProfile.lfo_data) currentProfile.lfo_data = {};
             if (!currentProfile.lfo_data[role]) {
-                currentProfile.lfo_data[role] = { shape: 'sine', bin: 0, speed: 0.5, react: 0.5 };
+                currentProfile.lfo_data[role] = { shape: 'sine', bin: 0, speed: 0.5, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0 };
             }
             const cfg = currentProfile.lfo_data[role];
             let binOptions = BIN_LABELS.map((label, i) =>
@@ -2052,17 +2272,35 @@
                     </div>
                     <div>
                         <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">BASE SPEED: <span style="color:white">${cfg.speed}</span></label>
-                        <input type="range" min="0" max="3" step="0.05" value="${cfg.speed}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'speed', parseFloat(this.value))">
+                        <input type="range" min="0" max="1.5" step="0.01" value="${cfg.speed}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'speed', parseFloat(this.value))">
                     </div>
                     <div>
                         <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">REACTIVITY: <span style="color:white">${cfg.react}</span></label>
-                        <input type="range" min="0" max="4" step="0.1" value="${cfg.react}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'react', parseFloat(this.value))">
+                        <input type="range" min="0" max="2" step="0.05" value="${cfg.react}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'react', parseFloat(this.value))">
+                    </div>
+                    <div>
+                        <label style="font-size:10px; color:#aaa; display:flex; align-items:center; gap:8px; cursor:pointer; height: 100%;">
+                            <input type="checkbox" ${cfg.return_to_min ? 'checked' : ''} onchange="updateLfoCfg('${role}', 'return_to_min', this.checked)" style="width:16px; height:16px; margin:0; accent-color:var(--accent);">
+                            <span style="font-weight:bold; letter-spacing:0.5px; text-transform:uppercase; font-size:9px;">Return to Min</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">START THRESHOLD: <span style="color:white">${cfg.threshold ?? 0.1}</span></label>
+                        <input type="range" min="0" max="1" step="0.01" value="${cfg.threshold ?? 0.1}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'threshold', parseFloat(this.value))">
+                    </div>
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">HOLD TIME: <span style="color:white">${cfg.hold ?? 0}s</span></label>
+                        <input type="range" min="0" max="1" step="0.01" value="${cfg.hold ?? 0}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'hold', parseFloat(this.value))">
                     </div>
                     <div style="grid-column: span 2; margin-top: 4px;">
                         <label style="font-size:10px; color:#aaa; display:flex; align-items:center; gap:8px; cursor:pointer; width: fit-content;">
                             <input type="checkbox" ${cfg.invert ? 'checked' : ''} onchange="updateLfoCfg('${role}', 'invert', this.checked)" style="width:16px; height:16px; margin:0; accent-color:var(--accent);">
                             <span style="font-weight:bold; letter-spacing:0.5px; text-transform:uppercase;">Invert Waveform Polarity (Flip Direction)</span>
                         </label>
+                    </div>
+                    <div>
+                        <label style="font-size:9px; color:#aaa; margin-bottom:4px; display:block;">SMOOTHING: <span style="color:white">${cfg.smoothing ?? 0}</span></label>
+                        <input type="range" min="0" max="0.99" step="0.01" value="${cfg.smoothing ?? 0}" style="width:100%; accent-color:var(--accent);" oninput="updateLfoCfg('${role}', 'smoothing', parseFloat(this.value))">
                     </div>
                 </div>
             </div>
@@ -2071,7 +2309,7 @@
 
         function updateLfoCfg(role, key, val) {
             if (!currentProfile.lfo_data) currentProfile.lfo_data = {};
-            if (!currentProfile.lfo_data[role]) currentProfile.lfo_data[role] = { shape: 'sine', bin: 0, speed: 0.5, react: 0.5 };
+            if (!currentProfile.lfo_data[role]) currentProfile.lfo_data[role] = { shape: 'sine', bin: 0, speed: 0.5, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0 };
             currentProfile.lfo_data[role][key] = val;
             syncUiToJson();
             renderProfileUi();
@@ -2406,29 +2644,59 @@
 
         // --- LIVE TEST ---
         function connectWs() {
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            ws = new WebSocket(`${wsProtocol}://${window.location.hostname}:8765`);
-            ws.onopen = () => {
+            // Logic mirrored from index.html for Cloudflare compatibility
+            const isProd = host.includes('ravebox.love') || host.includes('api.ravebox.love');
+            const wsProtocol = (window.location.protocol === 'https:' || isProd) ? 'wss' : 'ws';
+            
+            let wsHost = host;
+            let wsPort = `:${savedPort}`;
+
+            if (isProd) {
+                wsHost = 'wss.ravebox.love';
+                wsPort = ''; // Routed via 443
+            }
+
+            const wsUrl = `${wsProtocol}://${wsHost}${wsPort}`;
+            console.log(`📡 Connecting to WebSocket: ${wsUrl}`);
+
+            const newWs = new WebSocket(wsUrl);
+            
+            // Connection timeout (for fallback or retry)
+            const timeout = setTimeout(() => {
+                if (newWs.readyState !== 1) {
+                    console.warn(`⏳ WebSocket ${wsUrl} timed out.`);
+                    newWs.close();
+                }
+            }, 5000);
+
+            newWs.onopen = () => {
+                clearTimeout(timeout);
+                ws = newWs;
+                console.log(`✅ WebSocket Connected! (${wsUrl})`);
                 document.getElementById('conn-status').innerHTML = '<span style="display:flex; align-items:center; gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Connected</span>';
                 document.getElementById('conn-status').style.color = "var(--success)";
-
-                // Request current system parameters to populate the Axis Matrix
                 ws.send(JSON.stringify({ type: 'get_params' }));
             };
-            ws.onmessage = (event) => {
+
+            newWs.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    if (msg.dmx) {
-                        latestDmxState = msg.dmx;
-                    }
+                    if (msg.dmx) latestDmxState = msg.dmx;
                 } catch (e) {
                     console.error("WS Parse Error:", e);
                 }
             };
-            ws.onclose = () => {
+
+            newWs.onerror = (e) => {
+                clearTimeout(timeout);
+                console.error(`❌ WebSocket Error:`, e);
+            };
+
+            newWs.onclose = () => {
+                clearTimeout(timeout);
                 document.getElementById('conn-status').innerHTML = '<span style="display:flex; align-items:center; gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Offline</span>';
                 document.getElementById('conn-status').style.color = "var(--danger)";
-                setTimeout(connectWs, 2000);
+                setTimeout(() => connectWs(), 3000);
             };
         }
 
@@ -2524,15 +2792,17 @@
                 if (ws && ws.readyState === 1) {
                     activeTestDevices.forEach(devName => {
                         ws.send(JSON.stringify({ type: 'clear_overrides', device: devName }));
+                        // Clear local override memory for this device so moving one fader doesn't re-apply ALL others
+                        clearLocalOverridesForDevice(devName);
                     });
                 }
             } else {
                 track.classList.remove('on');
-                // Switch to manual Setup control: zero all channels and keep faders as source of truth
-                activeTestDevices.forEach(devName => {
-                    zeroDeviceDmx(devName);
-                });
+                // Switch to manual Setup control
+                // Immediately send all current fader values to the backend to take control
+                sendAllFaderOverrides();
             }
+            renderTestFaders(); // Refresh UI to show cleared overrides if any
         }
 
         async function zeroDeviceDmx(devName) {
@@ -2557,14 +2827,44 @@
                 const offset = typeof val === 'object' ? val.offset : val;
                 const absAddr = dev.address + dev.offset + offset;
 
-                currentFaderValues[absAddr] = 0;
-
                 const disp = document.getElementById(`disp-${absAddr}`);
-                if (disp) disp.value = 0;
+                if (disp) { disp.value = 0; disp.innerText = 0; }
                 const input = document.getElementById(`input-${absAddr}`);
                 if (input) input.value = 0;
 
-                updateDmxState(absAddr, 0, false, true); // skipLinked=false, skipAutoCheck=true
+                currentFaderValues[absAddr] = 0;
+            });
+
+            sendAllFaderOverrides();
+        }
+
+        function sendAllFaderOverrides() {
+            if (!ws || ws.readyState !== 1) return;
+            const overridesArray = Object.entries(currentFaderValues).map(([a, v]) => ({
+                address: parseInt(a),
+                value: v
+            }));
+            ws.send(JSON.stringify({
+                type: 'laser_override',
+                overrides: overridesArray
+            }));
+        }
+
+        function clearLocalOverridesForDevice(devName) {
+            let allDevices = stageConfig.devices || {};
+            const dev = allDevices[devName];
+            if (!dev) return;
+
+            let profile = testProfiles[dev.type];
+            if (!profile || !profile.channels) return;
+
+            Object.entries(profile.channels).forEach(([role, val]) => {
+                const offset = typeof val === 'object' ? val.offset : val;
+                const absAddr = dev.address + dev.offset + offset;
+                delete currentFaderValues[absAddr];
+                delete saveActiveChannels[absAddr];
+                const checkbox = document.getElementById(`save-active-${absAddr}`);
+                if (checkbox) checkbox.checked = false;
             });
         }
 
@@ -2641,7 +2941,10 @@
 
         async function handleDeviceSelection(devName) {
             if (!devName) return;
-            if (activeTestDevices.includes(devName)) return;
+            // Robust name handling (prevent [object Object])
+            const dName = (typeof devName === 'object' && devName.name) ? devName.name : devName;
+
+            if (activeTestDevices.includes(dName)) return;
 
             if (activeTestDevices.length > 0) {
                 const overlay = document.getElementById('fixture-modal-overlay');
@@ -2651,25 +2954,25 @@
                 const addBtn = document.getElementById('modal-add-btn');
 
                 title.innerText = `Manage Selection`;
-                text.innerText = `You currently have ${activeTestDevices.join(', ')} active. How would you like to handle ${devName}?`;
+                text.innerText = `You currently have ${activeTestDevices.join(', ')} active. How would you like to handle ${dName}?`;
 
-                switchBtn.innerText = `No, switch to ${devName}`;
+                switchBtn.innerText = `No, switch to ${dName}`;
                 switchBtn.onclick = () => {
-                    activeTestDevices = [devName];
+                    activeTestDevices = [dName];
                     renderTestFaders();
                     closeFixtureModal();
                 };
 
-                addBtn.innerText = `Add ${devName} to current setup`;
+                addBtn.innerText = `Add ${dName} to current setup`;
                 addBtn.onclick = () => {
-                    activeTestDevices.push(devName);
+                    activeTestDevices.push(dName);
                     renderTestFaders();
                     closeFixtureModal();
                 };
 
                 overlay.style.display = 'flex';
             } else {
-                activeTestDevices = [devName];
+                activeTestDevices = [dName];
                 await renderTestFaders();
             }
         }
@@ -3623,6 +3926,176 @@
                 ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
                 ctx.fill();
             });
+        }
+
+        // --- LIVE CHANNEL TESTER ---
+        function toggleLiveChannelTest(role) {
+            const testerEl = document.getElementById(`live-tester-${role}`);
+            if (!testerEl) return;
+
+            if (testerEl.style.display === 'none') {
+                // Activate
+                testerEl.style.display = 'block';
+
+                const profileFileName = (document.getElementById('fix-filename').value || "").trim();
+                const profileType = (currentProfile.type || "").trim();
+
+                console.log(`[LiveTester] Searching for fixtures matching filename: "${profileFileName}" or type: "${profileType}"`);
+
+                const allDevices = { ...(stageConfig.devices || {}), ...(stageConfig.lasers || {}) };
+                const fixtureEntries = Object.entries(allDevices).filter(([name, cfg]) => {
+                    const cfgType = (cfg.type || "").trim().toLowerCase();
+                    return cfgType === profileFileName.toLowerCase() || (profileType && cfgType === profileType.toLowerCase());
+                });
+
+                if (fixtureEntries.length === 0) {
+                    console.warn("[LiveTester] No fixtures found. Available stage devices:", allDevices);
+                    alert(`No fixtures on stage use the profile "${profileFileName}" (internal type: "${profileType}").\n\nMake sure at least one fixture in the Manager tab is set to this profile.`);
+                    testerEl.style.display = 'none';
+                    return;
+                }
+
+                const selectContainer = document.getElementById(`fixture-select-container-${role}`);
+                const select = document.getElementById(`fixture-select-${role}`);
+
+                if (fixtureEntries.length > 1) {
+                    selectContainer.style.display = 'flex';
+                    select.innerHTML = fixtureEntries.map(([name, _]) => `<option value="${name}">${name}</option>`).join('');
+                    activeLiveTesters[role] = { devName: fixtureEntries[0][0], data: [], raf: null };
+                } else {
+                    selectContainer.style.display = 'none';
+                    activeLiveTesters[role] = { devName: fixtureEntries[0][0], data: [], raf: null };
+                }
+
+                startLiveTesterLoop(role);
+            } else {
+                // Deactivate
+                testerEl.style.display = 'none';
+                if (activeLiveTesters[role]) {
+                    cancelAnimationFrame(activeLiveTesters[role].raf);
+                    delete activeLiveTesters[role];
+                }
+            }
+        }
+
+        function changeLiveTesterFixture(role, devName) {
+            if (activeLiveTesters[role]) {
+                activeLiveTesters[role].devName = devName;
+                activeLiveTesters[role].data = []; // Clear old data
+            }
+        }
+
+        function startLiveTesterLoop(role) {
+            function loop() {
+                if (!activeLiveTesters[role]) return;
+
+                const tester = activeLiveTesters[role];
+                const stateKey = `${tester.devName}_${role}`;
+                const val = latestDmxState[stateKey] !== undefined ? latestDmxState[stateKey] : 0;
+
+                // Update data buffer
+                tester.data.push(val);
+                if (tester.data.length > liveTesterMaxFrames) tester.data.shift();
+
+                // Update numerical display
+                const valEl = document.getElementById(`live-val-${role}`);
+                if (valEl) valEl.innerText = val;
+
+                // Draw Waveform
+                const canvas = document.getElementById(`live-canvas-${role}`);
+                if (canvas) {
+                    if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
+                    if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
+
+                    const ctx = canvas.getContext('2d');
+                    const w = canvas.width;
+                    const h = canvas.height;
+
+                    ctx.clearRect(0, 0, w, h);
+
+                    // Grid lines
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#1a1a1a';
+                    ctx.lineWidth = 1;
+                    // Horizontal Grid (DMX steps)
+                    for (let i = 1; i < 4; i++) {
+                        const gy = (h / 4) * i;
+                        ctx.moveTo(0, gy); ctx.lineTo(w, gy);
+                    }
+                    // Vertical Grid (Time marks - 10s intervals)
+                    for (let i = 1; i < 3; i++) {
+                        const gx = (w / 3) * i;
+                        ctx.moveTo(gx, 0); ctx.lineTo(gx, h);
+                    }
+                    ctx.stroke();
+
+                    if (tester.data.length > 1) {
+                        const xStep = w / liveTesterMaxFrames;
+                        const offset = liveTesterMaxFrames - tester.data.length;
+
+                        // 1. Draw Fill Area
+                        ctx.beginPath();
+                        const fillGrad = ctx.createLinearGradient(0, 0, 0, h);
+                        fillGrad.addColorStop(0, 'rgba(124, 77, 255, 0.2)');
+                        fillGrad.addColorStop(1, 'rgba(124, 77, 255, 0)');
+                        ctx.fillStyle = fillGrad;
+
+                        for (let i = 0; i < tester.data.length; i++) {
+                            const px = (i + offset) * xStep;
+                            const py = h - ((tester.data[i] / 255) * (h - 4)) - 2;
+                            if (i === 0) ctx.moveTo(px, py);
+                            else ctx.lineTo(px, py);
+                        }
+
+                        // Close path for fill
+                        const lastX = (tester.data.length - 1 + offset) * xStep;
+                        ctx.lineTo(lastX, h);
+                        ctx.lineTo(offset * xStep, h);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // 2. Draw Main Waveform Line
+                        ctx.beginPath();
+                        ctx.strokeStyle = '#7c4dff';
+                        ctx.lineWidth = 2.5;
+                        ctx.lineJoin = 'round';
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = 'rgba(124, 77, 255, 0.5)';
+
+                        for (let i = 0; i < tester.data.length; i++) {
+                            const px = (i + offset) * xStep;
+                            const py = h - ((tester.data[i] / 255) * (h - 4)) - 2;
+                            if (i === 0) ctx.moveTo(px, py);
+                            else ctx.lineTo(px, py);
+                        }
+                        ctx.stroke();
+                        ctx.shadowBlur = 0; // Reset for playhead
+
+                        // 3. Playhead
+                        const lastVal = tester.data[tester.data.length - 1];
+                        const lastPx = (tester.data.length - 1 + offset) * xStep;
+                        const lastPy = h - ((lastVal / 255) * (h - 4)) - 2;
+
+                        ctx.beginPath();
+                        ctx.fillStyle = '#fff';
+                        ctx.arc(lastPx, lastPy, 4, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Horizontal current line
+                        ctx.beginPath();
+                        ctx.setLineDash([5, 5]);
+                        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                        ctx.moveTo(0, lastPy);
+                        ctx.lineTo(w, lastPy);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+
+                tester.raf = requestAnimationFrame(loop);
+            }
+
+            activeLiveTesters[role].raf = requestAnimationFrame(loop);
         }
 
         window.onload = init;
