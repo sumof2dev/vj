@@ -314,7 +314,61 @@
             }
         }
 
-        /* Floating Toggle for Sidebar visibility on very small screens could go here */
+        /* Calibration Specifics */
+        .cal-progress-wrap {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .cal-progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--secondary));
+            transition: width 0.3s ease;
+        }
+        .cal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            text-align: left;
+            margin-top: 15px;
+        }
+        .cal-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+        .cal-item h4 {
+            margin: 0 0 5px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            letter-spacing: 0.5px;
+        }
+        .cal-status {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .cal-pass { color: #00ff88; }
+        .cal-fail { color: #ff3366; }
+        .cal-bpm-val { font-family: monospace; font-size: 1.1rem; color: #fff; }
+
+        #calRunningBpm {
+            font-family: monospace;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--accent);
+            text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
+        }
     </style>
 </head>
 
@@ -333,6 +387,12 @@
                 </li>
                 <li class="nav-item" onclick="showSection('setup')">
                     <span>🛠️</span> Initial Setup
+                </li>
+                <li class="nav-item" onclick="showSection('calibration')">
+                    <span>🔬</span> Sanity Check
+                </li>
+                <li class="nav-item" onclick="showSection('log')">
+                    <span>📋</span> Log
                 </li>
                 <li class="nav-item" onclick="showSection('debug')">
                     <span>🐞</span> Debug
@@ -400,8 +460,8 @@
                     <h3>⚡ The Audio Pipeline</h3>
                     <p>The engine captures system audio using PulseAudio and performs real-time analysis:</p>
                     <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
-                        <li><strong>11 Frequency Bins:</strong> From Sub-bass to Brilliance, mapped logarithmically for
-                            high fidelity.</li>
+                        <li><strong>6 Frequency Bins:</strong> From Sub + Bass to Air / High, natively mapped for
+                            optimized processing and long-term average dominance.</li>
                         <li><strong>Spectral Flux Tracking:</strong> Detects physical "impact" rather than just volume.
                         </li>
                         <li><strong>Normalization:</strong> A rolling 5-second window ensures the show is "full"
@@ -425,10 +485,10 @@
                     <h3>🎨 Layered DMX Logic</h3>
                     <p>Commands pass through a 4-layer priority stack:</p>
                     <ol style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
-                        <li><strong>Spatial Logic:</strong> Sine/Square LFOs mapped to your stage dimensions.</li>
+                        <li><strong>Spatial & Frequency Logic:</strong> LFOs or Direct Frequency mapping (pinpointing the most dominant EQ bin) mapped to your stage dimensions.</li>
                         <li><strong>Base Presets:</strong> Animated scenes like "Lissajous" or "Neon Tunnel".</li>
                         <li><strong>System Triggers:</strong> Styles like "Machine Gun" or "Tearout" that override the
-                            base.</li>
+                            base, and can even punch through global blackouts.</li>
                         <li><strong>Manual:</strong> Your overrides from the Setup UI.</li>
                     </ol>
                 </div>
@@ -488,10 +548,34 @@ dtoverlay=hifiberry-dacplus</pre>
                     </div>
                 </div>
 
+                <div class="help-card" style="border-color: rgba(255, 193, 7, 0.3);">
+                    <h3>🔒 SSL & Connectivity</h3>
+                    <p style="font-size:0.8rem; margin-bottom: 15px;">Self-signed certificates require manual authorization on each port for the dashboard.</p>
+                    <div style="display:flex; gap:15px; align-items: flex-end;">
+                        <div style="flex: 1;">
+                            <label style="font-size:0.6rem;">WS Port</label>
+                            <input type="number" id="wsPortInput" value="8765" style="padding: 10px; font-size: 1rem; height: 38px;">
+                        </div>
+                        <button class="btn btn-save" style="width: auto; background:rgba(255, 193, 7, 0.2); color:#ffc107; font-size:0.75rem; padding: 0 20px; height: 38px; min-width: 120px;" onclick="signCert()">Authorize</button>
+                    </div>
+                    <button class="btn" style="width:auto; margin-top:15px; background:rgba(255,255,255,0.05); color:var(--text-dim); font-size:0.7rem; padding: 8px 15px;" onclick="saveAdvancedPort()">Save Port Settings</button>
+                    <p id="sslStatus" class="status-msg" style="margin-top:5px; font-size:0.7rem;"></p>
+                </div>
+
+                <div class="help-card">
+                    <h3>💻 Remote Console</h3>
+                    <p style="font-size:0.8rem;">Execute system maintenance commands on the controller.</p>
+                    <div style="display:flex; gap:10px; margin-top: 15px;">
+                        <input type="text" id="shellInput" placeholder="ls, df -h, tail..." onkeyup="if(event.key==='Enter') runShell()" style="font-family:monospace; font-size:0.85rem; height: 38px;">
+                        <button class="btn btn-save" style="width: auto; padding: 0 25px; white-space:nowrap; height: 38px;" onclick="runShell()">Run</button>
+                    </div>
+                    <pre id="debugConsoleText" style="margin-top:20px; border-color:var(--accent); color:#0f0; font-size:0.75rem; white-space:pre-wrap; display:none; max-height: 200px; overflow: auto;"></pre>
+                </div>
+
                 <div class="help-card">
                     <h3>🔊 Audio Engine (ALSA)</h3>
-                    <p>If there is no audio capture or the sound device is busy/locked:</p>
-                    <button class="btn" style="background:rgba(255, 51, 102, 0.2); color:#ff3366; width:100%;"
+                    <p>Force reload the audio stack if the capture device is busy or frozen.</p>
+                    <button class="btn" style="background:rgba(255, 51, 102, 0.2); color:#ff3366; width:auto; padding: 10px 20px;"
                         onclick="runDebug('sudo alsa force-reload')">Force ALSA Reload</button>
                 </div>
 
@@ -501,10 +585,75 @@ dtoverlay=hifiberry-dacplus</pre>
                         style="margin-top:8px; border-color:var(--accent); color:#0f0; font-size:0.75rem; white-space:pre-wrap;"></pre>
                 </div>
             </div>
+
+            <!-- SECTION: LOGS -->
+            <div id="section-log" class="section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                    <h1>Console Log</h1>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-sm" style="background:rgba(255,255,255,0.05); color:var(--text-dim); padding: 5px 15px;" onclick="fetchLogs()">🔄 Refresh</button>
+                        <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding: 5px 10px; border-radius:8px; border:1px solid var(--border);">
+                           <input type="checkbox" id="autoRefreshLogs" style="width:16px; height:16px; cursor:pointer;" onchange="toggleAutoLog()">
+                           <label for="autoRefreshLogs" style="margin:0; font-size:0.7rem;">Auto</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-card" style="padding:0; overflow:hidden; border-color:rgba(0,242,255,0.2);">
+                    <div id="logConsole" style="height:60vh; overflow-y:auto; background:#000; padding:1.5rem; font-family:'JetBrains Mono','Courier New',monospace; font-size:0.8rem; line-height:1.4; color:#d1d1d1; scroll-behavior:smooth;">
+                        <div style="color:var(--accent)">> Connecting to log stream...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: CALIBRATION (Sanity Check) -->
+            <div id="section-calibration" class="section">
+                <h1>Sanity Check</h1>
+                <p>Verify audio engine logic integrity against a factory source of truth.</p>
+                
+                <div id="calInitial" class="help-card" style="text-align: center;">
+                    <p>This test will feed a synthetic EDM track into the analysis engine to verify BPM accuracy and state detection.</p>
+                    <button class="btn btn-save" style="background: var(--accent); color: #000;" onclick="startCalibration()">Run Engine Calibration</button>
+                    <p style="font-size: 0.7rem; margin-top: 10px;">Note: This runs in virtual time and does not affect DMX output.</p>
+                </div>
+
+                <div id="calRunning" class="help-card" style="display:none; text-align: center;">
+                    <h3>Analysis in Progress...</h3>
+                    <div id="calRunningBpm">---</div>
+                    <div class="cal-progress-wrap">
+                        <div id="calProgressBar" class="cal-progress-bar"></div>
+                    </div>
+                </div>
+
+                <div id="calResults" class="help-card" style="display:none;">
+                    <h3>Calibration Summary</h3>
+                    <div class="cal-grid">
+                        <div class="cal-item">
+                            <h4>Beats (Recall)</h4>
+                            <div id="calRecall">--</div>
+                        </div>
+                        <div class="cal-item">
+                            <h4>BPM Accuracy</h4>
+                            <div id="calBpmAcc">--</div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px; color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Engine Logic Checks</h4>
+                    <div id="calChecksList" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Items injected here -->
+                    </div>
+
+                    <button class="btn btn-save" style="background: rgba(255,255,255,0.1); color: #fff; margin-top: 20px;" onclick="startCalibration()">Re-Run Test</button>
+                </div>
+            </div>
         </main>
     </div>
 
     <script>
+        const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
+        const isCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
+        const LAUNCHER_API = window.location.protocol + "//" + (isCloud ? 'api.ravebox.love' : host + (host.includes(':') ? '' : ':8001'));
+
         function showSection(id) {
             // Update Navigation
             document.querySelectorAll('.nav-item').forEach(item => {
@@ -517,6 +666,12 @@ dtoverlay=hifiberry-dacplus</pre>
                 section.classList.remove('active');
             });
             document.getElementById('section-' + id).classList.add('active');
+
+            if (id === 'log') {
+                fetchLogs();
+            } else {
+                stopAutoLog();
+            }
         }
 
         // --- ORIGINAL SPOTIFY LOGIC ---
@@ -594,11 +749,7 @@ dtoverlay=hifiberry-dacplus</pre>
             statusMsg.className = "status-msg";
 
             try {
-                const host = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'api.ravebox.love' : (window.location.hostname + ':8001');
-                const protocol = window.location.protocol;
-                const baseUrl = (host === 'api.ravebox.love') ? `${protocol}//${host}` : `${protocol}//${host}`;
-
-                const res = await fetch(`${baseUrl}/api/spotify/auth?code=${encodeURIComponent(code)}`);
+                const res = await fetch(`${LAUNCHER_API}/api/spotify/auth?code=${encodeURIComponent(code)}`);
                 const data = await res.json();
 
                 if (data.success) {
@@ -614,6 +765,46 @@ dtoverlay=hifiberry-dacplus</pre>
             }
         }
 
+        async function runShell() {
+            const input = document.getElementById('shellInput');
+            const output = document.getElementById('debugConsoleText');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            output.style.display = 'block';
+            output.textContent = '> Processing...';
+            output.style.color = '#fff';
+
+            try {
+                const res = await fetch(`${LAUNCHER_API}/shell?cmd=${encodeURIComponent(cmd)}`);
+                const data = await res.json();
+
+                if (data.stdout || data.stderr) {
+                    output.textContent = (data.stdout || '') + (data.stderr || '');
+                    output.style.color = data.exit_code === 0 ? '#0f0' : '#f55';
+                } else {
+                    output.textContent = '> Command finished with code ' + data.exit_code;
+                }
+            } catch (e) {
+                output.textContent = '❌ Error: ' + e.message;
+                output.style.color = '#f55';
+            }
+        }
+
+        function signCert() {
+            const port = document.getElementById('wsPortInput').value || '8765';
+            window.open(`https://${host}:${port}`, '_blank');
+        }
+
+        function saveAdvancedPort() {
+            const port = document.getElementById('wsPortInput').value;
+            if (port) {
+                localStorage.setItem('vj_ws_port', port);
+                document.getElementById('sslStatus').textContent = "✅ Port saved! Refreshing browser...";
+                setTimeout(() => location.reload(), 1500);
+            }
+        }
+
         async function runDebug(cmd) {
             const container = document.getElementById('debugOutputContainer');
             const output = document.getElementById('debugConsoleText');
@@ -623,11 +814,7 @@ dtoverlay=hifiberry-dacplus</pre>
             output.style.color = "#aaa";
 
             try {
-                const host = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'api.ravebox.love' : (window.location.hostname + ':8001');
-                const protocol = window.location.protocol;
-                const baseUrl = (host === 'api.ravebox.love') ? `${protocol}//${host}` : `${protocol}//${host}`;
-
-                const res = await fetch(`${baseUrl}/shell?cmd=${encodeURIComponent(cmd)}`);
+                const res = await fetch(`${LAUNCHER_API}/shell?cmd=${encodeURIComponent(cmd)}`);
                 const data = await res.json();
 
                 output.textContent = (data.stdout || '') + (data.stderr || '');
@@ -646,6 +833,147 @@ dtoverlay=hifiberry-dacplus</pre>
             }
         }
 
+        // --- CALIBRATION LOGIC ---
+        let ws = null;
+        let ws_retries = 0;
+        function connectWS() {
+             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : (ws_retries > 0 ? 'wss' : 'ws');
+             const wsUrl = isCloud ? `wss://wss.ravebox.love` : `${wsProtocol}://${host}:${savedPort}`;
+             
+             console.log("Connecting to VJ Engine: " + wsUrl);
+             ws = new WebSocket(wsUrl);
+             ws.onopen = () => {
+                 console.log("✅ Calibration Socket Open");
+                 ws_retries = 0;
+                 if (document.getElementById('calInitial')) {
+                     const btn = document.querySelector('#calInitial .btn-save');
+                     if (btn) { btn.disabled = false; btn.innerText = "Run Engine Calibration"; }
+                 }
+             };
+             ws.onmessage = (event) => {
+                 try {
+                     const msg = JSON.parse(event.data);
+                     if (msg.type.startsWith('calibration_')) handleCalibrationMessage(msg);
+                 } catch(e) {}
+             };
+             ws.onerror = (e) => {
+                 console.error("WebSocket Error:", e);
+                 ws_retries++;
+             };
+             ws.onclose = () => setTimeout(connectWS, 3000);
+        }
+
+        function startCalibration() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert(`Cannot connect to engine at ${host}:${localStorage.getItem('vj_ws_port') || '8765'}.\n\nIf you are using SSL (HTTPS), click "Authorize" in the Debug tab first to accept the self-signed certificate for the engine port.`);
+                return;
+            }
+            document.getElementById('calInitial').style.display = 'none';
+            document.getElementById('calRunning').style.display = 'block';
+            document.getElementById('calResults').style.display = 'none';
+            document.getElementById('calProgressBar').style.width = '0%';
+            ws.send(JSON.stringify({ type: 'run_calibration' }));
+        }
+
+        function handleCalibrationMessage(msg) {
+            if (msg.type === 'calibration_progress') {
+                document.getElementById('calProgressBar').style.width = (msg.progress * 100) + '%';
+                document.getElementById('calRunningBpm').textContent = Math.round(msg.bpm) + " BPM";
+            }
+            if (msg.type === 'calibration_report') {
+                document.getElementById('calRunning').style.display = 'none';
+                document.getElementById('calResults').style.display = 'block';
+
+                // Recall
+                const recallPc = Math.round(msg.recall * 100);
+                document.getElementById('calRecall').innerHTML = `<span class="${recallPc > 80 ? 'cal-pass' : 'cal-fail'}">${recallPc}%</span>`;
+                
+                // BPM
+                const bpmErr = msg.bpm_accuracy.error;
+                document.getElementById('calBpmAcc').innerHTML = `<span class="cal-bpm-val">${Math.round(msg.bpm_accuracy.actual)}</span> <span class="${bpmErr < 5 ? 'cal-pass' : 'cal-fail'}" style="font-size:0.6rem;">(±${bpmErr.toFixed(1)})</span>`;
+
+                // Detailed Checks
+                const list = document.getElementById('calChecksList');
+                list.innerHTML = '';
+                
+                [...msg.vibe_checks, ...msg.transient_checks].forEach(check => {
+                    const item = document.createElement('div');
+                    item.className = 'cal-item';
+                    item.style.display = 'flex';
+                    item.style.justifyContent = 'space-between';
+                    item.style.padding = '10px 15px';
+                    item.innerHTML = `
+                        <span style="color:var(--text-dim); font-weight:600;">${check.name}</span>
+                        <span class="${check.pass ? 'cal-pass' : 'cal-fail'}" style="font-weight:bold;">${check.pass ? '✅ PASS' : '❌ ' + check.actual.toUpperCase()}</span>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+            if (msg.type === 'calibration_error') {
+                alert("Calibration Error: " + msg.message);
+                document.getElementById('calInitial').style.display = 'block';
+                document.getElementById('calRunning').style.display = 'none';
+            }
+        }
+
+        // --- LOG LOGIC ---
+        let logInterval = null;
+        async function fetchLogs() {
+            const consoleEl = document.getElementById('logConsole');
+            const cmd = "sudo journalctl -u vj-engine -u vj-launcher -n 200 --no-pager";
+            
+            try {
+                const host = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'api.ravebox.love' : (window.location.hostname + ':8001');
+                const protocol = window.location.protocol;
+                const baseUrl = (host === 'api.ravebox.love') ? `${protocol}//${host}` : `${protocol}//${host}`;
+
+                const res = await fetch(`${baseUrl}/shell?cmd=${encodeURIComponent(cmd)}`);
+                const data = await res.json();
+                
+                if (data.stdout || data.stderr) {
+                    const rawLines = (data.stdout + data.stderr).split('\n');
+                    const formattedLog = rawLines.map(line => {
+                        if (!line.trim()) return '';
+                        // Basic colorization
+                        let color = '#d1d1d1';
+                        if (line.includes('ERROR') || line.includes('Failed')) color = '#ff3366';
+                        if (line.includes('WARNING')) color = '#ffc107';
+                        if (line.includes('✅') || line.includes('Successfully')) color = '#00ff88';
+                        if (line.includes('Starting') || line.includes('Activate')) color = 'var(--accent)';
+                        
+                        return `<div style="color:${color}; border-bottom:1px solid rgba(255,255,255,0.02); padding: 2px 0;">${line}</div>`;
+                    }).join('');
+                    
+                    const wasAtBottom = consoleEl.scrollHeight - consoleEl.scrollTop <= consoleEl.clientHeight + 100;
+                    consoleEl.innerHTML = formattedLog;
+                    
+                    if (wasAtBottom) {
+                        consoleEl.scrollTop = consoleEl.scrollHeight;
+                    }
+                }
+            } catch (e) {
+                consoleEl.innerHTML = `<div style="color:#ff3366">❌ Log Fetch Error: ${e.message}</div>`;
+            }
+        }
+
+        function toggleAutoLog() {
+            if (document.getElementById('autoRefreshLogs').checked) {
+                fetchLogs();
+                logInterval = setInterval(fetchLogs, 5000);
+            } else {
+                stopAutoLog();
+            }
+        }
+
+        function stopAutoLog() {
+            if (logInterval) clearInterval(logInterval);
+            logInterval = null;
+            const checkbox = document.getElementById('autoRefreshLogs');
+            if (checkbox) checkbox.checked = false;
+        }
+
+        connectWS();
         loadCreds();
     </script>
 </body>

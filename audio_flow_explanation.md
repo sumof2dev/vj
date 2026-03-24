@@ -12,8 +12,8 @@ This document serves as the technical source-of-truth for the VJ Engine's archit
 - **Watchdog:** If the audio callback hangs for 4 seconds, the stream is automatically destroyed and recreated.
 
 ### Analysis (`AudioAnalyzer`)
-- **Visual Frequency Bins (11 Bins):** Unlike WLED's linear bins, the engine calculates 11 logarithmic bins for high-fidelity visualization:
-  - `Sub-bass`, `Bass`, `Low-mid`, `Mid`, `Upper-mid`, `Presence`, `Upper presence`, `Low treble`, `Treble`, `High treble`, `Brilliance`.
+- **Visual Frequency Bins (6 Bins):** Unlike WLED's linear bins, the engine calculates 6 grouped bins for high-fidelity visualization and optimized processing:
+  - `Sub + Bass`, `Low-Mid`, `Mid`, `High-Mid`, `Presence`, `Air / High`.
 - **Smoothing:** All bins use a **70/30 peak-hold decay** (70% previous frame, 30% current) to eliminate flicker while maintaining reactivity.
 - **Normalization:** A rolling 300-frame (~5s) history window tracks local min/max. This maps variable inputs to a perfect `0.0 - 1.0` range, regardless of song volume.
 - **Beat Tracking:** Uses **Spectral Flux** (positive change in energy) rather than simple volume peaks.
@@ -43,7 +43,7 @@ The engine maintains three independent `LogicMatrix` math cores:
 
 ### The 4-Layer Priority Stack
 Before a final DMX value is sent, it passes through four priority layers:
-1.  **Spatial Logic:** Raw LFOs (Sine, Tri, Saw, Square) mapped to the 3-point calibration (Min/Center/Max).
+1.  **Spatial Logic & Frequency Modifiers:** Raw LFOs (Sine, Tri, Saw, Square) or Direct Frequency maps (which dynamically select the most dominant of the 6 bins with a valid range) mapped to the 3-point calibration (Min/Center/Max).
 2.  **Base Layer (Presets):** The active background scene (e.g., "Lissajous") provides a default overlay.
 3.  **System Triggers (High Priority):** Automatic overlays triggered by musical events:
     - **Bass Styles:** Detects `machine_gun` (rapid sub-hits), `tearout` (distorted high-energy mid), `wonky` (swinging rhythmic shifts), and `sub`.
@@ -51,7 +51,7 @@ Before a final DMX value is sent, it passes through four priority layers:
 4.  **Manual Overrides:** Absolute highest priority. Direct injections from the Setup UI or Live Test tab.
 
 ### Preset Logic
-Presets stored in `fixtures/presets.json` use the `trigger` field (e.g., `vibe:high`, `bass_style:wonky`, or `bin:0>0.8`) to automatically override specific fixture roles when conditions are met.
+Presets stored in `fixtures/presets.json` use the `trigger` field (e.g., `vibe:high`, `bass_style:wonky`, or `bin:0>0.8`) to automatically override specific fixture roles when conditions are met. These triggers can also override global blackout ("silence") states to ensure immediate visual impact.
 
 ---
 

@@ -1,6 +1,3 @@
-# ============================================================================== 
-# FILE: dmx_engine.py 
-# ==============================================================================
 import time
 import math
 import random
@@ -10,25 +7,30 @@ import collections
 from typing import Dict
 import threading
 
-
 class ChannelConfig:
-    """Pre-resolved channel configuration for hot-loop performance."""
-    __slots__ = ['mod_name', 'vibe_map', 'any_cal', 'states', 'default_val', 'is_controller', 'smoothing', 'threshold']
-    def __init__(self, mod_name, vibe_map, any_cal, states, default_val, smoothing=0.0, threshold=0.0):
-        self.mod_name = mod_name
-        self.vibe_map = vibe_map # Map[vibe_str] -> (min, center, max)
-        self.any_cal = any_cal   # (min, center, max) or None
+    """Pre-resolved channel mapping rules for hot-loop performance."""
+    __slots__ = ['mod_name', 'rules', 'states', 'default_val', 'is_controller', 'smoothing', 'threshold']
+    def __init__(self, rules, states, default_val, smoothing=0.0, threshold=0.0, mod_name='static'):
+        self.rules = rules # List of dicts: layer, mod, vibe, cal: [min, center, max], lfo, state_map, etc.
         self.states = states
         self.default_val = default_val
-        self.is_controller = (mod_name == 'controller')
+        self.is_controller = False
         self.smoothing = smoothing
         self.threshold = threshold
+        self.mod_name = mod_name
 
-    def get_cal(self, vibe):
-        return self.vibe_map.get(vibe, self.any_cal)
+    def get_active_rule(self, current_vibe):
+        """Returns the specific vibe rule if it exists, otherwise falls back to 'any'."""
+        fallback = None
+        for r in self.rules:
+            if r.get('vibe') == current_vibe:
+                return r
+            if r.get('vibe') == 'any' and fallback is None:
+                fallback = r
+        return fallback
 
 class LogicMatrix:
-    """The modular core. Generates continuous LFOs and Envelopes."""
+    # Same as before
     def __init__(self):
         self.phases = collections.defaultdict(float)
         self.beat_env = 0.0
@@ -38,101 +40,59 @@ class LogicMatrix:
         self.hold_values = collections.defaultdict(float)
 
     def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, active_lfos=None):
-        # 1. Update Beat Envelope (Sharp attack, exponential decay)
         if audio.get('beat', False):
             self.beat_env = 1.0
             self.beat_count += 1
         else:
             self.beat_env = max(0.0, self.beat_env - (4.0 * dt))
 
-        # 2. Extract EQ Bins (0-10)
         bins = audio.get('bins', [0.0]*11)
 
-        # 3. Process dynamic channel-level LFOs
         self.state = {}
         if active_lfos:
             for lfo_id, cfg in active_lfos.items():
                 shape = cfg.get('shape', 'sine')
-                bin_idx = cfg.get('bin', 0)
-                base_speed = cfg.get('speed', 0.5)
-                reactivity = cfg.get('react', 0.5)
+                bin_idx = int(cfg.get('bin', 0))
+                base_speed = float(cfg.get('speed', 0.5))
+                reactivity = float(cfg.get('react', 0.5))
                 invert = cfg.get('invert', False)
                 
-                # New 6-bin simplification mapping
-                # Frontend 0 -> Raw 0 (Sub)
-                # Frontend 1 -> Raw 1,2,3 (Bass/Low-Mid)
-                # Frontend 2 -> Raw 4,5 (Mid)
-                # Frontend 3 -> Raw 6,7 (Presence)
-                # Frontend 4 -> Raw 8,9 (Treble)
-                # Frontend 5 -> Raw 10 (Air)
-                raw_bin_map = {
-                    0: [0],
-                    1: [1, 2, 3],
-                    2: [4, 5],
-                    3: [6, 7],
-                    4: [8, 9],
-                    5: [10]
-                }
-                
-                target_bins = raw_bin_map.get(bin_idx, [0])
-                bin_energy = sum(bins[i] for i in target_bins) / len(target_bins) if bins else 0.0
+                # Removed raw_bin_map. Using direct 6-band native mapping.
+                bin_energy = bins[bin_idx] if bin_idx < len(bins) else 0.0
                 
                 return_to_min = cfg.get('return_to_min', False)
-                threshold = cfg.get('threshold', 0.1)
+                threshold = float(cfg.get('threshold', 0.1))
                 
                 if return_to_min and bin_energy < threshold:
-                    # Move towards base value based on reactivity
-                    # If inverted, base is +1.0. If normal, base is -1.0.
                     target_val = 1.0 if invert else -1.0
                     current_val = self.state.get(lfo_id, 0.0)
                     decay_rate = dt * reactivity * 10.0
-                    
-                    if current_val < target_val:
-                        val = min(target_val, current_val + decay_rate)
-                    else:
-                        val = max(target_val, current_val - decay_rate)
+                    if current_val < target_val: val = min(target_val, current_val + decay_rate)
+                    else: val = max(target_val, current_val - decay_rate)
                     freq = 0
                 else:
                     freq = (base_speed + (bin_energy * reactivity)) * speed_mult
-                    
                     if base_speed == 0 and freq < 0.05:
                         p_current = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
                         should_complete = False
-                        if shape == 'sawtooth' and p_current > 0.05:
-                            should_complete = True
-                        elif shape == 'triangle' and abs(p_current - 0.5) > 0.05:
-                            should_complete = True
-                        elif shape == 'square' and p_current < 0.5:
-                            should_complete = True
-                        
-                        if should_complete:
-                            freq = 10.0 * speed_mult
-                        else:
-                            freq = 0.0
+                        if shape == 'sawtooth' and p_current > 0.05: should_complete = True
+                        elif shape == 'triangle' and abs(p_current - 0.5) > 0.05: should_complete = True
+                        elif shape == 'square' and p_current < 0.5: should_complete = True
+                        if should_complete: freq = 10.0 * speed_mult
+                        else: freq = 0.0
 
                     self.phases[lfo_id] += dt * freq
                     p = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
-                    
-                    if shape == 'sawtooth':
-                        val = (p * 2.0) - 1.0
-                    elif shape == 'triangle':
-                        val = 4.0 * abs(p - 0.5) - 1.0
-                    elif shape == 'square':
-                        val = 1.0 if p < 0.5 else -1.0
-                    else:  # Default to sine
-                        val = math.sin(self.phases[lfo_id])
+                    if shape == 'sawtooth': val = (p * 2.0) - 1.0
+                    elif shape == 'triangle': val = 4.0 * abs(p - 0.5) - 1.0
+                    elif shape == 'square': val = 1.0 if p < 0.5 else -1.0
+                    else: val = math.sin(self.phases[lfo_id])
 
-                    if invert:
-                        val = -val
-
-                    # Apply audio-reactive amplitude scaling.
-                    # If reactivity is 0, amplitude is 1.0 (constant moving LFO).
-                    # If reactivity > 0, the amplitude crushes to 0.0 (Center) when silent.
-                    # We multiply bin_energy by 2.0 so average hits easily push it to full scale.
+                    if invert: val = -val
                     amp_scale = (1.0 - reactivity) + (bin_energy * reactivity * 2.0)
                     val = val * max(0.0, min(1.0, amp_scale))
                     
-                hold_time = cfg.get('hold', 0.0)
+                hold_time = float(cfg.get('hold', 0.0))
                 if hold_time > 0:
                     self.hold_timers[lfo_id] += dt
                     if self.hold_timers[lfo_id] >= hold_time or lfo_id not in self.hold_values:
@@ -145,20 +105,19 @@ class LogicMatrix:
 
                 self.state[lfo_id] = val
 
-        # 4. Global State Metadata
         intensity_val = (master_intensity * 2.0) - 1.0
-        # if transient == 'tension':
-        #     intensity_val = -1.0
-            
+        intensity_val = (master_intensity * 2.0) - 1.0
         self.state.update({
             'intensity': intensity_val,
-            'bass': audio.get('bass', 0.0),
-            'flux': audio.get('flux', 0.0),
-            'beat': self.beat_env,
+            'bass': (audio.get('bass', 0.0) * 2.0) - 1.0,
+            'flux': (audio.get('flux', 0.0) * 2.0) - 1.0,
+            'beat': (self.beat_env * 2.0) - 1.0,
+            'audio': (audio.get('vol', 0.0) * 2.0) - 1.0,
+            'frequency': (max(audio.get('bins', [0.0]*6)[:6]) * 2.0) - 1.0 if audio.get('bins') else -1.0,
             'static': 1.0,
-            'zero': 0.0,
+            'zero': -1.0,
             'dimmer': 1.0,
-            'mode': 0.0
+            'mode': -1.0
         })
 
 class DMXEngine:
@@ -168,19 +127,16 @@ class DMXEngine:
         self.overrides = {}
         self._dt = 0.016
         
-        # Engines - 3 Independent Spatial Matrices
         self.logic = LogicMatrix()
         self.logic_l = LogicMatrix()
         self.logic_r = LogicMatrix()
         
-        # Global Modifiers
         self.intensity = 1.0
         self.speed = 1.0 
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
         self.transient = "steady" 
         
-        # Drops & Visual Sync
         self._one_shot_active = False
         self._last_drop_time = 0.0
         self.current_base_layer = 0 
@@ -193,157 +149,152 @@ class DMXEngine:
         self._preset_holds = {}
         self._silence_start = None
         
-        # System State Detectors (Bass Styles & Rhythm)
-        self.rhythm_state = {'boots': False, 'cats': False, 'cha': False}
+        # Removed legacy rhythm and bass style history
         
-        # Bass Style Detection State
-        self._bass_bins_history = collections.deque(maxlen=30)
-        self._bass_delta_history = collections.deque(maxlen=30)
-        self._mid_history = collections.deque(maxlen=30)
-        self._current_bass_style = None
-        self._bass_style_holdoff = 0.0
-        
-        # Config Storage
+        # New V2 Arrays
         self.fixtures = {}
-        self.active_lfos = {} # Gathered from profiles
-        self.stage_config = {}
-        self.presets = {}
-        self.zone_map = []
+        self.profiles = {}
+        self.stage_instances = []
+        self.presets = []
         
-        # Controller Mapping State
+        self.active_lfos = {}
+        
         self.gamepad = {}
         self.prev_gamepad = {}
-        self.channel_latches = {} # role -> index into calibration list
-        self.prev_vals = collections.defaultdict(float) # Store previous smoothed values
+        self.channel_latches = {}
+        self.prev_vals = collections.defaultdict(float)
         
-        self._stage_config_path = os.path.join('fixtures', 'stage_config.json')
-        self._presets_config_path = os.path.join('fixtures', 'presets.json')
-        self._last_reload_check = 0
-        self._fixture_mtimes = {} 
-        self._fixture_mtimes = {} 
-        self._fast_cache = {} # Map[fixture_type][role] -> ChannelConfig
+        self._config_path = os.path.join('fixtures', 'ravebox_config.json')
+        self._fixture_mtime = 0
+        self._fast_cache = {} # Map[profile_id][channel_idx] -> ChannelConfig
+        self.active_presets = [] # List of preset objects active in the current frame
         
         self._load_profiles()
         
-        # Background Disk I/O for Hot Reloading
         self._reload_thread = threading.Thread(target=self._hot_reload_loop, daemon=True)
         self._reload_thread.start()
 
     def _load_profiles(self):
-        fixtures_dir = 'fixtures'
-        if not os.path.exists(fixtures_dir): return
+        if not os.path.exists(self._config_path): return
 
-        if os.path.exists(self._stage_config_path):
-            with open(self._stage_config_path, 'r') as f:
-                self.stage_config = json.load(f)
-                if 'lasers' in self.stage_config:
-                    if 'devices' not in self.stage_config: self.stage_config['devices'] = {}
-                    self.stage_config['devices'].update(self.stage_config['lasers'])
-                self.zone_map = list(self.stage_config.get('devices', {}).keys())
-                print(f"📦 DMX Engine Loaded Devices: {self.zone_map}")
+        try:
+            with open(self._config_path, 'r') as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"Failed to parse config: {e}")
+            return
 
-        if os.path.exists(self._presets_config_path):
-            with open(self._presets_config_path, 'r') as f:
-                self.presets = json.load(f)
-
-        for filename in os.listdir(fixtures_dir):
-            if filename.endswith('.json') and filename not in ['stage_config.json', 'vibe_config.json', 'presets.json']:
-                with open(os.path.join(fixtures_dir, filename), 'r') as f:
-                    fix_name = filename.replace('.json', '')
-                    self.fixtures[fix_name] = json.load(f)
-                    
+        self.fixtures = {f['id']: f for f in data.get('fixtures', [])}
+        self.profiles = {p['id']: p for p in data.get('profiles', [])}
+        self.stage_instances = data.get('stage', [])
+        self.presets = data.get('presets', [])
+        
+        # Determine highest channel address from stage instead of dict iteration
+        self.zone_map = [inst['id'] for inst in self.stage_instances]
+        print(f"📦 DMX Engine Loaded V2 Config! Instances: {len(self.stage_instances)}")
+        
         self._build_fast_cache()
 
     def _build_fast_cache(self):
-        """Flattens nested dictionaries to prevent CPU overhead in the 60fps render loop."""
         self._fast_cache = {}
         self.active_lfos = {}
-        for fix_name, fixture in self.fixtures.items():
-            self._fast_cache[fix_name] = {}
-            for role in fixture.get('channels', {}).keys():
-                mods = fixture.get('modifiers', {})
-                mod_name = mods.get(role, 'static')
-                
-                if mod_name.startswith('axis_'):
-                    mod_name = 'lfo'
+        
+        for p_id, profile in self.profiles.items():
+            self._fast_cache[p_id] = {}
+            fixture = self.fixtures.get(profile.get('fixtureId'))
+            if not fixture: continue
+            
+            mappings = profile.get('mappings', [])
+            for ch_idx, channels in enumerate(fixture.get('channels', [])):
+                if ch_idx < len(mappings):
+                    rules = mappings[ch_idx]
+                else:
+                    rules = []
                     
-                lfo_data = fixture.get('lfo_data', {}).get(role, {})
-                if mod_name == 'lfo':
-                    self.active_lfos[f"{fix_name}_{role}"] = lfo_data
-                
-                raw_cals = fixture.get('calibration', {}).get(role, [])
-                if isinstance(raw_cals, dict): raw_cals = [raw_cals]
-                    
-                steps = list(fixture.get('step_data', {}).values()) # Still kept in cache build if needed for other logic, but removed from ChannelConfig if unused
-                default_val = fixture.get('defaults', {}).get(role, 127)
-                states = fixture.get('state_data', {}).get(role, {})
-
-                # Pre-resolve vibe mappings
-                vibe_map = {}
-                any_cal = None
-                for c in raw_cals:
-                    v = c.get('vibe', 'any')
-                    c_min = int(c.get('min', 0))
-                    c_center = int(c.get('center', default_val))
-                    c_max = int(c.get('max', 255))
-                    cal_tuple = (c_min, c_center, c_max)
-                    
-                    if v == 'any':
-                        any_cal = cal_tuple
-                    else:
-                        vibe_map[v] = cal_tuple
-                
-                # If any_cal is missing, ensure we have a fallback
-                if any_cal is None:
-                    any_cal = (0, default_val, 255)
-
-                self._fast_cache[fix_name][role] = ChannelConfig(
-                    mod_name=mod_name,
-                    vibe_map=vibe_map,
-                    any_cal=any_cal,
-                    states=states,
+                for rule_idx, rule in enumerate(rules):
+                    mod_name = rule.get('mod', 'static')
+                    if mod_name == 'lfo':
+                        lfo_id = f"{p_id}_{ch_idx}_{rule_idx}"
+                        lfo_cfg = rule.get('lfo', {})
+                        self.active_lfos[lfo_id] = lfo_cfg
+                        # Inject lfo_id directly into rule for fast lookup
+                        rule['_lfo_id'] = lfo_id
+                        
+                default_val = 127
+                self._fast_cache[p_id][ch_idx] = ChannelConfig(
+                    rules=rules,
+                    states={}, # State machine maps handled inside specific rules now
                     default_val=default_val,
-                    smoothing=float(lfo_data.get('smoothing', 0.0)),
-                    threshold=float(lfo_data.get('threshold', 0.0))
+                    smoothing=0.0,
+                    threshold=0.0
                 )
 
     def _hot_reload_loop(self):
-        """Background thread to check for file changes without blocking the render loop."""
         while True:
             time.sleep(2.0)
-            self._check_for_reload()
-
-    def _check_for_reload(self):
-        """Checks if fixture or stage config files have changed on disk."""
-
-        fixtures_dir = 'fixtures'
-        if not os.path.exists(fixtures_dir): return
-
-        changed = False
-        for filename in os.listdir(fixtures_dir):
-            if not filename.endswith('.json'): continue
-            if filename == 'vibe_config.json': continue
-
-            fpath = os.path.join(fixtures_dir, filename)
-            mtime = os.path.getmtime(fpath)
-
-            if self._fixture_mtimes.get(filename) != mtime:
-                self._fixture_mtimes[filename] = mtime
-                changed = True
-
-        if changed:
-            print("🔄 Changes detected in fixtures directory. Reloading profiles...")
-            self._load_profiles()
+            if not os.path.exists(self._config_path): continue
+            try: mtime = os.path.getmtime(self._config_path)
+            except: continue
+                
+            if self._fixture_mtime != mtime:
+                self._fixture_mtime = mtime
+                print("🔄 Changes detected in ravebox_config.json. Reloading...")
+                self._load_profiles()
 
     def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
-        # print(f"🔄 ENGINE UPDATE: vibe={audio.get('vibe')}")
         self._dt = dt
         self.prev_gamepad = self.gamepad
         self.gamepad = gamepad or {}
         self.transient = audio.get('transient', 'steady')
+        current_vibe = audio.get('vibe', 'mid')
 
-        # 1. Update the pure math core for all 3 spatial fields using the active channel LFOs
+        # Global Silence Tracking
+        vol = audio.get('vol', 0.0)
+        if vol < 0.03:
+            if not hasattr(self, '_silence_timer'): self._silence_timer = 0
+            self._silence_timer += dt
+            if self._silence_timer > 0.5: self._global_silence = True
+            else: self._global_silence = False
+        else:
+            self._silence_timer = 0
+            self._global_silence = False
+
         self.logic.update(dt, audio, self.transient, self.speed, self.intensity, self.active_lfos)
+        
+        # Pre-calculate active presets (Global check once per frame)
+        self.active_presets = []
+        active_triggers = [f"vibe:{current_vibe}"]
+        if self.transient: active_triggers.append(f"state:{self.transient}") # Support state triggers correctly
+
+        for p_data in self.presets:
+            triggers = p_data.get('triggers', [])
+            if p_data.get('trigger'): triggers = [p_data.get('trigger')] # Legacy support
+            
+            is_active = False
+            for trig in triggers:
+                t_cat = trig.get('category') or trig.get('type')
+                if t_cat == 'vibe' and trig.get('vibe') == current_vibe:
+                    is_active = True
+                elif t_cat == 'state' and (trig.get('state') == self.transient or trig.get('value') == self.transient):
+                    is_active = True
+                elif t_cat == 'volume':
+                    target_v = trig.get('value', 'mid')
+                    v = audio.get('vol', 0.0)
+                    if target_v == 'silence' and v < 0.05: is_active = True
+                    elif target_v == 'mid' and 0.05 <= v < 0.5: is_active = True
+                    elif target_v == 'loud' and v >= 0.5: is_active = True
+                elif t_cat == 'bin':
+                    bin_idx = int(trig.get('bin', 0))
+                    threshold = float(trig.get('threshold', 0.8))
+                    bins = audio.get('bins', [0.0]*11)
+                    if bin_idx < len(bins) and bins[bin_idx] >= threshold:
+                        is_active = True
+                
+                if is_active: break
+                
+            if is_active:
+                self.active_presets.append(p_data)
+
         if 'left' in audio and 'right' in audio:
             self.logic_l.update(dt, audio['left'], self.transient, self.speed, self.intensity, self.active_lfos)
             self.logic_r.update(dt, audio['right'], self.transient, self.speed, self.intensity, self.active_lfos)
@@ -351,42 +302,17 @@ class DMXEngine:
             self.logic_l = self.logic
             self.logic_r = self.logic
         
-        # 1.5 Update System Triggers (Bass Styles & Rhythm)
-        self._detect_bass_style(audio, dt)
+        # Removed legacy rhythm triggers
         
-        bass_hit = audio.get('bass_onset', False)
-        high_hit = audio.get('high_onset', False)
-        self.rhythm_state['boots'] = bass_hit and not high_hit
-        self.rhythm_state['cats'] = high_hit and not bass_hit
-        self.rhythm_state['cha'] = bass_hit and high_hit
-        
-        # 2. Check for EDM Drops & Scene Changes
-        current_vibe = audio.get('vibe', 'mid')
         should_switch = False
-
-        # if self.transient == 'dropping' and not self._one_shot_active:
-        #     if time.time() - self._last_drop_time > 8.0:
-        #         self._one_shot_active = True
-        #         self._last_drop_time = time.time()
-        #         should_switch = True
-                
-        # if self._one_shot_active and time.time() - self._last_drop_time > 2.0:
-        #     self._one_shot_active = False
-
-        # Interval-based scene switching
         current_beat = audio.get('beat_count', 0)
         beats_passed = current_beat - self._last_scene_switch_beat
         
-        if self.scene_freq == 0 and beats_passed >= 1: # Every Beat
-            should_switch = True
-        elif self.scene_freq == 1 and beats_passed >= 4: # 4th Beat
-            should_switch = True
-        elif self.scene_freq == 2 and beats_passed >= 8: # 2 Bars
-            should_switch = True
-        elif self.scene_freq == 3 and beats_passed >= 16: # 4 Bars
-            should_switch = True
-        elif self.scene_freq == 4 and self.transient != self._last_transient and self.transient in ['dropping', 'building']: # On Spectral Shift
-            should_switch = True
+        if self.scene_freq == 0 and beats_passed >= 1: should_switch = True
+        elif self.scene_freq == 1 and beats_passed >= 4: should_switch = True
+        elif self.scene_freq == 2 and beats_passed >= 8: should_switch = True
+        elif self.scene_freq == 3 and beats_passed >= 16: should_switch = True
+        elif self.scene_freq == 4 and self.transient != self._last_transient and self.transient in ['dropping', 'building']: should_switch = True
 
         if visual_states:
             if visual_states.get("bg", -1) != -1: self.current_base_layer = visual_states["bg"]
@@ -394,9 +320,12 @@ class DMXEngine:
             if visual_states.get("fg", -1) != -1: self.current_fg_layer = visual_states["fg"]
 
         if should_switch:
-            # Only auto-switch if not overridden
             if not visual_states or visual_states.get("bg", -1) == -1:
-                self.current_base_layer = random.choice([0,1,2,3,4,5,6,7,8,9,10])
+                # Dynamically include Spotify (Layer 11) only if metadata is present
+                choices = [0,1,2,3,4,5,6,7,8,9,10]
+                if audio.get('spotify'):
+                    choices.append(11)
+                self.current_base_layer = random.choice(choices)
             if not visual_states or visual_states.get("fx", -1) == -1:
                 self.current_fx_layer = random.choice([0,1,2,3,5,6])
             self._last_scene_switch_beat = current_beat
@@ -404,324 +333,199 @@ class DMXEngine:
         self._last_vibe = current_vibe
         self._last_transient = self.transient
 
-        # 3. Process All Devices
-        for i, (dev_name, dev_cfg) in enumerate(self.stage_config.get('devices', {}).items()):
-            self._process_device(dev_name, dev_cfg, i, audio)
+        # Process All Instances
+        for i, inst in enumerate(self.stage_instances):
+            self._process_instance(inst, i, audio)
 
-        # 4. Global Overrides (ensure they win no matter what)
         for addr, val in self.overrides.items():
             if 0 < addr < len(self.universe):
                 self.universe[addr] = max(0, min(255, int(val)))
 
-    def _process_device(self, dev_name, dev_cfg, zone_idx, audio):
-        fixture = self.fixtures.get(dev_cfg.get('type'))
-        if not fixture: return
+    def _process_instance(self, inst, zone_idx, audio):
+        profile = self.profiles.get(inst.get('profileId'))
+        fixture = self.fixtures.get(inst.get('fixtureId'))
+        if not profile or not fixture: return
 
-        base_addr = dev_cfg['address'] + dev_cfg['offset']
+        try:
+            base_addr = int(inst.get('address', 1)) + int(inst.get('offset', 0))
+        except: return
         
-        # Gather Active System Triggers for Preset Overlays
         active_triggers = []
-        
-        # 1. Transients (Drops, Tension, Building)
-        # if self.transient and self.transient != 'steady':
-        #     active_triggers.append(f"transient:{self.transient}")
-            
-        # 2. Bass Styles (Machine Gun, Tearout, Wonky, Sub)
-        if self._current_bass_style:
-            active_triggers.append(f"bass_style:{self._current_bass_style}")
-            
-        # 3. Rhythms (Boots, Cats, Cha)
-        for k, v in self.rhythm_state.items():
-            if v: active_triggers.append(f"rhythm:{k}")
-            
-        # 4. Global Vibe (Chill, Mid, High)
         current_vibe = audio.get('vibe', 'mid')
         active_triggers.append(f"vibe:{current_vibe}")
         
-        for role, ch_offset in fixture.get('channels', {}).items():
-            final_addr = base_addr + ch_offset
+        for ch_idx, ch_def in enumerate(fixture.get('channels', [])):
+            # Use addrOffset if provided explicitly, otherwise fallback to index relative to base_addr
+            offset = ch_def.get('addrOffset')
+            if offset is None: offset = ch_idx
             
-            # Layer 0: Determine Spatial Position (Left, Right, Center)
-            pos = dev_cfg.get('position', 'center')
-            if pos == 'left':
-                active_audio = audio.get('left', audio)
-                active_logic = self.logic_l
-            elif pos == 'right':
-                active_audio = audio.get('right', audio)
-                active_logic = self.logic_r
-            else:
-                active_audio = audio
-                active_logic = self.logic
+            final_addr = base_addr + int(offset)
+            if not (0 < final_addr < len(self.universe)): continue
+            
+            # Simple global routing - Left/Right/Center usually inferred from zone name for now
+            zone_str = str(inst.get('zone', '')).lower()
+            if 'left' in zone_str: active_logic = self.logic_l; active_audio = audio.get('left', audio)
+            elif 'right' in zone_str: active_logic = self.logic_r; active_audio = audio.get('right', audio)
+            else: active_logic = self.logic; active_audio = audio
+            
+            cache = self._fast_cache.get(profile['id'], {}).get(ch_idx)
+            if not cache: continue
+            
+            val = self._calculate_channel(ch_idx, active_audio, active_logic, zone_idx, cache, profile['id'])
 
-            # Layer 2: Preset Overrides (Manual UI Triggers & System Triggers)
-            # BYPASS: If the channel is set to 'controller', we skip presets to allow absolute control
-            cache = self._fast_cache.get(dev_cfg.get('type'), {}).get(role)
-            if not cache: continue # Should not happen with built cache
-            
-            # Layer 1: Calculate the pure mapped math value
-            val = self._calculate_channel(role, active_audio, active_logic, zone_idx, cache, dev_cfg.get('type'))
-
-            is_controller = cache.is_controller
-            
+            # Preset Overrides (Optimized)
             preset_override_val = None
-            if not is_controller:
-                # Helper to verify preset applies to this specific hardware profile, fixture, or behavior
-                def is_preset_applicable(p_data, d_name):
-                    target_fixtures = p_data.get('target_fixtures')
-                    if target_fixtures is not None:
-                        return d_name in target_fixtures
-                    
-                    prof_match = p_data.get('profile') is None or p_data.get('profile') == dev_cfg.get('type')
-                    beh_match = p_data.get('target_behavior') is None or p_data.get('target_behavior') == dev_cfg.get('behavior', 'lead')
-                    
-                    return prof_match and beh_match
+            
+            for p_data in self.active_presets:
+                overrides = p_data.get('overrides', [])
+                for ov in overrides:
+                    if ov.get('type') == 'instance' and ov.get('id') == inst['id']:
+                        for ov_ch in ov.get('channels', []):
+                            if ov_ch.get('name') == ch_def.get('role', ch_def.get('name')):
+                                preset_override_val = int(ov_ch.get('value', 0))
+                    elif ov.get('type') == 'global' and ov.get('name') == ch_def.get('role', ch_def.get('name')):
+                        preset_override_val = int(ov.get('value', 0))
+            
+            if preset_override_val is not None:
+                val = preset_override_val
                 
-                #   A. Check standard active scene first (Base Overlay)
-                scene_name = getattr(self, 'current_scene_name', '')
-                if scene_name.startswith('PRESET:'):
-                    p_name = scene_name.replace('PRESET:', '')
-                    p_data = self.presets.get(p_name, {})
-                    
-                    if is_preset_applicable(p_data, dev_name):
-                        # Check for fixture-specific override first, then fallback to global channels
-                        p_fixture_data = p_data.get('fixture_payloads', {}).get(dev_name)
-                        if p_fixture_data and role in p_fixture_data:
-                            preset_override_val = p_fixture_data[role]
-                        elif role in p_data.get('channels', {}):
-                            preset_override_val = p_data['channels'][role]
-                        
-                #   B. Check System Triggers (Higher Priority than Base Scene)
-                # Iterate all presets to see if their 'trigger' matches our active_triggers
-                for p_name, p_data in self.presets.items():
-                    p_trigger = p_data.get('trigger')
-                    # Legacy: presets with only a 'vibe' field and no 'trigger'
-                    if not p_trigger and p_data.get('vibe'):
-                        vibe_val = p_data['vibe']
-                        # Map known vibe names to proper trigger format
-                        VIBE_TRIGGER_MAP = {
-                            'machine_gun': 'bass_style:machine_gun', 'tearout': 'bass_style:tearout',
-                            'wonky': 'bass_style:wonky', 'sub': 'bass_style:sub',
-                        }
-                        p_trigger = VIBE_TRIGGER_MAP.get(vibe_val, f"vibe:{vibe_val}")
-                    
-                    is_active = False
-                    if p_trigger and p_trigger in active_triggers:
-                        is_active = True
-                    elif p_trigger and p_trigger.startswith('bin:'):
-                        # Parse dynamic bin thresholds e.g., "bin:4>0.8"
-                        try:
-                            parts = p_trigger.split('>')
-                            bin_idx = int(parts[0].split(':')[1])
-                            threshold = float(parts[1])
-                            bins = audio.get('bins', [0.0]*11)
-                            
-                            if bin_idx < len(bins) and bins[bin_idx] > threshold:
-                                is_active = True
-                                self._preset_holds[p_trigger] = time.time() + 0.4 # 400ms hold/decay
-                            elif p_trigger in self._preset_holds and time.time() < self._preset_holds[p_trigger]:
-                                is_active = True
-                        except Exception:
-                            pass # Fail silently on malformed triggers
+            self.universe[final_addr] = max(0, min(255, int(val)))
 
-                    if is_active:
-                        if is_preset_applicable(p_data, dev_name):
-                            # Check for fixture-specific override first, then fallback to global channels
-                            p_fixture_data = p_data.get('fixture_payloads', {}).get(dev_name)
-                            if p_fixture_data and role in p_fixture_data:
-                                preset_override_val = p_fixture_data[role]
-                            elif role in p_data.get('channels', {}):
-                                preset_override_val = p_data['channels'][role]
-                            
-                if preset_override_val is not None:
-                    val = preset_override_val
-                
-
-            # Write to DMX buffer safely
-            if 0 < final_addr < len(self.universe):
-                self.universe[final_addr] = max(0, min(255, val))
-
-    def _calculate_channel(self, role, audio, logic_matrix, zone_idx, cache, fixture_name):
-        """The Universal Mapper: Subscribes to the Logic Matrix and applies 3-point scaling."""
-        mod_name = cache.mod_name
-
-        # --- CONTROLLER MODIFIER BYPASS ---
-        if cache.is_controller:
-            # Controller mode still uses raw calibration dictionaries from fixture for complex mapping
-            # (Keeping controller logic mostly as is, but could be optimized further)
-            fixture = self.fixtures.get(fixture_name, {})
-            cals = fixture.get('calibration', {}).get(role, [])
-            if isinstance(cals, dict): cals = [cals]
-            if not cals: return 0
-            
-            if role not in self.channel_latches:
-                self.channel_latches[role] = 0
-            
-            dpad_up = self.gamepad.get('dpad_up', 0) > 0.5 and not (self.prev_gamepad.get('dpad_up', 0) > 0.5)
-            dpad_down = self.gamepad.get('dpad_down', 0) > 0.5 and not (self.prev_gamepad.get('dpad_down', 0) > 0.5)
-            
-            if dpad_up:
-                self.channel_latches[role] = (self.channel_latches[role] + 1) % len(cals)
-            elif dpad_down:
-                self.channel_latches[role] = (self.channel_latches[role] - 1) % len(cals)
-
-            l_idx = self.channel_latches[role]
-            mapping = cals[l_idx % len(cals)]
-            
-            control_id = mapping.get('control', 'static')
-            m_min = int(mapping.get('min', 0))
-            m_max = int(mapping.get('max', 255))
-            
-            if control_id == 'static': return m_max
-            
-            raw_val = self.gamepad.get(control_id, 0.0)
-            if control_id in ['ls_x', 'ls_y', 'rs_x', 'rs_y']:
-                norm = abs(raw_val - 0.5) * 2.0
-                if norm < 0.1: norm = 0.0 
-                return int(m_min + (norm * (m_max - m_min)))
-            else:
-                return int(m_min + (raw_val * (m_max - m_min)))
-
-        # --- AUDIO MAPPING LOGIC ---
+    def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id):
         current_vibe = audio.get('vibe', 'mid')
-        cal = cache.get_cal(current_vibe)
-        if not cal: return 0
+        rule = cache.get_active_rule(current_vibe)
+        if not rule: return cache.default_val
             
-        c_min, c_center, c_max = cal
+        mod_name = rule.get('mod', 'static')
         
-        # Force to minimum only after 2 seconds of sustained silence
-        if audio.get('vol', 1.0) <= 0.0:
-            now = time.time()
-            if self._silence_start is None:
-                self._silence_start = now
-            if now - self._silence_start >= 2.0:
-                return c_min
-        else:
-            self._silence_start = None
+        # Robust 3-point calibration parsing
+        cal = rule.get('cal') or {}
+        def get_int(d, k, default):
+            try:
+                v = d.get(k)
+                return int(v) if v is not None else default
+            except: return default
+
+        c_min = get_int(cal, 'min', 0)
+        c_max = get_int(cal, 'max', 255)
+        c_center = get_int(cal, 'center', (c_min + c_max) // 2)
+        
+        # Global Silence Blackout (definitively prevents "crazy" behavior during pauses)
+        if getattr(self, '_global_silence', False):
+            return c_min
             
-        # --- DISCRETE HANDLERS ---
         if mod_name == '4th beat':
-            if c_max <= c_min: return c_min
             seed = (logic_matrix.beat_count // 4) + zone_idx + 42
             rng = random.Random(seed)
+            if c_max <= c_min: return rng.randint(c_max, c_min)
             return rng.randint(c_min, c_max)
             
         if mod_name == 'beat':
-            if c_max <= c_min: return c_min
             seed = logic_matrix.beat_count + zone_idx + 7
             rng = random.Random(seed)
+            if c_max <= c_min: return rng.randint(c_max, c_min)
             return rng.randint(c_min, c_max)
 
-        # --- STATE MACHINE HANDLER ---
-        if mod_name == 'state_machine':
-            states = cache.states
-            if logic_matrix.state.get('intensity', 1.0) < -0.8:
-                off_val = states.get('off', 0)
-                if isinstance(off_val, list):
-                    return off_val[0] if off_val and off_val[0] is not None else 0
-                return off_val
-            return states.get(current_vibe, states.get('default', 254))
-
-        # --- CONTINUOUS MATH MAPPING ---
-        if mod_name == 'static':
-            return c_center
+        if mod_name in ['static', 'state_machine']: 
+            return rule.get('value', c_center)
             
+        # 1. Apply Modifier-specific Reactivity / Smoothing / Threshold
+        mod_settings = rule.get('audio', {}) if mod_name in ['bass', 'flux', 'audio'] else rule.get('lfo', {})
+        
+        # Extract tuning parameters with rule-level priority
+        s_threshold = float(mod_settings.get('threshold', cache.threshold))
+        s_smoothing = float(mod_settings.get('smoothing', cache.smoothing))
+        s_react = float(mod_settings.get('react', 1.0))
+
         if mod_name == 'lfo':
-            lfo_id = f"{fixture_name}_{role}"
+            lfo_id = rule.get('_lfo_id', '')
             val_norm = logic_matrix.state.get(lfo_id, 0.0)
+        elif mod_name == 'frequency':
+            bins = audio.get('bins', [0.0]*11)
+            freq_bins_subset = bins[:6]
+            
+            # Find bins with valid ranges and sort by amplitude descending
+            # [(idx, amp), (idx, amp), ...]
+            sorted_bins = sorted(enumerate(freq_bins_subset), key=lambda x: x[1], reverse=True)
+            rule_freq_bins = rule.get('freq_bins', [])
+            
+            found = False
+            for idx, amp in sorted_bins:
+                if amp <= 0: continue
+                if idx < len(rule_freq_bins):
+                    r = rule_freq_bins[idx]
+                    r_min = r.get('min')
+                    r_max = r.get('max')
+                    
+                    # Treat None or empty string as "blank"
+                    if r_min is not None and r_max is not None and r_min != "" and r_max != "":
+                        try:
+                            c_min = int(float(r_min))
+                            c_max = int(float(r_max))
+                            c_center = (c_min + c_max) // 2
+                            val_norm = (amp * 2.0) - 1.0
+                            found = True
+                            break
+                        except (ValueError, TypeError):
+                            continue
+            
+            if not found:
+                val_norm = -1.0
+                if rule_freq_bins:
+                    # Fallback to first bin min if possible
+                    r0 = rule_freq_bins[0]
+                    if r0.get('min') is not None and r0.get('min') != "":
+                        try: c_min = int(float(r0.get('min')))
+                        except: pass
         else:
             val_norm = logic_matrix.state.get(mod_name, 0.0)
+            # Apply reactivity scaling to direct modifiers
+            val_norm *= s_react
 
-        # Apply Threshold (Gate)
-        if abs(val_norm) < cache.threshold:
-            val_norm = 0.0 if mod_name != 'intensity' else -1.0 # Intensity base is -1.0
+        # Apply Threshold
+        if abs(val_norm) < s_threshold:
+            val_norm = 0.0 if mod_name != 'intensity' else -1.0
             
-        # Apply Smoothing (Temporal Low-pass)
-        prev_id = f"{fixture_name}_{role}_{zone_idx}"
+        prev_id = f"{profile_id}_{ch_idx}_{zone_idx}"
         prev = self.prev_vals[prev_id]
-        if cache.smoothing > 0:
-            val_norm = (val_norm * (1.0 - cache.smoothing)) + (prev * cache.smoothing)
+        if s_smoothing > 0:
+            val_norm = (val_norm * (1.0 - s_smoothing)) + (prev * s_smoothing)
         self.prev_vals[prev_id] = val_norm
 
-        # 3-Point Calibration Map
         val_norm = max(-1.0, min(1.0, val_norm))
-        if val_norm < 0:
-            out = c_center + val_norm * (c_center - c_min)
-        else:
-            out = c_center + val_norm * (c_max - c_center)
+        if val_norm < 0: out = c_center + val_norm * (c_center - c_min)
+        else: out = c_center + val_norm * (c_max - c_center)
             
-        return max(c_min, min(c_max, int(out)))
+        out_int = int(out)
+        if c_min > c_max:
+            return max(c_max, min(c_min, out_int))
+        else:
+            return max(c_min, min(c_max, out_int))
 
-    # --- STANDARD ENGINE FUNCTIONS ---
     def get_universe(self): return self.universe[:]
     def set_intensity(self, val): self.intensity = float(val)
     def set_speed(self, val): self.speed = float(val)
     def set_audio_sensitivity(self, val): self.audio_sensitivity = float(val)
-    def set_pattern_mode(self, mode): pass # Deprecated, handled by modifiers now
-    def set_color_mode(self, mode): pass # Deprecated, handled by modifiers now
 
-    def _detect_bass_style(self, audio, dt):
-        bins = audio.get('bins', [0.0] * 11)
-        isolation = audio.get('isolation', 0.0)
-        bass = audio.get('bass', 0.0)
-        mid = audio.get('mid', 0.0)
-
-        self._bass_bins_history.append(bass)
-        prev_bass = self._bass_bins_history[-2] if len(self._bass_bins_history) >= 2 else 0.0
-        bass_delta = abs(bass - prev_bass)
-        self._bass_delta_history.append(bass_delta)
-        self._mid_history.append(mid)
-
-        if self._bass_style_holdoff > 0:
-            self._bass_style_holdoff -= dt
-            return
-
-        detected = None
-        if bins[0] > 0.5 and sum(bins[4:]) < 0.2 and isolation > 0.5:
-            detected = 'sub'
-        elif bass > 0.4 and sum(bins[5:]) > 1.2 and isolation < 0.35:
-            detected = 'tearout'
-        elif len(self._bass_delta_history) >= 15:
-            deltas = list(self._bass_delta_history)
-            avg_delta = sum(deltas) / len(deltas)
-            crossings = sum(1 for i in range(1, len(deltas)) if (deltas[i] > avg_delta * 1.5) != (deltas[i-1] > avg_delta * 1.5))
-            if crossings > 8 and bass > 0.25 and avg_delta > 0.08:
-                detected = 'machine_gun'
-                
-        if detected is None and len(self._mid_history) >= 15 and bass > 0.3:
-            mids = list(self._mid_history)
-            sign_changes = 0
-            for i in range(2, len(mids)):
-                d1 = mids[i] - mids[i-1]
-                d2 = mids[i-1] - mids[i-2]
-                if (d1 > 0.02 and d2 < -0.02) or (d1 < -0.02 and d2 > 0.02):
-                    sign_changes += 1
-            bass_sustained = min(self._bass_bins_history) > 0.15 if len(self._bass_bins_history) >= 10 else False
-            if sign_changes > 5 and bass_sustained:
-                detected = 'wonky'
-
-        if detected != self._current_bass_style:
-            self._current_bass_style = detected
-            self._bass_style_holdoff = 0.5 if detected else 0.0
+    # Removed legacy _detect_bass_style
 
     def apply_overrides(self, ol, sl=[]):
         for o in ol:
             if 'address' in o:
                 self.overrides[int(o['address'])] = int(o.get('value', 0))
-            else:
-                z_idx = int(o.get('zone', 1))
-                if z_idx <= len(self.zone_map):
-                    dev_cfg = self.stage_config['devices'][self.zone_map[z_idx - 1]]
-                    self.overrides[dev_cfg['address'] + dev_cfg['offset'] + int(o.get('channel', 1)) - 1] = int(o.get('value', 0))
 
-    def clear_device_overrides(self, dev_name):
-        dev_cfg = self.stage_config.get('devices', {}).get(dev_name)
-        fixture = self.fixtures.get(dev_cfg.get('type')) if dev_cfg else None
+    def clear_device_overrides(self, dev_id):
+        # We now match by instance id or profile name
+        inst = next((i for i in self.stage_instances if i['id'] == dev_id or i.get('profileName') == dev_id), None)
+        if not inst: return
+        fixture = self.fixtures.get(inst.get('fixtureId'))
         if not fixture: return
-        base = dev_cfg['address'] + dev_cfg['offset']
-        for ch_offset in fixture.get('channels', {}).values():
-            if base + ch_offset in self.overrides: del self.overrides[base + ch_offset]
+        
+        base = int(inst.get('address', 1)) + int(inst.get('offset', 0))
+        for ch in fixture.get('channels', []):
+            addr = base + int(ch.get('addrOffset', 0))
+            if addr in self.overrides: del self.overrides[addr]
 
     def clear_address_overrides(self, addresses):
         for addr in addresses:
-            if int(addr) in self.overrides:
-                del self.overrides[int(addr)]
+            if int(addr) in self.overrides: del self.overrides[int(addr)]
