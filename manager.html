@@ -516,9 +516,11 @@
         <h1>RaveBox Control</h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
-        <div id="wsCertWarning" class="status-badge" style="display:none; background:rgba(255,193,7,0.1); color:#ffc107; margin-top:10px; font-size:0.7rem; border:1px solid rgba(255,193,7,0.3); text-transform: none;">
-            ⚠️ SSL Issue? <a href="#" onclick="signCert()" style="color:#ffc107; text-decoration:underline;">Authorize Certificate</a>
+
+        <div id="hostBadge" style="font-size: 0.65rem; color: var(--text-dim); margin: -10px 0 20px; text-transform: uppercase; letter-spacing: 1px; cursor:pointer;" onclick="changeHost()">
+            Controller: <span id="hostDisplay" style="color:var(--primary); font-weight:bold;">Local</span> (Click to Change)
         </div>
+
 
         <div class="action-btns">
             <button id="btnToggle" class="btn btn-start" onclick="toggleEngine()">Launch Engine</button>
@@ -558,17 +560,16 @@
                 <div class="thinking-grid">
                     <div class="logic-state" id="hubTransient">STEADY</div>
                     <div class="bin-viz" id="hubBins">
-                        <div class="bin-bar" title="Sub-Bass"></div>
-                        <div class="bin-bar" title="Bass"></div>
-                        <div class="bin-bar" title="Mid"></div>
-                        <div class="bin-bar" title="Presence"></div>
+                        <div class="bin-bar" title="Sub/Bass"></div>
+                        <div class="bin-bar" title="Low-Mid/Mid"></div>
+                        <div class="bin-bar" title="Upper-Mid"></div>
+                        <div class="bin-bar" title="High-Mid"></div>
                         <div class="bin-bar" title="Treble"></div>
                         <div class="bin-bar" title="Air"></div>
                     </div>
                 </div>
                 <div class="sys-stats">
                     <span class="stat-val" id="hubBpm">--</span>
-                    <span class="stat-val" id="hubConf">--</span>
                     <span class="stat-val" id="hubGrid" style="transition: color 0.1s;">PULSE</span>
                 </div>
             </div>
@@ -632,55 +633,36 @@
         <div class="links">
             <a id="link-visual" href="#">Visualizer</a>
             <a id="link-setup" href="#">Setup</a>
-            <a id="link-spotify" href="#">Help</a>
+            <a id="link-help" href="#">Help</a>
         </div>
     </div>
 
-    <!-- Advanced Settings Modal -->
-    <div id="advancedModal" class="modal-overlay">
-        <div class="container modal-content">
-            <h2 style="font-size:1.3rem; margin-bottom:1rem;">Advanced Connection</h2>
-            <div style="text-align:left; margin: 15px 0;">
-                <label
-                    style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">WebSocket
-                    Port</label>
-                <input type="number" id="wsPortInput" class="dash-panel"
-                    style="width:100%; border:1px solid rgba(255,255,255,0.1); margin-top:5px; padding:12px; color:#fff; font-size:1rem;"
-                    placeholder="8765">
-            </div>
-            <button class="btn btn-start" style="width:100%; margin-bottom:10px;" onclick="saveAdvancedPort()">Save &
-                Reconnect</button>
-            <button class="btn btn-restart" style="width:100%; margin-bottom:10px;" onclick="signCert()">Sign
-                Certificate</button>
-            <div
-                style="text-align:left; margin: 15px 0; border-top: 1px solid rgba(255,255,255,0.1); padding-top:15px;">
-                <label
-                    style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Remote
-                    Console</label>
-                <div style="display:flex; gap:5px; margin-top:8px;">
-                    <input type="text" id="shellInput" class="dash-panel"
-                        style="flex:1; border:1px solid rgba(255,255,255,0.1); padding:10px; color:#fff; font-family:monospace;"
-                        placeholder="e.g. ls, df -h, tail..." onkeyup="if(event.key==='Enter') runShell()">
-                    <button class="btn btn-start"
-                        style="flex:0; padding:10px 15px; background:rgba(255,255,255,0.05); color:white;"
-                        onclick="runShell()">Run</button>
-                </div>
-                <pre id="shellOutput"
-                    style="font-size:0.7rem; background:rgba(0,0,0,0.5); padding:10px; border-radius:10px; margin-top:10px; max-height:150px; overflow:auto; display:none; border:1px solid rgba(255,255,255,0.1); font-family:monospace; color:#0f0;"></pre>
-            </div>
-            <button class="btn" style="width:100%; background:transparent; color:var(--text-dim);"
-                onclick="closeAdvancedModal()">Cancel</button>
-        </div>
-    </div>
+
 
     <script>
-        const host = localStorage.getItem('vj_backend_host') || 'api.ravebox.love';
-        const LAUNCHER_API = `https://${host}`;
+        const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
+        const isCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
+        const LAUNCHER_API = window.location.protocol + "//" + (isCloud ? 'api.ravebox.love' : host + (host.includes(':') ? '' : ':8001'));
+
+        function changeHost() {
+            const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
+            const next = prompt("Enter Controller IP Address or Hostname:", current);
+            if (next !== null) {
+                if (next.trim() === "" || next === window.location.hostname) {
+                    localStorage.removeItem('vj_backend_host');
+                } else {
+                    localStorage.setItem('vj_backend_host', next.trim());
+                }
+                location.reload();
+            }
+        }
+        
+        document.getElementById('hostDisplay').textContent = (localStorage.getItem('vj_backend_host') || "Local (" + host + ")");
 
         // Point links within the same origin (Port Independent)
         document.getElementById('link-visual').href = `/visualdmx.html`;
         document.getElementById('link-setup').href = `/setup.html`;
-        document.getElementById("link-spotify").href = "/spotify_setup.html";
+        document.getElementById("link-help").href = "/help.html";
         let engineActive = false;
 
 
@@ -712,6 +694,7 @@
                     btn.innerText = "Kill Engine";
                     btn.className = "btn btn-stop";
                     if (!lastKnownActive) connectLiveDashboard(); // Restore WS if it was dead
+                    if (document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
                 } else {
                     btn.innerText = "Launch Engine";
                     btn.className = "btn btn-start";
@@ -752,9 +735,7 @@
             } catch (e) {
                 alert(`Error: ${e.message}`);
             } finally {
-                if (action !== 'start') {
-                    loader.style.display = 'none';
-                }
+                loader.style.display = 'none';
             }
         }
 
@@ -792,52 +773,14 @@
             }
         }
 
-        function openAdvancedModal() {
-            document.getElementById('advancedModal').style.display = 'flex';
-        }
-
-        function closeAdvancedModal() {
-            document.getElementById('advancedModal').style.display = 'none';
-        }
-
-        function saveAdvancedPort() {
-            const port = document.getElementById('wsPortInput').value;
-            if (port) {
-                localStorage.setItem('vj_ws_port', port);
-                location.reload();
-            }
-        }
-
-        function signCert() {
-            const port = document.getElementById('wsPortInput').value || '8765';
-            window.open(`https://${host}:${port}`, '_blank');
-        }
-
         async function runShell() {
-            const input = document.getElementById('shellInput');
-            const output = document.getElementById('shellOutput');
-            const cmd = input.value.trim();
-            if (!cmd) return;
-
-            output.style.display = 'block';
-            output.textContent = '> Processing...';
-            output.style.color = '#fff';
-
-            try {
-                const res = await fetch(`${LAUNCHER_API}/shell?cmd=${encodeURIComponent(cmd)}`);
-                const data = await res.json();
-
-                if (data.stdout || data.stderr) {
-                    output.textContent = (data.stdout || '') + (data.stderr || '');
-                    output.style.color = data.exit_code === 0 ? '#0f0' : '#f55';
-                } else {
-                    output.textContent = '> Command finished with code ' + data.exit_code;
-                }
-            } catch (e) {
-                output.textContent = '❌ Error: ' + e.message;
-                output.style.color = '#f55';
-            }
+            // Moved to help.html
         }
+        function signCert() {
+            // Moved to help.html
+        }
+
+
 
         function changeSystemVolume(delta) {
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -853,17 +796,14 @@
             if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
 
             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
-            document.getElementById('wsPortInput').value = savedPort;
-
-            const wsProtocol = 'wss';
-            const wsHost = (host === 'api.ravebox.love') ? 'wss.ravebox.love' : host;
-            const wsUrl = (host === 'api.ravebox.love') ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`;
+            
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const wsUrl = isCloud ? `wss://wss.ravebox.love` : `${wsProtocol}://${host}:${savedPort}`;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
                 wsErrorCount = 0;
-                const warning = document.getElementById('wsCertWarning');
-                if (warning) warning.style.display = 'none';
+                // SSL issue check moved to help.html
                 document.getElementById('liveDashboard').style.display = 'flex';
                 // Trigger reflow to fade in
                 setTimeout(() => document.getElementById('liveDashboard').style.opacity = '1', 50);
@@ -974,10 +914,6 @@
             ws.onerror = (err) => {
                 wsErrorCount++;
                 console.error("WebSocket Error:", err);
-                const warning = document.getElementById('wsCertWarning');
-                if (warning && wsProtocol === 'wss' && wsErrorCount > 1) {
-                    warning.style.display = 'block';
-                }
             };
 
             ws.onclose = () => {
@@ -1005,39 +941,34 @@
                             tr.className = 'logic-state ' + d.transient;
                         }
                         if (d.bpm) document.getElementById('hubBpm').textContent = Math.round(d.bpm);
-                        if (d.confidence !== undefined) document.getElementById('hubConf').textContent = Math.round(d.confidence * 100) + '%';
                         if (d.beat) {
                             const bd = document.getElementById('hubGrid');
                             bd.style.color = '#fff';
                             setTimeout(() => bd.style.color = 'var(--primary)', 100);
                         }
                         if (d.bins) {
-                            const bars = document.getElementById('hubBins').children;
-                            // Map 11 Raw -> 6 Logical Bins (Per dmx_engine.py logic)
-                            // 0: Sub, 1: Bass/Low-Mid, 2: Mid, 3: Presence, 4: Treble, 5: Air
-                            const mapping = [[0], [1, 2, 3], [4, 5], [6, 7], [8, 9], [10]];
+                            const hubBins = document.getElementById('hubBins');
+                            // Dashboard EQ (Direct 1:1 mapping from 6 native bands)
+                            for (let i = 0; i < 6; i++) {
+                                const bar = hubBins.children[i];
+                                if (!bar) continue;
 
-                            for (let i = 0; i < mapping.length; i++) {
-                                if (!bars[i]) continue;
-                                let energy = 0;
-                                let indices = mapping[i];
-                                for (let idx of indices) energy += (d.bins[idx] || 0);
-                                energy /= indices.length;
+                                const energy = d.bins[i] || 0;
 
                                 // Internal height: 54px - (6px * 2 padding) = 42px
-                                bars[i].style.height = Math.max(2, energy * 42) + 'px';
+                                bar.style.height = Math.max(2, energy * 42) + 'px';
 
                                 const isActive = energy > 0.05;
                                 const isPeak = energy > 0.85;
                                 const barColor = isPeak ? '#f200ff' : (isActive ? 'var(--primary)' : '#333');
 
-                                bars[i].style.background = barColor;
-                                bars[i].style.opacity = 0.4 + (energy * 0.6);
+                                bar.style.background = barColor;
+                                bar.style.opacity = 0.4 + (energy * 0.6);
 
                                 if (isActive) {
-                                    bars[i].style.boxShadow = `0 0 10px ${isPeak ? '#f200ff55' : 'var(--primary-glow, #00f2ff44)'}`;
+                                    bar.style.boxShadow = `0 0 10px ${isPeak ? '#f200ff55' : 'var(--primary-glow, #00f2ff44)'}`;
                                 } else {
-                                    bars[i].style.boxShadow = 'none';
+                                    bar.style.boxShadow = 'none';
                                 }
                             }
                         }

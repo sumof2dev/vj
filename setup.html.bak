@@ -30,23 +30,14 @@
             box-sizing: border-box;
         }
 
-        html,
-        body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-
         body {
             background: var(--bg);
             color: var(--text);
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
             display: flex;
             height: 100vh;
             height: 100svh;
-            /* Use smaller viewport height for more stability */
             overflow: hidden;
             font-size: 14px;
         }
@@ -114,7 +105,8 @@
         .view-panel {
             display: none;
             flex: 1;
-            padding: 20px;
+            padding: 12px;
+            padding-top: 16px;
             overflow-y: auto;
             flex-direction: column;
         }
@@ -141,9 +133,9 @@
         .card {
             background: var(--panel);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
         }
 
         .btn {
@@ -206,13 +198,14 @@
 
         .row {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
             margin-bottom: 10px;
         }
 
         .col {
             flex: 1;
+            margin-bottom: 8px;
         }
 
         label {
@@ -236,12 +229,78 @@
         }
 
         .device-header {
-            display: none;
-            /* Header is redundant with internal labels/icons */
+            display: flex;
+            gap: 15px;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 2px solid var(--border);
+            border-radius: 10px 10px 0 0;
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 700;
+        }
+
+        .device-header div:nth-child(1),
+        .device-header div:nth-child(2),
+        .device-row-desktop > *:nth-child(1),
+        .device-row-desktop > *:nth-child(2) {
+            flex: 1;
+        }
+
+        .device-header div:last-child {
+            width: 32px;
+            flex: none;
+        }
+
+        .small-col {
+            width: 70px;
+            flex: none;
+            text-align: center;
+        }
+
+        .device-row {
+            padding: 1px 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 2px;
+            position: relative;
+            transition: transform 0.2s, border-color 0.2s;
         }
 
         .device-row:hover {
-            border-color: #444;
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .device-row-desktop {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .device-row-desktop input,
+        .device-row-desktop select {
+            height: 36px;
+            font-size: 14px;
+            padding: 0 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+        }
+
+        .dev-numeric input {
+            text-align: center;
+            width: 100%;
+        }
+
+        .dev-pos select {
+            text-align: center;
+            width: 100%;
         }
 
         /* --- FIXTURE EDITOR --- */
@@ -739,6 +798,12 @@
             min-width: 80px;
         }
 
+        @keyframes pulse-red {
+            0% { opacity: 0.5; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.5; transform: scale(0.9); }
+        }
+
         .kv-row .kv-val {
             width: 70px;
         }
@@ -854,20 +919,18 @@
             body {
                 flex-direction: column-reverse;
                 /* Nav at bottom */
-                font-size: 14px;
+                font-size: 16px;
             }
 
             #nav-panel {
                 width: 100%;
-                padding: 6px 5px;
-                /* Increased bottom padding substantially for system nav bars */
-                padding-bottom: max(16px, env(safe-area-inset-bottom));
-                height: 74px;
-                /* Slightly taller to accommodate the extra padding */
-                min-height: 74px;
+                height: 80px;
+                min-height: 80px;
                 flex-shrink: 0;
                 flex-direction: row;
                 justify-content: space-around;
+                padding: 10px 5px;
+                padding-bottom: max(10px, env(safe-area-inset-bottom));
                 border-right: none;
                 border-top: 1px solid rgba(255, 255, 255, 0.1);
                 background: rgba(15, 15, 19, 0.9);
@@ -878,17 +941,17 @@
             }
 
             #main-content {
-                height: calc(100svh - 74px);
-                padding-top: max(8px, env(safe-area-inset-top));
+                height: calc(100dvh - 80px);
+                padding-top: max(10px, env(safe-area-inset-top));
                 flex: 1;
             }
 
             .nav-btn {
                 flex: 1;
                 height: 100%;
-                border-radius: 10px;
+                border-radius: 12px;
                 background: transparent;
-                font-size: 18px;
+                font-size: 22px;
                 border: none;
                 flex-direction: column;
                 gap: 0;
@@ -896,7 +959,6 @@
 
             .nav-label {
                 display: block;
-                font-size: 9px;
             }
 
             .nav-btn.active {
@@ -919,17 +981,16 @@
             /* Responsive Grids */
             .row {
                 flex-wrap: wrap;
-                gap: 8px;
             }
 
             .col {
                 min-width: 100%;
-                margin-bottom: 8px;
+                margin-bottom: 12px;
             }
 
             .view-panel {
-                padding: 12px;
-                padding-top: 16px;
+                padding: 16px;
+                padding-top: 24px;
             }
 
             .card {
@@ -1028,7 +1089,7 @@
                 background: rgba(124, 77, 255, 0.15);
                 border-color: var(--accent);
                 color: var(--accent);
-                box-shadow: 0 0 12px rgba(124, 77, 255, 0.1);
+                box-shadow: 0 0 15px rgba(124, 77, 255, 0.15);
             }
 
             .custom-checkbox input {
@@ -1038,12 +1099,12 @@
             .device-row .kv-remove {
                 grid-column: span 2;
                 width: 100%;
-                height: 34px;
-                margin-top: 4px;
+                height: 38px;
+                margin-top: 6px;
                 background: rgba(255, 71, 87, 0.08);
                 border-color: rgba(255, 71, 87, 0.2);
-                border-radius: 6px;
-                font-size: 14px;
+                border-radius: 8px;
+                font-size: 16px;
             }
 
             /* Touch Targets */
@@ -1057,119 +1118,16 @@
             .kv-remove,
             .custom-checkbox,
             .toggle-switch {
-                min-height: 40px;
-                min-width: 40px;
+                min-height: 44px;
+                min-width: 44px;
                 box-sizing: border-box;
             }
 
             /* Ensure content doesn't get hidden behind the nav bar */
             .view-panel>*:last-child {
-                margin-bottom: 30px;
-            }
-
-            /* --- STAGE MANAGER MOBILE REFINEMENTS --- */
-            .stage-container {
-                flex-direction: column;
-                height: auto;
-                min-height: auto;
-                border: none;
-                background: transparent;
-            }
-
-            .stage-sidebar {
-                width: 100%;
-                height: 250px;
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-                padding: 12px;
-                background: rgba(20, 20, 30, 0.6);
-            }
-
-            .stage-map-area {
-                height: 350px;
-                flex: none;
-                width: 100%;
-                margin-top: 10px;
-                border-radius: 8px;
-            }
-
-            .stage-sidebar.collapsed {
-                height: 0;
-                width: 100%;
-                transform: scaleY(0);
-                transform-origin: top;
-            }
-
-            #fixture-details-panel {
-                margin-top: 12px;
-                padding-top: 12px;
-            }
-
-            /* Header button adjustments */
-            #view-stage .row {
-                gap: 6px;
-                margin-bottom: 12px !important;
-            }
-
-            #view-stage .btn {
-                padding: 6px 8px;
-                font-size: 11px;
-                flex: 1;
-                justify-content: center;
-            }
-
-            #view-stage .btn svg {
-                width: 10;
-                height: 10;
-            }
-
-            #txt-view-toggle {
-                display: none;
-                /* Hide text on mobile to save space, icon only */
-            }
-
-            #btn-toggle-sidebar span {
-                display: none;
-            }
-
-            /* Live Test View Adjustments */
-            .fader-grid {
-                padding: 10px;
-                gap: 5px;
-                grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)) !important;
-            }
-
-            .fader-ch {
-                height: 280px !important;
-                padding-top: 6px !important;
-                border-radius: 6px !important;
-            }
-
-            .drag-handle {
-                height: 14px !important;
-                font-size: 11px !important;
-            }
-
-            .fader-val {
-                font-size: 10px !important;
-            }
-
-            .looper-topbar {
-                padding: 8px 12px !important;
-            }
-
-            h2 {
-                margin-bottom: 12px;
-                padding-bottom: 6px;
-                font-size: 18px;
-            }
-
-            h3 {
-                margin-bottom: 8px;
-                font-size: 14px;
+                margin-bottom: 40px;
             }
         }
-
 
         .stepper-btn {
             width: 100%;
@@ -1188,23 +1146,6 @@
         .stepper-btn:active {
             background: var(--accent);
             color: white;
-        }
-
-        @keyframes pulse-red {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-
-            50% {
-                transform: scale(1.3);
-                opacity: 0.5;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
         }
     </style>
 </head>
@@ -1240,14 +1181,16 @@
             </svg>
             <span class="nav-label">Profile</span>
         </div>
-        <div class="nav-btn" onclick="showView('test')" title="Preset builder">
+        <div class="nav-btn" onclick="showView('test')" title="Fixture Setup">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 2v20" />
-                <path d="M2 12h20" />
-                <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                <line x1="4" x1="21" y1="21" y2="4" />
+                <line x1="14" x1="14" y1="21" y2="14" />
+                <line x1="4" x1="4" y1="10" y2="4" />
+                <circle cx="4" cy="14" r="4" />
+                <circle cx="14" cy="10" r="4" />
             </svg>
-            <span class="nav-label">Builder</span>
+            <span class="nav-label">Setup</span>
         </div>
 
         <div class="nav-btn" onclick="showView('presets')" title="Preset Manager">
@@ -1269,18 +1212,45 @@
 
         <!-- === STAGE MANAGER === -->
         <div id="view-stage" class="view-panel active">
-            <div id="stage-map" class="card" style="max-width: 900px; margin: 20px auto; padding: 25px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
-                    <h2 style="margin:0; color: var(--accent);">Fixtures</h2>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn" style="border-style:dashed" onclick="addDevice()">+ Add Device</button>
-                        <button class="btn primary" onclick="saveStageConfig()">💾 Save Configuration</button>
-                    </div>
+            <div class="row" style="justify-content:space-between">
+                <h2>Stage Configuration</h2>
+                <div class="row">
+                    <button class="btn" onclick="loadStageConfig()" style="display:flex; align-items:center; gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                            <path d="M21 3v5h-5" />
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                            <path d="M8 16H3v5" />
+                        </svg>
+                        Refresh
+                    </button>
+                    <button class="btn primary" onclick="saveStageConfig()"
+                        style="display:flex; align-items:center; gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                            <polyline points="17 21 17 13 7 13 7 21" />
+                            <polyline points="7 3 7 8 15 8" />
+                        </svg>
+                        Save Layout
+                    </button>
                 </div>
-                <div id="device-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                <p style="margin-top:20px; font-size:12px; color:var(--text-dim); text-align:center;">
-                    Define your fixtures, their start addresses, and assign their functional profiles here.
-                </p>
+            </div>
+
+            <div class="card">
+                <h3>Devices</h3>
+                <div class="device-header">
+                    <div>Fixture</div>
+                    <div>Profile</div>
+                    <div class="small-col">Adds</div>
+                    <div class="small-col">Offs</div>
+                    <div class="small-col">Pos</div>
+                    <div></div>
+                </div>
+                <div id="device-list"></div>
+                <button class="btn" style="width:100%; margin-top:10px; border-style:dashed" onclick="addDevice()">+ Add
+                    Device</button>
             </div>
         </div>
 
@@ -1296,7 +1266,7 @@
                 </div>
                 <div class="row">
                     <select id="profile-select" onchange="loadFixtureProfile(this.value)" style="width:200px">
-                        <option value="">-- Select Inactive Profile --</option>
+                        <option value="">-- Inactive Profiles --</option>
                     </select>
                     <button class="btn" onclick="createNewProfile()">+ New</button>
                     <button class="btn primary" onclick="saveFixtureProfile()">💾 Save Profile</button>
@@ -1317,12 +1287,13 @@
                     <textarea id="json-editor" style="height:300px; font-family:monospace; color:#a29bfe"></textarea>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
                         <button class="btn" onclick="parseJsonToUi()">Update UI from JSON</button>
+                        <button class="btn primary" onclick="showRecordTestOverlay()">Record Test</button>
                     </div>
                 </div>
             </div>
 
             <div id="editor-empty-state" style="padding:30px 20px;">
-                <h3 style="text-align:center; color:var(--text-dim); font-weight:normal; margin-bottom:20px;">Active Profiles on Stage:</h3>
+                <h3 style="text-align:center; color:var(--text-dim); font-weight:normal; margin-bottom:20px;">Active Profiles (Applied to Fixtures):</h3>
                 <div id="quick-profile-list"
                     style="display:flex; flex-direction:column; gap:10px; max-width:400px; margin:0 auto;">
                 </div>
@@ -1334,7 +1305,6 @@
 
             <div class="looper-topbar"
                 style="display: flex; flex-direction: column; align-items: stretch; gap: 8px; height: auto; padding: 10px 15px;">
-                <h2 style="margin: 0 0 10px 0; font-size: 18px; color: var(--accent);">Preset builder</h2>
                 <!-- Row 1: Control & Device -->
                 <div
                     style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 5px;">
@@ -1361,7 +1331,16 @@
                     </div>
                 </div>
 
-
+                <!-- Row 2: Save Options -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 10px; color: var(--accent); letter-spacing: 1px; font-weight: bold;">SAVE TO:
+                    </div>
+                    <button class="btn"
+                        style="padding: 4px 10px; font-size:11px; height: 26px; border-color: var(--accent); color: var(--accent);"
+                        onclick="saveToProfilePreset()">PROFILE</button>
+                    <button class="btn primary" style="padding: 4px 10px; font-size:11px; height: 26px;"
+                        onclick="saveToFixturePreset()">FIXTURE</button>
+                </div>
             </div>
 
             <div id="test-faders" class="fader-grid" style="overflow-y:auto; flex:1;">
@@ -1483,6 +1462,25 @@
         </div>
     </div>
 
+    <!-- Record Test Overlay -->
+    <div id="recordTestOverlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:20000; flex-direction:column;">
+        <div
+            style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h2 style="margin:0; border:none; padding:0;" id="record-test-title">Record Test</h2>
+                <div style="font-size:12px; color:var(--text-dim); margin-top:5px;" id="record-test-subtitle">Waiting...
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button id="record-test-btn" class="btn danger" onclick="toggleRecordTest()">Record (Max 60s)</button>
+                <button class="btn" onclick="closeRecordTestOverlay()">Close</button>
+            </div>
+        </div>
+        <div id="record-test-channels"
+            style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:20px;">
+        </div>
+    </div>
 
 
     <script>
@@ -1496,7 +1494,9 @@
             alert(`[ASYNC ERROR] ${event.reason}`);
         };
 
-        const API_BASE = localStorage.getItem('vj_backend_url') || '/api/fixtures';
+        const host = localStorage.getItem('vj_backend_host') || window.location.hostname || 'api.ravebox.love';
+        const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+        const API_BASE = '/api/fixtures';
         let stageConfig = { devices: {} };
         let currentProfile = null;
         let availableProfiles = [];
@@ -1515,12 +1515,13 @@
         let looperState = {};
         let looperInterval = null;
         let isEngineVisualOn = true;
-        let draggingAddresses = new Set();
 
         // --- INIT ---
         async function init() {
-            await loadStageConfig();
-            await loadProfileList();
+            // Sequential loading to ensure availableProfiles and stageConfig are available in the right order
+            await loadProfileList(); // Loads all profiles into availableProfiles
+            await loadStageConfig();  // Loads fixtures, calls renderDevices (uses availableProfiles)
+            await loadProfileList(); // Refresh lists after stageConfig is available to filter Active/Inactive
             connectWs();
             renderPresetsManager();
         }
@@ -1583,37 +1584,87 @@
             const list = document.getElementById('device-list');
             list.innerHTML = '';
 
-            const profiles = availableProfiles.map(f => f.replace('.json', ''));
+            const devices = Object.entries(stageConfig.devices || {});
 
-            Object.entries(stageConfig.devices || {}).forEach(([key, dev]) => {
+            if (devices.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align:center; padding: 30px 20px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+                        <div style="font-size: 28px; margin-bottom: 10px;">🎭</div>
+                        <h3 style="color: var(--accent); margin-bottom: 10px; font-size: 16px;">Welcome to RaveBox!</h3>
+                        <p style="color: var(--text-dim); margin-bottom: 20px; font-size: 13px; line-height: 1.5;">It looks like you don't have any fixtures on your stage yet.<br>To get started, you'll need to create or load a fixture profile.</p>
+                        <button class="btn primary" onclick="showView('profiles')" style="padding: 10px 20px; font-size: 13px; border-radius: 6px;">Go to Profile Editor</button>
+                    </div>
+                `;
+                return;
+            }
+
+            devices.forEach(([key, dev]) => {
                 const row = document.createElement('div');
                 row.className = 'device-row';
+
+                let profOptions = availableProfiles.map(p =>
+                    `<option value="${p.replace('.json', '')}" ${dev.type === p.replace('.json', '') ? 'selected' : ''}>${p}</option>`
+                ).join('');
+
                 row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                    <div style="flex:1; display:flex; align-items:center; gap:8px;">
-                        <input type="text" value="${key}" onchange="updateDeviceKey('${key}', this.value)" 
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; font-weight:bold; width: 80px; padding: 4px 8px;" title="Fixture Name">
-                        <select onchange="updateDeviceProp('${key}', 'type', this.value)" 
-                            style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.8); font-size:12px; padding: 4px 8px; border-radius:4px; flex: 1; max-width: 250px;" title="Assigned Profile">
-                            <option value="">-- Assign Profile --</option>
-                            ${profiles.map(p => `<option value="${p}" ${dev.type === p ? 'selected' : ''}>${p}</option>`).join('')}
+                <div class="device-row-desktop">
+                    <input type="text" value="${key}" onchange="updateDeviceKey('${key}', this.value)" style="font-weight:bold;" placeholder="Name">
+                    <select onchange="updateDeviceProp('${key}', 'type', this.value)">${profOptions}</select>
+                    
+                    <div class="dev-numeric small-col">
+                        <input type="number" value="${dev.address}" onchange="updateDeviceProp('${key}', 'address', parseInt(this.value))" title="DMX Address">
+                    </div>
+                    
+                    <div class="dev-numeric small-col">
+                        <input type="number" value="${dev.offset}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" title="Channel Offset">
+                    </div>
+                    
+                    <div class="dev-pos small-col">
+                        <select onchange="updateDeviceProp('${key}', 'position', this.value)" title="Audio Position">
+                            <option value="center" ${dev.position === 'center' || !dev.position ? 'selected' : ''}>C</option>
+                            <option value="left" ${dev.position === 'left' ? 'selected' : ''}>L</option>
+                            <option value="right" ${dev.position === 'right' ? 'selected' : ''}>R</option>
                         </select>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 8px;">
-                            <span style="color:var(--text-dim); font-size:11px; font-weight:bold;">CH</span>
-                            <input type="number" value="${dev.address}" onchange="updateDeviceProp('${key}', 'address', parseInt(this.value))" 
-                                style="background:none; border:none; color:white; font-weight:bold; width: 45px; text-align: center; padding: 0;" title="DMX Start Address">
+                    
+                    <button class="kv-remove" onclick="deleteDevice('${key}')" style="width: 32px; height: 32px; margin: 0; flex:none;">×</button>
+                </div>
+
+                <div class="device-row-mobile">
+                    <div class="device-row-line">
+                        <input type="text" value="${key}" onchange="updateDeviceKey('${key}', this.value)" style="font-weight:bold; flex: 1;" placeholder="Name">
+                        <select onchange="updateDeviceProp('${key}', 'type', this.value)" style="flex: 1;">${profOptions}</select>
+                        <button class="kv-remove" onclick="deleteDevice('${key}')" style="width: 32px; height: 32px; margin: 0;">×</button>
+                    </div>
+                    <div class="device-row-line" style="justify-content: space-between; font-size: 11px; color: var(--text-dim);">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <div style="display:flex; align-items:center; gap:2px;" title="DMX Address">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <input type="number" value="${dev.address}" onchange="updateDeviceProp('${key}', 'address', parseInt(this.value))" style="width:45px; height: 28px; padding: 0 4px; text-align: center;">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:2px;" title="Channel Offset">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                <input type="number" value="${dev.offset}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" style="width:40px; height: 28px; padding: 0 4px; text-align: center;">
+                            </div>
                         </div>
-                        <div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 8px;">
-                            <span style="color:var(--text-dim); font-size:11px; font-weight:bold;">+/-</span>
-                            <input type="number" value="${dev.offset || 0}" onchange="updateDeviceProp('${key}', 'offset', parseInt(this.value))" 
-                                style="background:none; border:none; color:white; font-weight:bold; width: 35px; text-align: center; padding: 0;" title="Channel Offset">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <select onchange="updateDeviceProp('${key}', 'position', this.value)" style="width:70px; height:28px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); color:#aaa; font-size:10px; border-radius:6px; padding:0 4px;" title="Stereo Audio Positioning">
+                                <option value="center" ${dev.position === 'center' || !dev.position ? 'selected' : ''}>Center</option>
+                                <option value="left" ${dev.position === 'left' ? 'selected' : ''}>Left</option>
+                                <option value="right" ${dev.position === 'right' ? 'selected' : ''}>Right</option>
+                            </select>
                         </div>
-                        <button class="kv-remove" onclick="deleteDevice('${key}')" style="background:none; border:none; color:rgba(255,255,255,0.4); font-size:20px; cursor:pointer; padding:0 10px;">×</button>
+                        <div class="checkbox-group" style="margin: 0; gap: 4px;">
+                            <label class="custom-checkbox ${dev.invert_x ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert X">
+                                <input type="checkbox" ${dev.invert_x ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_x', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> X
+                            </label>
+                            <label class="custom-checkbox ${dev.invert_y ? 'checked' : ''}" style="height: 28px; padding: 0 6px; min-width: 44px;" title="Invert Y">
+                                <input type="checkbox" ${dev.invert_y ? 'checked' : ''} onchange="updateDeviceProp('${key}', 'invert_y', this.checked); this.parentElement.classList.toggle('checked', this.checked)"> Y
+                            </label>
+                        </div>
                     </div>
                 </div>
-`;
+            `;
                 list.appendChild(row);
             });
         }
@@ -1622,103 +1673,18 @@
             const name = prompt("Device Name (e.g. L3):");
             if (name) {
                 stageConfig.devices[name] = {
-                    type: "", address: 1, offset: 0,
+                    type: "Ehaho", address: 1, offset: 0,
                     invert_x: false, invert_y: false
                 };
                 renderDevices();
-                loadProfileList(); // Refresh active state
             }
         }
 
         function updateDeviceProp(key, prop, val) {
             stageConfig.devices[key][prop] = val;
             if (prop === 'type') {
-                loadProfileList(); // Refresh active/inactive lists
+                 loadProfileList(); // Refresh active/inactive lists
             }
-        }
-
-        function updateDeviceKey(oldKey, newKey) {
-            newKey = newKey.trim();
-            if (oldKey === newKey || !newKey) {
-                renderDevices(); // Revert UI if invalid
-                return;
-            }
-            if (stageConfig.devices[newKey]) {
-                alert("A device with that name already exists!");
-                renderDevices(); // Revert UI
-                return;
-            }
-            stageConfig.devices[newKey] = stageConfig.devices[oldKey];
-            delete stageConfig.devices[oldKey];
-            renderDevices();
-        }
-
-        function deleteDevice(key) {
-            if (confirm(`Delete ${key}?`)) {
-                delete stageConfig.devices[key];
-                renderDevices();
-            }
-        }
-
-        function getFixtureIcon(type) {
-            if (!type) return '💡';
-            type = type.toLowerCase();
-            if (type.includes('wash') || type.includes('par')) return '🏮';
-            if (type.includes('spot') || type.includes('moving')) return '💡';
-            if (type.includes('laser')) return '⚡';
-            if (type.includes('strobe')) return '📸';
-            if (type.includes('projector')) return '📽️';
-            return '💡';
-        }
-
-        function getFixtureColor(type) {
-            if (!type) return 'white';
-            type = type.toLowerCase();
-            if (type.includes('wash')) return 'purple';
-            if (type.includes('spot') || type.includes('moving')) return 'cyan';
-            if (type.includes('laser')) return 'orange';
-            return 'white';
-        }
-
-        function addDevice() {
-            const name = prompt("Device Name (e.g. L3):");
-            if (!name) return;
-
-            if (stageConfig.devices[name]) {
-                alert("Device already exists!");
-                return;
-            }
-
-            // Show a simple selection for type
-            let type = "Ehaho";
-            let profOptions = availableProfiles.map(p => p.replace('.json', ''));
-            const selectedType = prompt("Fixture Type:\n" + profOptions.join(", "), "Ehaho");
-            if (selectedType && profOptions.includes(selectedType)) {
-                type = selectedType;
-            }
-
-            stageConfig.devices[name] = {
-                type: type,
-                address: 1,
-                offset: 0,
-                invert_x: false,
-                invert_y: false,
-                x: 50,
-                y: 50
-            };
-            renderDevices();
-        }
-
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.stage-sidebar');
-            sidebar.classList.toggle('collapsed');
-
-            // Re-center map fixtures if needed or just let CSS handle it
-            // The map will automatically expand thanks to flex: 1
-        }
-
-        function updateDeviceProp(key, prop, val) {
-            stageConfig.devices[key][prop] = val;
         }
 
         function updateDeviceKey(oldKey, newKey) {
@@ -1748,47 +1714,33 @@
         async function loadProfileList() {
             const res = await fetch(API_BASE);
             const files = await res.json();
-            availableProfiles = files.filter(f => f !== 'stage_config.json' && f !== 'presets.json' && f !== 'vibe_config.json' && f.endsWith('.json'));
-
-            // Identify active profile types from stage config
-            const activeTypes = new Set();
-            Object.values(stageConfig.devices || {}).forEach(dev => {
-                if (dev.type) activeTypes.add(dev.type.toLowerCase());
-            });
+            availableProfiles = files.filter(f => f !== 'stage_config.json' && f !== 'presets.json' && f !== 'vibe_config.json');
 
             const sel = document.getElementById('profile-select');
             const quickList = document.getElementById('quick-profile-list');
 
-            sel.innerHTML = '<option value="">-- Select Inactive Profile --</option>';
-            if (quickList) quickList.innerHTML = '';
+            // Find all unique profile types currently used in fixtures and map fixtures to types
+            const profileToFixtures = {};
+            if (stageConfig && stageConfig.devices) {
+                Object.entries(stageConfig.devices).forEach(([key, dev]) => {
+                    if (dev.type) {
+                        if (!profileToFixtures[dev.type]) profileToFixtures[dev.type] = [];
+                        profileToFixtures[dev.type].push(key);
+                    }
+                });
+            }
+            const activeProfileTypes = new Set(Object.keys(profileToFixtures));
 
-            // Separate active and inactive profiles
-            const activeProfiles = [];
-            const inactiveProfiles = [];
+            sel.innerHTML = '<option value="">-- Inactive Profiles --</option>';
+            if (quickList) quickList.innerHTML = '';
 
             availableProfiles.forEach(f => {
                 const profileName = f.replace('.json', '');
-                if (activeTypes.has(profileName.toLowerCase())) {
-                    activeProfiles.push(f);
-                } else {
-                    inactiveProfiles.push(f);
-                }
-            });
+                const isActive = activeProfileTypes.has(profileName);
 
-            // Populate Inactive Profiles Dropdown
-            inactiveProfiles.forEach(f => {
-                const opt = document.createElement('option');
-                opt.value = f;
-                opt.innerText = f.replace('.json', '');
-                sel.appendChild(opt);
-            });
-
-            // Populate Active Profiles Quick List
-            if (quickList) {
-                if (activeProfiles.length === 0) {
-                    quickList.innerHTML = '<p style="text-align:center; color:var(--text-dim); font-size:12px; padding:20px;">No profiles currently active on stage.</p>';
-                } else {
-                    activeProfiles.forEach(f => {
+                if (isActive) {
+                    // Add to active quick list
+                    if (quickList) {
                         const btn = document.createElement('button');
                         btn.className = 'card';
                         btn.style.textAlign = 'left';
@@ -1800,19 +1752,33 @@
                         btn.style.fontWeight = 'bold';
                         btn.style.background = 'rgba(255,255,255,0.02)';
                         btn.style.color = 'white';
-                        btn.innerText = f.replace('.json', '');
+                        
+                        // List fixtures using this profile
+                        const fixturesList = (profileToFixtures[profileName] || []).join(', ');
+                        btn.innerHTML = `${profileName} <span style="font-size:11px; color:var(--text-dim); font-weight:normal; margin-left:8px;">[ ${fixturesList} ]</span>`;
+                        
                         btn.onclick = () => {
-                            sel.value = f;
                             loadFixtureProfile(f);
                         };
                         btn.onmouseover = () => btn.style.background = 'rgba(124, 77, 255, 0.1)';
                         btn.onmouseout = () => btn.style.background = 'rgba(255,255,255,0.02)';
                         quickList.appendChild(btn);
-                    });
+                    }
+                } else {
+                    // Add to inactive dropdown
+                    const opt = document.createElement('option');
+                    opt.value = f;
+                    opt.innerText = f;
+                    sel.appendChild(opt);
                 }
+            });
+
+            // If quickList is empty, show a small hint
+            if (quickList && quickList.children.length === 0) {
+                quickList.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:20px; font-size: 13px;">No active profiles. Select an inactive profile or create a new one.</div>';
             }
 
-            // Re-render stage devices to populate dropdowns
+            // Re-render stage devices to ensure dropdowns have latest availableProfiles
             if (stageConfig.devices) renderDevices();
         }
 
@@ -1836,12 +1802,12 @@
             renderProfileUi();
         }
 
-        async function saveFixtureProfile(silent = false) {
+        async function saveFixtureProfile() {
             try {
                 // Sync basic info fields into currentProfile
                 if (currentProfile) {
                     currentProfile.type = document.getElementById('fix-type').value;
-                    currentProfile.name = document.getElementById('fix-name').value || (document.getElementById('fix-filename').value);
+                    currentProfile.name = document.getElementById('fix-name').value;
                 }
                 const data = currentProfile || JSON.parse(document.getElementById('json-editor').value);
 
@@ -1853,17 +1819,10 @@
                     body: JSON.stringify(data, null, 4)
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                if (!silent) alert(`Saved ${fname}`);
+                alert(`Saved ${fname}`);
                 loadProfileList();
             } catch (e) {
-                if (!silent) alert("Error saving JSON: " + e.message);
-                console.error("Auto-save failed:", e);
-            }
-        }
-
-        function tryAutoSave() {
-            if (activeLiveTesters && Object.keys(activeLiveTesters).length > 0) {
-                saveFixtureProfile(true);
+                alert("Error saving JSON: " + e.message);
             }
         }
 
@@ -2223,7 +2182,6 @@
             currentProfile.modifiers[role] = val;
             syncUiToJson();
             renderProfileUi(); // Re-render to swap between Calibration vs State Machine UI
-            tryAutoSave();
         }
 
         function renderCalibrationRanges(role) {
@@ -2373,7 +2331,6 @@
             currentProfile.lfo_data[role][key] = val;
             syncUiToJson();
             renderProfileUi();
-            tryAutoSave();
         }
 
         function updateCal(role, index, key, val) {
@@ -2390,7 +2347,6 @@
             currentProfile.calibration[role][index][key] = v;
             syncUiToJson();
             if (key === 'control') renderProfileUi();
-            tryAutoSave();
         }
 
         function addCalRange(role) {
@@ -2411,7 +2367,6 @@
 
             syncUiToJson();
             renderProfileUi();
-            tryAutoSave();
         }
 
         function removeCalRange(role, index) {
@@ -2419,7 +2374,6 @@
                 currentProfile.calibration[role].splice(index, 1);
                 syncUiToJson();
                 renderProfileUi();
-                tryAutoSave();
             }
         }
 
@@ -2535,7 +2489,6 @@
                 currentProfile.state_data[role][state][idx] = v;
             }
             syncUiToJson();
-            tryAutoSave();
         }
 
         // ==================== STEP DATA ====================
@@ -2560,7 +2513,6 @@
             currentProfile.channels[role] = val;
             syncUiToJson();
             renderProfileUi(); // Force re-sort if offset changed manually
-            tryAutoSave();
         }
 
         function renameProfileChannel(oldName, newName) {
@@ -2589,15 +2541,9 @@
                 currentProfile.state_data[newName] = currentProfile.state_data[oldName];
                 delete currentProfile.state_data[oldName];
             }
-            // Move LFO data
-            if (currentProfile.lfo_data && currentProfile.lfo_data[oldName]) {
-                currentProfile.lfo_data[newName] = currentProfile.lfo_data[oldName];
-                delete currentProfile.lfo_data[oldName];
-            }
 
             syncUiToJson();
             renderProfileUi();
-            tryAutoSave();
         }
 
         function removeProfileChannel(role) {
@@ -2606,10 +2552,8 @@
             if (currentProfile.modifiers) delete currentProfile.modifiers[role];
             if (currentProfile.calibration) delete currentProfile.calibration[role];
             if (currentProfile.state_data) delete currentProfile.state_data[role];
-            if (currentProfile.lfo_data) delete currentProfile.lfo_data[role];
             syncUiToJson();
             renderProfileUi();
-            tryAutoSave();
         }
 
         function appendNewChannel() {
@@ -2622,7 +2566,6 @@
             currentProfile.channels[newRole] = maxOffset + 1;
             syncUiToJson();
             renderProfileUi();
-            tryAutoSave();
         }
 
         // ==================== MODES ====================
@@ -2637,14 +2580,12 @@
             currentProfile.step_data[name] = 0;
             syncUiToJson();
             renderProfileUi();
-            tryAutoSave();
         }
 
         function removeProfileStep(name) {
             delete currentProfile.step_data[name];
             syncUiToJson();
             renderProfileUi();
-            tryAutoSave();
         }
 
         function renameProfileStep(oldName, newName) {
@@ -2652,13 +2593,11 @@
             currentProfile.step_data[newName] = currentProfile.step_data[oldName];
             delete currentProfile.step_data[oldName];
             syncUiToJson();
-            tryAutoSave();
         }
 
         function updateProfileStep(name, val) {
             currentProfile.step_data[name] = val;
             syncUiToJson();
-            tryAutoSave();
         }
 
         // ==================== MACROS ====================
@@ -2689,13 +2628,11 @@
             }
             syncUiToJson();
             renderProfileUi();
-            tryAutoSave();
         }
 
         function updateProfileMacro(name, val) {
             currentProfile.macros[name] = val;
             syncUiToJson();
-            tryAutoSave();
         }
 
         function updateGenericParam(role, param, val) {
@@ -2703,7 +2640,6 @@
             if (!currentProfile.generic[role]) currentProfile.generic[role] = { min: 0, max: 255, default: 0, modifier: 'intensity', amount: 100 };
             currentProfile.generic[role][param] = val;
             syncUiToJson();
-            tryAutoSave();
         }
 
         function updateStrobeParam(role, param, val) {
@@ -2711,7 +2647,6 @@
             if (!currentProfile.strobe[role]) currentProfile.strobe[role] = { min: 0, max: 255 };
             currentProfile.strobe[role][param] = val;
             syncUiToJson();
-            tryAutoSave();
         }
 
         function updateDimmerParam(key, param, val) {
@@ -2727,69 +2662,60 @@
 
         // --- LIVE TEST ---
         function connectWs() {
-            const host = localStorage.getItem('vj_backend_host') || 'api.ravebox.love';
-            const wsProtocol = 'wss';
-            const wsHost = (host === 'api.ravebox.love') ? 'wss.ravebox.love' : host;
-            const wsUrl = (host === 'api.ravebox.love') ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:8765`;
-            ws = new WebSocket(wsUrl);
-            ws.onopen = () => {
+            // Logic mirrored from index.html for Cloudflare compatibility
+            const isProd = host.includes('ravebox.love') || host.includes('api.ravebox.love');
+            const wsProtocol = (window.location.protocol === 'https:' || isProd) ? 'wss' : 'ws';
+            
+            let wsHost = host;
+            let wsPort = `:${savedPort}`;
+
+            if (isProd) {
+                wsHost = 'wss.ravebox.love';
+                wsPort = ''; // Routed via 443
+            }
+
+            const wsUrl = `${wsProtocol}://${wsHost}${wsPort}`;
+            console.log(`📡 Connecting to WebSocket: ${wsUrl}`);
+
+            const newWs = new WebSocket(wsUrl);
+            
+            // Connection timeout (for fallback or retry)
+            const timeout = setTimeout(() => {
+                if (newWs.readyState !== 1) {
+                    console.warn(`⏳ WebSocket ${wsUrl} timed out.`);
+                    newWs.close();
+                }
+            }, 5000);
+
+            newWs.onopen = () => {
+                clearTimeout(timeout);
+                ws = newWs;
+                console.log(`✅ WebSocket Connected! (${wsUrl})`);
                 document.getElementById('conn-status').innerHTML = '<span style="display:flex; align-items:center; gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Connected</span>';
                 document.getElementById('conn-status').style.color = "var(--success)";
-
-                // Request current system parameters to populate the Axis Matrix
                 ws.send(JSON.stringify({ type: 'get_params' }));
             };
-            ws.onmessage = (event) => {
+
+            newWs.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
-                    if (msg.dmx) {
-                        latestDmxState = msg.dmx;
-                        if (isEngineVisualOn) {
-                            updateTestFadersFromLive(msg.dmx);
-                        }
-                    }
+                    if (msg.dmx) latestDmxState = msg.dmx;
                 } catch (e) {
                     console.error("WS Parse Error:", e);
                 }
             };
-            ws.onclose = () => {
+
+            newWs.onerror = (e) => {
+                clearTimeout(timeout);
+                console.error(`❌ WebSocket Error:`, e);
+            };
+
+            newWs.onclose = () => {
+                clearTimeout(timeout);
                 document.getElementById('conn-status').innerHTML = '<span style="display:flex; align-items:center; gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Offline</span>';
                 document.getElementById('conn-status').style.color = "var(--danger)";
-                setTimeout(connectWs, 2000);
+                setTimeout(() => connectWs(), 3000);
             };
-        }
-
-        function updateTestFadersFromLive(dmx) {
-            // Only update sliders/values for the currently active test devices
-            activeTestDevices.forEach(devName => {
-                const dev = (stageConfig.devices || {})[devName];
-                if (!dev) return;
-                const profile = testProfiles[dev.type];
-                if (!profile || !profile.channels) return;
-
-                Object.entries(profile.channels).forEach(([role, val]) => {
-                    const offset = typeof val === 'object' ? val.offset : val;
-                    const absAddr = dev.address + dev.offset + offset;
-
-                    // Mixed Control Mode: Skip updating sliders that are currently being manipulated or held
-                    if (draggingAddresses.has(absAddr) || saveActiveChannels[absAddr]) return;
-
-                    const dmxKey = `${devName}_${role}`;
-                    const dmxVal = dmx[dmxKey];
-
-                    if (dmxVal !== undefined) {
-                        const input = document.getElementById(`input-${absAddr}`);
-                        const disp = document.getElementById(`disp-${absAddr}`);
-                        if (input) input.value = dmxVal;
-                        if (disp) {
-                            disp.value = dmxVal;
-                            disp.innerText = dmxVal;
-                        }
-                        // Sync currentFaderValues to prevent snap-back when switching to manual mode
-                        currentFaderValues[absAddr] = dmxVal;
-                    }
-                });
-            });
         }
 
         function populateTestDevices() {
@@ -2877,22 +2803,24 @@
         function toggleEngineVisual() {
             const track = document.getElementById('engine-toggle');
             isEngineVisualOn = !isEngineVisualOn;
-            
+
             if (isEngineVisualOn) {
-                if (track) track.classList.add('on');
+                track.classList.add('on');
                 // Clear overrides for all active test devices to return control to the engine
                 if (ws && ws.readyState === 1) {
                     activeTestDevices.forEach(devName => {
                         ws.send(JSON.stringify({ type: 'clear_overrides', device: devName }));
+                        // Clear local override memory for this device so moving one fader doesn't re-apply ALL others
+                        clearLocalOverridesForDevice(devName);
                     });
                 }
             } else {
-                if (track) track.classList.remove('on');
-                // Switch to manual Setup control: zero all channels and keep faders as source of truth
-                activeTestDevices.forEach(devName => {
-                    zeroDeviceDmx(devName);
-                });
+                track.classList.remove('on');
+                // Switch to manual Setup control
+                // Immediately send all current fader values to the backend to take control
+                sendAllFaderOverrides();
             }
+            renderTestFaders(); // Refresh UI to show cleared overrides if any
         }
 
         async function zeroDeviceDmx(devName) {
@@ -2917,55 +2845,112 @@
                 const offset = typeof val === 'object' ? val.offset : val;
                 const absAddr = dev.address + dev.offset + offset;
 
-                currentFaderValues[absAddr] = 0;
-                saveActiveChannels[absAddr] = true; // Mark as overridden
-
                 const disp = document.getElementById(`disp-${absAddr}`);
-                if (disp) {
-                    disp.value = 0;
-                    disp.innerText = 0;
-                }
+                if (disp) { disp.value = 0; disp.innerText = 0; }
                 const input = document.getElementById(`input-${absAddr}`);
                 if (input) input.value = 0;
-                const checkbox = document.getElementById(`save-active-${absAddr}`);
-                if (checkbox) checkbox.checked = true;
 
-                updateDmxState(absAddr, 0, false, true); // skipLinked=false, skipAutoCheck=true
+                currentFaderValues[absAddr] = 0;
+            });
+
+            sendAllFaderOverrides();
+        }
+
+        function sendAllFaderOverrides() {
+            if (!ws || ws.readyState !== 1) return;
+            const overridesArray = Object.entries(currentFaderValues).map(([a, v]) => ({
+                address: parseInt(a),
+                value: v
+            }));
+            ws.send(JSON.stringify({
+                type: 'laser_override',
+                overrides: overridesArray
+            }));
+        }
+
+        function clearLocalOverridesForDevice(devName) {
+            let allDevices = stageConfig.devices || {};
+            const dev = allDevices[devName];
+            if (!dev) return;
+
+            let profile = testProfiles[dev.type];
+            if (!profile || !profile.channels) return;
+
+            Object.entries(profile.channels).forEach(([role, val]) => {
+                const offset = typeof val === 'object' ? val.offset : val;
+                const absAddr = dev.address + dev.offset + offset;
+                delete currentFaderValues[absAddr];
+                delete saveActiveChannels[absAddr];
+                const checkbox = document.getElementById(`save-active-${absAddr}`);
+                if (checkbox) checkbox.checked = false;
             });
         }
 
         function toggleLooper(addr) {
-            if (!looperState[addr]) looperState[addr] = { mode: 'paused', frames: [], playIdx: 0, lastVal: currentFaderValues[addr] || 0 };
+            if (!looperState[addr]) looperState[addr] = { mode: 'idle', frames: [], playIdx: 0, lastVal: currentFaderValues[addr] || 0 };
 
             const state = looperState[addr];
-            const btn = document.getElementById(`looper-btn-${addr}`);
+            const led = document.getElementById(`led-${addr}`);
 
-            if (state.mode === 'playing') {
-                state.mode = 'paused';
-                if (btn) btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'; // Show Play icon when paused
-                // Set channel to 0 immediately when pausing
-                updateDmxState(parseInt(addr), 0, true, true);
-            } else {
-                state.mode = 'playing';
-                if (btn) btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>'; // Show Pause icon when playing
-                // Resume showing the current value
-                const val = (state.frames && state.frames.length > 0) ? state.frames[state.playIdx] : (currentFaderValues[addr] || 0);
-                updateDmxState(parseInt(addr), val, true, true);
+            if (state.mode === 'idle') {
+                state.mode = 'rec';
+                state.frames = [currentFaderValues[addr] || 0];
+                led.className = 'led red';
+            } else if (state.mode === 'rec') {
+                state.mode = 'play';
+                state.playIdx = 0;
+                led.className = 'led green';
+            } else if (state.mode === 'play') {
+                state.mode = 'idle';
+                led.className = 'led';
+                state.frames = [];
             }
         }
 
         function looperTick() {
-            Object.keys(looperState).forEach(addr => {
-                const state = looperState[addr];
-                if (state.mode === 'playing' && state.frames && state.frames.length > 0) {
-                    state.playIdx = (state.playIdx + 1) % state.frames.length;
+            let overridesToSend = {};
+            let hasOverrides = false;
+
+            Object.entries(looperState).forEach(([addrStr, state]) => {
+                const addr = parseInt(addrStr);
+
+                if (state.mode === 'rec') {
+                    state.frames.push(currentFaderValues[addr] || 0);
+                } else if (state.mode === 'play' && state.frames.length > 0) {
                     const val = state.frames[state.playIdx];
-                    updateDmxState(parseInt(addr), val, true, true); // skipLinked, skipAutoCheck
-                } else if (state.mode === 'paused') {
-                    // Force 0 value when paused but skip UI update (keep showing entered range/val)
-                    updateDmxState(parseInt(addr), 0, true, true, true); 
+                    if (val !== undefined && val !== state.lastVal) {
+                        currentFaderValues[addr] = val;
+                        state.lastVal = val;
+
+                        const input = document.getElementById(`input-${addr}`);
+                        const disp = document.getElementById(`disp-${addr}`);
+                        if (input) input.value = val;
+                        if (disp) {
+                            disp.value = val;
+                            disp.innerText = val; // fallback
+                        }
+
+                        overridesToSend[addr] = val;
+                        hasOverrides = true;
+                    }
+
+                    state.playIdx++;
+                    if (state.playIdx >= state.frames.length) {
+                        state.playIdx = 0;
+                    }
                 }
             });
+
+            if (hasOverrides && ws && ws.readyState === 1) {
+                const overridesArray = Object.entries(currentFaderValues).map(([a, v]) => ({
+                    address: parseInt(a),
+                    value: v
+                }));
+                ws.send(JSON.stringify({
+                    type: 'laser_override',
+                    overrides: overridesArray
+                }));
+            }
         }
 
         function closeFixtureModal() {
@@ -2974,7 +2959,10 @@
 
         async function handleDeviceSelection(devName) {
             if (!devName) return;
-            if (activeTestDevices.includes(devName)) return;
+            // Robust name handling (prevent [object Object])
+            const dName = (typeof devName === 'object' && devName.name) ? devName.name : devName;
+
+            if (activeTestDevices.includes(dName)) return;
 
             if (activeTestDevices.length > 0) {
                 const overlay = document.getElementById('fixture-modal-overlay');
@@ -2984,25 +2972,25 @@
                 const addBtn = document.getElementById('modal-add-btn');
 
                 title.innerText = `Manage Selection`;
-                text.innerText = `${activeTestDevices.join(', ')} active. Add or replace with ${devName}?`;
+                text.innerText = `You currently have ${activeTestDevices.join(', ')} active. How would you like to handle ${dName}?`;
 
-                switchBtn.innerText = `Replace with ${devName}`;
+                switchBtn.innerText = `No, switch to ${dName}`;
                 switchBtn.onclick = () => {
-                    activeTestDevices = [devName];
+                    activeTestDevices = [dName];
                     renderTestFaders();
                     closeFixtureModal();
                 };
 
-                addBtn.innerText = `Add ${devName} to current setup`;
+                addBtn.innerText = `Add ${dName} to current setup`;
                 addBtn.onclick = () => {
-                    activeTestDevices.push(devName);
+                    activeTestDevices.push(dName);
                     renderTestFaders();
                     closeFixtureModal();
                 };
 
                 overlay.style.display = 'flex';
             } else {
-                activeTestDevices = [devName];
+                activeTestDevices = [dName];
                 await renderTestFaders();
             }
         }
@@ -3081,7 +3069,7 @@
                     const role = ch.role;
 
                     if (!looperState[absAddr]) {
-                        looperState[absAddr] = { mode: 'paused', frames: [], playIdx: 0, lastVal: 0 };
+                        looperState[absAddr] = { mode: 'idle', frames: [], playIdx: 0, lastVal: 0 };
                     }
 
                     const wrapper = document.createElement('div');
@@ -3122,28 +3110,19 @@
                     let shortRole = role.replace(/_/g, ' ').toUpperCase();
                     if (shortRole.length > 10) shortRole = shortRole.substring(0, 8) + '..';
 
-                    const looperBtnIcon = looperState[absAddr].mode === 'playing'
-                        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>' // Pause icon
-                        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'; // Play icon
-
                     wrapper.innerHTML = `
                         <div style="min-height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
                             <input type="checkbox" id="save-active-${absAddr}" ${saveActiveChannels[absAddr] ? 'checked' : ''} 
-                                onchange="saveActiveChannels[${absAddr}] = this.checked; if(this.checked) { updateDmxState(${absAddr}, document.getElementById('input-${absAddr}').value); } else { checkAndClearOverride(${absAddr}); }"
-                                title="Hold / Include in Save"
+                                onchange="saveActiveChannels[${absAddr}] = this.checked"
+                                title="Include in Save"
                                 style="margin:0; cursor:pointer; accent-color:var(--accent);">
-                            <button id="looper-btn-${absAddr}" class="looper-btn" onclick="toggleLooper(${absAddr})" style="display:flex; align-items:center; justify-content:center; padding:0; background:transparent; border:1px solid #444; border-radius:4px; width:22px; height:22px; color:var(--accent); cursor:pointer;">
-                                ${looperBtnIcon}
-                            </button>
+                            <div id="led-${absAddr}" class="led"></div>
+                            <button class="looper-btn" onclick="toggleLooper(${absAddr})"></button>
                         </div>
                         
                         <div style="font-size:10px; color:#aaa; margin-bottom:5px">CH ${absAddr}</div>
                         
                         <input type="range" id="input-${absAddr}" min="0" max="255" value="${currentFaderValues[absAddr] || 0}" 
-                            onmousedown="draggingAddresses.add(${absAddr})"
-                            ontouchstart="draggingAddresses.add(${absAddr})"
-                            onmouseup="draggingAddresses.delete(${absAddr}); checkAndClearOverride(${absAddr})"
-                            ontouchend="draggingAddresses.delete(${absAddr}); checkAndClearOverride(${absAddr})"
                             oninput="updateDmxState(${absAddr}, this.value)"
                             style="flex:1;">
                         
@@ -3221,22 +3200,13 @@
         }
 
         function syncFaderInput(addr, el) {
-            let val = el.value.trim();
-            if (!val) return;
-
-            // Manual entry resumes playback (User request)
-            if (looperState[addr]) {
-                looperState[addr].mode = 'playing';
-                const btn = document.getElementById(`looper-btn-${addr}`);
-                if (btn) btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>';
-            }
-
-            if (val.includes(',') || val.includes('-')) {
-                generateMultiSequence(addr, val);
+            const valStr = el.value.trim();
+            if (valStr.includes(',') || valStr.includes('-')) {
+                generateMultiSequence(addr, valStr);
                 return;
             }
 
-            let v = parseInt(val);
+            let v = parseInt(valStr);
             if (!isNaN(v)) {
                 v = Math.max(0, Math.min(255, v));
                 updateDmxState(addr, v);
@@ -3282,17 +3252,20 @@
             if (frames.length === 0) return;
 
             if (!looperState[addr]) {
-                looperState[addr] = { mode: 'paused', frames: [], playIdx: 0, lastVal: frames[0] };
+                looperState[addr] = { mode: 'idle', frames: [], playIdx: 0, lastVal: frames[0] };
             }
             looperState[addr].frames = frames;
             looperState[addr].playIdx = 0;
-            looperState[addr].mode = 'playing';
+            looperState[addr].mode = 'play';
 
-            const btn = document.getElementById(`looper-btn-${addr}`);
-            if (btn) btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>'; // Show Pause icon
+            const led = document.getElementById(`led-${addr}`);
+            if (led) led.className = 'led green';
         }
 
-        function getLinkedGroup(addr) {
+        function updateDmxState(addr, val, skipLinked = false, skipAutoCheck = false) {
+            const intVal = parseInt(val);
+
+            // Find which device this addr belongs to
             let devName = null;
             let allDevices = stageConfig.devices || {};
             for (const name of activeTestDevices) {
@@ -3309,104 +3282,68 @@
                     break;
                 }
             }
-            if (!devName || !linkedLinks[devName]) return [addr];
 
+            if (!devName) {
+                // Fallback for cases where it's not in a current profile (shouldn't happen with current logic)
+                currentFaderValues[addr] = intVal;
+                return;
+            }
+
+            // Find Linked Group
             let group = [addr];
-            const order = testOrder[devName] || [];
-            const links = linkedLinks[devName];
+            if (!skipLinked && linkedLinks[devName]) {
+                const order = testOrder[devName] || [];
+                const links = linkedLinks[devName];
 
-            // Expand forwards
-            let curr = addr;
-            while (true) {
-                const idx = order.findIndex(o => o.addr === curr);
-                const next = order[idx + 1];
-                if (next && links.has(`${curr}-${next.addr}`)) {
-                    group.push(next.addr);
-                    curr = next.addr;
-                } else break;
+                // Expand forwards
+                let curr = addr;
+                while (true) {
+                    const idx = order.findIndex(o => o.addr === curr);
+                    const next = order[idx + 1];
+                    if (next && links.has(`${curr}-${next.addr}`)) {
+                        group.push(next.addr);
+                        curr = next.addr;
+                    } else break;
+                }
+                // Expand backwards
+                curr = addr;
+                while (true) {
+                    const idx = order.findIndex(o => o.addr === curr);
+                    const prev = order[idx - 1];
+                    if (prev && links.has(`${prev.addr}-${curr}`)) {
+                        group.unshift(prev.addr);
+                        curr = prev.addr;
+                    } else break;
+                }
             }
-            // Expand backwards
-            curr = addr;
-            while (true) {
-                const idx = order.findIndex(o => o.addr === curr);
-                const prev = order[idx - 1];
-                if (prev && links.has(`${prev.addr}-${curr}`)) {
-                    group.unshift(prev.addr);
-                    curr = prev.addr;
-                } else break;
-            }
-            return group;
-        }
-
-        function checkAndClearOverride(addr) {
-            if (!isEngineVisualOn) return; // In manual Setup mode, we don't clear overrides
-            const group = getLinkedGroup(addr);
-            const toClear = group.filter(a => !saveActiveChannels[a] && !draggingAddresses.has(a));
-            if (toClear.length > 0 && ws && ws.readyState === 1) {
-                ws.send(JSON.stringify({ type: 'clear_channel_overrides', addresses: toClear }));
-            }
-        }
-
-        function updateDmxState(addr, val, skipLinked = false, skipAutoCheck = false, skipUi = false) {
-            const intVal = parseInt(val);
-            if (isNaN(intVal)) return;
-
-            // Manual adjustment resumes playback (User request)
-            if (!skipAutoCheck && looperState[addr] && looperState[addr].mode === 'paused') {
-                looperState[addr].mode = 'playing';
-                const btn = document.getElementById(`looper-btn-${addr}`);
-                if (btn) btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>';
-            }
-
-            const group = skipLinked ? [addr] : getLinkedGroup(addr);
 
             group.forEach(targetAddr => {
-                if (!skipUi) {
-                    currentFaderValues[targetAddr] = intVal;
+                currentFaderValues[targetAddr] = intVal;
 
-                    if (!skipAutoCheck && !isEngineVisualOn) {
-                        saveActiveChannels[targetAddr] = true;
-                        const checkbox = document.getElementById(`save-active-${targetAddr}`);
-                        if (checkbox) checkbox.checked = true;
-                    }
-
-                    const disp = document.getElementById(`disp-${targetAddr}`);
-                    if (disp) {
-                        disp.value = intVal;
-                        disp.innerText = intVal;
-                    }
-                    const input = document.getElementById(`input-${targetAddr}`);
-                    if (input) input.value = intVal;
+                if (!skipAutoCheck) {
+                    saveActiveChannels[targetAddr] = true;
+                    const checkbox = document.getElementById(`save-active-${targetAddr}`);
+                    if (checkbox) checkbox.checked = true;
                 }
+
+                const disp = document.getElementById(`disp-${targetAddr}`);
+                if (disp) {
+                    disp.value = intVal;
+                    disp.innerText = intVal;
+                }
+                const input = document.getElementById(`input-${targetAddr}`);
+                if (input) input.value = intVal;
             });
+            // Send ALL active overrides
+            const overrides = Object.entries(currentFaderValues).map(([a, v]) => ({
+                address: parseInt(a),
+                value: v
+            }));
 
-            let overridesToSend;
-            if (isEngineVisualOn) {
-                // Audio control mode: Only send active overrides (those being moved, held by checkbox, or in the current linked group)
-                overridesToSend = Object.entries(currentFaderValues)
-                    .filter(([a, v]) => {
-                        const addrInt = parseInt(a);
-                        return draggingAddresses.has(addrInt) || saveActiveChannels[addrInt] || group.includes(addrInt);
-                    })
-                    .map(([a, v]) => ({
-                        address: parseInt(a),
-                        value: v
-                    }));
-            } else {
-                // Setup mode: Send all values to maintain total manual control (override paused value to 0 if skipUi)
-                overridesToSend = Object.entries(currentFaderValues).map(([a, v]) => {
-                    const addrInt = parseInt(a);
-                    return {
-                        address: addrInt,
-                        value: (skipUi && addrInt === addr) ? 0 : v
-                    };
-                });
-            }
-
-            if (ws && ws.readyState === 1 && overridesToSend.length > 0) {
+            if (ws && ws.readyState === 1) {
                 ws.send(JSON.stringify({
                     type: 'laser_override',
-                    overrides: overridesToSend
+                    overrides: overrides
                 }));
             }
         }
@@ -3869,6 +3806,145 @@
             }
         }
 
+        // --- RECORD TEST VISUALIZER ---
+        let recordTestActive = false;
+        let recordTestMaxFrames = 30 * 60;
+        let recordTestInterval = null;
+        let recordTestChannelsInfo = [];
+        let recordTestDevName = null;
+
+        function showRecordTestOverlay() {
+            if (!currentProfile) {
+                alert('Please load or save a profile first.');
+                return;
+            }
+            const profileFileName = document.getElementById('fix-filename').value;
+            if (!profileFileName) {
+                alert('Please load or save a profile first.');
+                return;
+            }
+            let targetDevName = null;
+            let targetDevCfg = null;
+            const allDevices = stageConfig.devices || {};
+            for (const [dName, cfg] of Object.entries(allDevices)) {
+                if (cfg.type === profileFileName) {
+                    targetDevName = dName;
+                    targetDevCfg = cfg;
+                    break;
+                }
+            }
+            if (!targetDevName) {
+                alert('No fixture on stage uses this profile. Add one in the Manager tab first.');
+                return;
+            }
+            recordTestDevName = targetDevName;
+            document.getElementById('record-test-subtitle').innerText = 'Simulating via ' + targetDevName;
+            const container = document.getElementById('record-test-channels');
+            container.innerHTML = '';
+            recordTestChannelsInfo = [];
+            const sortedChans = Object.entries(currentProfile.channels).sort((a, b) => {
+                const offA = typeof a[1] === 'object' ? a[1].offset : a[1];
+                const offB = typeof b[1] === 'object' ? b[1].offset : b[1];
+                return offA - offB;
+            });
+            sortedChans.forEach(([role, val]) => {
+                const offset = typeof val === 'object' ? val.offset : val;
+                const absAddr = targetDevCfg.address + targetDevCfg.offset + offset;
+                recordTestChannelsInfo.push({ role, addr: absAddr, data: [] });
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; gap:20px; align-items:center; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);';
+                const labelDiv = document.createElement('div');
+                labelDiv.style.cssText = 'width:120px; flex-shrink:0; font-size:12px; font-weight:bold; color:var(--text-dim); text-transform:uppercase;';
+                labelDiv.innerHTML = role + '<br><span style="font-size:10px; color:#666; font-weight:normal">CH ' + absAddr + '</span>';
+                const canvasContainer = document.createElement('div');
+                canvasContainer.style.cssText = 'flex:1; height:60px; position:relative;';
+                const canvas = document.createElement('canvas');
+                canvas.id = 'canvas-' + absAddr;
+                canvas.style.cssText = 'width:100%; height:100%; display:block; background:#0a0a0f; border:1px inset #222; border-radius:4px;';
+                canvasContainer.appendChild(canvas);
+                row.appendChild(labelDiv);
+                row.appendChild(canvasContainer);
+                container.appendChild(row);
+            });
+            document.getElementById('recordTestOverlay').style.display = 'flex';
+            requestAnimationFrame(drawRecordTest);
+        }
+
+        function closeRecordTestOverlay() {
+            if (recordTestActive) toggleRecordTest();
+            document.getElementById('recordTestOverlay').style.display = 'none';
+        }
+
+        function toggleRecordTest() {
+            const btn = document.getElementById('record-test-btn');
+            if (!recordTestActive) {
+                recordTestActive = true;
+                btn.innerText = 'Stop Recording';
+                btn.className = 'btn';
+                recordTestChannelsInfo.forEach(ch => ch.data = []);
+                if (recordTestInterval) clearInterval(recordTestInterval);
+                recordTestInterval = setInterval(recordTestTick, 1000 / 30);
+            } else {
+                recordTestActive = false;
+                btn.innerText = 'Record (Max 60s)';
+                btn.className = 'btn danger';
+                if (recordTestInterval) clearInterval(recordTestInterval);
+                recordTestInterval = null;
+            }
+        }
+
+        function recordTestTick() {
+            if (!recordTestActive) return;
+            const dmx = latestDmxState || {};
+            let isFull = false;
+            recordTestChannelsInfo.forEach(ch => {
+                const stateKey = recordTestDevName + '_' + ch.role;
+                const val = dmx[stateKey] !== undefined ? dmx[stateKey] : 0;
+                ch.data.push(val);
+                if (ch.data.length >= recordTestMaxFrames) isFull = true;
+            });
+            requestAnimationFrame(drawRecordTest);
+            if (isFull) toggleRecordTest();
+        }
+
+        function drawRecordTest() {
+            recordTestChannelsInfo.forEach(ch => {
+                const canvas = document.getElementById('canvas-' + ch.addr);
+                if (!canvas) return;
+                if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
+                if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                ctx.beginPath();
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 1;
+                ctx.moveTo(0, h / 2);
+                ctx.lineTo(w, h / 2);
+                ctx.stroke();
+                if (ch.data.length === 0) return;
+                ctx.beginPath();
+                ctx.strokeStyle = '#7c4dff';
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+                const xStep = w / recordTestMaxFrames;
+                for (let i = 0; i < ch.data.length; i++) {
+                    const px = i * xStep;
+                    const py = h - ((ch.data[i] / 255) * h);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+                const lastVal = ch.data[ch.data.length - 1];
+                const lastX = (ch.data.length - 1) * xStep;
+                const lastY = h - ((lastVal / 255) * h);
+                ctx.beginPath();
+                ctx.fillStyle = '#fff';
+                ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
 
         // --- LIVE CHANNEL TESTER ---
         function toggleLiveChannelTest(role) {

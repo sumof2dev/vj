@@ -30,7 +30,7 @@
     "calibration": {
         "horizontal": [
             {
-                "min": 150,
+                "min": 0,
                 "center": 172,
                 "max": 255,
                 "vibe": "any"
@@ -96,7 +96,7 @@
             {
                 "min": 0,
                 "center": 50,
-                "max": 255,
+                "max": 100,
                 "vibe": "any"
             }
         ]
@@ -106,7 +106,7 @@
     "macros": {},
     "step_data": {},
     "modifiers": {
-        "horizontal": "flux",
+        "horizontal": "lfo",
         "reset": "state_machine",
         "hor+vert op": "flux",
         "dimming": "flux",
@@ -119,8 +119,8 @@
         "horizontal": {
             "shape": "sawtooth",
             "bin": 1,
-            "speed": 0.76,
-            "react": 0.6,
+            "speed": 1.3,
+            "react": 1.95,
             "return_to_min": false,
             "threshold": 0,
             "hold": 0,

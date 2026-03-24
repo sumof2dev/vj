@@ -19,13 +19,21 @@ class VibeEngine:
         self.energy_history = collections.deque(maxlen=120)  # ~4s at 30fps
         self.transient = "steady"  # "building", "dropping", "tension", "steady"
         self._transient_hold_until = 0  # Hold timer to prevent single-frame flickers
+        self._steady_since = 0 # Prevent re-triggering building too fast
 
-    def update(self, audio_state):
+    def update(self, audio_state, now=None):
         """
         Input: Raw Audio Dictionary from main.py
         Output: The "3x3" Command Structure
         """
-        now = time.time()
+        if now is None: now = time.time()
+        
+        # Initialize timestamps on first frame to support virtual time / reset
+        if not hasattr(self, '_time_initialized') or now < self.last_vibe_change - 10.0:
+            self.last_vibe_change = now
+            self._transient_hold_until = now
+            self._steady_since = now
+            self._time_initialized = True
         
         # 1. CALCULATE DENSITY (For Vibe Selection)
         if audio_state['beat']:
@@ -54,7 +62,7 @@ class VibeEngine:
             
             if density < chill_density and audio_state['vol'] < chill_vol:
                 target = "chill"
-            elif density > high_density and audio_state['vol'] > high_vol and audio_state.get('confidence', 1.0) > 0.5:
+            elif density > high_density and audio_state['vol'] > high_vol:
                 target = "high"
             else:
                 target = "mid"
@@ -107,7 +115,8 @@ class VibeEngine:
                 
                 if self.transient == "steady":
                     # Entry to BUILDING: Energy is rising over ~2 seconds
-                    if trend_long > 1.0:
+                    # DEBOUNCE: Stay steady for at least 0.5s before re-building
+                    if trend_long > 1.0 and now - self._steady_since > 0.5:
                         self.transient = "building"
                         self._transient_hold_until = now + HOLD_TIMES["building"]
                 
@@ -136,20 +145,18 @@ class VibeEngine:
                 elif self.transient == "dropping":
                     # Drop is over, return to steady
                     self.transient = "steady"
+                    self._steady_since = now
 
-        # 4. APPLY CONFIDENCE SCALING (The "Commit Zone")
-        # Low confidence = reduced amplitude of effects
-        conf = audio_state.get('confidence', 1.0)
+        # Drop is over, return to steady
         
         return {
             "vibe": self.current_vibe,      # "chill", "mid", "high"
             "transient": self.transient,    # "building", "dropping", "steady"
             "mods": {
-                "bass": self.smooth_bass * max(0.4, conf),   # Floor confidence at 0.4
-                "high": self.smooth_high * max(0.4, conf),
-                "flux": self.smooth_flux * max(0.4, conf),
-                "vol":  audio_state['vol'] * max(0.5, conf), # Ensure at least 50% volume passes through
-                "conf": conf,                      # Pass through for DMX scaling
+                "bass": self.smooth_bass,
+                "high": self.smooth_high,
+                "flux": self.smooth_flux,
+                "vol":  audio_state['vol'],
                 "beat_phase": audio_state.get('beat_phase', 0.0)  # 0-1 position in beat
             }
         }

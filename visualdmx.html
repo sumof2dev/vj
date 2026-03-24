@@ -96,10 +96,10 @@
             float clampedBass = min(u_bass, 0.8);
             float clampedVol = min(u_vol, 0.8);
             
-            p.z += u_time * (0.5 + clampedFlux * 0.5);
+            p.z += u_time * (0.2 + clampedFlux * 0.4);
             
             // Combine rotations into one call where possible
-            float rotAngle = u_time * 0.1 + p.z * 0.03 * (1.0 + clampedBass * 0.2);
+            float rotAngle = u_time * 0.05 + p.z * 0.02 * (1.0 + clampedBass * 0.15);
             rot(p.xy, rotAngle);
             
             float size = 4.0;
@@ -1196,6 +1196,7 @@
         uniform float u_blackPoint; 
         uniform float u_time;
         uniform float u_transient_state; // 0=steady, 1=building, 2=tension, 3=dropping
+        uniform float u_vol;
         uniform float u_drop_time;
         uniform vec2 u_resolution;
 
@@ -1233,6 +1234,19 @@
             float denominator = 1.0 - u_blackPoint;
             if(denominator < 0.05) denominator = 0.05; 
             color.rgb = (color.rgb - u_blackPoint) / denominator;
+
+            // --- USER Blackout: 3% threshold ---
+            if (u_vol <= 0.03) {
+                color.rgb = vec3(0.0);
+            }
+            // --- USER Strobe: Dropping state strobe (Hard black to on) ---
+            else if (u_transient_state == 3.0) {
+                // High speed strobe (approx 15Hz)
+                if (mod(u_time * 15.0, 1.0) > 0.5) {
+                    color.rgb = vec3(0.0);
+                }
+            }
+
             color.rgb = clamp(color.rgb, 0.0, 0.9); // FINAL SAFETY: No pure white 
             
             gl_FragColor = color;
@@ -1430,6 +1444,7 @@
             u_axis_c: { value: 0 },
             u_axis_d: { value: 0 },
             u_axis_e: { value: 0 },
+            u_frequency: { value: 0 },
             u_noiseTex: { value: noiseTexture },
             tDiffuse: { value: null } // Used for Spotify Album Art
         };
@@ -2040,6 +2055,7 @@
             uniforms: {
                 tDiffuse: { value: null },
                 u_blackPoint: { value: 0.2 },
+                u_vol: { value: 0 },
                 u_time: { value: 0 },
                 u_transient_state: { value: 0 },
                 u_drop_time: { value: -1 },
@@ -2299,8 +2315,6 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             const rawTime = clock.getElapsedTime();
-            accumulatedTime += delta * remoteParams.speed;
-            const time = accumulatedTime;
 
             // --- TRANSIENT STATE TRACKING ---
             if (currentTransient === 'dropping' && lastTransient !== 'dropping') {
@@ -2324,12 +2338,16 @@
             if (currentTransient === "tension") {
                 smoothFactor = 0.02; // Float slowly
                 amp *= 0.3;          // Constrain movement
-                currentSpeed *= 0.2; // Freeze rotation
+                currentSpeed *= 0.5; // Soften freeze
             } else if (currentTransient === "dropping") {
                 smoothFactor = 0.8;  // Instant snap to audio peaks
-                amp *= 2.0;          // Exaggerate displacement
-                currentSpeed *= 3.0; // Accelerate rotation
+                amp *= 1.4;          // Exaggerate displacement slightly
+                currentSpeed *= 1.6; // Controlled acceleration
             }
+
+            // Sync playback speed with transients
+            accumulatedTime += delta * currentSpeed;
+            const time = accumulatedTime;
 
             smoothedMods.flux += (targetMods.flux - smoothedMods.flux) * smoothFactor;
             smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * smoothFactor;
@@ -2337,10 +2355,8 @@
             smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * smoothFactor;
 
             // --- DECOUPLED VISUAL GAIN ---
-            // Since main.py now sends clean 0.0-1.0 data, we apply a base multiplier here 
-            // to make the shaders "pop", scaling it further with your UI Amplitude slider.
-            // We completely ignore the Master Sensitivity slider to decouple from the lasers.
-            const VISUAL_BASE_GAIN = 3.0;
+            // Matched to 1.0 to ensure visuals react exactly like the DMX engine (Master Sensitivity driven)
+            const VISUAL_BASE_GAIN = 1.0;
             const visualPower = VISUAL_BASE_GAIN * amp;
 
             // --- PROCEDURAL SYNC (Axis Matrix) ---
@@ -2355,6 +2371,7 @@
             uniforms.u_axis_c.value = logicState.axis_c || 0;
             uniforms.u_axis_d.value = logicState.axis_d || 0;
             uniforms.u_axis_e.value = logicState.axis_e || 0;
+            uniforms.u_frequency.value = logicState.frequency || 0;
 
             // Audio Modulators (Reactivity)
             // Clamped at 1.5 to prevent the shaders from blowing out to pure white
@@ -2396,7 +2413,7 @@
             const fluxPulse = 1.0 + (visualBeatPulse * 0.3 + smoothedMods.flux * 0.1) * visualPower;
 
             // Update uniforms - apply sensitivity boost
-            uniforms.u_time.value = rawTime;
+            uniforms.u_time.value = time;
 
             // Brightness/Color Uniforms: Use CLAMPED modulators
             // This prevents the "washed out" white screen
@@ -2416,13 +2433,14 @@
             uniforms.u_drop_time.value = dropDuration;
 
             // Update post-processing pass uniforms
-            blackPointPass.uniforms.u_time.value = rawTime;
+            blackPointPass.uniforms.u_time.value = time;
+            blackPointPass.uniforms.u_vol.value = smoothedMods.vol;
             blackPointPass.uniforms.u_transient_state.value = transInt;
             blackPointPass.uniforms.u_drop_time.value = dropDuration;
             blackPointPass.uniforms.u_resolution.value.set(window.innerWidth * pixelRatio, window.innerHeight * pixelRatio);
 
             // Update effect pass uniforms
-            kaleidPass.uniforms.u_time.value = rawTime;
+            kaleidPass.uniforms.u_time.value = time;
             kaleidPass.uniforms.u_bass.value = zoomMod;
             kaleidPass.uniforms.u_segments.value = 6.0 + Math.floor(modFlux * 4.0);
 
@@ -2488,7 +2506,7 @@
                 shootingMesh.visible = (oldXMode === 2);
 
                 if (oldXMode === 0) {
-                    gearsMat.uniforms.u_time.value = rawTime;
+                    gearsMat.uniforms.u_time.value = time;
                     gearsMat.uniforms.u_audioLevel.value = smoothedMods.vol * amp;
                     gearsMat.uniforms.u_bass.value = smoothedMods.bass * amp;
                     gearsMat.uniforms.u_mids.value = smoothedMods.flux * amp;

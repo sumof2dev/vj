@@ -70,6 +70,30 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(501, "Not Implemented")
 
     def do_POST(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        
+        # API: Proxy Engine Restart
+        if path == '/api/restart':
+            try:
+                import urllib.request
+                import ssl
+                # Ignore SSL verification for local launcher proxy
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+
+                req = urllib.request.Request("https://127.0.0.1:8001/restart")
+                with urllib.request.urlopen(req, timeout=5, context=ctx) as response:
+                    self.send_response(200)
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(b'{"status": "restarting"}')
+            except Exception as e:
+                self.send_error(500, f"Failed to hit local launcher: {e}")
+            return
+            
         self.do_PUT()
 
     def _handle_list_fixtures(self):

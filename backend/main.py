@@ -13,8 +13,16 @@ import random
 import base64
 from dmx_engine import DMXEngine
 from vibe_engine import VibeEngine
-import evdev
-from evdev import ecodes
+from audio_analyzer import AudioAnalyzer
+import wave
+
+try:
+    import evdev
+    from evdev import ecodes
+    HAS_EVDEV = True
+except ImportError:
+    HAS_EVDEV = False
+    print("⚠️  evdev not found. Gamepad support disabled.")
 
 # --- SYNTH ENGINE ---
 class SimpleSynth:
@@ -81,6 +89,7 @@ hardware_synth_enabled = True # Enabled by default for direct test
 
 def get_gamepad():
     """Find the first Xbox/Microsoft controller available"""
+    if not HAS_EVDEV: return None
     try:
         devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
         for device in devices:
@@ -92,6 +101,9 @@ def get_gamepad():
     return None
 
 async def gamepad_task():
+    if not HAS_EVDEV:
+        print("🎮 Gamepad support disabled (evdev missing)")
+        return
     global hardware_synth_enabled, gamepad_state
     print("🎮 Gamepad Watchdog Started")
     
@@ -126,19 +138,6 @@ async def gamepad_task():
                             dmx_engine.clear_device_overrides("L2")
                             print("🎮 L1/L2 Reset to AUTO")
 
-                    # A = Drop
-                    elif event.code == ecodes.BTN_SOUTH and event.value == 1:
-                        if dmx_engine: dmx_engine.current_scene_name = "PRESET:Drop"
-                    # B = Tension
-                    elif event.code == ecodes.BTN_EAST and event.value == 1:
-                        if dmx_engine: dmx_engine.current_scene_name = "PRESET:Tension"
-                    # X = Hold
-                    elif event.code == ecodes.BTN_WEST and event.value == 1:
-                        if dmx_engine: dmx_engine.current_scene_name = "hold"
-                    # Y = Build
-                    elif event.code == ecodes.BTN_NORTH and event.value == 1:
-                        if dmx_engine: dmx_engine.current_scene_name = "PRESET:Build"
-                    
                     # Update global button states
                     BTN_MAP = {
                         ecodes.BTN_SOUTH: "btn_a", ecodes.BTN_EAST: "btn_b", 
@@ -277,6 +276,7 @@ dmx_engine = None
 vibe_engine = None
 connected_clients = set()
 dmx_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+dmx_ready = True
 audio_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 is_usb_dmx = False
 last_serialized_state = "{}" # Pre-serialized broadcast message
@@ -360,302 +360,7 @@ def load_live_defaults():
 
 # --- AUDIO ENGINE (Spectral Flux) ---
 # --- LEAN AUDIO ENGINE (NO LIBROSA) ---
-class AudioAnalyzer:
-    def __init__(self):
-        # WLED Frequency Ranges (Hz)
-        self.wled_freqs = [
-            86, 129, 216, 301, 430, 560, 818, 1120, 
-            1421, 1895, 2412, 3015, 3704, 4479, 7106, 9259
-        ]
-        
-        # Audio History for Rolling Normalization
-        self.rolling_window_size = 300 # Approx 5-10 seconds @ 30-60 updates/sec
-        self.history_bass = collections.deque(maxlen=self.rolling_window_size)
-        self.history_mid  = collections.deque(maxlen=self.rolling_window_size)
-        self.history_high = collections.deque(maxlen=self.rolling_window_size)
-        self.history_flux = collections.deque(maxlen=self.rolling_window_size)
-        self.history_raw_max = collections.deque(maxlen=self.rolling_window_size)
-
-        # Beat Detection State
-        self.last_beat_time = 0.0
-        self.bpm_list = []
-        self.bpm = 120.0
-        self.prev_beat_timestamp = time.time()
-        self.beat_intervals = collections.deque(maxlen=4)
-        
-        # Confidence State
-        self.confidence = 0.0
-        self.isolation = 0.0
-        
-        # Silence Detection
-        self.last_sound_time = time.time()
-
-        # Gain (Sensitivity)
-        self.gain = 0.5 # Default gain (1.0 = Normal)
-        
-        # Flux Threshold Tuning
-        self.flux_threshold_mult = 2.05 # Flux Sens 0.5
-        self.flux_threshold_abs = 0.35  # Flux Sens 0.5
-        
-        # Simple Timer for pattern switching
-        self.frames_since_switch = 0
-        self.auto_switch_threshold = 400 
-        self.prev_bands = [0.0, 0.0, 0.0]
-        self.prev_bins = [0.0] * 11
-        self.beat_count = 0
-
-    def set_gain(self, val: float):
-        """Set normalization gain (Sensitivity)"""
-        self.gain = max(0.01, min(5.0, float(val)))
-
-    def set_flux_sensitivity(self, val: float):
-        """Set flux threshold multiplier (Higher = less sensitive to beats)"""
-        # Map 0.0-1.0 to thresholds
-        # val 0.5 (Default) -> mult 1.5, abs 0.25
-        # val 1.0 (Highest Sens) -> mult 1.1, abs 0.1
-        # val 0.0 (Lowest Sens) -> mult 3.0, abs 0.6
-        self.flux_threshold_mult = 3.0 - (float(val) * 1.9)
-        self.flux_threshold_abs = 0.6 - (float(val) * 0.5)
-
-    def _normalize(self, val, history):
-        """Perform rolling normalization (val - history_min) / (history_max - history_min)"""
-        history.append(val)
-        if len(history) < 10: return 0.5 # Not enough data
-        
-        min_val = min(history)
-        max_val = max(history)
-        
-        # SANE PEAK: Instead of normalizing against absolute max in history (which might be noise),
-        # use a minimum baseline for the 'max' so tiny sounds aren't boosted to 100%.
-        sane_peak = max(0.4, max_val)
-        
-        if sane_peak - min_val < 0.0001: return 0.0
-        
-        norm = (val - min_val) / (sane_peak - min_val)
-        return min(1.0, max(0.0, norm))
-
-    def process(self, indata):
-        if indata.size == 0: return self.get_empty_state()
-
-        # 1. Clean & FFT
-        mono = np.mean(indata, axis=1)
-        mono = mono - np.mean(mono)
-        fft_raw = np.abs(np.fft.rfft(mono))
-        freqs = np.fft.rfftfreq(len(mono), 1/44100) 
-        
-        # 2. Map to 16 WLED Bins
-        wled_bins = [0.0] * 16
-        current_fft_idx = 1
-        for i, cutoff in enumerate(self.wled_freqs):
-            start = current_fft_idx
-            while current_fft_idx < len(freqs) and freqs[current_fft_idx] < cutoff:
-                current_fft_idx += 1
-            if current_fft_idx == start: current_fft_idx += 1 
-            chunk = fft_raw[start:current_fft_idx]
-            if chunk.size > 0: wled_bins[i] = np.mean(chunk)
-
-        # 3. Calculate Raw Bands
-        raw_bass = np.mean(wled_bins[0:4])
-        raw_mid  = np.mean(wled_bins[4:11])
-        raw_high = np.mean(wled_bins[11:16])
-        
-        # 3.5 Calculate 11 Frequency Bins (logarithmically spaced from wled_bins)
-        # Bin 0: Sub-bass (86 Hz)
-        # Bin 1: Bass (129-216 Hz)
-        # Bin 2: Low-mid (216-301 Hz)
-        # Bin 3: Mid (301-430 Hz)  
-        # Bin 4: Upper-mid (430-560 Hz)
-        # Bin 5: Presence (560-818 Hz)
-        # Bin 6: Upper presence (818-1120 Hz)
-        # Bin 7: Low treble (1120-1895 Hz)
-        # Bin 8: Treble (1895-3015 Hz)
-        # Bin 9: High treble (3015-4479 Hz)
-        # Bin 10: Brilliance (4479-9259 Hz)
-        raw_bins = [
-            wled_bins[0],
-            np.mean(wled_bins[1:3]),
-            wled_bins[3],
-            wled_bins[4],
-            wled_bins[5],
-            wled_bins[6],
-            wled_bins[7],
-            np.mean(wled_bins[8:10]),
-            np.mean(wled_bins[10:12]),
-            np.mean(wled_bins[12:14]),
-            np.mean(wled_bins[14:16])
-        ]
-        
-        # 4. Silence Reset
-        raw_vol = (raw_bass + raw_mid + raw_high) / 3.0
-        now = time.time()
-        if raw_vol > 0.01: # Signal detected
-            self.last_sound_time = now
-        elif now - self.last_sound_time > 5.0:
-            # Silence for > 5 seconds, reset state
-            self.bpm = 120.0
-            self.bpm_list = []
-            return self.get_empty_state()
-
-        # 5. ROLLING NORMALIZATION
-        # Auto-scales raw input to 0.0-1.0 range
-        out_bass = self._normalize(raw_bass, self.history_bass)
-        out_mid  = self._normalize(raw_mid, self.history_mid)
-        out_high = self._normalize(raw_high, self.history_high)
-        
-        # Track Global Raw Peak for sync'd bin/vol scaling
-        current_raw_max = max(raw_bass, raw_mid, raw_high)
-        self.history_raw_max.append(current_raw_max)
-        global_peak = max(0.4, max(self.history_raw_max) if self.history_raw_max else 0.4)
-        
-        # Consistent Vol scaling (relative to shared peak)
-        out_vol = min(1.0, (current_raw_max / global_peak) * self.gain)
-
-        # Apply Logic Gain Slider (User preference) to bands
-        out_bass = min(1.0, out_bass * self.gain)
-        out_mid  = min(1.0, out_mid * self.gain)
-        out_high = min(1.0, out_high * self.gain)
-        
-        # 6. FLUX CALCULATION (Moved before Beat Detection)
-        # Spectral Flux = Positive change in energy across bands
-        # This is a much better onset detector than raw volume
-        bass_delta = max(0, out_bass - self.prev_bands[0])
-        high_delta = max(0, out_high - self.prev_bands[2])
-        flux = bass_delta + \
-               max(0, out_mid - self.prev_bands[1]) + \
-               high_delta
-
-        # 6.5 PER-BAND ONSET DETECTION
-        # Independent triggers for bass drops vs hi-hat/cymbal hits
-        bass_onset = bass_delta > 0.15
-        high_onset = high_delta > 0.12
-
-        self.prev_bands = [out_bass, out_mid, out_high]
-        
-        # Normalize 11 bins AGAINST THE GLOBAL PEAK (Saves UI consistency)
-        out_bins = [0.0] * 11
-        for bi in range(11):
-            val = float(raw_bins[bi])
-            # Attenuate Sub-Bass (Bin 0) to handle rumble/DC noise and make UI less overwhelming
-            if bi == 0: val *= 0.75 
-            
-            # Use shared global peak for consistent scaling with Volume indicator
-            normalized = min(1.0, (val / global_peak) * self.gain)
-            
-            # Smooth: 70% previous + 30% new (prevents jitter)
-            out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * 0.7 + normalized * 0.3))
-        self.prev_bins = out_bins
-        
-        # Maintain Flux History for Adaptive Threshold
-        self.history_flux.append(flux)
-        
-        # 7. ADAPTIVE BEAT DETECTION (Flux-Based)
-        is_beat = False
-        
-        # Calculate trailing average (Cumulative Average)
-        if len(self.history_flux) > 0:
-            avg_flux = sum(self.history_flux) / len(self.history_flux)
-            
-            # Threshold: Flux must be > mult * average AND > absolute threshold
-            if flux > avg_flux * self.flux_threshold_mult and flux > self.flux_threshold_abs:
-                # DEBOUNCE: Max 170 BPM (60/170 = ~0.35s)
-                if now - self.prev_beat_timestamp > 0.35:
-                    is_beat = True
-                    self.beat_count += 1
-                    print(f"🥁 BEAT DETECTED #{self.beat_count} | BPM: {self.bpm:.1f} | Flux: {flux:.2f}")
-                    
-                    # Update BPM
-                    delta = now - self.prev_beat_timestamp
-                    new_bpm = 60.0 / delta
-                    self.prev_beat_timestamp = now
-                    
-                    # Outlier Rejection
-                    self.bpm_list.append(new_bpm)
-                    if len(self.bpm_list) > 4:
-                        self.bpm_list.pop(0)
-                        
-                    # Smooth BPM
-                    avg_bpm = sum(self.bpm_list) / len(self.bpm_list)
-                    self.bpm = avg_bpm
-
-                    # Update Beat Stability (Confidence component)
-                    self.beat_intervals.append(delta)
-
-        # 7.2 BEAT PHASE TRACKING
-        # Position within the current beat cycle (0.0 = on beat, 1.0 = next beat)
-        # Enables beat-synced effects that anticipate or land precisely
-        if self.bpm > 0:
-            beat_phase = ((now - self.prev_beat_timestamp) * self.bpm / 60.0) % 1.0
-        else:
-            beat_phase = 0.0
-        
-        # 7.5. CONFIDENCE CALCULATION
-        # A) Beat Stability: How consistent are the intervals?
-        stability = 0.0
-        if len(self.beat_intervals) >= 3:
-            intervals = list(self.beat_intervals)
-            avg_int = sum(intervals) / len(intervals)
-            # Calculate variance/deviation
-            dev = sum(abs(x - avg_int) for x in intervals) / len(intervals)
-            # Stability = 1.0 (perfect) to 0.0 (erratic)
-            stability = max(0.0, 1.0 - (dev / (avg_int * 0.5 + 0.01)))
-            
-        # B) Frequency Isolation: Clear signal vs Muddy noise
-        # Compare Peak bin vs Average of all bins
-        isolation = 0.0
-        if any(wled_bins):
-            peak = max(wled_bins)
-            avg_bins = sum(wled_bins) / len(wled_bins)
-            # Isolation = Peak/Avg ratio, normalized
-            # Clear signal (one instrument) has high peak/avg.
-            # Pink noise (muddy) has low peak/avg.
-            ratio = peak / (avg_bins + 0.001)
-            isolation = min(1.0, (ratio - 1.0) / 4.0) # 5.0x ratio = 100% isolation
-        self.isolation = isolation
-
-        # C) Flux Magnitude: Sharpness of transients
-        flux_mag = min(1.0, flux * 2.0)
-
-        # FINAL CONFIDENCE SCORE (Weighted)
-        # 40% Stability, 40% Isolation, 20% Flux
-        new_conf = (stability * 0.4) + (isolation * 0.4) + (flux_mag * 0.2)
-        
-        # Smooth Confidence to prevent jitter
-        self.confidence += (new_conf - self.confidence) * 0.1
-        self.confidence = max(0.0, min(1.0, self.confidence))
-
-        # 8. Pattern Switching logic
-        suggested_shape = None
-        self.frames_since_switch += 1
-        if is_beat and self.frames_since_switch > self.auto_switch_threshold:
-            suggested_shape = "random"
-            self.frames_since_switch = 0
-
-        return {
-            "bass": float(out_bass),
-            "mid": float(out_mid),
-            "high": float(out_high),
-            "vol":  float(out_vol),
-            "flux": float(flux),
-            "beat": bool(is_beat),
-            "bass_onset": bool(bass_onset),
-            "high_onset": bool(high_onset),
-            "beat_phase": float(beat_phase),
-            "beat_count": int(self.beat_count),
-            "bpm": float(self.bpm),
-            "confidence": float(self.confidence),
-            "isolation": float(self.isolation),
-            "suggested_animation": suggested_shape,
-            "bins": [float(b) for b in out_bins]
-        }
-
-    def get_empty_state(self):
-         return { 
-             "bass": 0.0, "mid": 0.0, "high": 0.0, "vol": 0.0, "flux": 0.0, 
-             "beat": False, "bpm": 120.0, "confidence": 0.0, "isolation": 0.0,
-             "bass_onset": False, "high_onset": False, "beat_phase": 0.0,
-             "suggested_animation": None, "vibe": "chill", "transient": "steady",
-             "bins": [0.0] * 11
-         }
+from audio_analyzer import AudioAnalyzer
 
 analyzer = AudioAnalyzer()
 
@@ -984,29 +689,36 @@ async def process_audio_queue():
                         # This allows 60fps throughput for smaller setups (Full 512 needs 25ms @ 250k)
                         full_u = dmx_engine.get_universe()
                         max_addr = 0
-                        for dev in dmx_engine.stage_config.get('devices', {}).values():
-                            fixture = dmx_engine.fixtures.get(dev.get('type'))
+                        for inst in dmx_engine.stage_instances:
+                            fixture = dmx_engine.fixtures.get(inst.get('fixtureId'))
                             if fixture:
-                                # Address + Offset + max channel offset
-                                ch_offsets = fixture.get('channels', {}).values()
-                                if ch_offsets:
-                                    dev_max = dev['address'] + dev['offset'] + max(ch_offsets)
+                                ch_count = len(fixture.get('channels', []))
+                                if ch_count > 0:
+                                    dev_max = int(inst.get('address', 1)) + int(inst.get('offset', 0)) + (ch_count - 1)
                                     if dev_max > max_addr: max_addr = dev_max
                         
-                        # Truncate to max used (min 32 for stability, max 513)
-                        # Ensure we also include any active manual overrides that might be past the device range
-                        if dmx_engine and dmx_engine.overrides:
-                            max_o = max(dmx_engine.overrides.keys())
-                            if max_o > max_addr: max_addr = max_o
+                        # 🟢 BACKLOG PREVENTION: Only submit if executor is ready
+                        global dmx_ready
+                        if dmx_port and dmx_ready:
+                            dmx_ready = False
+                            # Truncate to max used (min 32 for stability, max 513)
+                            # Ensure we also include any active manual overrides that might be past the device range
+                            if dmx_engine and dmx_engine.overrides:
+                                max_o = max(dmx_engine.overrides.keys())
+                                if max_o > max_addr: max_addr = max_o
+                                
+                            send_len = max(32, min(513, max_addr + 1))
+                            universe = bytearray(full_u[:send_len])
                             
-                        send_len = max(32, min(513, max_addr + 1))
-                        universe = bytearray(full_u[:send_len])
-                        
-                        if current_time - last_log > 0.5:
-                            print(f"📊 DMX STATS: SendLen={send_len} | Overrides={len(dmx_engine.overrides)}")
-                        
-                        loop = asyncio.get_running_loop()
-                        loop.run_in_executor(dmx_executor, sync_send_dmx, dmx_port, universe)
+                            if current_time - last_log > 0.5:
+                                print(f"📊 DMX STATS: SendLen={send_len} | Overrides={len(dmx_engine.overrides)}")
+                            
+                            loop = asyncio.get_running_loop()
+                            fut = loop.run_in_executor(dmx_executor, sync_send_dmx, dmx_port, universe)
+                            def dmx_done_cb(f):
+                                global dmx_ready
+                                dmx_ready = True
+                            fut.add_done_callback(dmx_done_cb)
 
                    # --- BROADCAST PRE-SERIALIZATION ---
                     # Serialize the state ONCE per frame for all clients
@@ -1015,7 +727,8 @@ async def process_audio_queue():
                     # Adaptive Throttle: Only broadcast at 60fps if there is activity
                     # Otherwise, drop to ~10fps or less for background idle
                     is_active = audio_state.get('vol', 0.0) > 0.01 or audio_state.get('beat', False)
-                    broadcast_interval = 0.016 if is_active else 0.2 # 60Hz or 5Hz
+                    # Optimized for Cloudflare Stability: 30Hz instead of 60Hz
+                    broadcast_interval = 0.033 if is_active else 0.2 # 30Hz or 5Hz
                     
                     if (current_time - last_broadcast_time) >= broadcast_interval:
                         # Optimization: Encode DMX as binary/base64 to save ~60% bandwidth
@@ -1037,6 +750,8 @@ async def process_audio_queue():
                             "data": audio_state.copy(),
                             "dmx_b64": dmx_b64, # Optimized representation (visualizer)
                             "logic": pruned_logic,
+                            "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
+                            "active_presets": [p['name'] for p in dmx_engine.active_presets] if dmx_engine else [],
                             "base_layer": dmx_engine.current_base_layer if dmx_engine else 0,
                             "fx_layer": dmx_engine.current_fx_layer if dmx_engine else 0,
                             "fg_layer": dmx_engine.current_fg_layer if dmx_engine else 0
@@ -1079,6 +794,7 @@ async def spotify_poller():
             client_secret=SPOT_CLIENT_SECRET,
             redirect_uri=SPOTIFY_REDIRECT_URI,
             scope="user-read-currently-playing",
+            cache_handler=handler,
             open_browser=False # Important for headless Pi
         )
         sp = spotipy.Spotify(auth_manager=auth_manager)
@@ -1134,7 +850,11 @@ async def spotify_poller():
         except spotipy.SpotifyException as se:
             print(f"⚠️ Spotify API Error: {se}")
         except Exception as e:
-            print(f"⚠️ Spotify Poller generic error: {e}")
+            err_str = str(e)
+            print(f"⚠️ Spotify Poller generic error: {err_str}")
+            if "EOF" in err_str or isinstance(e, EOFError):
+                print("🛑 Spotify auth requires an interactive browser. Disabling poller for this session.")
+                return
             
         await asyncio.sleep(3.0) # Check every 3 seconds
 
@@ -1359,6 +1079,9 @@ async def ws_handler(websocket):
                             }
                             await websocket.send(json.dumps(params))
 
+                        elif msg_type == "run_calibration":
+                            asyncio.create_task(run_calibration_task(websocket))
+
                     except json.JSONDecodeError:
                         pass
             except asyncio.TimeoutError:
@@ -1380,7 +1103,111 @@ async def ws_handler(websocket):
     except websockets.exceptions.ConnectionClosed:
         print("Client Disconnected")
     finally:
-        connected_clients.remove(websocket)
+        if websocket in connected_clients:
+            connected_clients.remove(websocket)
+
+async def run_calibration_task(websocket):
+    """Background task to run audio engine sanity check and stream results"""
+    try:
+        wav_path = os.path.join(os.path.dirname(__file__), "..", "tests", "calibration", "calibration_audio.wav")
+        truth_path = os.path.join(os.path.dirname(__file__), "..", "tests", "calibration", "calibration_truth.json")
+
+        if not os.path.exists(wav_path) or not os.path.exists(truth_path):
+            await websocket.send(json.dumps({"type": "calibration_error", "message": "Calibration files missing. Run generator first."}))
+            return
+
+        await websocket.send(json.dumps({"type": "calibration_start"}))
+        
+        with open(truth_path, 'r') as f:
+            truth = json.load(f)
+
+        wf = wave.open(wav_path, 'rb')
+        num_frames = wf.getnframes()
+        
+        # Fresh analysis context
+        cal_analyzer = AudioAnalyzer()
+        cal_analyzer.set_gain(1.0)
+        cal_vibe = VibeEngine()
+        
+        results = {"beats": [], "vibe_states": [], "transients": [], "bpm": []}
+        processed_frames = 0
+        
+        # To avoid blocking the WS loop for too long, we process in chunks and yield
+        chunk_count = 0
+        while processed_frames < num_frames:
+            data = wf.readframes(BLOCK_SIZE)
+            if not data: break
+            
+            samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32767.0
+            samples = samples.reshape(-1, 1)
+            
+            t = processed_frames / SAMPLE_RATE
+            audio_state = cal_analyzer.process(samples, now=t)
+            vibe_state = cal_vibe.update(audio_state, now=t)
+            
+            if audio_state['beat']: results["beats"].append(t)
+            results["vibe_states"].append((t, vibe_state['vibe']))
+            results["transients"].append((t, vibe_state['transient']))
+            results["bpm"].append((t, audio_state['bpm']))
+            
+            processed_frames += len(samples)
+            chunk_count += 1
+            
+            # Update UI every 0.5s of virtual audio
+            if chunk_count % 10 == 0:
+                await websocket.send(json.dumps({
+                    "type": "calibration_progress", 
+                    "progress": processed_frames / num_frames,
+                    "bpm": audio_state['bpm']
+                }))
+                await asyncio.sleep(0.01) # Yield to event loop
+
+        wf.close()
+
+        # Evaluate (Same logic as run_calibration.py)
+        # 1. Beats
+        all_truth_beats = []
+        for s in truth["sections"]:
+            if "beats" in s: all_truth_beats.extend(s["beats"])
+        matches = 0
+        for tb in all_truth_beats:
+            closest = min(results["beats"], key=lambda db: abs(db - tb)) if results["beats"] else 999
+            if abs(closest - tb) < 0.1: matches += 1
+        recall = matches / len(all_truth_beats) if all_truth_beats else 0
+        
+        # 2. Vibe/Transient Score
+        vibe_checks = []
+        transient_checks = []
+        for s in truth["sections"]:
+            mid_t = (s["start"] + s["end"]) / 2.0
+            if "expected_vibe" in s:
+                _, actual = min(results["vibe_states"], key=lambda x: abs(x[0] - mid_t))
+                vibe_checks.append({"name": s["name"], "pass": actual == s["expected_vibe"], "actual": actual, "expected": s["expected_vibe"]})
+            if "expected_transient" in s:
+                _, actual = min(results["transients"], key=lambda x: abs(x[0] - mid_t))
+                transient_checks.append({"name": s["name"], "pass": actual == s["expected_transient"], "actual": actual, "expected": s["expected_transient"]})
+
+        # 3. Final BPM (Section 1)
+        mid_s1 = (truth["sections"][0]["start"] + truth["sections"][0]["end"]) / 2.0
+        _, actual_bpm = min(results["bpm"], key=lambda x: abs(x[0] - mid_s1))
+
+        await websocket.send(json.dumps({
+            "type": "calibration_report",
+            "recall": recall,
+            "vibe_checks": vibe_checks,
+            "transient_checks": transient_checks,
+            "bpm_accuracy": {
+                "expected": truth["bpm"],
+                "actual": actual_bpm,
+                "error": abs(actual_bpm - truth["bpm"])
+            }
+        }))
+
+    except Exception as e:
+        print(f"❌ Calibration Task Error: {e}")
+        try:
+            await websocket.send(json.dumps({"type": "calibration_error", "message": str(e)}))
+        except: pass
 
 async def main():
     setup_dmx()    
