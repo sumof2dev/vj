@@ -240,9 +240,9 @@ CONFIG_FILE = "vj_remote_settings.json"
 SPOT_CREDS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "spotify_creds.json")
 
 # Default credentials (fallback)
-SPOT_CLIENT_ID = 'SCRUBBED_ID'
-SPOT_CLIENT_SECRET = 'SCRUBBED_SECRET'
-SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:8888/callback'
+SPOT_CLIENT_ID = ''
+SPOT_CLIENT_SECRET = ''
+SPOTIFY_REDIRECT_URI = 'https://ravebox.love/callback'
 
 # try to load from spotify_creds.json
 if os.path.exists(SPOT_CREDS_FILE):

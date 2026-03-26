@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+
+# Environment / Credentials
+.env
+.venv
+env/
+venv/
+ENV/
+*.pem
+*.key
+*.csr
+*.crt
+cert.pem
+key.pem
+spotify_creds.json
+.spotify_cache
+vj_remote_settings.json
+.wrangler/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Project-specific
+setup.html.bak
+setup.html.old
+ravebox_frontend.zip
+killvj.sh
+vjstatus.sh
+install.sh
+QUICKSTART.sh
+vj-engine.service
+vj-launcher.service
+vj-server.service

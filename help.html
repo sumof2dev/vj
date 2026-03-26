@@ -379,22 +379,22 @@
                 <h2>RaveBox Help</h2>
             </div>
             <ul class="nav-list">
-                <li class="nav-item active" onclick="showSection('spotify')">
+                <li class="nav-item active" onclick="showSection('spotify', this)">
                     <span>🎵</span> Spotify API
                 </li>
-                <li class="nav-item" onclick="showSection('raves')">
+                <li class="nav-item" onclick="showSection('raves', this)">
                     <span>⚡</span> How it Raves
                 </li>
-                <li class="nav-item" onclick="showSection('setup')">
+                <li class="nav-item" onclick="showSection('setup', this)">
                     <span>🛠️</span> Initial Setup
                 </li>
-                <li class="nav-item" onclick="showSection('calibration')">
+                <li class="nav-item" onclick="showSection('calibration', this)">
                     <span>🔬</span> Sanity Check
                 </li>
-                <li class="nav-item" onclick="showSection('log')">
+                <li class="nav-item" onclick="showSection('log', this)">
                     <span>📋</span> Log
                 </li>
-                <li class="nav-item" onclick="showSection('debug')">
+                <li class="nav-item" onclick="showSection('debug', this)">
                     <span>🐞</span> Debug
                 </li>
             </ul>
@@ -460,12 +460,10 @@
                     <h3>⚡ The Audio Pipeline</h3>
                     <p>The engine captures system audio using PulseAudio and performs real-time analysis:</p>
                     <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
-                        <li><strong>6 Frequency Bins:</strong> From Sub + Bass to Air / High, natively mapped for
-                            optimized processing and long-term average dominance.</li>
-                        <li><strong>Spectral Flux Tracking:</strong> Detects physical "impact" rather than just volume.
+                        <li><strong>6 Custom Frequency Bins:</strong> Categorized as <code>Sub+Bass</code>, <code>Low-Mid</code>, <code>Mid</code>, <code>High-Mid</code>, <code>Presence</code>, and <code>Air/High</code>.</li>
+                        <li><strong>Spectral Flux Tracking:</strong> Detects physical "impact" and transient energy shifts rather than just simple volume peaks.
                         </li>
-                        <li><strong>Normalization:</strong> A rolling 5-second window ensures the show is "full"
-                            regardless of track volume.</li>
+                        <li><strong>Normalization:</strong> A rolling 5-second window maps variable inputs to a perfect 0.0-1.0 range, ensuring the show stays "full" even during quiet track sections.</li>
                     </ul>
                 </div>
 
@@ -483,13 +481,12 @@
 
                 <div class="help-card">
                     <h3>🎨 Layered DMX Logic</h3>
-                    <p>Commands pass through a 4-layer priority stack:</p>
+                    <p>Commands pass through a 4-layer priority stack before reaching the fixtures:</p>
                     <ol style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
-                        <li><strong>Spatial & Frequency Logic:</strong> LFOs or Direct Frequency mapping (pinpointing the most dominant EQ bin) mapped to your stage dimensions.</li>
-                        <li><strong>Base Presets:</strong> Animated scenes like "Lissajous" or "Neon Tunnel".</li>
-                        <li><strong>System Triggers:</strong> Styles like "Machine Gun" or "Tearout" that override the
-                            base, and can even punch through global blackouts.</li>
-                        <li><strong>Manual:</strong> Your overrides from the Setup UI.</li>
+                        <li><strong>Spatial & Frequency Logic:</strong> LFOs (Sine, Tri, Saw) or <b>Direct Frequency Mapping</b> (pinpointing the most dominant EQ bin) mapped to your stage dimensions.</li>
+                        <li><strong>Base Presets:</strong> Animated scenes like "Lissajous" or "Voxel Tunnel" provide the rhythmic foundation.</li>
+                        <li><strong>System Triggers (High Priority):</strong> Preset-driven overlays (e.g., "Machine Gun" or "Wonky" presets) that automatically punch through when specific vibe, transient, or EQ conditions are met. These can even override global blackouts.</li>
+                        <li><strong>Manual Overrides (Performance):</strong> Direct additive injections from the UI or physical Gamepads. Manual frequency control acts as a layer <i>on top</i> of the automated analysis.</li>
                     </ol>
                 </div>
             </div>
@@ -513,9 +510,9 @@ dtoverlay=hifiberry-dacplus</pre>
                     <h3>2. System Services</h3>
                     <p>The engine runs as three independent systemd units:</p>
                     <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
-                        <li><strong>vj-server:</strong> Main DMX logic and WebSocket relay.</li>
-                        <li><strong>vj-launcher:</strong> The Flask API that starts/stops the engine.</li>
-                        <li><strong>vj-engine:</strong> The raw python processing core.</li>
+                        <li><strong>vj-server:</strong> The host for the Web UI and Assets (Management Console).</li>
+                        <li><strong>vj-launcher:</strong> The management API that handles engine startup/shutdown and configuration.</li>
+                        <li><strong>vj-engine:</strong> The heavy-lifter: Handles Audio Analysis, Vibe/Transient Detection, and the DMX Logic Engine.</li>
                     </ul>
                     <p>Run <code>./setup_service.sh</code> to re-install or update these services.</p>
                 </div>
@@ -650,16 +647,45 @@ dtoverlay=hifiberry-dacplus</pre>
     </div>
 
     <script>
-        const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
-        const isCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
-        const LAUNCHER_API = window.location.protocol + "//" + (isCloud ? 'api.ravebox.love' : host + (host.includes(':') ? '' : ':8001'));
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryHost = urlParams.get('host');
+        if (queryHost) {
+            localStorage.setItem('vj_backend_host', queryHost.trim());
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({}, '', cleanUrl);
+        }
 
-        function showSection(id) {
+        const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
+        let savedHost = localStorage.getItem('vj_backend_host');
+        
+        // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
+        if (!savedHost && onHostedDomain) {
+            savedHost = prompt("Enter your RaveBox IP or Tunnel URL (e.g., 192.168.1.100 or ravecave.ravebox.love):");
+            if (savedHost) {
+                savedHost = savedHost.trim();
+                localStorage.setItem('vj_backend_host', savedHost);
+            }
+        }
+        
+        const host = savedHost || (onHostedDomain ? null : window.location.hostname);
+        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
+        // Determine if the host is a custom tunnel (e.g., *.ravebox.love but not api.ravebox.love)
+        const isCustomTunnel = host && host.endsWith('.ravebox.love') && !isOriginalCloud;
+        const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? host : host + ':8001'))) : null;
+
+        function showSection(id, el) {
             // Update Navigation
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
-            event.currentTarget.classList.add('active');
+            if (el) el.classList.add('active');
+            else {
+                // Fallback for direct calls
+                const items = document.querySelectorAll('.nav-item');
+                items.forEach(item => {
+                    if (item.getAttribute('onclick').includes(`'${id}'`)) item.classList.add('active');
+                });
+            }
 
             // Update Sections
             document.querySelectorAll('.section').forEach(section => {
@@ -839,7 +865,7 @@ dtoverlay=hifiberry-dacplus</pre>
         function connectWS() {
              const savedPort = localStorage.getItem('vj_ws_port') || '8765';
              const wsProtocol = window.location.protocol === 'https:' ? 'wss' : (ws_retries > 0 ? 'wss' : 'ws');
-             const wsUrl = isCloud ? `wss://wss.ravebox.love` : `${wsProtocol}://${host}:${savedPort}`;
+             const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : `${wsProtocol}://${host}:${savedPort}`;
              
              console.log("Connecting to VJ Engine: " + wsUrl);
              ws = new WebSocket(wsUrl);
@@ -924,9 +950,7 @@ dtoverlay=hifiberry-dacplus</pre>
             const cmd = "sudo journalctl -u vj-engine -u vj-launcher -n 200 --no-pager";
             
             try {
-                const host = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'api.ravebox.love' : (window.location.hostname + ':8001');
-                const protocol = window.location.protocol;
-                const baseUrl = (host === 'api.ravebox.love') ? `${protocol}//${host}` : `${protocol}//${host}`;
+                const baseUrl = LAUNCHER_API || (window.location.protocol + "//" + window.location.hostname + ":8001");
 
                 const res = await fetch(`${baseUrl}/shell?cmd=${encodeURIComponent(cmd)}`);
                 const data = await res.json();

@@ -923,9 +923,34 @@
 
     <script>
         // --- 1. DATABASE & PERSISTENCE ---
-        const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
-        const isCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
-        const API_BASE_ROOT = window.location.protocol + "//" + (isCloud ? 'api.ravebox.love' : host + (host.includes(':') ? '' : ':8000'));
+        let savedHost = localStorage.getItem('vj_backend_host');
+        const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
+        // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
+        if (!savedHost && onHostedDomain) {
+            savedHost = prompt("Enter your RaveBox IP or Tunnel URL (e.g., 192.168.1.100 or ravecave.ravebox.love):");
+            if (savedHost) {
+                savedHost = savedHost.trim();
+                localStorage.setItem('vj_backend_host', savedHost);
+            }
+        }
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryHost = urlParams.get('host');
+        if (queryHost) {
+            localStorage.setItem('vj_backend_host', queryHost.trim());
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({}, '', cleanUrl);
+        }
+
+        savedHost = localStorage.getItem('vj_backend_host');
+        const host = savedHost || (onHostedDomain ? '' : window.location.hostname);
+        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
+        // Smart Tunnel: *.ravebox.love hostnames are routed by Cloudflare — no port needed
+        const isCustomTunnel = host.endsWith('.ravebox.love') && !isOriginalCloud;
+        const baseHost = (isCustomTunnel ? host.replace(/^(api-|ws-)/, '') : host);
+        const apiHost = isCustomTunnel ? 'api-' + baseHost : host;
+        const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
+        const API_BASE_ROOT = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? apiHost : apiHost + ':8000'))) : null;
         const API_BASE = API_BASE_ROOT + '/api/fixtures';
 
         let db = JSON.parse(localStorage.getItem('ravebox_v2_db')) || {
@@ -2064,7 +2089,7 @@
                     db.fixtures.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
             }
 
-            document.getElementById('saved-profiles-list').innerHTML = db.profiles.map(p => {
+            document.getElementById('saved-profiles-list').innerHTML = (db.profiles || []).map(p => {
                 return `<div class="item-row" onclick="editProfile('${p.id}')" style="cursor:pointer">
                     <span>${p.name}</span>
                     <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
@@ -2079,10 +2104,10 @@
             }
             updateStageProfileList();
 
-            document.getElementById('stage-list').innerHTML = db.stage.map(s => {
-                const fixture = db.fixtures.find(f => f.id === s.fixtureId);
+            document.getElementById('stage-list').innerHTML = (db.stage || []).map(s => {
+                const fixture = (db.fixtures || []).find(f => f.id === s.fixtureId);
                 const fixName = fixture ? fixture.name : 'Unknown';
-                const availableProfiles = db.profiles;
+                const availableProfiles = db.profiles || [];
                 const profOptions = availableProfiles.map(p => `<option value="${p.id}" ${p.id === s.profileId ? 'selected' : ''}>${p.name}</option>`).join('');
 
                 return `<div class="item-row" onclick="goToProfile('${s.profileId}')" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
@@ -2120,7 +2145,7 @@
             const presStageSel = document.getElementById('pres-add-stage-fix');
             if (presStageSel) {
                 presStageSel.innerHTML = '<option value="">-- Select Instance --</option>' +
-                    db.stage.map(inst => `<option value="${inst.id}">${inst.id} (${inst.profileName})</option>`).join('');
+                    (db.stage || []).map(inst => `<option value="${inst.id}">${inst.id} (${inst.profileName})</option>`).join('');
             }
             const presGlobalSel = document.getElementById('pres-add-global-func');
             if (presGlobalSel) {
@@ -2130,7 +2155,7 @@
 
             const presList = document.getElementById('saved-presets-list');
             if (presList) {
-                presList.innerHTML = db.presets.map(p => {
+                presList.innerHTML = (db.presets || []).map(p => {
                     let triggerDesc = (p.triggers || []).map(t => {
                         const ch = t.chance !== undefined ? t.chance : (t.range !== undefined ? t.range : 100);
                         if (t.type === 'vibe') return `${t.value} (${ch}%)`;
@@ -2411,11 +2436,10 @@
         let simulationLastTime = performance.now();
 
         function connectWs() {
-            const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
-            const isProd = host.includes('ravebox.love');
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-
-            let wsUrl = isProd ? `wss://wss.ravebox.love` : `${wsProtocol}://${host}:8765`;
+            const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+            
+            let wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
             const newWs = new WebSocket(wsUrl);
 
             newWs.onopen = () => {
@@ -2659,18 +2683,53 @@
 
         // Init
         async function initApp() {
+            console.log("🚀 Initializing RaveBox Setup from:", API_BASE);
             try {
                 const res = await fetch(`${API_BASE}/ravebox_config.json`);
                 if (res.ok) {
                     const data = await res.json();
-                    if (data && data.fixtures) {
-                        db = data;
+                    if (data) {
+                        // Safe assignment to avoid losing keys if they are missing in the unified file
+                        db.fixtures = data.fixtures || db.fixtures || [];
+                        db.profiles = data.profiles || db.profiles || [];
+                        db.stage = data.stage || db.stage || [];
+                        db.presets = data.presets || db.presets || [];
+                        console.log("✅ Loaded unified config from server");
                         saveDB(); // Cache to local storage
                     }
+                } else {
+                    console.warn("⚠️ Unified config not found, trying modular files...");
+                    // Try to load modular files as fallback
+                    const modularFiles = [
+                        { key: 'fixtures', file: 'fixtures.json' },
+                        { key: 'profiles', file: 'profiles.json' },
+                        { key: 'stage', file: 'stage_config.json' },
+                        { key: 'presets', file: 'presets.json' }
+                    ];
+                    
+                    for (const mod of modularFiles) {
+                        try {
+                            const modRes = await fetch(`${API_BASE}/${mod.file}`);
+                            if (modRes.ok) {
+                                db[mod.key] = await modRes.json();
+                                console.log(`📦 Loaded ${mod.key} from ${mod.file}`);
+                            }
+                        } catch (err) {
+                            console.error(`❌ Failed to load ${mod.file}:`, err);
+                        }
+                    }
+                    saveDB();
                 }
             } catch (e) {
-                console.warn("Could not load ravebox_config.json from server, using local cache.", e);
+                console.warn("Could not load config from server, using local cache.", e);
             }
+            
+            // Final check to ensure no nulls
+            if (!db.fixtures) db.fixtures = [];
+            if (!db.profiles) db.profiles = [];
+            if (!db.stage) db.stage = [];
+            if (!db.presets) db.presets = [];
+            
             updateUniqueFunctions();
             refreshUI();
         }

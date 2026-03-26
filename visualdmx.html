@@ -96,10 +96,10 @@
             float clampedBass = min(u_bass, 0.8);
             float clampedVol = min(u_vol, 0.8);
             
-            p.z += u_time * (0.2 + clampedFlux * 0.4);
+            p.z += u_time * (0.5 + clampedFlux * 0.5);
             
             // Combine rotations into one call where possible
-            float rotAngle = u_time * 0.05 + p.z * 0.02 * (1.0 + clampedBass * 0.15);
+            float rotAngle = u_time * 0.1 + p.z * 0.03 * (1.0 + clampedBass * 0.2);
             rot(p.xy, rotAngle);
             
             float size = 4.0;
@@ -773,8 +773,8 @@
             float bass = min(u_bass, 0.8);
             float vol = min(u_vol, 0.8);
             
-            float speed_mult = 1.0 + flux * 1.5;
-            vec3 freq = vec3(3.0, 2.0, 2.5) * speed_mult;
+            float speed_mult = 1.0;
+            vec3 freq = vec3(3.0, 2.0, 2.5);
             vec3 radius = vec3(0.6 + bass * 0.4, 0.5 + bass * 0.3, 0.4 + bass * 0.3);
             
             float ca = cos(u_dmxRot);
@@ -1234,18 +1234,6 @@
             float denominator = 1.0 - u_blackPoint;
             if(denominator < 0.05) denominator = 0.05; 
             color.rgb = (color.rgb - u_blackPoint) / denominator;
-
-            // --- USER Blackout: 3% threshold ---
-            if (u_vol <= 0.03) {
-                color.rgb = vec3(0.0);
-            }
-            // --- USER Strobe: Dropping state strobe (Hard black to on) ---
-            else if (u_transient_state == 3.0) {
-                // High speed strobe (approx 15Hz)
-                if (mod(u_time * 15.0, 1.0) > 0.5) {
-                    color.rgb = vec3(0.0);
-                }
-            }
 
             color.rgb = clamp(color.rgb, 0.0, 0.9); // FINAL SAFETY: No pure white 
             
@@ -2082,14 +2070,34 @@
         };
         const LAYER_CHANGE_INTERVALS = [40, 20, 10, 5]; // seconds per freq level
 
-        // Remote Sync Support: Allow ?server=IP query param
         const urlParams = new URLSearchParams(window.location.search);
-        let serverIP = urlParams.get('server');
-
-        // If no server param, use the current hostname (works for both local and remote)
-        if (!serverIP) {
-            serverIP = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'wss.ravebox.love' : (window.location.hostname || 'localhost');
+        let queryHost = urlParams.get('host');
+        if (queryHost) {
+            localStorage.setItem('vj_backend_host', queryHost.trim());
+            // Clean URL
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, '', newUrl);
         }
+
+        let savedHost = localStorage.getItem('vj_backend_host');
+        const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
+        // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
+        if (!savedHost && onHostedDomain) {
+            savedHost = prompt("Enter your RaveBox IP or Tunnel URL (e.g., 192.168.1.100 or ravecave.ravebox.love):");
+            if (savedHost) {
+                savedHost = savedHost.trim();
+                localStorage.setItem('vj_backend_host', savedHost);
+            }
+        }
+        
+        const host = savedHost || (onHostedDomain ? null : window.location.hostname);
+        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
+        const isCustomTunnel = host && host.endsWith('.ravebox.love') && !isOriginalCloud;
+        const baseHost = (isCustomTunnel ? host.replace(/^(api-|ws-)/, '') : host);
+        
+        // Smart Tunnel: Custom subdomains like ravecave.ravebox.love use ws- prefix for WebSocket (port 8765)
+        const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
+        let serverIP = urlParams.get('server') || (isOriginalCloud ? 'wss.ravebox.love' : (wsHost || 'localhost'));
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         let ws = null;
@@ -2125,7 +2133,8 @@
                 wsReconnectTimer = null;
             }
 
-            const wsUrl = (serverIP === 'wss.ravebox.love') ? `${wsProtocol}://${serverIP}` : `${wsProtocol}://${serverIP}:8765`;
+            const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+            const wsUrl = (serverIP === 'wss.ravebox.love' || isCustomTunnel) ? `${wsProtocol}://${serverIP}` : `${wsProtocol}://${serverIP}:${savedPort}`;
             console.log(`🔌 Connecting to WebSocket at ${wsUrl}`);
             showWsStatus('⏳ Connecting...', '#ffcc00');
 
@@ -2336,18 +2345,19 @@
             let currentSpeed = remoteParams.speed;
 
             if (currentTransient === "tension") {
-                smoothFactor = 0.02; // Float slowly
-                amp *= 0.3;          // Constrain movement
-                currentSpeed *= 0.5; // Soften freeze
+                // Tension defaults matched to baseline for consistency
+                smoothFactor = 0.12; 
+                amp *= 1.0;          
+                currentSpeed *= 1.0; 
             } else if (currentTransient === "dropping") {
-                smoothFactor = 0.8;  // Instant snap to audio peaks
-                amp *= 1.4;          // Exaggerate displacement slightly
-                currentSpeed *= 1.6; // Controlled acceleration
+                // Drop multipliers REMOVED as requested
+                smoothFactor = 0.12;  
+                amp *= 1.0;          
+                currentSpeed *= 1.0; 
             }
 
             // Sync playback speed with transients
-            accumulatedTime += delta * currentSpeed;
-            const time = accumulatedTime;
+            const time = rawTime; // REAL-TIME: Locked to absolute system clock (Unity Speed)
 
             smoothedMods.flux += (targetMods.flux - smoothedMods.flux) * smoothFactor;
             smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * smoothFactor;
@@ -2355,7 +2365,7 @@
             smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * smoothFactor;
 
             // --- DECOUPLED VISUAL GAIN ---
-            // Matched to 1.0 to ensure visuals react exactly like the DMX engine (Master Sensitivity driven)
+            // RESTORED: Standard base gain to ensure visuals react exactly like the DMX engine
             const VISUAL_BASE_GAIN = 1.0;
             const visualPower = VISUAL_BASE_GAIN * amp;
 

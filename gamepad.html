@@ -721,7 +721,7 @@
 <body>
     <div class="header">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <a href="/manager.html" class="back-btn">←</a>
+            <a href="./manager.html" class="back-btn">←</a>
             <h1>
                 🕹️ Gamepad Remote
                 <div class="vol-meter" title="Input Volume">
@@ -916,9 +916,32 @@
         });
 
         function connect() {
-            const host = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love') ? 'wss.ravebox.love' : (window.location.hostname || 'localhost');
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryHost = urlParams.get('host');
+            if (queryHost) {
+                localStorage.setItem('vj_backend_host', queryHost.trim());
+                // Clean the URL
+                const newUrl = window.location.pathname + window.location.hash;
+                window.history.replaceState({}, '', newUrl);
+            }
+
+            let savedHost = localStorage.getItem('vj_backend_host');
+            const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname.includes('ravebox-love.storage.googleapis.com'));
+            // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
+            if (!savedHost && onHostedDomain) {
+                savedHost = prompt("Enter your RaveBox IP or Tunnel URL (e.g., 192.168.1.100 or ravecave.ravebox.love):");
+                if (savedHost) {
+                    savedHost = savedHost.trim();
+                    localStorage.setItem('vj_backend_host', savedHost);
+                }
+            }
+            
+            const host = savedHost || (onHostedDomain ? null : window.location.hostname);
+            const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
+            const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+            
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            const wsUrl = (host === 'wss.ravebox.love') ? `${wsProtocol}://${host}` : `${wsProtocol}://${host}:8765`;
+            const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : `${wsProtocol}://${host}:${savedPort}`;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {

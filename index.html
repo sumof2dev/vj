@@ -517,11 +517,8 @@
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
-        <div id="hostBadge"
-            style="font-size: 0.65rem; color: var(--text-dim); margin: -10px 0 20px; text-transform: uppercase; letter-spacing: 1px; cursor:pointer;"
-            onclick="changeHost()">
-            Controller: <span id="hostDisplay" style="color:var(--primary); font-weight:bold;">Local</span> (Click to
-            Change)
+        <div id="hostBadge" style="font-size: 0.65rem; color: var(--text-dim); margin: -10px 0 20px; text-transform: uppercase; letter-spacing: 1px; cursor:pointer;" onclick="changeHost()">
+            Controller: <span id="hostDisplay" style="color:var(--primary); font-weight:bold;">Local</span> (Click to Change)
         </div>
 
 
@@ -580,6 +577,14 @@
             <!-- COLLAPSIBLE SYSTEM CONTROLS -->
             <div id="sysControls" class="dash-panel sys-controls-panel"
                 style="display: none; margin-top: -20px; z-index: 1;">
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Speed</span>
+                        <span class="slider-value" id="masterSpeedVal">1.0x</span>
+                    </div>
+                    <input type="range" id="masterSpeed" min="0.0" max="2.0" step="0.05" value="1.0">
+                </div>
+
                 <div class="slider-group">
                     <div class="slider-label">
                         <span>Input Gain</span>
@@ -646,29 +651,28 @@
 
         let savedHost = localStorage.getItem('vj_backend_host');
         const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
-
+        
         // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
         if (!savedHost && onHostedDomain) {
-            savedHost = prompt("Enter your Ravebox secret code below. This saves to your device's storage for reentry. Save code to connect with other devices!");
+            savedHost = prompt("Enter your RaveBox IP or Tunnel URL (e.g., 192.168.1.100 or ravecave.ravebox.love):");
             if (savedHost) {
                 savedHost = savedHost.trim();
                 localStorage.setItem('vj_backend_host', savedHost);
             }
         }
-
+        
         const host = savedHost || (onHostedDomain ? '' : window.location.hostname);
         const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
         // Smart Tunnel: *.ravebox.love hostnames are routed by Cloudflare — no port needed
         const isCustomTunnel = host.endsWith('.ravebox.love') && !isOriginalCloud;
-        const baseHost = (isCustomTunnel ? host.replace(/^(api-|ws-)/, '') : host);
-        const launcherHost = isCustomTunnel ? baseHost : host;
-        const apiHost = isCustomTunnel ? 'api-' + baseHost : host;
-        const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
+        const launcherHost = isCustomTunnel ? host : host;
+        const apiHost = isCustomTunnel ? 'api-' + host : host;
+        const wsHost = isCustomTunnel ? 'ws-' + host : host;
         const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? launcherHost : launcherHost + ':8001'))) : null;
 
         function changeHost() {
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
-            const next = prompt("Code:", current);
+            const next = prompt("Enter Controller IP Address or Hostname:", current);
             if (next !== null) {
                 if (next.trim() === "" || next === window.location.hostname) {
                     localStorage.removeItem('vj_backend_host');
@@ -678,7 +682,7 @@
                 location.reload();
             }
         }
-
+        
         document.getElementById('hostDisplay').textContent = (localStorage.getItem('vj_backend_host') || "Local (" + host + ")");
 
         // Point links within the same origin (Port Independent)
@@ -746,7 +750,7 @@
 
         async function doAction(action) {
             if (!LAUNCHER_API) {
-                alert("Please configure a RaveBox code first.");
+                alert("Please configure a RaveBox controller IP first.");
                 return;
             }
             const loader = document.getElementById('loader');
@@ -760,7 +764,7 @@
                 if (action === 'start' && data.success) {
                     const badge = document.getElementById('status');
                     if (badge) {
-                        badge.innerText = "Pregaming. standby...";
+                        badge.innerText = "Engine Starting...";
                         badge.className = "status-badge active";
                     }
                 }
@@ -828,9 +832,9 @@
             if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
 
             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
-
+            
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
+            const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : `${wsProtocol}://${host}:${savedPort}`;
             ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
@@ -849,6 +853,7 @@
 
             function setupControlListeners() {
                 const sliders = [
+                    { id: 'masterSpeed', key: 'speed', suffix: 'x' },
                     { id: 'masterSens', key: 'gain', suffix: '' },
                     { id: 'masterFlux', key: 'sensitivity', suffix: '' },
                     { id: 'masterBias', key: 'vibe_bias', suffix: '' }

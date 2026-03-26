@@ -71,17 +71,17 @@ class LogicMatrix:
                     else: val = max(target_val, current_val - decay_rate)
                     freq = 0
                 else:
-                    freq = (base_speed + (bin_energy * reactivity)) * speed_mult
+                    freq = (base_speed + (bin_energy * reactivity))
                     if base_speed == 0 and freq < 0.05:
                         p_current = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
                         should_complete = False
                         if shape == 'sawtooth' and p_current > 0.05: should_complete = True
                         elif shape == 'triangle' and abs(p_current - 0.5) > 0.05: should_complete = True
                         elif shape == 'square' and p_current < 0.5: should_complete = True
-                        if should_complete: freq = 10.0 * speed_mult
+                        if should_complete: freq = 10.0
                         else: freq = 0.0
 
-                    self.phases[lfo_id] += dt * freq
+                    self.phases[lfo_id] += dt * freq * 2.0 * math.pi
                     p = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
                     if shape == 'sawtooth': val = (p * 2.0) - 1.0
                     elif shape == 'triangle': val = 4.0 * abs(p - 0.5) - 1.0
@@ -132,7 +132,7 @@ class DMXEngine:
         self.logic_r = LogicMatrix()
         
         self.intensity = 1.0
-        self.speed = 1.0 
+        self.speed = 0.6 
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
         self.transient = "steady" 
@@ -253,7 +253,7 @@ class DMXEngine:
         if vol < 0.03:
             if not hasattr(self, '_silence_timer'): self._silence_timer = 0
             self._silence_timer += dt
-            if self._silence_timer > 0.5: self._global_silence = True
+            if self._silence_timer > 2.0: self._global_silence = True
             else: self._global_silence = False
         else:
             self._silence_timer = 0
@@ -280,9 +280,17 @@ class DMXEngine:
                 elif t_cat == 'volume':
                     target_v = trig.get('value', 'mid')
                     v = audio.get('vol', 0.0)
-                    if target_v == 'silence' and v < 0.05: is_active = True
-                    elif target_v == 'mid' and 0.05 <= v < 0.5: is_active = True
-                    elif target_v == 'loud' and v >= 0.5: is_active = True
+                    r = float(trig.get('range', 5)) / 100.0 # Convert UI percentage to 0.0-1.0
+                    
+                    if target_v == 'silence':
+                        # Active from 0% to r%
+                        if v <= r: is_active = True
+                    elif target_v == 'loud':
+                        # Active from (1.0 - r) to 1.0
+                        if v >= (1.0 - r): is_active = True
+                    elif target_v == 'mid':
+                        # Active within +/- r/2 around 0.5
+                        if abs(v - 0.5) <= (r / 2.0): is_active = True
                 elif t_cat == 'bin':
                     bin_idx = int(trig.get('bin', 0))
                     threshold = float(trig.get('threshold', 0.8))
