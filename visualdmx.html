@@ -2109,17 +2109,24 @@
         // Connection status overlay (non-intrusive, bottom-left)
         const wsStatusOverlay = document.createElement('div');
         wsStatusOverlay.id = 'ws-status-overlay';
-        wsStatusOverlay.style.cssText = 'position:fixed;bottom:12px;left:12px;padding:6px 14px;border-radius:6px;font-family:monospace;font-size:13px;z-index:9999;pointer-events:none;transition:opacity 0.5s;opacity:0;background:rgba(0,0,0,0.7);color:#ff6b6b;';
+        wsStatusOverlay.style.cssText = 'position:fixed;bottom:12px;left:12px;padding:8px 16px;border-radius:6px;font-family:monospace;font-size:13px;z-index:9999;background:rgba(0,0,0,0.7);color:#ff6b6b;cursor:pointer;display:none;';
         document.body.appendChild(wsStatusOverlay);
 
-        function showWsStatus(msg, color) {
-            wsStatusOverlay.textContent = msg;
+        function authorizeEngine() {
+             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+             window.open(`https://${serverIP}:${savedPort}`, '_blank');
+        }
+        wsStatusOverlay.onclick = authorizeEngine;
+
+        function showWsStatus(msg, color, showAuth = false) {
+            wsStatusOverlay.innerHTML = showAuth ? `⚠️ ${msg} <br><span style="font-size:10px;text-decoration:underline;">Authorize SSL Port</span>` : msg;
             wsStatusOverlay.style.color = color || '#ff6b6b';
-            wsStatusOverlay.style.opacity = '1';
+            wsStatusOverlay.style.display = 'block';
+            wsStatusOverlay.style.pointerEvents = showAuth ? 'auto' : 'none';
         }
 
         function hideWsStatus() {
-            wsStatusOverlay.style.opacity = '0';
+            wsStatusOverlay.style.display = 'none';
         }
 
         let currentSessionId = null;
@@ -2266,13 +2273,13 @@
 
         function scheduleReconnect() {
             if (wsReconnectTimer) return; // Already scheduled
-            showWsStatus(`🔄 Reconnecting in ${(wsReconnectDelay / 1000).toFixed(0)}s...`, '#ff6b6b');
+            showWsStatus(`🔄 Reconnecting...`, '#ff6b6b', window.location.protocol === 'https:');
             console.log(`🔄 Reconnecting in ${wsReconnectDelay}ms...`);
             wsReconnectTimer = setTimeout(() => {
                 wsReconnectTimer = null;
                 connectWS();
             }, wsReconnectDelay);
-            // Exponential backoff: 1s -> 2s -> 4s -> 8s -> 10s (capped)
+            // Exponential backoff
             wsReconnectDelay = Math.min(wsReconnectDelay * 2, WS_MAX_RECONNECT_DELAY);
         }
 

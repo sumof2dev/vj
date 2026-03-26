@@ -12,6 +12,8 @@ CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+DIM='\033[2m' # Dim text
+MAGENTA='\033[0;35m' # Magenta text
 
 echo ""
 echo -e "${CYAN}====================================================${NC}"
@@ -98,13 +100,12 @@ echo -e "${YELLOW}1. REBOOT${NC} to activate high-speed UART and HifiBerry drive
 echo -e "   > sudo reboot"
 echo ""
 echo -e "${YELLOW}2. SPOTIFY API${NC} (Bypassing developer tokens):"
-echo -e "   Go to: ${CYAN}http://$(hostname -I | awk '{print $1}'):8000/help.html${NC}"
+echo -e "   Go to: ${CYAN}https://$(hostname -I | awk '{print $1}'):8000/help.html${NC}"
 echo -e "   Follow the guide to register your own Client ID & Secret."
 echo ""
-echo -e "${YELLOW}3. CLOUDFLARE TUNNEL${NC} (For external ravebox.love access):"
-echo -e "   Run these commands on the new device:"
-echo -e "   > cloudflared tunnel login"
-echo -e "   > cloudflared tunnel create <box-name>"
+echo -e "${YELLOW}3. GLOBAL ACCESS${NC} (Remote 'Secret Code' via ravebox.love):"
+echo -e "   Run our new automation script:"
+echo -e "   > ${YELLOW}chmod +x setup_tunnel.sh && ./setup_tunnel.sh${NC}"
 echo ""
-echo -e "${GREEN}LFG! Your RaveBox is ready for its first vibe check.${NC}"
+echo -e "${GREEN}LFG! Your RaveBox is ready. See you at ravebox.love${NC}"
 echo ""

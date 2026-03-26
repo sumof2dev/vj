@@ -94,6 +94,9 @@ fi
 
 
 echo "✅ LFG!"
+echo -e "   Go to: ${CYAN}https://$(hostname -I | awk '{print $1}'):8000/help.html${NC}"
+echo -e "   ${DIM}(Self-signed cert: Click 'Advanced' -> 'Proceed' in browser)${NC}"
+echo -e "   Follow the guide to register your own Client ID & Secret."
 # Robust IP detection (retry if not found immediately)
 LAN_IP=""
 for i in {1..5}; do
@@ -109,11 +112,20 @@ if [ -z "$LAN_IP" ]; then
     echo "⚠️  Could not detect LAN IP, defaulting to localhost"
 fi
 
+# Robust Protocol Detection
+PROTOCOL="http"
+[ -f "cert.pem" ] && PROTOCOL="https"
+
 echo ""
-echo "👉 Manager:    http://$LAN_IP:8000/manager.html"
-echo "👉 Visualizer: http://$LAN_IP:8000/visualdmx.html"
-echo "👉 Remote:     http://$LAN_IP:8000/remote.html"
-echo "👉 Setup:      http://$LAN_IP:8000/setup.html"
+echo "👉 Manager:    ${PROTOCOL}://$LAN_IP:8000/manager.html"
+echo "👉 Visualizer: ${PROTOCOL}://$LAN_IP:8000/visualdmx.html"
+echo "👉 Remote:     ${PROTOCOL}://$LAN_IP:8000/remote.html"
+echo "👉 Setup:      ${PROTOCOL}://$LAN_IP:8000/setup.html"
+echo ""
+if [ "$PROTOCOL" = "https" ]; then
+    echo -e "${YELLOW}🔒 HTTPS Mode Active:${NC} Browser will warn about self-signed cert."
+    echo -e "   Click ${CYAN}'Advanced' -> 'Proceed'${NC} to bypass on first load."
+fi
 echo ""
 echo "   (Press Ctrl+C to stop)"
 
