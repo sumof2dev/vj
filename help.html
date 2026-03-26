@@ -379,24 +379,13 @@
                 <h2>RaveBox Help</h2>
             </div>
             <ul class="nav-list">
-                <li class="nav-item active" onclick="showSection('spotify', this)">
-                    <span>🎵</span> Spotify API
-                </li>
-                <li class="nav-item" onclick="showSection('raves', this)">
-                    <span>⚡</span> How it Raves
-                </li>
-                <li class="nav-item" onclick="showSection('setup', this)">
-                    <span>🛠️</span> Initial Setup
-                </li>
-                <li class="nav-item" onclick="showSection('calibration', this)">
-                    <span>🔬</span> Sanity Check
-                </li>
-                <li class="nav-item" onclick="showSection('log', this)">
-                    <span>📋</span> Log
-                </li>
-                <li class="nav-item" onclick="showSection('debug', this)">
-                    <span>🐞</span> Debug
-                </li>
+                <li class="nav-item active" onclick="showSection('setup', this)">🏁 Getting Started</li>
+                <li class="nav-item" onclick="showSection('connectivity', this)">🌐 Global vs Local</li>
+                <li class="nav-item" onclick="showSection('spotify-setup', this)">🎵 Spotify Control</li>
+                <li class="nav-item" onclick="showSection('raves', this)">⚡ How it Raves</li>
+                <li class="nav-item" onclick="showSection('calibration', this)">🔬 Sanity Check</li>
+                <li class="nav-item" onclick="showSection('log', this)">📋 Log</li>
+                <li class="nav-item" onclick="showSection('debug', this)">🐞 Debug</li>
             </ul>
             <div class="sidebar-footer">
                 <button class="btn-back" onclick="window.location.href='/manager.html'">← Back to Manager</button>
@@ -404,8 +393,35 @@
         </aside>
 
         <main class="main-content">
+            <!-- --- CONNECTIVITY SECTION --- -->
+            <div id="section-connectivity" class="section">
+                <h1>🌐 Connection Workflows</h1>
+                
+                <div class="help-card">
+                    <h3>Option 1: Global "Secret Code" (Zero-Config)</h3>
+                    <p>This is the intended professional workflow. You set up a Cloudflare Tunnel on the device, and anyone can control it from anywhere using just your <b>Secret Code</b>.</p>
+                    <ol style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.8;">
+                        <li>Run <code>./setup_tunnel.sh</code> on the device.</li>
+                        <li>Follow the prompts to create your code (e.g. <code>ravecave</code>).</li>
+                        <li>Go to <a href="https://ravebox.love" target="_blank" style="color: var(--accent);">ravebox.love</a> and enter your code.</li>
+                        <li><b>Result:</b> Instant, secure, no "Failed to Fetch" errors.</li>
+                    </ol>
+                </div>
+
+                <div class="help-card" style="border-left: 4px solid #ffaa00;">
+                    <h3>Option 2: Local Network (Manual)</h3>
+                    <p>Access the device directly via its local IP address. Since we use self-signed certificates for security, the browser will block requests until you "Sign Off" manually.</p>
+                    <ul style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.8;">
+                        <li>Access: <code>https://[LOCAL-IP]:8000/manager.html</code></li>
+                        <li>Browsers will show <b>"Your connection is not private"</b>.</li>
+                        <li>Click <b>Advanced</b> -> <b>Proceed</b>.</li>
+                        <li>If "Failed to Fetch" appears in the UI, look for the <b>"Authorize Port"</b> helper at the bottom and follow its links.</li>
+                    </ul>
+                </div>
+            </div>
+
             <!-- SECTION: SPOTIFY API -->
-            <div id="section-spotify" class="section active">
+            <div id="section-spotify-setup" class="section">
                 <h1>Spotify API Setup</h1>
                 <p>Connect your own Spotify Developer account to enable rich metadata and track analysis. This bypasses
                     built-in credentials for higher reliability.</p>
@@ -421,7 +437,7 @@
                         <input type="password" id="clientSecret" placeholder="Enter your Spotify Client Secret">
                     </div>
                     <div class="form-group" style="display:none;">
-                        <input type="text" id="redirectUri" value="http://127.0.0.1:8888/callback">
+                        <input type="text" id="redirectUri" value="https://ravebox.love/callback">
                     </div>
                     <button class="btn btn-save" onclick="saveCreds()">Save Credentials</button>
                 </div>
@@ -444,7 +460,7 @@
                     <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.85rem;">
                         <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank"
                                 style="color:var(--primary)">Spotify Dev Dashboard</a>.</li>
-                        <li>Add <code>http://127.0.0.1:8888/callback</code> to Redirect URIs.</li>
+                        <li>Add <code>https://ravebox.love/callback</code> to Redirect URIs.</li>
                         <li>Copy ID and Secret into Step 1 above.</li>
                     </ul>
                 </div>

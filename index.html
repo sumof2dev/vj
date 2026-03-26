@@ -663,16 +663,20 @@
         
         const host = savedHost || (onHostedDomain ? '' : window.location.hostname);
         const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
-        // Smart Tunnel: *.ravebox.love hostnames are routed by Cloudflare — no port needed
-        const isCustomTunnel = host.endsWith('.ravebox.love') && !isOriginalCloud;
-        const launcherHost = isCustomTunnel ? host : host;
-        const apiHost = isCustomTunnel ? 'api-' + host : host;
-        const wsHost = isCustomTunnel ? 'ws-' + host : host;
+        
+        // Smart Tunnel: If user enters just a name like 'ravecave', assume it's a *.ravebox.love tunnel
+        const boxName = (host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host;
+        const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+        
+        const launcherHost = isCustomTunnel ? boxName : host;
+        const apiHost = isCustomTunnel ? 'api-' + boxName : host;
+        const wsHost = isCustomTunnel ? 'ws-' + boxName : host;
+
         const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? launcherHost : launcherHost + ':8001'))) : null;
 
         function changeHost() {
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
-            const next = prompt("Enter Controller IP Address or Hostname:", current);
+            const next = prompt("Enter RaveBox Secret Code (e.g. 'ravecave') or local IP:", current);
             if (next !== null) {
                 if (next.trim() === "" || next === window.location.hostname) {
                     localStorage.removeItem('vj_backend_host');
@@ -689,6 +693,12 @@
         document.getElementById('link-visual').href = `./visualdmx.html`;
         document.getElementById('link-setup').href = `./setup.html`;
         document.getElementById("link-help").href = "./help.html";
+
+        function authorizeLauncher() {
+            const port = LAUNCHER_API.split(':').pop();
+            window.open(`https://${launcherHost}:${port}`, '_blank');
+        }
+
         let engineActive = false;
 
 
@@ -736,7 +746,13 @@
                 console.error("Status check failed", e);
                 statusPollingRate = 12000; // Major backup on failure
                 const badge = document.getElementById('status');
-                if (badge) badge.innerText = "Searching for controller...";
+                if (badge) {
+                     badge.innerText = "Searching for controller...";
+                     // If fetch failed on HTTPS, suggest authorization
+                     if (window.location.protocol === 'https:') {
+                         badge.innerHTML = `⚠️ <a href="javascript:void(0)" onclick="authorizeLauncher()" style="color:var(--primary); text-decoration:underline;">Authorize Secure Port 8001</a>`;
+                     }
+                }
             }
 
             // Adaptive Loop instead of setInterval
