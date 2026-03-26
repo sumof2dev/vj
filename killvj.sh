@@ -6,6 +6,9 @@ fuser -k 8000/tcp >/dev/null 2>&1
 fuser -k 8001/tcp >/dev/null 2>&1
 fuser -k 8765/tcp >/dev/null 2>&1
 
+# Kill Dev Server (8085)
+fuser -k 8085/tcp >/dev/null 2>&1
+
 # Kill VJSetup Sandbox (8081, 8766)
 fuser -k 8081/tcp >/dev/null 2>&1
 fuser -k 8766/tcp >/dev/null 2>&1

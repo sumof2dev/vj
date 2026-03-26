@@ -5,9 +5,9 @@ import os
 import json
 
 # Default Spotify Credentials
-SPOT_CLIENT_ID = 'SCRUBBED_ID'
-SPOT_CLIENT_SECRET = 'SCRUBBED_SECRET'
-SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:8888/callback' 
+SPOT_CLIENT_ID = ''
+SPOT_CLIENT_SECRET = ''
+SPOTIFY_REDIRECT_URI = 'https://ravebox.love/callback' 
 
 # Load from file if exists
 SPOT_CREDS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "spotify_creds.json")
@@ -48,9 +48,9 @@ def main():
         code = sys.argv[1] if len(sys.argv) > 1 else None
         
         if not code:
-            # Priority 2: Hardcoded fallback (unlikely to work for long)
-            code = "SCRUBBED_CODE"
-            print(f"⚠️ No code provided via CLI. Using fallback: {code[:10]}...")
+            # Priority 2: Hardcoded fallback (not recommended)
+            code = ""
+            print(f"⚠️ No code provided via CLI. Please provide an authorization code.")
         else:
             # If the user pasted the whole URL, extract the code
             if 'code=' in code:
