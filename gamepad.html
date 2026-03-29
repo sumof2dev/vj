@@ -929,7 +929,7 @@
             const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname.includes('ravebox-love.storage.googleapis.com'));
             // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
             if (!savedHost && onHostedDomain) {
-                savedHost = prompt("Enter your RaveBox IP or Tunnel URL (e.g., 192.168.1.100 or ravecave.ravebox.love):");
+                savedHost = prompt("Enter your RaveBox Secret Code or IP:");
                 if (savedHost) {
                     savedHost = savedHost.trim();
                     localStorage.setItem('vj_backend_host', savedHost);

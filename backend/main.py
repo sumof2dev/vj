@@ -257,7 +257,10 @@ if os.path.exists(SPOT_CREDS_FILE):
         print(f"⚠️ Spotify: Failed to load {SPOT_CREDS_FILE}: {e}")
 
 SPOTIFY_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".spotify_cache")
-SESSION_ID = str(time.time()) # Unique ID per engine restart
+SESSION_ID = int(time.time())
+SERVER_START_TIME = time.time()
+DMX_ENABLED = True
+active_clients = set()
 last_callback_time = time.time()
 dmx_port = None
 audio_state = { "bass": 0.0, "mid": 0.0, "high": 0.0, "vol": 0.0, "flux": 0.0, "beat": False, "device_name": "None", "bpm": 120.0 }
@@ -281,6 +284,7 @@ audio_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 is_usb_dmx = False
 last_serialized_state = "{}" # Pre-serialized broadcast message
 last_broadcast_time = 0.0 # Signal all handlers to send when updated
+broadcast_version = 0 # Monotonic version for WS sync
 
 # Cache for visualizer params to persist them even if frontend isn't active
 visual_params_cache = {
@@ -720,45 +724,6 @@ async def process_audio_queue():
                                 dmx_ready = True
                             fut.add_done_callback(dmx_done_cb)
 
-                   # --- BROADCAST PRE-SERIALIZATION ---
-                    # Serialize the state ONCE per frame for all clients
-                    global last_serialized_state, last_broadcast_time
-                    
-                    # Adaptive Throttle: Only broadcast at 60fps if there is activity
-                    # Otherwise, drop to ~10fps or less for background idle
-                    is_active = audio_state.get('vol', 0.0) > 0.01 or audio_state.get('beat', False)
-                    # Optimized for Cloudflare Stability: 30Hz instead of 60Hz
-                    broadcast_interval = 0.033 if is_active else 0.2 # 30Hz or 5Hz
-                    
-                    if (current_time - last_broadcast_time) >= broadcast_interval:
-                        # Optimization: Encode DMX as binary/base64 to save ~60% bandwidth
-                        # Integer list: ~1600 bytes. Base64: ~700 bytes.
-                        universe = dmx_engine.get_universe() if dmx_engine else bytes([0]*513)
-                        dmx_b64 = base64.b64encode(universe).decode()
-                        
-                        # Further Pruning: logic only needs specific axis/states for the UI/Visualizer
-                        logic_whitelist = [
-                            'axis_a', 'axis_b', 'axis_c', 'axis_d', 'axis_e', 
-                            'beat', 'intensity', 'bass', 'flux', 'zero', 'static'
-                        ]
-                        full_logic = dmx_engine.logic.state if dmx_engine else {}
-                        pruned_logic = {k: full_logic[k] for k in logic_whitelist if k in full_logic}
-                        
-                        last_serialized_state = json.dumps({
-                            "type": "audio",
-                            "session_id": SESSION_ID,
-                            "data": audio_state.copy(),
-                            "dmx_b64": dmx_b64, # Optimized representation (visualizer)
-                            "logic": pruned_logic,
-                            "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
-                            "active_presets": [p['name'] for p in dmx_engine.active_presets] if dmx_engine else [],
-                            "base_layer": dmx_engine.current_base_layer if dmx_engine else 0,
-                            "fx_layer": dmx_engine.current_fx_layer if dmx_engine else 0,
-                            "fg_layer": dmx_engine.current_fg_layer if dmx_engine else 0
-                        })
-                        last_broadcast_time = current_time
-
-                    # Clear redundant dmx_info logic if not used elsewhere in this loop
                 except ValueError as ve:
                     # STRICT ERROR CAUGHT DURING RUNTIME
                     if not critical_error_sent:
@@ -770,6 +735,64 @@ async def process_audio_queue():
                         dmx_engine = None
                 except Exception as e:
                     print(f"⚠️ DMX Update Error: {e}")
+
+            # --- 3.65 BROADCAST PRE-SERIALIZATION ---
+            # Helper to force pure Python types for JSON
+            def ensure_serializable(obj):
+                if isinstance(obj, dict):
+                    return {k: ensure_serializable(v) for k, v in obj.items()}
+                if isinstance(obj, (list, tuple)):
+                    return [ensure_serializable(v) for v in obj]
+                if hasattr(obj, 'item') and callable(getattr(obj, 'item')): # Numpy scalar
+                     return obj.item()
+                if isinstance(obj, (float, int, str, bool)) or obj is None:
+                    return obj
+                return float(obj) if hasattr(obj, '__float__') else str(obj)
+
+            global last_serialized_state, last_broadcast_time, broadcast_version
+            
+            # Adaptive Throttle: Only broadcast at 30fps if active, otherwise 5fps
+            is_active = audio_state.get('vol', 0.0) > 0.01 or audio_state.get('beat', False)
+            broadcast_interval = 0.033 if is_active else 0.2
+            
+            # Recalculate time here in case DMX execution took meaningful time
+            current_time = time.time()
+            if (current_time - last_broadcast_time) >= broadcast_interval:
+                try:
+                    u = dmx_engine.get_universe() if dmx_engine else bytes([0]*513)
+                    dmx_b64 = base64.b64encode(u).decode()
+                    
+                    logic_whitelist = [
+                        'axis_a', 'axis_b', 'axis_c', 'axis_d', 'axis_e', 
+                        'beat', 'intensity', 'bass', 'flux', 'zero', 'static', 'scene_trigger'
+                    ]
+                    full_logic = dmx_engine.logic.state if dmx_engine else {}
+                    pruned_logic = {k: ensure_serializable(full_logic[k]) for k in logic_whitelist if k in full_logic}
+                    
+                    broadcast_data = ensure_serializable(audio_state)
+                    
+                    last_serialized_state = json.dumps({
+                        "type": "audio",
+                        "session_id": SESSION_ID,
+                        "master_time": (current_time - SERVER_START_TIME) * 0.6,
+                        "data": broadcast_data,
+                        "dmx_b64": dmx_b64,
+                        "logic": pruned_logic,
+                        "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
+                        "active_presets": [p['name'] for p in dmx_engine.active_presets] if dmx_engine else [],
+                        "base_layer": dmx_engine.current_base_layer if dmx_engine else 0,
+                        "fx_layer": dmx_engine.current_fx_layer if dmx_engine else 0,
+                        "fg_layer": dmx_engine.current_fg_layer if dmx_engine else 0
+                    })
+                    last_broadcast_time = current_time
+                    broadcast_version += 1
+                    
+                    if broadcast_version % 100 == 0:
+                        print(f"📡 Broadcast Health: Version {broadcast_version} (Active: {is_active})")
+                    
+                except Exception as serial_err:
+                    print(f"⚠️ Serialization Failure: {serial_err}")
+                    audio_state['error'] = f"Serialization: {serial_err}"
 
             # If we had a critical startup error, we need to broadcast it once connected
             if dmx_engine is None and not critical_error_sent and 'CRITICAL' in audio_state.get('error', ''):
@@ -863,7 +886,7 @@ async def ws_handler(websocket):
     global connected_clients, visual_params_cache
     print("Client Connected")
     connected_clients.add(websocket)
-    last_sent_time = 0.0 # Per-client tracking of high-frequency broadcast
+    last_sent_version = 0 # Track which version of broadcast this client last received
     
     try:
         while True:
@@ -1018,6 +1041,14 @@ async def ws_handler(websocket):
                                     except:
                                         pass
                                     
+                        elif msg_type in ["new_ai_shader", "cycle_shader", "vj_command"]:
+                            # RELAY: AI VJ Controller messages to all puppets
+                            for client in connected_clients:
+                                if client != websocket:
+                                    try:
+                                        asyncio.create_task(client.send(msg))
+                                    except: pass
+                                    
                         elif msg_type == "master_params":
                             # Handle Global Performance Tuning
                             if "sensitivity" in data:
@@ -1090,11 +1121,11 @@ async def ws_handler(websocket):
                 raise
             
             # Tx to Browser: Only send if we have fresh data to broadcast
-            global last_broadcast_time, last_serialized_state
-            if last_broadcast_time > last_sent_time:
+            global broadcast_version, last_serialized_state
+            if broadcast_version > last_sent_version:
                 try:
                     await websocket.send(last_serialized_state)
-                    last_sent_time = last_broadcast_time
+                    last_sent_version = broadcast_version
                 except: pass
             
             # Yield control
@@ -1124,10 +1155,13 @@ async def run_calibration_task(websocket):
         wf = wave.open(wav_path, 'rb')
         num_frames = wf.getnframes()
         
-        # Fresh analysis context
+        # Sync with LIVE settings to test the current environment
         cal_analyzer = AudioAnalyzer()
-        cal_analyzer.set_gain(1.0)
+        cal_analyzer.set_gain(analyzer.gain)
+        cal_analyzer.set_flux_sensitivity(analyzer.flux_sensitivity_percentage)
+        
         cal_vibe = VibeEngine()
+        cal_vibe.mid_vibe_bias = vibe_engine.mid_vibe_bias
         
         results = {"beats": [], "vibe_states": [], "transients": [], "bpm": []}
         processed_frames = 0
@@ -1191,6 +1225,9 @@ async def run_calibration_task(websocket):
         mid_s1 = (truth["sections"][0]["start"] + truth["sections"][0]["end"]) / 2.0
         _, actual_bpm = min(results["bpm"], key=lambda x: abs(x[0] - mid_s1))
 
+        # 4. SIGNAL HEALTH AUDIT (The logic we just added)
+        health = analyzer.get_signal_health()
+
         await websocket.send(json.dumps({
             "type": "calibration_report",
             "recall": recall,
@@ -1200,6 +1237,11 @@ async def run_calibration_task(websocket):
                 "expected": truth["bpm"],
                 "actual": actual_bpm,
                 "error": abs(actual_bpm - truth["bpm"])
+            },
+            "signal_health": health, # Tell the user if their Spotify/Main vol is the issue
+            "settings": {
+                "gain": analyzer.gain,
+                "reactivity": analyzer.flux_sensitivity_percentage
             }
         }))
 

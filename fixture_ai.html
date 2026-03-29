@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Fixture Extractor | RaveBox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="icon.png">
+    <style>
+        :root {
+            --bg: #050508;
+            --panel: rgba(20, 20, 27, 0.7);
+            --header: #1b1b22;
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #7c4dff;
+            --accent-rgb: 124, 77, 255;
+            --accent-glow: rgba(124, 77, 255, 0.4);
+            --accent-alt: #00ffcc;
+            --text: #eee;
+            --text-dim: #a0a0a0;
+            --danger: #ff4757;
+            --success: #2ed573;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --glass: blur(12px) saturate(180%);
+        }
+
+        body {
+            background: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(var(--accent-rgb), 0.15) 0, transparent 40%),
+                radial-gradient(at 100% 100%, rgba(0, 255, 204, 0.1) 0, transparent 40%);
+            color: var(--text);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* --- HEADER --- */
+        header {
+            width: 100%;
+            padding: 20px 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: var(--glass);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 1.2rem;
+            letter-spacing: -1px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .btn-settings {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-settings:hover {
+            border-color: var(--accent);
+            transform: rotate(45deg);
+        }
+
+        /* --- MAIN CONTAINER --- */
+        main {
+            width: 90%;
+            max-width: 800px;
+            padding: 40px 0 100px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .card {
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .card-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin-bottom: 25px;
+        }
+
+        /* --- UPLOAD ZONE --- */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: rgba(var(--accent-rgb), 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accent-alt);
+            background: rgba(0, 255, 204, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--accent);
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        #file-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* --- LOADING OVERLAY --- */
+        .loading-overlay {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(var(--accent-rgb), 0.1);
+            border-left-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* --- RESULTS SECTION --- */
+        .results-container {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .fixture-header-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+
+        .fixture-header-row div {
+            flex: 1;
+        }
+
+        .channel-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .channel-card:hover {
+            border-color: var(--accent-glow);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .channel-card.active {
+            border-left: 4px solid var(--accent);
+            background: rgba(var(--accent-rgb), 0.05);
+        }
+
+        .channel-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .channel-num {
+            font-weight: 900;
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        .channel-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* --- CONTROLS --- */
+        label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"], 
+        input[type="number"], 
+        select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #fff;
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .test-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 10px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .val-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--accent-alt);
+            width: 35px;
+            text-align: right;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover, #9e75ff);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--accent-glow);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #333;
+            border: 1px solid #444;
+        }
+
+        .btn-secondary:hover {
+            background: #444;
+        }
+
+        /* --- SETTINGS MODAL --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--header);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 400px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- STATUS BAR --- */
+        .status-bar {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        /* --- ANIMATIONS --- */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- MOBILE REFINEMENTS --- */
+        @media (max-width: 600px) {
+            .channel-inputs {
+                grid-template-columns: 1fr;
+            }
+            .fixture-header-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+            <div class="logo">RAVE<span>BOX</span> FIXTURE AI</div>
+            <div class="btn-settings" onclick="openSettings()" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- STEP 1: UPLOAD -->
+        <section id="step-upload" class="card fade-in">
+            <div class="card-title">Extract Fixture from Manual</div>
+            <div class="card-subtitle">Take a photo of the DMX channel table in your manual. Our AI will build the profile for you.</div>
+            
+            <div class="upload-zone" id="drop-zone">
+                <i class="upload-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path><line x1="16" y1="5" x2="22" y2="5"></line><line x1="19" y1="2" x2="19" y2="8"></line><circle cx="9" cy="11" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
+                </i>
+                <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px;">Upload or Take Photo</div>
+                <div style="font-size: 0.8rem; color: var(--text-dim);">DMX table image (JPG, PNG)</div>
+                <input type="file" id="file-input" accept="image/*">
+            </div>
+
+            <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px; color: var(--success); font-weight: 700; font-size: 0.9rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Powered by Gemini 2.0 Flash
+            </div>
+        </section>
+
+        <!-- STEP 2: LOADING -->
+        <section id="step-loading" class="card loading-overlay">
+            <div class="spinner"></div>
+            <div style="font-weight: 800; font-size: 1.2rem; color: #fff;">Analyzing Channel Table...</div>
+            <div style="color: var(--text-dim); text-align: center; max-width: 300px;">Our Stage Lighting AI is extracting your DMX functions. This usually takes 5-10 seconds.</div>
+        </section>
+
+        <!-- STEP 3: HAND-HOLDING RESULTS -->
+        <section id="step-results" class="results-container">
+            <div class="card fade-in">
+                <div class="card-title">Confirm Fixture Details</div>
+                <div class="card-subtitle">AI extracted the following. Use the sliders to test each channel live and verify the roles.</div>
+
+                <div class="fixture-header-row">
+                    <div>
+                        <label>Fixture Name</label>
+                        <input type="text" id="final-fix-name" placeholder="e.g. Laser Cube 500">
+                    </div>
+                    <div style="flex: 0.5;">
+                        <label>Test Address</label>
+                        <input type="number" id="test-addr" value="1" min="1" max="512">
+                    </div>
+                </div>
+
+                <div id="channels-list" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Channel Cards Rendered Here -->
+                </div>
+
+                <div style="margin-top: 30px; display: flex; gap: 15px;">
+                    <button class="btn" style="flex: 1;" onclick="saveAndFinish()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Save Fixture to Setup
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetUI()">
+                        Try Another Image
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay" onclick="closeSettings()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 800; font-size: 1.1rem;">AI Settings</div>
+                <button class="btn-settings" onclick="closeSettings()" style="width: 30px; height: 30px;">×</button>
+            </div>
+            <div>
+                <label>Gemini API Key</label>
+                <input type="password" id="gemini-key" placeholder="AI_Studio_Key_Here">
+                <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 8px;">Key is stored safely in your browser's LocalStorage.</div>
+            </div>
+            <div>
+                <label>Backend Host / IP</label>
+                <input type="text" id="backend-host" placeholder="ravebox.local or ravecave">
+            </div>
+            <button class="btn" style="width: 100%;" onclick="saveSettings()">Save Configuration</button>
+        </div>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+        <div id="status-dot" class="status-dot"></div>
+        <span id="status-text">Disconnected</span>
+    </div>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "@google/genai": "https://esm.run/@google/genai"
+          }
+        }
+    </script>
+
+    <script type="module">
+        import { GoogleGenAI } from "@google/genai";
+
+        // Global State
+        let db = JSON.parse(localStorage.getItem('ravebox_v2_db')) || { fixtures: [], profiles: [], stage: [], presets: [] };
+        let currentFixture = null;
+        let ws = null;
+        let dmxConnected = false;
+
+        // Initialize UI
+        function init() {
+            document.getElementById('gemini-key').value = localStorage.getItem('vj_gemini_api_key') || "";
+            document.getElementById('backend-host').value = localStorage.getItem('vj_backend_host') || window.location.hostname;
+            connectWS();
+        }
+
+        // --- WEBSOCKET LOGIC ---
+        function connectWS() {
+            const host = document.getElementById('backend-host').value;
+            const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+            const isCustomTunnel = boxName.endsWith('.ravebox.love') && boxName !== 'ravebox.love';
+            const wsHost = isCustomTunnel ? 'ws-' + boxName : host;
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const port = localStorage.getItem('vj_ws_port') || '8765';
+            
+            const url = isCustomTunnel ? `${protocol}://${wsHost}` : `${protocol}://${host}:${port}`;
+            
+            if (ws) ws.close();
+            
+            try {
+                ws = new WebSocket(url);
+                ws.onopen = () => {
+                    dmxConnected = true;
+                    updateStatusUI(true);
+                    console.log("✅ DMX Connected");
+                };
+                ws.onclose = () => {
+                    dmxConnected = false;
+                    updateStatusUI(false);
+                    setTimeout(connectWS, 5000);
+                };
+                ws.onmessage = (e) => {};
+            } catch (e) {
+                console.error("WS Connect Error", e);
+            }
+        }
+
+        function updateStatusUI(online) {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            if (online) {
+                dot.className = "status-dot online";
+                text.innerText = "DMX Online";
+            } else {
+                dot.className = "status-dot";
+                text.innerText = "DMX Offline";
+            }
+        }
+
+        function sendOverride(addr, val) {
+            if (!dmxConnected || !ws) return;
+            const overrides = [{ address: parseInt(addr), value: parseInt(val) }];
+            ws.send(JSON.stringify({ type: 'laser_override', overrides }));
+        }
+
+        // --- IMAGE ANALYSIS ---
+        async function analyzeImage(file) {
+            const apiKey = localStorage.getItem('vj_gemini_api_key');
+            if (!apiKey) {
+                openSettings();
+                alert("Please enter your Gemini API Key first.");
+                return;
+            }
+
+            setStep('loading');
+
+            try {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = async () => {
+                    const base64Data = reader.result.split(',')[1];
+                    const prompt = `Role: You are an expert Stage Lighting Technician and Data Extraction AI.
+
+Task: You will be provided with an image of a DMX fixture manual (specifically the DMX channel table). Your job is to extract the channel list and output a strict JSON object that formats the channels for a user interface.
+
+Extraction Rules:
+
+Focus Only on Primary Functions: Look ONLY at the "Channel" and "Function" columns. Completely ignore the specific DMX value ranges (e.g., 0-127, 128-255) and their sub-descriptions.
+
+Standardize the name: Combine the channel number and a short, clean description of the function. Format it as "{Channel Number}-{Short Name}". Keep the short name to 1-3 words. (Example: "CH5: PATTERN ZOOMIN/OUT" becomes "5-Zoom").
+
+Assign a role: Based on standard generic laser/lighting architectures, assign a short identifier string to the role key. Use the following guide to guess the best role:
+
+Dimmer, Intensity, On/Off, Laser On -> dim or dimmer
+Pattern Selection, Gobo -> pattern
+Group Selection, Folder -> group
+Zoom, Size, Scale -> zoom
+X Moving, Horizontal Position, Pan -> x_pos
+Y Moving, Vertical Position, Tilt -> y_pos
+Rotation, Roll, Spin -> z_rot or rotation
+Colors, RGB, Color Wheel -> color
+Strobe, Flash -> strobe
+Out of bounds, Blanking, Clipping -> clip
+If unknown or a combined movement macro -> movement or leave blank ""
+
+Static Values: Always set "default": 0 and "currentValue": 0 for every channel.
+
+Target JSON Output Format:
+Return ONLY valid JSON. Do not include markdown formatting blocks or conversational text. Use this exact structure:
+
+{
+  "id": "fix_generated_timestamp",
+  "name": "Extract brand/model if visible, otherwise use 'Generic Fixture'",
+  "channels": [
+    {
+      "name": "1-On/Off",
+      "role": "dimmer",
+      "default": 0,
+      "currentValue": 0
+    }
+  ]
+}
+`;
+
+                    const genAI = new GoogleGenAI(apiKey);
+                    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+                    const result = await model.generateContent([
+                        prompt,
+                        {
+                            inlineData: {
+                                data: base64Data,
+                                mimeType: file.type
+                            }
+                        }
+                    ]);
+
+                    const response = await result.response;
+                    const text = response.text().replace(/^```json|```$/g, "").trim();
+                    processAIResponse(text);
+                };
+            } catch (err) {
+                console.error("AI Error", err);
+                alert("Failed to process image. check console.");
+                setStep('upload');
+            }
+        }
+
+        function processAIResponse(jsonText) {
+            try {
+                const data = JSON.parse(jsonText);
+                currentFixture = data;
+                data.id = "fix_" + Date.now();
+                renderResults();
+                setStep('results');
+            } catch (e) {
+                console.error("JSON Parse Error", e, jsonText);
+                alert("AI returned invalid JSON. Try another photo.");
+                setStep('upload');
+            }
+        }
+
+        // --- RENDERING ---
+        function renderResults() {
+            const list = document.getElementById('channels-list');
+            document.getElementById('final-fix-name').value = currentFixture.name;
+            
+            list.innerHTML = currentFixture.channels.map((ch, idx) => `
+                <div class="channel-card" id="card-${idx}">
+                    <div class="channel-info">
+                        <span class="channel-num">CH ${idx + 1}</span>
+                        <div style="display:flex; gap:10px;">
+                            <span style="font-size:10px; color:var(--text-dim);">ROLE: <b>${ch.role || 'NONE'}</b></span>
+                        </div>
+                    </div>
+                    <div class="channel-inputs">
+                        <div>
+                            <label>Function Name</label>
+                            <input type="text" value="${ch.name}" oninput="currentFixture.channels[${idx}].name=this.value">
+                        </div>
+                        <div>
+                            <label>Assign Role</label>
+                            <select onchange="currentFixture.channels[${idx}].role=this.value">
+                                <option value="" ${!ch.role ? 'selected' : ''}>-- Selective Role --</option>
+                                <option value="dimmer" ${ch.role === 'dimmer' ? 'selected' : ''}>Dimmer / Intensity</option>
+                                <option value="pattern" ${ch.role === 'pattern' ? 'selected' : ''}>Pattern / Gobo</option>
+                                <option value="color" ${ch.role === 'color' ? 'selected' : ''}>Color / RGB</option>
+                                <option value="x_pos" ${ch.role === 'x_pos' ? 'selected' : ''}>Pan / X Move</option>
+                                <option value="y_pos" ${ch.role === 'y_pos' ? 'selected' : ''}>Tilt / Y Move</option>
+                                <option value="zoom" ${ch.role === 'zoom' ? 'selected' : ''}>Zoom / Scale</option>
+                                <option value="z_rot" ${ch.role === 'z_rot' ? 'selected' : ''}>Rotation / Spin</option>
+                                <option value="strobe" ${ch.role === 'strobe' ? 'selected' : ''}>Strobe / Flash</option>
+                                <option value="clip" ${ch.role === 'clip' ? 'selected' : ''}>Clip / Blanking</option>
+                                <option value="group" ${ch.role === 'group' ? 'selected' : ''}>Pattern Group</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="test-controls">
+                        <input type="range" min="0" max="255" value="0" 
+                               oninput="handleSlider(${idx}, this.value)"
+                               onmousedown="highlightCard(${idx}, true)"
+                               onmouseup="highlightCard(${idx}, false)">
+                        <div class="val-display" id="val-${idx}">0</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.handleSlider = (idx, val) => {
+            currentFixture.channels[idx].currentValue = parseInt(val);
+            document.getElementById(`val-${idx}`).innerText = val;
+            
+            const baseAddr = parseInt(document.getElementById('test-addr').value) || 1;
+            sendOverride(baseAddr + idx, val);
+        };
+
+        window.highlightCard = (idx, active) => {
+            const card = document.getElementById(`card-${idx}`);
+            if (active) card.classList.add('active');
+            else card.classList.remove('active');
+        };
+
+        function setStep(step) {
+            document.getElementById('step-upload').style.display = step === 'upload' ? 'block' : 'none';
+            document.getElementById('step-loading').style.display = step === 'loading' ? 'flex' : 'none';
+            document.getElementById('step-results').style.display = step === 'results' ? 'flex' : 'none';
+        }
+
+        // --- SETTINGS & PERSISTENCE ---
+        window.openSettings = () => { document.getElementById('settings-modal').style.display = 'flex'; };
+        window.closeSettings = () => { document.getElementById('settings-modal').style.display = 'none'; };
+        
+        window.saveSettings = () => {
+            const key = document.getElementById('gemini-key').value;
+            const host = document.getElementById('backend-host').value;
+            localStorage.setItem('vj_gemini_api_key', key);
+            localStorage.setItem('vj_backend_host', host);
+            closeSettings();
+            connectWS();
+        };
+
+        window.saveAndFinish = async () => {
+            currentFixture.name = document.getElementById('final-fix-name').value;
+            
+            // Add to DB
+            db.fixtures.push(currentFixture);
+            localStorage.setItem('ravebox_v2_db', JSON.stringify(db));
+            
+            // Attempt to send to server if possible
+            const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
+            const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+            const isCustomTunnel = boxName.endsWith('.ravebox.love') && boxName !== 'ravebox.love';
+            const apiHost = isCustomTunnel ? 'api-' + boxName : (host === 'ravebox.love' ? 'api.ravebox.love' : host);
+            const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+            
+            // Use port 8000 for standard server, or empty if tunnel
+            const port = isCustomTunnel ? '' : ':8000'; 
+            
+            const url = `${protocol}://${apiHost}${port}/api/fixtures/fixtures.json`;
+            
+            try {
+                const resp = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(db.fixtures)
+                });
+                if (resp.ok) {
+                    alert("Fixture saved to RaveBox!");
+                } else {
+                    alert("Saved locally, but server sync failed. Status: " + resp.status);
+                }
+            } catch (e) {
+                alert("Saved locally. Ensure server is online to sync.");
+            }
+            
+            window.location.href = "setup.html";
+        };
+
+        window.resetUI = () => {
+            currentFixture = null;
+            setStep('upload');
+        };
+
+        document.getElementById('file-input').onchange = (e) => {
+            if (e.target.files && e.target.files[0]) {
+                analyzeImage(e.target.files[0]);
+            }
+        };
+
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+        dropZone.ondragleave = () => { dropZone.classList.remove('dragover'); };
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                analyzeImage(e.dataTransfer.files[0]);
+            }
+        };
+
+        init();
+    </script>
+</body>
+</html>

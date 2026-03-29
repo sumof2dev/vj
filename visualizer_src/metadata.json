@@ -1,0 +1,5 @@
+{
+  "name": "AI VJ Sandbox",
+  "description": "A real-time VJ performance tool that generates GLSL shaders using Gemini AI, synced with audio.",
+  "requestFramePermissions": ["microphone"]
+}

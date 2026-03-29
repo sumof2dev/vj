@@ -504,8 +504,60 @@
             margin-bottom: 5px;
         }
 
-        .hide-forced {
-            display: none !important;
+        .dash-panel select.vibe-mode {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        .diy-drawer {
+            display: none;
+            background: rgba(112, 0, 255, 0.1) !important;
+            border-color: rgba(112, 0, 255, 0.3) !important;
+            margin-top: 10px;
+            animation: slideIn 0.3s forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .btn.loading {
+            position: relative;
+            background: rgba(112, 0, 255, 0.4) !important;
+            color: white !important;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .btn.loading::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: btn-scan 1.5s infinite;
+        }
+
+        @keyframes btn-scan {
+            to {
+                left: 100%;
+            }
         }
     </style>
 </head>
@@ -572,7 +624,14 @@
                     </div>
                 </div>
                 <div class="sys-stats">
-                    <span class="stat-val" id="hubBpm">--</span>
+                    <div>
+                        <span class="stat-val" id="hubBpm">--</span>
+                        <span style="font-size: 0.6rem; opacity: 0.5; margin-right: 5px;">BPM</span>
+                    </div>
+                    <div>
+                        <span class="stat-val" id="hubVibe">MID</span>
+                        <span style="font-size: 0.6rem; opacity: 0.5;">VIBE</span>
+                    </div>
                     <span class="stat-val" id="hubGrid" style="transition: color 0.1s;">PULSE</span>
                 </div>
             </div>
@@ -609,6 +668,7 @@
                         <span>Phrasing</span>
                     </div>
                     <select id="masterSceneFreq" class="dash-panel">
+                        <option value="-1">Manual (OFF)</option>
                         <option value="0">Every Beat</option>
                         <option value="1">4th Beat (1 Bar)</option>
                         <option value="2">2 Bars</option>
@@ -634,6 +694,13 @@
 
 
 
+    <script type="importmap">
+        { "imports": { "@google/genai": "https://esm.run/@google/genai" } }
+    </script>
+    <script type="module">
+        import { GoogleGenAI } from "@google/genai";
+        window.GoogleGenAI = GoogleGenAI;
+    </script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const queryHost = urlParams.get('host');
@@ -657,21 +724,21 @@
         }
 
         const host = savedHost || (onHostedDomain ? '' : window.location.hostname);
-        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
-        
-        // Smart Tunnel: If user enters just a name like 'ravecave', assume it's a *.ravebox.love tunnel
-        const boxName = (host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host;
-        const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
-        
-        const launcherHost = isCustomTunnel ? boxName : host;
-        const apiHost = isCustomTunnel ? 'api-' + boxName : host;
-        const wsHost = isCustomTunnel ? 'ws-' + boxName : host;
+        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
 
-        const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? launcherHost : launcherHost + ':8001'))) : null;
+        // Smart Tunnel: Resolve secret codes to *.ravebox.love
+        const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+        const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+
+        const baseHost = (isCustomTunnel ? boxName.replace(/^(api-|ws-)/, '') : boxName);
+        const apiHost = isCustomTunnel ? 'api-' + baseHost : host;
+        const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
+
+        const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? apiHost : apiHost + ':8001'))) : null;
 
         function changeHost() {
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
-            const next = prompt("Enter RaveBox Secret Code (e.g. 'ravecave') or local IP:", current);
+            const next = prompt("Enter RaveBox Secret Code (e.g. 'mybox') or local IP:", current);
             if (next !== null) {
                 if (next.trim() === "" || next === window.location.hostname) {
                     localStorage.removeItem('vj_backend_host');
@@ -690,8 +757,13 @@
         document.getElementById("link-help").href = "./help.html";
 
         function authorizeLauncher() {
-            const port = LAUNCHER_API.split(':').pop();
-            window.open(`https://${launcherHost}:${port}`, '_blank');
+            if (isCustomTunnel) {
+                alert("Cloudflare Tunnel detected. Handshake authorization is handled by the edge; no manual signing required.");
+                return;
+            }
+            const port = (LAUNCHER_API && LAUNCHER_API.includes(':')) ? LAUNCHER_API.split(':').pop().split('/')[0] : '8001';
+            const target = (host && host.includes('.')) ? host : window.location.hostname;
+            window.open(`https://${target}:${port}`, '_blank');
         }
 
         let engineActive = false;
@@ -715,6 +787,11 @@
                     return;
                 }
                 const res = await fetch(`${LAUNCHER_API}/status`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const contentType = res.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Invalid response from controller (expected JSON)");
+                }
                 const data = await res.json();
                 const badge = document.getElementById('status');
                 const btn = document.getElementById('btnToggle');
@@ -728,12 +805,12 @@
                 }
 
                 if (data.active) {
-                    btn.innerText = "Kill Engine";
+                    btn.innerText = "Dip out";
                     btn.className = "btn btn-stop";
                     if (!lastKnownActive) connectLiveDashboard(); // Restore WS if it was dead
                     if (document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
                 } else {
-                    btn.innerText = "Launch Engine";
+                    btn.innerText = "Start this bitch";
                     btn.className = "btn btn-start";
                 }
                 lastKnownActive = data.active;
@@ -742,11 +819,11 @@
                 statusPollingRate = 12000; // Major backup on failure
                 const badge = document.getElementById('status');
                 if (badge) {
-                     badge.innerText = "Searching for controller...";
-                     // If fetch failed on HTTPS, suggest authorization
-                     if (window.location.protocol === 'https:') {
-                         badge.innerHTML = `⚠️ <a href="javascript:void(0)" onclick="authorizeLauncher()" style="color:var(--primary); text-decoration:underline;">Authorize Secure Port 8001</a>`;
-                     }
+                    badge.innerText = "Searching for controller...";
+                    // If fetch failed on HTTPS and NOT a tunnel, suggest authorization
+                    if (window.location.protocol === 'https:' && !isCustomTunnel) {
+                        badge.innerHTML = `⚠️ <a href="javascript:void(0)" onclick="authorizeLauncher()" style="color:var(--primary); text-decoration:underline;">Authorize SSL Port</a>`;
+                    }
                 }
             }
 
@@ -761,14 +838,23 @@
 
         async function doAction(action) {
             if (!LAUNCHER_API) {
-                alert("Please configure a RaveBox code first.");
+                alert("Enter the code, yo!");
                 return;
             }
             const loader = document.getElementById('loader');
-            loader.style.display = 'block';
+            const btn = document.getElementById('btnToggle');
+            const originalText = btn.innerText;
+
+            btn.classList.add('loading');
+            btn.innerText = action === 'start' ? "Wait for it...Pregaming" : "Oh, shit! Mom's coming...";
 
             try {
                 const res = await fetch(`${LAUNCHER_API}/${action}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status} from ${action}`);
+                const contentType = res.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Invalid response from controller (expected JSON)");
+                }
                 const data = await res.json();
                 console.log(action, data);
 
@@ -781,8 +867,13 @@
                 }
             } catch (e) {
                 alert(`Error: ${e.message}`);
+                btn.classList.remove('loading');
+                btn.innerText = originalText;
             } finally {
-                loader.style.display = 'none';
+                // Keep loading state until polling confirms actual engine status
+                setTimeout(() => {
+                    btn.classList.remove('loading');
+                }, 4000);
             }
         }
 
@@ -798,8 +889,8 @@
             speed: 1.0,
             gain: 1.0,
             sensitivity: 0.7,
-            vibe_bias: 0.5,
-            sceneFreq: 1
+            bias: 0.5,
+            vibe: 'Chill'
         };
 
         function toggleSysControls() {
@@ -987,6 +1078,7 @@
                             tr.className = 'logic-state ' + d.transient;
                         }
                         if (d.bpm) document.getElementById('hubBpm').textContent = Math.round(d.bpm);
+                        if (d.vibe) document.getElementById('hubVibe').textContent = d.vibe.toUpperCase();
                         if (d.beat) {
                             const bd = document.getElementById('hubGrid');
                             bd.style.color = '#fff';
