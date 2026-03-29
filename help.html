@@ -402,7 +402,7 @@
                     <p>This is the intended professional workflow. You set up a Cloudflare Tunnel on the device, and anyone can control it from anywhere using just your <b>Secret Code</b>.</p>
                     <ol style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.8;">
                         <li>Run <code>./setup_tunnel.sh</code> on the device.</li>
-                        <li>Follow the prompts to create your code (e.g. <code>ravecave</code>).</li>
+                        <li>Follow the prompts to create your code (e.g. <code>mybox</code>).</li>
                         <li>Go to <a href="https://ravebox.love" target="_blank" style="color: var(--accent);">ravebox.love</a> and enter your code.</li>
                         <li><b>Result:</b> Instant, secure, no "Failed to Fetch" errors.</li>
                     </ol>
@@ -649,6 +649,11 @@ dtoverlay=hifiberry-dacplus</pre>
                             <h4>BPM Accuracy</h4>
                             <div id="calBpmAcc">--</div>
                         </div>
+                        <div id="calHealthWrap" class="cal-item" style="grid-column: span 2; display:none; border-color: rgba(0, 242, 255, 0.3); background: rgba(0, 242, 255, 0.05);">
+                            <h4>Environmental Audit</h4>
+                            <div id="calSignalHealth" style="font-weight: bold; font-size: 0.85rem; margin-bottom: 4px;">--</div>
+                            <div id="calSettingsSummary" style="color: var(--text-dim); font-size: 0.7rem; line-height: 1.4;">--</div>
+                        </div>
                     </div>
                     
                     <h4 style="margin: 15px 0 10px; color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Engine Logic Checks</h4>
@@ -676,18 +681,25 @@ dtoverlay=hifiberry-dacplus</pre>
         
         // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
         if (!savedHost && onHostedDomain) {
-            savedHost = prompt("Enter your RaveBox IP or Tunnel URL (e.g., 192.168.1.100 or ravecave.ravebox.love):");
+            savedHost = prompt("Enter your RaveBox Secret Code or IP:");
             if (savedHost) {
                 savedHost = savedHost.trim();
                 localStorage.setItem('vj_backend_host', savedHost);
             }
         }
         
-        const host = savedHost || (onHostedDomain ? null : window.location.hostname);
-        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
-        // Determine if the host is a custom tunnel (e.g., *.ravebox.love but not api.ravebox.love)
-        const isCustomTunnel = host && host.endsWith('.ravebox.love') && !isOriginalCloud;
-        const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? host : host + ':8001'))) : null;
+        const host = savedHost || (onHostedDomain ? '' : window.location.hostname);
+        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+
+        // Smart Tunnel: Resolve secret codes to *.ravebox.love
+        const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+        const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+
+        const launcherHost = isCustomTunnel ? boxName : host;
+        const apiHost = isCustomTunnel ? 'api-' + boxName : (isOriginalCloud ? 'api.ravebox.love' : host);
+        const wsHost = isCustomTunnel ? 'ws-' + boxName : (isOriginalCloud ? 'wss.ravebox.love' : host);
+
+        const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? apiHost : launcherHost + ':8001'))) : null;
 
         function showSection(id, el) {
             // Update Navigation
@@ -834,8 +846,13 @@ dtoverlay=hifiberry-dacplus</pre>
         }
 
         function signCert() {
+            if (isCustomTunnel) {
+                alert("Cloudflare Tunnels use valid SSL certificates. No manual authorization is required.");
+                return;
+            }
             const port = document.getElementById('wsPortInput').value || '8765';
-            window.open(`https://${host}:${port}`, '_blank');
+            const target = (host && host.includes('.')) ? host : window.location.hostname;
+            window.open(`https://${target}:${port}`, '_blank');
         }
 
         function saveAdvancedPort() {
@@ -881,7 +898,7 @@ dtoverlay=hifiberry-dacplus</pre>
         function connectWS() {
              const savedPort = localStorage.getItem('vj_ws_port') || '8765';
              const wsProtocol = window.location.protocol === 'https:' ? 'wss' : (ws_retries > 0 ? 'wss' : 'ws');
-             const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : `${wsProtocol}://${host}:${savedPort}`;
+             const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : (isCustomTunnel ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
              
              console.log("Connecting to VJ Engine: " + wsUrl);
              ws = new WebSocket(wsUrl);
@@ -951,6 +968,24 @@ dtoverlay=hifiberry-dacplus</pre>
                     `;
                     list.appendChild(item);
                 });
+
+                // Signal Health Audit
+                if (msg.signal_health) {
+                    const hw = document.getElementById('calHealthWrap');
+                    if (hw) {
+                        hw.style.display = 'block';
+                        const sh = document.getElementById('calSignalHealth');
+                        const st = msg.signal_health.status;
+                        sh.textContent = st + ": " + (msg.signal_health.message || "");
+                        sh.className = 'cal-status ' + (st === 'HEALTHY' ? 'cal-pass' : 'cal-fail');
+
+                        const ss = document.getElementById('calSettingsSummary');
+                        if (msg.settings) {
+                            ss.innerHTML = `Tested with <b>Gain: ${msg.settings.gain.toFixed(2)}</b> and <b>Reactivity: ${msg.settings.reactivity.toFixed(2)}</b>.<br>` + 
+                                          `Peak Input Signal (last 5s): ${msg.signal_health.peak}`;
+                        }
+                    }
+                }
             }
             if (msg.type === 'calibration_error') {
                 alert("Calibration Error: " + msg.message);

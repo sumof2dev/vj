@@ -46,7 +46,7 @@ class LogicMatrix:
         else:
             self.beat_env = max(0.0, self.beat_env - (4.0 * dt))
 
-        bins = audio.get('bins', [0.0]*11)
+        bins = audio.get('bins', [0.0]*6)
 
         self.state = {}
         if active_lfos:
@@ -57,8 +57,23 @@ class LogicMatrix:
                 reactivity = float(cfg.get('react', 0.5))
                 invert = cfg.get('invert', False)
                 
-                # Removed raw_bin_map. Using direct 6-band native mapping.
-                bin_energy = bins[bin_idx] if bin_idx < len(bins) else 0.0
+                # Dynamic Audio Source Routing for LFOs
+                source = cfg.get('_source', 'raw')
+                if source in ['raw', 'raw_energy']:
+                    bin_energy = bins[bin_idx] if bin_idx < len(bins) else 0.0
+                elif source in ['ratio', 'harmonic_ratio']:
+                    ratios = audio.get('ratios', [0.0]*6)
+                    bin_energy = ratios[bin_idx] if bin_idx < len(ratios) else 0.0
+                elif source in ['attack', 'attack_vel']:
+                    attacks = audio.get('attacks', [0.0]*6)
+                    bin_energy = attacks[bin_idx] if bin_idx < len(attacks) else 0.0
+                elif source == 'flux':
+                    # Use smoothed mods if available, fallback to raw scaled flux
+                    mods = audio.get('mods', {})
+                    s_flux = float(mods.get('flux', float(audio.get('flux', 0.0)) * 0.5))
+                    bin_energy = min(1.0, max(0.0, s_flux))
+                else:
+                    bin_energy = 0.0
                 
                 return_to_min = cfg.get('return_to_min', False)
                 threshold = float(cfg.get('threshold', 0.1))
@@ -81,7 +96,8 @@ class LogicMatrix:
                         if should_complete: freq = 10.0
                         else: freq = 0.0
 
-                    self.phases[lfo_id] += dt * freq * 2.0 * math.pi
+                    # GLOBAL SPEED LOCK: 0.6x multiplier (Permanent baseline stabilization)
+                    self.phases[lfo_id] += dt * freq * 0.6 * 2.0 * math.pi
                     p = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
                     if shape == 'sawtooth': val = (p * 2.0) - 1.0
                     elif shape == 'triangle': val = 4.0 * abs(p - 0.5) - 1.0
@@ -106,14 +122,23 @@ class LogicMatrix:
                 self.state[lfo_id] = val
 
         intensity_val = (master_intensity * 2.0) - 1.0
-        intensity_val = (master_intensity * 2.0) - 1.0
+        # Pull Smoothed Mods from Vibe Engine if available, fallback to raw
+        mods = audio.get('mods', {})
+        s_bass = float(mods.get('bass', audio.get('bass', 0.0)))
+        s_flux = float(mods.get('flux', audio.get('flux', 0.0)))
+        s_vol = float(mods.get('vol', audio.get('vol', 0.0)))
+        s_high = float(mods.get('high', audio.get('high', 0.0)))
+
         self.state.update({
-            'intensity': intensity_val,
-            'bass': (audio.get('bass', 0.0) * 2.0) - 1.0,
-            'flux': (audio.get('flux', 0.0) * 2.0) - 1.0,
-            'beat': (self.beat_env * 2.0) - 1.0,
-            'audio': (audio.get('vol', 0.0) * 2.0) - 1.0,
-            'frequency': (max(audio.get('bins', [0.0]*6)[:6]) * 2.0) - 1.0 if audio.get('bins') else -1.0,
+            'intensity': float(intensity_val),
+            'bass': float((s_bass * 2.0) - 1.0),
+            'flux': float(min(1.0, (s_flux * 1.5) - 1.0)),
+            'beat': float((self.beat_env * 2.0) - 1.0),
+            'audio': float((s_vol * 2.0) - 1.0),
+            'frequency': float((max(audio.get('bins', [0.0]*6)[:6]) * 2.0) - 1.0 if audio.get('bins') else -1.0),
+            'ratios': [float((r * 2.0) - 1.0) for r in audio.get('ratios', [0.0]*6)],
+            'attacks': [float((a * 2.0) - 1.0) for a in audio.get('attacks', [0.0]*6)],
+            'bins': [float((b * 2.0) - 1.0) for b in audio.get('bins', [0.0]*6)],
             'static': 1.0,
             'zero': -1.0,
             'dimmer': 1.0,
@@ -212,10 +237,14 @@ class DMXEngine:
                     rules = []
                     
                 for rule_idx, rule in enumerate(rules):
-                    mod_name = rule.get('mod', 'static')
-                    if mod_name == 'lfo':
+                    behavior = rule.get('behavior', rule.get('mod', 'static'))
+                    if behavior == 'lfo':
                         lfo_id = f"{p_id}_{ch_idx}_{rule_idx}"
-                        lfo_cfg = rule.get('lfo', {})
+                        lfo_cfg = rule.get('lfo', {}).copy()
+                        # Unify bin selection: prefer rule.bin_idx (new UI) over lfo.bin (legacy)
+                        lfo_cfg['bin'] = rule.get('bin_idx', lfo_cfg.get('bin', 0))
+                        # Inject source so LogicMatrix knows what drives this LFO
+                        lfo_cfg['_source'] = rule.get('source', 'raw')
                         self.active_lfos[lfo_id] = lfo_cfg
                         # Inject lfo_id directly into rule for fast lookup
                         rule['_lfo_id'] = lfo_id
@@ -294,7 +323,7 @@ class DMXEngine:
                 elif t_cat == 'bin':
                     bin_idx = int(trig.get('bin', 0))
                     threshold = float(trig.get('threshold', 0.8))
-                    bins = audio.get('bins', [0.0]*11)
+                    bins = audio.get('bins', [0.0]*6)
                     if bin_idx < len(bins) and bins[bin_idx] >= threshold:
                         is_active = True
                 
@@ -316,7 +345,9 @@ class DMXEngine:
         current_beat = audio.get('beat_count', 0)
         beats_passed = current_beat - self._last_scene_switch_beat
         
-        if self.scene_freq == 0 and beats_passed >= 1: should_switch = True
+        # PHRASING LOGIC
+        if self.scene_freq == -1: should_switch = False # MANUAL MODE
+        elif self.scene_freq == 0 and beats_passed >= 1: should_switch = True
         elif self.scene_freq == 1 and beats_passed >= 4: should_switch = True
         elif self.scene_freq == 2 and beats_passed >= 8: should_switch = True
         elif self.scene_freq == 3 and beats_passed >= 16: should_switch = True
@@ -329,14 +360,14 @@ class DMXEngine:
 
         if should_switch:
             if not visual_states or visual_states.get("bg", -1) == -1:
-                # Dynamically include Spotify (Layer 11) only if metadata is present
-                choices = [0,1,2,3,4,5,6,7,8,9,10]
-                if audio.get('spotify'):
-                    choices.append(11)
-                self.current_base_layer = random.choice(choices)
+                # Pick a global index for the base layer (UserGen uses this to index library)
+                self.current_base_layer = random.randint(0, 999)
             if not visual_states or visual_states.get("fx", -1) == -1:
-                self.current_fx_layer = random.choice([0,1,2,3,5,6])
+                # Pick a global index for the fx layer
+                self.current_fx_layer = random.randint(0, 999)
             self._last_scene_switch_beat = current_beat
+            
+        self.logic.state['scene_trigger'] = 1.0 if should_switch else -1.0
             
         self._last_vibe = current_vibe
         self._last_transient = self.transient
@@ -422,79 +453,95 @@ class DMXEngine:
         if getattr(self, '_global_silence', False):
             return c_min
             
-        if mod_name == '4th beat':
-            seed = (logic_matrix.beat_count // 4) + zone_idx + 42
-            rng = random.Random(seed)
-            if c_max <= c_min: return rng.randint(c_max, c_min)
-            return rng.randint(c_min, c_max)
-            
-        if mod_name == 'beat':
-            seed = logic_matrix.beat_count + zone_idx + 7
-            rng = random.Random(seed)
-            if c_max <= c_min: return rng.randint(c_max, c_min)
-            return rng.randint(c_min, c_max)
-
-        if mod_name in ['static', 'state_machine']: 
-            return rule.get('value', c_center)
-            
-        # 1. Apply Modifier-specific Reactivity / Smoothing / Threshold
-        mod_settings = rule.get('audio', {}) if mod_name in ['bass', 'flux', 'audio'] else rule.get('lfo', {})
+        # --- 2D Control Paradigm (Behavior vs Source) ---
+        # Backwards compatibility migration
+        behavior = rule.get('behavior')
+        source = rule.get('source')
+        bin_idx = int(rule.get('bin_idx', rule.get('lfo', {}).get('bin', 0)))
         
+        if not behavior:
+            # Migrate old 'mod' field
+            mod = rule.get('mod', 'static')
+            if mod == 'lfo': behavior = 'lfo'
+            elif mod in ['beat', '4th beat']: behavior = 'cycle'
+            elif mod in ['static', 'state_machine']: behavior = 'static'
+            else: behavior = 'direct'
+            
+            if not source:
+                if mod == 'flux': source = 'flux'
+                elif mod == 'frequency': source = 'ratio'
+                else: source = 'raw'
+
         # Extract tuning parameters with rule-level priority
+        mod_settings = rule.get('audio', {}) if behavior == 'direct' else rule.get('lfo', {})
         s_threshold = float(mod_settings.get('threshold', cache.threshold))
         s_smoothing = float(mod_settings.get('smoothing', cache.smoothing))
         s_react = float(mod_settings.get('react', 1.0))
 
-        if mod_name == 'lfo':
+        # Pull Driver Magnitude from Source
+        val_norm = 0.0
+        if source == 'raw':
+            bins = logic_matrix.state.get('bins', [-1.0]*6)
+            val_norm = bins[bin_idx] if bin_idx < len(bins) else -1.0
+        elif source == 'ratio':
+            ratios = logic_matrix.state.get('ratios', [-1.0]*6)
+            val_norm = ratios[bin_idx] if bin_idx < len(ratios) else -1.0
+        elif source == 'attack':
+            attacks = logic_matrix.state.get('attacks', [-1.0]*6)
+            val_norm = attacks[bin_idx] if bin_idx < len(attacks) else -1.0
+        elif source == 'flux':
+            val_norm = logic_matrix.state.get('flux', -1.0)
+        elif source == 'volume':
+            val_norm = logic_matrix.state.get('audio', -1.0)
+        elif source == 'beat':
+            # Random jump on every beat pulse
+            seed = logic_matrix.beat_count + zone_idx + 7
+            rng = random.Random(seed)
+            val_norm = (rng.random() * 2.0) - 1.0
+        elif source == 'bar':
+            # Random jump on every 4th beat (bar)
+            seed = (logic_matrix.beat_count // 4) + zone_idx + 42
+            rng = random.Random(seed)
+            val_norm = (rng.random() * 2.0) - 1.0
+            
+        # Apply Behavior Action
+        if behavior == 'static':
+            return rule.get('value', c_center)
+            
+        elif behavior == 'direct':
+            # Reactivity scaling
+            val_norm *= s_react
+            
+        elif behavior == 'lfo':
             lfo_id = rule.get('_lfo_id', '')
             val_norm = logic_matrix.state.get(lfo_id, 0.0)
-        elif mod_name == 'frequency':
-            bins = audio.get('bins', [0.0]*11)
-            freq_bins_subset = bins[:6]
             
-            # Find bins with valid ranges and sort by amplitude descending
-            # [(idx, amp), (idx, amp), ...]
-            sorted_bins = sorted(enumerate(freq_bins_subset), key=lambda x: x[1], reverse=True)
-            rule_freq_bins = rule.get('freq_bins', [])
-            
-            found = False
-            for idx, amp in sorted_bins:
-                if amp <= 0: continue
-                if idx < len(rule_freq_bins):
-                    r = rule_freq_bins[idx]
-                    r_min = r.get('min')
-                    r_max = r.get('max')
-                    
-                    # Treat None or empty string as "blank"
-                    if r_min is not None and r_max is not None and r_min != "" and r_max != "":
-                        try:
-                            c_min = int(float(r_min))
-                            c_max = int(float(r_max))
-                            c_center = (c_min + c_max) // 2
-                            val_norm = (amp * 2.0) - 1.0
-                            found = True
-                            break
-                        except (ValueError, TypeError):
-                            continue
-            
-            if not found:
-                val_norm = -1.0
-                if rule_freq_bins:
-                    # Fallback to first bin min if possible
-                    r0 = rule_freq_bins[0]
-                    if r0.get('min') is not None and r0.get('min') != "":
-                        try: c_min = int(float(r0.get('min')))
-                        except: pass
-        else:
-            val_norm = logic_matrix.state.get(mod_name, 0.0)
-            # Apply reactivity scaling to direct modifiers
-            val_norm *= s_react
+        elif behavior == 'cycle':
+            mod = rule.get('mod', 'beat')
+            if mod == '4th beat':
+                seed = (logic_matrix.beat_count // 4) + zone_idx + 42
+            else:
+                seed = logic_matrix.beat_count + zone_idx + 7
+            rng = random.Random(seed)
+            if c_max <= c_min: return rng.randint(c_max, c_min)
+            return rng.randint(c_min, c_max)
 
-        # Apply Threshold
-        if abs(val_norm) < s_threshold:
-            val_norm = 0.0 if mod_name != 'intensity' else -1.0
-            
+        # Apply Soft-Knee Threshold (Re-range to prevent target snapping)
+        if val_norm > -1.0: # Skip if already forced off by upstream logic
+            if abs(val_norm) <= s_threshold:
+                val_norm = -1.0
+            else:
+                # Scale the remaining active range [threshold, 1.0] to [-1.0, 1.0]
+                # This ensures val_norm approaches -1.0 smoothly as audio approaches the threshold
+                sign = 1.0 if val_norm >= 0 else -1.0
+                val_norm = sign * (((abs(val_norm) - s_threshold) / (1.0 - s_threshold + 1e-6)) * 2.0 - 1.0)
+
         prev_id = f"{profile_id}_{ch_idx}_{zone_idx}"
+        
+        # Initialize to -1.0 on the very first frame to prevent a center-value (0.0) startup flash
+        if prev_id not in self.prev_vals:
+            self.prev_vals[prev_id] = -1.0
+            
         prev = self.prev_vals[prev_id]
         if s_smoothing > 0:
             val_norm = (val_norm * (1.0 - s_smoothing)) + (prev * s_smoothing)
@@ -524,6 +571,10 @@ class DMXEngine:
 
     def clear_device_overrides(self, dev_id):
         # We now match by instance id or profile name
+        if dev_id == "all":
+            self.overrides = {}
+            return
+
         inst = next((i for i in self.stage_instances if i['id'] == dev_id or i.get('profileName') == dev_id), None)
         if not inst: return
         fixture = self.fixtures.get(inst.get('fixtureId'))

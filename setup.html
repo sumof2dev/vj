@@ -321,6 +321,13 @@
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+        }
+
         input:focus,
         select:focus {
             border-color: var(--accent);
@@ -910,7 +917,7 @@
                     style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">
                     <div class="card-title" id="test-fixture-name" style="margin:0; border:none; padding:0;">Fixture
                         Details</div>
-                    <button class="btn btn-danger btn-sm" onclick="clearAllOverrides()">🧹 Clear All Overrides</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearAllOverrides()">Release All</button>
                 </div>
                 <div id="test-channels-list"
                     style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:15px;">
@@ -927,7 +934,7 @@
         const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
         // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
         if (!savedHost && onHostedDomain) {
-            savedHost = prompt("Enter your RaveBox IP or Tunnel URL (e.g., 192.168.1.100 or ravecave.ravebox.love):");
+            savedHost = prompt("Enter your RaveBox Secret Code or IP:");
             if (savedHost) {
                 savedHost = savedHost.trim();
                 localStorage.setItem('vj_backend_host', savedHost);
@@ -944,13 +951,17 @@
 
         savedHost = localStorage.getItem('vj_backend_host');
         const host = savedHost || (onHostedDomain ? '' : window.location.hostname);
-        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love');
-        // Smart Tunnel: *.ravebox.love hostnames are routed by Cloudflare — no port needed
-        const isCustomTunnel = host.endsWith('.ravebox.love') && !isOriginalCloud;
-        const baseHost = (isCustomTunnel ? host.replace(/^(api-|ws-)/, '') : host);
+        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+
+        // Smart Tunnel: Resolve secret codes to *.ravebox.love
+        const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+        const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+
+        const baseHost = (isCustomTunnel ? boxName.replace(/^(api-|ws-)/, '') : boxName);
         const apiHost = isCustomTunnel ? 'api-' + baseHost : host;
         const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
-        const API_BASE_ROOT = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? apiHost : apiHost + ':8000'))) : null;
+
+        const API_BASE_ROOT = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? apiHost : apiHost + ':8001'))) : null;
         const API_BASE = API_BASE_ROOT + '/api/fixtures';
 
         let db = JSON.parse(localStorage.getItem('ravebox_v2_db')) || {
@@ -1255,6 +1266,13 @@
             "5: Brilliance/Air (Sizzle)"
         ];
 
+        // The Secret Hybrid Mapping: UI shows 3 bands, Backend uses sharpest 6-bin indices
+        const TARGET_BINS = [
+            { val: 0, label: "Bass" },
+            { val: 2, label: "Mids" },
+            { val: 5, label: "Treble" }
+        ];
+
         const KNOWN_ROLES = [
             'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y',
             'color_solid', 'color_multi', 'pattern',
@@ -1263,15 +1281,19 @@
             'mode', 'clip', 'group'
         ];
 
-        const KNOWN_MODIFIERS = [
-            { id: 'state_machine', label: 'Static Value State Machine / Dimmer' },
-            { id: 'lfo', label: 'Continuous Wave (Independent LFO)' },
-            { id: 'frequency', label: 'Direct: Dominant Frequency' },
-            { id: 'bass', label: 'Direct: Bass Energy' },
-            { id: 'flux', label: 'Direct: Transients (Flux)' },
-            { id: '4th beat', label: 'Cycle: Rhythm (4th Beat)' },
-            { id: 'beat', label: 'Cycle: rhythm (Beat)' },
-            { id: 'controller', label: 'Direct: Xbox Controller' }
+        const BEHAVIORS = [
+            { id: 'static', label: 'Static Value' },
+            { id: 'direct', label: 'Direct Mapping' },
+            { id: 'lfo', label: 'Continuous Wave (LFO)' }
+        ];
+
+        const SOURCES = [
+            { id: 'raw', label: 'Raw Volume' },
+            { id: 'ratio', label: 'Harmonic Ratio (Timbre)' },
+            { id: 'attack', label: 'Attack Velocity (Impact)' },
+            { id: 'flux', label: 'Spectral Flux' },
+            { id: 'beat', label: 'Beat (Cycle)' },
+            { id: 'bar', label: '4th Beat (Bar)' }
         ];
 
         function updateFreqBinRange(chIdx, ruleIdx, binIdx, key, val) {
@@ -1306,7 +1328,7 @@
                 mapping[p][k] = val;
             } else {
                 mapping[key] = val;
-                if (key === 'mod') loadProfileChannels();
+                if (key === 'mod' || key === 'behavior' || key === 'source') loadProfileChannels();
             }
             dirtyChannels.add(parseInt(chIdx));
         }
@@ -1363,13 +1385,31 @@
             } else {
                 // Migration check during active interaction
                 currentProfileMappings = currentProfileMappings.map(rules => {
-                    if (!Array.isArray(rules)) {
-                        return [{ vibe: 'any', mod: rules.mod || 'state_machine', cal: rules.cal || { min: 0, center: 127, max: 255 }, lfo: rules.lfo, audio: rules.audio, value: rules.value || 0 }];
-                    }
+                    if (!Array.isArray(rules)) rules = [rules];
                     if (rules.length === 0) {
-                        return [{ vibe: 'any', mod: 'state_machine', cal: { min: 0, center: 127, max: 255 }, lfo: { shape: 'sine', bin: 0, speed: 0.5, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 }, audio: { smoothing: 0.5, threshold: 0.5, react: 1.0 }, value: 0 }];
+                        rules = [{ vibe: 'any', behavior: 'static', source: 'raw', cal: { min: 0, center: 127, max: 255 }, lfo: { shape: 'sine', bin: 0, speed: 0.5, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 }, audio: { smoothing: 0.5, threshold: 0.5, react: 1.0 }, value: 0 }];
                     }
-                    return rules;
+                    return rules.map(rule => {
+                        if (!rule.behavior) {
+                            const mod = rule.mod || 'static';
+                            if (mod === 'lfo') rule.behavior = 'lfo';
+                            else if (mod === 'beat' || mod === '4th beat' || mod === 'cycle') rule.behavior = 'direct';
+                            else if (mod === 'static' || mod === 'state_machine') rule.behavior = 'static';
+                            else rule.behavior = 'direct';
+                        }
+                        if (!rule.source) {
+                            const mod = rule.mod || 'static';
+                            if (mod === 'flux') rule.source = 'flux';
+                            else if (mod === 'frequency') rule.source = 'ratio';
+                            else if (mod === 'beat' || mod === 'cycle') rule.source = 'beat';
+                            else if (mod === '4th beat') rule.source = 'bar';
+                            else rule.source = 'raw';
+                        }
+                        if (rule.bin_idx === undefined) {
+                             rule.bin_idx = (rule.lfo && rule.lfo.bin !== undefined) ? rule.lfo.bin : 0;
+                        }
+                        return rule;
+                    });
                 });
             }
 
@@ -1391,10 +1431,9 @@
 
                     <div id="rules-container-${chIdx}">
                         ${rules.map((rule, ruleIdx) => {
-                    const modOptions = KNOWN_MODIFIERS.map(m => `<option value="${m.id}" ${rule.mod === m.id ? 'selected' : ''}>${m.label}</option>`).join('');
 
                     let modSettingsHtml = '';
-                    if (rule.mod === 'lfo') {
+                    if (rule.behavior === 'lfo') {
                         modSettingsHtml = `
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:4px;">
                                     <div>
@@ -1404,12 +1443,6 @@
                                             <option value="triangle" ${rule.lfo.shape === 'triangle' ? 'selected' : ''}>Triangle</option>
                                             <option value="sawtooth" ${rule.lfo.shape === 'sawtooth' ? 'selected' : ''}>Sawtooth</option>
                                             <option value="square" ${rule.lfo.shape === 'square' ? 'selected' : ''}>Square</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">BIN</label>
-                                        <select style="width:100%; font-size:10px;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.bin', parseInt(this.value))">
-                                            ${BIN_LABELS.map((b, i) => `<option value="${i}" ${rule.lfo.bin === i ? 'selected' : ''}>${b}</option>`).join('')}
                                         </select>
                                     </div>
                                     <div>
@@ -1441,7 +1474,7 @@
                                         </label>
                                     </div>
                                 </div>`;
-                    } else if (rule.mod === 'bass' || rule.mod === 'flux' || rule.mod === 'audio') {
+                    } else if (rule.behavior === 'direct') {
                         modSettingsHtml = `
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:4px;">
                                     <div>
@@ -1457,46 +1490,16 @@
                                         <input type="range" min="0" max="4" step="0.05" value="${rule.audio.react || 1.0}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'audio.react', parseFloat(this.value)); this.previousElementSibling.innerText='REACT: '+this.value">
                                     </div>
                                 </div>`;
-                    } else if (rule.mod === 'frequency') {
-                        if (!rule.freq_bins) {
-                            rule.freq_bins = Array(6).fill(0).map(() => ({ min: 0, max: 255 }));
-                        }
-                        modSettingsHtml = `
-                                <div style="margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:4px;">
-                                    <label style="font-size:9px; color:var(--accent); font-weight:bold; display:block; margin-bottom:10px; text-transform:uppercase;">Dominant Frequency Ranges</label>
-                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                                        <div>
-                                            <label style="font-size:8px; color:#aaa;">SMOOTH: ${rule.audio.smoothing}</label>
-                                            <input type="range" min="0" max="0.99" step="0.01" value="${rule.audio.smoothing}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'audio.smoothing', parseFloat(this.value)); this.previousElementSibling.innerText='SMOOTH: '+this.value">
-                                        </div>
-                                        <div>
-                                            <label style="font-size:8px; color:#aaa;">THRESH: ${rule.audio.threshold}</label>
-                                            <input type="range" min="0" max="1" step="0.01" value="${rule.audio.threshold}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'audio.threshold', parseFloat(this.value)); this.previousElementSibling.innerText='THRESH: '+this.value">
-                                        </div>
-                                    </div>
-                                    <div style="display:flex; flex-direction:column; gap:6px;">
-                                        ${BIN_LABELS.map((label, i) => `
-                                            <div style="display:grid; grid-template-columns: 2fr 1fr 0.1fr 1fr; gap:8px; align-items:center;">
-                                                <span style="font-size:10px; color:#ccc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${label}">${label.split(':')[0]}</span>
-                                                <input type="number" value="${rule.freq_bins[i].min !== null ? rule.freq_bins[i].min : ''}" min="0" max="255" style="width:100%; padding:2px; font-size:10px; background:#111; color:#fff; border:1px solid #444;" 
-                                                    onchange="updateFreqBinRange(${chIdx}, ${ruleIdx}, ${i}, 'min', parseInt(this.value))" placeholder="Min">
-                                                <span style="color:#666; font-size:10px; text-align:center;">-</span>
-                                                <input type="number" value="${rule.freq_bins[i].max !== null ? rule.freq_bins[i].max : ''}" min="0" max="255" style="width:100%; padding:2px; font-size:10px; background:#111; color:#fff; border:1px solid #444;" 
-                                                    onchange="updateFreqBinRange(${chIdx}, ${ruleIdx}, ${i}, 'max', parseInt(this.value))" placeholder="Max">
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>`;
                     }
 
                     let calFieldsHtml = '';
-                    if (rule.mod === 'state_machine' || rule.mod === 'static') {
+                    if (rule.behavior === 'static') {
                         calFieldsHtml = `
                                 <div style="margin-top:10px;">
                                     <label style="font-size:8px; color:#555;">FIXED VALUE (0-255)</label>
                                     <input type="number" value="${rule.value || 0}" min="0" max="255" style="width:100%; text-align:center;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'value', parseInt(this.value))">
                                 </div>`;
-                    } else if (rule.mod.includes('beat') || rule.mod.includes('4th')) {
+                    } else if (rule.behavior === 'cycle') {
                         // Cycle/Rhythm - Min/Max only
                         calFieldsHtml = `
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
@@ -1509,10 +1512,8 @@
                                         <input type="number" value="${rule.cal.max}" min="0" max="255" style="width:100%; text-align:center;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.max', parseInt(this.value))">
                                     </div>
                                 </div>`;
-                    } else if (rule.mod === 'frequency') {
-                        calFieldsHtml = '';
                     } else {
-                        // Default (LFO, Audio) - Min/Center/Max
+                        // Default (LFO, Direct) - Min/Center/Max
                         calFieldsHtml = `
                                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:10px;">
                                     <div>
@@ -1530,12 +1531,17 @@
                                 </div>`;
                     }
 
+                    const vibeDisabled = (rules.length <= 1);
+                    if (vibeDisabled && rule.vibe !== 'any') {
+                        rule.vibe = 'any'; // Force data reset if only one rule exists
+                    }
+
                     return `
                             <div style="background:rgba(255,255,255,0.03); border:1px solid #333; padding:12px; border-radius:4px; margin-bottom:10px; position:relative;">
-                                <div style="display:grid; grid-template-columns: 1fr 1.5fr auto; gap:10px; align-items:flex-end;">
+                                <div style="display:grid; grid-template-columns: 1fr 1.2fr 1.2fr auto; gap:10px; align-items:flex-end;">
                                     <div>
-                                        <label style="font-size:9px; color:#666;">VIBE STATE</label>
-                                        <select style="width:100%; font-size:12px;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'vibe', this.value)">
+                                        <label style="font-size:9px; color:#666; ${vibeDisabled ? 'opacity:0.3;' : ''}">VIBE STATE</label>
+                                        <select style="width:100%; font-size:12px;" ${vibeDisabled ? 'disabled' : ''} onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'vibe', this.value)">
                                             <option value="any" ${rule.vibe === 'any' ? 'selected' : ''}>Any / Fallback</option>
                                             <option value="chill" ${rule.vibe === 'chill' ? 'selected' : ''}>Chill</option>
                                             <option value="mid" ${rule.vibe === 'mid' ? 'selected' : ''}>Mid</option>
@@ -1543,13 +1549,29 @@
                                         </select>
                                     </div>
                                     <div>
-                                        <label style="font-size:9px; color:#666;">MODIFIER</label>
-                                        <select style="width:100%; font-size:12px;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'mod', this.value)">
-                                            ${modOptions}
+                                        <label style="font-size:9px; color:#666;">BEHAVIOR</label>
+                                        <select style="width:100%; font-size:12px;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'behavior', this.value)">
+                                            ${BEHAVIORS.map(b => `<option value="${b.id}" ${rule.behavior === b.id ? 'selected' : ''}>${b.label}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size:9px; color:#666;">DRIVEN BY</label>
+                                        <select style="width:100%; font-size:12px;" ${rule.behavior === 'static' ? 'disabled' : ''} onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'source', this.value)">
+                                            ${SOURCES.map(s => `<option value="${s.id}" ${rule.source === s.id ? 'selected' : ''}>${s.label}</option>`).join('')}
                                         </select>
                                     </div>
                                     <button class="btn btn-danger btn-sm" onclick="removeVibeRule(${chIdx}, ${ruleIdx})">×</button>
                                 </div>
+
+                                ${(rule.behavior === 'lfo' || rule.source === 'ratio' || rule.source === 'raw' || rule.source === 'attack') ? `
+                                <div style="margin-top:10px; padding:8px; background:rgba(255,255,255,0.05); border-radius:4px;">
+                                    <label style="font-size:9px; color:#aaa;">FREQUENCY BIN</label>
+                                    <select style="width:100%; font-size:11px;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'bin_idx', parseInt(this.value))">
+                                        ${TARGET_BINS.map(b => `<option value="${b.val}" ${rule.bin_idx === b.val ? 'selected' : ''}>${b.label}</option>`).join('')}
+                                    </select>
+                                </div>
+                                ` : ''}
+
                                 ${modSettingsHtml}
                                 ${calFieldsHtml}
                             </div>`;
@@ -1898,7 +1920,7 @@
                 } else if (t.type === 'bin') {
                     inputs = `
                         <select onchange="updateTriggerVal(${idx}, 'bin', parseInt(this.value))">
-                            ${BIN_LABELS.map((b, i) => `<option value="${i}" ${t.bin === i ? 'selected' : ''}>${b}</option>`).join('')}
+                            ${TARGET_BINS.map(b => `<option value="${b.val}" ${t.bin === b.val ? 'selected' : ''}>${b.label}</option>`).join('')}
                         </select>
                         <input type="range" min="0" max="1" step="0.05" value="${t.threshold}" oninput="updateTriggerVal(${idx}, 'threshold', parseFloat(this.value))">
                         <span style="font-family:monospace; font-size:0.8rem">${t.threshold}</span>
@@ -2345,8 +2367,11 @@
         }
         function clearAllOverrides() {
             if (ws && ws.readyState === WebSocket.OPEN) {
+                // If we are looking at a specific fixture, only release that one. 
+                // If in overview, release everything.
                 ws.send(JSON.stringify({
-                    type: 'clear_overrides'
+                    type: 'clear_overrides',
+                    device: activeTestFixtureId || 'all'
                 }));
             }
         }
@@ -2493,32 +2518,42 @@
             const rule = currentProfileMappings[chIdx][ruleIdx];
             if (!rule) return 127;
 
-            const mod = rule.mod || 'static';
+            const behavior = rule.behavior || rule.mod || 'static';
+            const source = rule.source || 'raw';
             const cal = rule.cal || { min: 0, center: 127, max: 255 };
             const min = parseInt(cal.min || 0);
             const max = parseInt(cal.max || 255);
             const center = parseInt(cal.center || (min + max) / 2);
 
-            if (mod === 'static') return rule.value || center;
+            if (behavior === 'static' || behavior === 'state_machine') return rule.value || center;
 
             let norm = 0;
-            const audioCfg = rule.audio || { smoothing: 0.5, threshold: 0.5, react: 1.0 };
+            const audioCfg = rule.audio || { bin: 0, smoothing: 0.5, threshold: 0.5, react: 1.0 };
+            const binIdx = parseInt(rule.bin_idx !== undefined ? rule.bin_idx : (rule.lfo ? rule.lfo.bin : 0));
 
-            if (mod === 'lfo') {
+            // Pull simulated energy based on Source
+            let energy = 0;
+            const mods = latestAudioState.mods || {};
+            if (source === 'raw') {
+                if (binIdx === 0 && mods.bass !== undefined) energy = mods.bass;
+                else energy = (latestAudioState.bins || [0])[binIdx] || 0;
+            } else if (source === 'ratio') {
+                energy = (latestAudioState.ratios || [0])[binIdx] || 0;
+            } else if (source === 'attack') {
+                energy = (latestAudioState.attacks || [0])[binIdx] || 0;
+            } else if (source === 'flux') {
+                energy = (mods.flux !== undefined) ? (mods.flux * 0.5) : (latestAudioState.flux || 0) * 0.3;
+            } else if (source === 'volume') {
+                energy = mods.vol !== undefined ? mods.vol : (latestAudioState.vol || 0);
+            }
+
+            if (behavior === 'lfo') {
                 const lfo = rule.lfo || { shape: 'sine', speed: 0.5, bin: 0, react: 0.5, smoothing: 0, threshold: 0.1 };
                 const id = `sim_${chIdx}_${ruleIdx}`;
                 if (simulationPhases[id] === undefined) simulationPhases[id] = 0;
 
-                const binIdx = parseInt(lfo.bin || 0);
-                const bins = latestAudioState.bins || [0, 0, 0, 0, 0, 0];
-                const energy = bins[binIdx] || 0;
-
                 const speed = parseFloat(lfo.speed || 0.5);
                 const react = parseFloat(lfo.react || 0.5);
-
-                if (speed < 0.1 && latestAudioState.beat) {
-                    simulationPhases[id] = 0;
-                }
 
                 const freq = (speed + (energy * react * 1.5)) * 2 * Math.PI;
                 simulationPhases[id] += dt * freq;
@@ -2533,16 +2568,9 @@
                 if (lfo.invert) norm = -norm;
                 const ampScale = (1.0 - react) + (energy * react * 3.0);
                 norm *= Math.max(0, Math.min(1.0, ampScale));
-
-                // Optional: apply LFO smoothing/threshold here too if desired
-                if (Math.abs(norm) < (lfo.threshold || 0)) norm = 0;
-            } else if (mod === 'bass') {
-                norm = ((latestAudioState.bass || 0) * (audioCfg.react || 1.0)) * 2.0 - 1.0;
-            } else if (mod === 'flux') {
-                norm = ((latestAudioState.flux || 0) * (audioCfg.react || 1.0)) * 2.0 - 1.0;
-            } else if (mod === 'audio') {
-                norm = ((latestAudioState.vol || 0) * (audioCfg.react || 1.0)) * 2.0 - 1.0;
-            } else if (mod === 'beat') {
+            } else if (behavior === 'direct') {
+                norm = (energy * (audioCfg.react || 1.0)) * 2.0 - 1.0;
+            } else if (behavior === 'cycle' || behavior.includes('beat')) {
                 norm = latestAudioState.beat ? 1.0 : -1.0;
             }
 

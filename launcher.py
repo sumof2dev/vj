@@ -31,16 +31,38 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             self.handle_spotify_auth()
         elif self.path.startswith('/api/smart/control'):
             self.handle_smart_control()
+        elif self.path.startswith('/api/usergen'):
+            # Forward usergen API calls to the main setup server (8000)
+            host = self.headers.get('Host').split(':')[0]
+            redirect_host = 'api-' + host if (host.endswith('.ravebox.love') and not host.startswith('api-')) else host
+            schema = 'https' if host.endswith('.ravebox.love') else 'http'
+            port_str = '' if host.endswith('.ravebox.love') else ':8000'
+            
+            self.send_response(302)
+            self.send_header('Location', f'{schema}://{redirect_host}{port_str}{self.path}')
+            self.end_headers()
+            return
         elif self.path.startswith('/shell'):
             self.handle_shell_command()
             return
             
-        elif self.path in ['/', '/manager', '/manager.html', '/setup.html', '/visualdmx.html', '/remote.html']:
+        elif self.path in ['/', '/manager', '/manager.html', '/setup.html', '/visualdmx.html', '/remote.html', '/usergen', '/usergen/']:
             # Redirect frontend apps to the main engine port (8000)
+            # Smart Tunnel: use the api- prefix if it's a ravebox.love domain to avoid port 8000
             host = self.headers.get('Host').split(':')[0]
             target_path = '/manager.html' if self.path in ['/', '/manager'] else self.path
+            
+            if host.endswith('.ravebox.love') and not host.startswith('api-'):
+                redirect_host = 'api-' + host
+                schema = 'https'
+                port_str = ''
+            else:
+                redirect_host = host
+                schema = 'http'
+                port_str = ':8000'
+
             self.send_response(302)
-            self.send_header('Location', f'http://{host}:8000{target_path}')
+            self.send_header('Location', f'{schema}://{redirect_host}{port_str}{target_path}')
             self.end_headers()
             return
         else:

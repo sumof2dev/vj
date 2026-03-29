@@ -41,16 +41,44 @@ class AudioAnalyzer:
         self.auto_switch_threshold = 400 
         self.prev_bands = [0.0, 0.0, 0.0]
         self.prev_bins = [0.0] * 6
+        self.prev_raw_bins = [0.0] * 6
         self.beat_count = 0
+        self.flux_sensitivity_percentage = 0.5 # Track raw slider percentage (0-1)
+
+    def get_signal_health(self):
+        """Analyze raw peak history to detect environment-level issues (Spotify vol, ALSA)."""
+        if not self.history_raw_max or len(self.history_raw_max) < 20:
+            return {"status": "WARM_UP", "peak": 0.0, "message": "Gathering signal data..."}
+
+        # Find the peak in the rolling window (last ~5-10s)
+        peak = max(self.history_raw_max)
+
+        if peak < 0.05:
+            # Signal is basically silence
+            return {"status": "CRITICAL_LOW", "peak": round(peak, 3), "message": "Signal nearly silent. Check Spotify/Main Volume."}
+        if peak < 0.2:
+            # Signal is workable but weak
+            return {"status": "WEAK", "peak": round(peak, 3), "message": "Signal is weak. Results may be inconsistent."}
+        if peak > 3.0:
+            # Overloaded signal
+            return {"status": "OVERLOAD", "peak": round(peak, 3), "message": "Signal is clipping or has high DC offset."}
+        
+        return {"status": "HEALTHY", "peak": round(peak, 3), "message": "Audio signal levels are optimal."}
 
     def set_gain(self, val: float):
         """Set normalization gain (Sensitivity)"""
         self.gain = max(0.01, min(5.0, float(val)))
 
     def set_flux_sensitivity(self, val: float):
-        """Set flux threshold multiplier (Higher = less sensitive to beats)"""
-        self.flux_threshold_mult = 3.0 - (float(val) * 1.9)
-        self.flux_threshold_abs = 0.6 - (float(val) * 0.5)
+        """Set flux threshold multiplier (Higher = more sensitive to beats)"""
+        self.flux_sensitivity_percentage = float(val)
+        # Optimized formula: 
+        # val=0.0 -> mult=4.0 (Very conservative)
+        # val=0.5 -> mult=2.0 (Balanced)
+        # val=1.0 -> mult=1.2 (Sensitive)
+        # val=1.5 -> mult=0.8 (Aggressive but not insane)
+        self.flux_threshold_mult = max(0.6, 4.0 - (float(val) * 2.1))
+        self.flux_threshold_abs = max(0.1, 0.6 - (float(val) * 0.45))
 
     def _normalize(self, val, history):
         """Perform rolling normalization (val - history_min) / (history_max - history_min)"""
@@ -111,12 +139,16 @@ class AudioAnalyzer:
             np.mean(wled_bins[14:16])  # 5: Air / High
         ]
         
-        # 4. Silence Reset
+        # 4. Silence Reset & Peak Tracking
         current_raw_vol = (raw_bass + raw_mid + raw_high) / 3.0
         if not hasattr(self, 'smooth_raw_vol'): self.smooth_raw_vol = 0.0
         self.smooth_raw_vol = self.smooth_raw_vol * 0.5 + current_raw_vol * 0.5
         raw_vol = self.smooth_raw_vol
         
+        current_raw_max = max(raw_bass, raw_mid, raw_high)
+        self.history_raw_max.append(current_raw_max)
+        global_peak = max(0.4, max(self.history_raw_max) if self.history_raw_max else 0.4)
+
         if raw_vol > 0.03: 
             self.last_sound_time = now
         elif now - self.last_sound_time > 2.0:
@@ -127,14 +159,18 @@ class AudioAnalyzer:
         if raw_vol < 0.02:
             return self.get_empty_state()
 
+        # --- Timbre (Spectral Ratios) ---
+        total_energy = sum(raw_bins) + 1e-6
+        ratios = [float(b / total_energy) for b in raw_bins]
+        
+        # --- Impact (Rate of Rise / Attacks) ---
+        attacks = [min(1.0, float(max(0, raw_bins[i] - self.prev_raw_bins[i])) / (global_peak + 1e-6) * self.gain) for i in range(6)]
+        self.prev_raw_bins = list(raw_bins)
+
         # 5. ROLLING NORMALIZATION
         out_bass = self._normalize(raw_bass, self.history_bass)
         out_mid  = self._normalize(raw_mid, self.history_mid)
         out_high = self._normalize(raw_high, self.history_high)
-        
-        current_raw_max = max(raw_bass, raw_mid, raw_high)
-        self.history_raw_max.append(current_raw_max)
-        global_peak = max(0.4, max(self.history_raw_max) if self.history_raw_max else 0.4)
         
         out_vol = min(1.0, (current_raw_max / global_peak) * self.gain)
         out_bass = min(1.0, out_bass * self.gain)
@@ -159,7 +195,18 @@ class AudioAnalyzer:
             if bi == 0: val = max(0.0, val - 0.08) * 0.5
             if bi == 1: val = max(0.0, val - 0.03) * 0.7
             normalized = min(1.0, (val / global_peak) * self.gain)
-            out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * 0.7 + normalized * 0.3))
+            
+            # --- FREQUENCY-AWARE SMOOTHING ---
+            # Low bins (0-2) are punchy (70/30). 
+            # High bins (3-5) are cinematic/smooth (85/15 to 90/10).
+            if bi < 3:
+                s_factor = 0.70 
+            elif bi < 5:
+                s_factor = 0.85
+            else:
+                s_factor = 0.90 # Extreme smoothing for "Air" to prevent strobe-flicker
+            
+            out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * s_factor + normalized * (1.0 - s_factor)))
         self.prev_bins = out_bins
         
         self.history_flux.append(flux)
@@ -206,7 +253,9 @@ class AudioAnalyzer:
             "beat_count": int(self.beat_count),
             "bpm": float(self.bpm),
             "suggested_animation": suggested_shape,
-            "bins": [float(b) for b in out_bins]
+            "bins": [float(b) for b in out_bins],
+            "ratios": ratios,
+            "attacks": attacks
         }
 
     def get_empty_state(self):
@@ -215,5 +264,7 @@ class AudioAnalyzer:
              "beat": False, "bpm": 120.0,
              "bass_onset": False, "high_onset": False, "beat_phase": 0.0,
              "suggested_animation": None, "vibe": "chill", "transient": "steady",
-             "bins": [0.0] * 6
+             "bins": [0.0] * 6,
+             "ratios": [0.0] * 6,
+             "attacks": [0.0] * 6
          }

@@ -12,6 +12,7 @@ import os
 import sys
 import subprocess
 import ssl
+import time
 from urllib.parse import urlparse
 
 # --- CONFIGURATION ---
@@ -25,16 +26,35 @@ sys.path.insert(0, BACKEND_DIR)
 class ProductionHandler(http.server.SimpleHTTPRequestHandler):
     """HTTP handler for VJ Production"""
     
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        super().end_headers()
+
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        path = parsed.path
+        path = parsed.path.rstrip('/')
+
+        # Handle root or default
+        if path == '':
+            self.send_response(302)
+            self.send_header('Location', '/manager.html')
+            self.end_headers()
+            return
+
+        # API: List UserGen Shaders
+        if path == '/api/usergen/list':
+            query = parsed.query
+            layer_type = None
+            if 'type=' in query:
+                layer_type = query.split('type=')[1].split('&')[0]
+            self._handle_list_shaders(layer_type)
+            return
 
         # API: List Fixtures
         if path == '/api/fixtures':
@@ -47,11 +67,28 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_fixture(fname)
             return
 
+        # NEW: Global Proxy for Launcher Status (if hit on 8000)
+        if path == '/status':
+             self._proxy_to_launcher('/status')
+             return
+
+        if path == '/start':
+             self._proxy_to_launcher('/start')
+             return
+
+        if path == '/stop':
+             self._proxy_to_launcher('/stop')
+             return
+
+        if path == '/restart' or path == '/api/restart':
+             self._proxy_to_launcher('/restart')
+             return
+
         return super().do_GET()
 
     def do_PUT(self):
         parsed = urlparse(self.path)
-        path = parsed.path
+        path = parsed.path.rstrip('/')
 
         # API: Save Fixture
         if path.startswith('/api/fixtures/'):
@@ -59,42 +96,79 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_save_fixture(fname)
             return
 
-        # API: Save Direct Fixture (no path)
-        if path == '/api/fixtures':
-             # Maybe it expects a filename in headers or just saves default? 
-             # Usually it's /api/fixtures/NAME.json
-             pass
-
         # Legacy saves (config.json, etc)
         if not self.handle_save_legacy():
             self.send_error(501, "Not Implemented")
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        path = parsed.path
+        path = parsed.path.rstrip('/')
         
-        # API: Proxy Engine Restart
-        if path == '/api/restart':
-            try:
-                import urllib.request
-                import ssl
-                # Ignore SSL verification for local launcher proxy
-                ctx = ssl.create_default_context()
-                ctx.check_hostname = False
-                ctx.verify_mode = ssl.CERT_NONE
-
-                req = urllib.request.Request("https://127.0.0.1:8001/restart")
-                with urllib.request.urlopen(req, timeout=5, context=ctx) as response:
-                    self.send_response(200)
-                    self.send_header('Access-Control-Allow-Origin', '*')
-                    self.send_header('Content-Type', 'application/json')
-                    self.end_headers()
-                    self.wfile.write(b'{"status": "restarting"}')
-            except Exception as e:
-                self.send_error(500, f"Failed to hit local launcher: {e}")
+        # API: Save UserGen Shader
+        if path == '/api/usergen/save':
+            self._handle_save_shader()
             return
-            
+
+        # API: Rename UserGen Shader (Metadata prompt)
+        if path == '/api/usergen/rename':
+            self._handle_rename_shader()
+            return
+
+        # API: Proxy Engine Restart
+        if path == '/api/restart' or path == '/restart':
+            self._proxy_to_launcher('/restart')
+            return
+
+        if path == '/start':
+            self._proxy_to_launcher('/start')
+            return
+
+        if path == '/stop':
+            self._proxy_to_launcher('/stop')
+            return
+
         self.do_PUT()
+
+    def do_DELETE(self):
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip('/')
+        
+        # API: Delete UserGen Shader
+        if path == '/api/usergen/delete':
+            from urllib.parse import parse_qs, unquote
+            qs = parse_qs(parsed.query)
+            fname = qs.get('file', [None])[0]
+            
+            if not fname or '..' in fname:
+                self.send_error(400, "Invalid filename")
+                return
+
+            lib_root = os.path.join(BASE_DIR, 'library')
+            fpath = os.path.join(lib_root, fname)
+            
+            if os.path.exists(fpath):
+                try:
+                    os.remove(fpath)
+                    # Delete metadata in same directory
+                    if os.path.exists(fpath + ".json"):
+                        os.remove(fpath + ".json")
+                    
+                    # Also cleanup orphan JSON in root if it exists (legacy compatibility)
+                    fname_only = os.path.basename(fname)
+                    root_json = os.path.join(lib_root, fname_only + ".json")
+                    if os.path.exists(root_json):
+                        os.remove(root_json)
+                        print(f"🧹 Cleaned up orphan metadata in root: {fname_only}.json")
+
+                    print(f"🗑️ Deleted UserGen Shader: {fname}")
+                    self._send_json({"status": "ok"})
+                except Exception as e:
+                    self.send_error(500, str(e))
+            else:
+                self.send_error(404, f"File not found: {fname}")
+            return
+
+        self.send_error(501, "Not Implemented")
 
     def _handle_list_fixtures(self):
         """List all .json files in fixtures/"""
@@ -148,13 +222,170 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, str(e))
 
 
+    def _handle_list_shaders(self, filter_type=None):
+        """List all .frag files in library/ (recursive)"""
+        lib_root = os.path.join(BASE_DIR, 'library')
+        try:
+            if not os.path.exists(lib_root):
+                os.makedirs(lib_root)
+                os.makedirs(os.path.join(lib_root, 'base'))
+                os.makedirs(os.path.join(lib_root, 'fx'))
+            
+            results = []
+            
+            # Walk the library directory
+            for root, dirs, files in os.walk(lib_root):
+                # Calculate relative path from lib_root (e.g. "base" or "")
+                rel_dir = os.path.relpath(root, lib_root)
+                if rel_dir == ".": rel_dir = ""
+                
+                # Filter by type if requested
+                if filter_type and rel_dir and filter_type not in rel_dir.lower():
+                    continue
+
+                for f in files:
+                    if not f.endswith('.frag'): continue
+                    
+                    fpath = os.path.join(root, f)
+                    meta_path = fpath + ".json"
+                    prompt = "Hand-coded Shaders"
+                    
+                    # File relative to library/ for frontend fetching
+                    rel_file = os.path.join(rel_dir, f) if rel_dir else f
+                    
+                    # Default type based on directory
+                    ltype = "fx" if "fx" in rel_dir.lower() else "base"
+                    
+                    if os.path.exists(meta_path):
+                        with open(meta_path, 'r') as m:
+                            try:
+                                meta = json.load(m)
+                                prompt = meta.get('prompt', prompt)
+                                # Trust metadata type if it explicitly exists
+                                if 'type' in meta:
+                                    ltype = meta['type']
+                            except: pass
+                    
+                    results.append({
+                        "file": rel_file, 
+                        "prompt": prompt, 
+                        "type": ltype,
+                        "mtime": os.path.getmtime(fpath)
+                    })
+            
+            # Sort by most recent
+            results.sort(key=lambda x: x['mtime'], reverse=True)
+            self._send_json(results)
+        except Exception as e:
+            print(f"❌ Error listing shaders: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_save_shader(self):
+        """Save a shader .frag file to library/"""
+        length = int(self.headers['Content-Length'])
+        body = self.rfile.read(length)
+        
+        try:
+            data = json.loads(body)
+            code = data.get('code')
+            prompt = data.get('prompt', 'Unlabeled')
+            layer_type = data.get('layer_type', 'base').lower() # default to base
+            
+            if layer_type not in ['base', 'fx']:
+                layer_type = 'base'
+
+            if not code:
+                self.send_error(400, "Missing code")
+                return
+
+            lib_root = os.path.join(BASE_DIR, 'library')
+            target_dir = os.path.join(lib_root, layer_type)
+            if not os.path.exists(target_dir):
+                os.makedirs(target_dir)
+
+            # Filename based on timestamp
+            ts = int(time.time() * 1000)
+            fname = f"vj_shader_{ts}.frag"
+            fpath = os.path.join(target_dir, fname)
+            
+            # Save the code
+            with open(fpath, 'w') as f:
+                f.write(code)
+            
+            # Save metadata
+            with open(fpath + ".json", 'w') as f:
+                json.dump({"prompt": prompt, "timestamp": ts, "id": ts, "type": layer_type}, f)
+
+            print(f"🎨 Saved UserGen {layer_type.upper()} Shader: {fname}")
+            # Return relative path for UI consistency
+            self._send_json({"status": "ok", "file": f"{layer_type}/{fname}", "prompt": prompt, "type": layer_type})
+        except Exception as e:
+            print(f"❌ Error saving shader: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_rename_shader(self):
+        """Update the prompt (label) of a shader in its metadata file"""
+        length = int(self.headers['Content-Length'])
+        body = self.rfile.read(length)
+        
+        try:
+            data = json.loads(body)
+            fname = data.get('file')
+            new_prompt = data.get('new_prompt')
+            
+            if not fname or not new_prompt or '..' in fname:
+                self.send_error(400, "Invalid input")
+                return
+
+            lib_root = os.path.join(BASE_DIR, 'library')
+            meta_path = os.path.join(lib_root, fname + ".json")
+            
+            if os.path.exists(meta_path):
+                with open(meta_path, 'r') as f:
+                    meta = json.load(f)
+                
+                meta['prompt'] = new_prompt
+                
+                with open(meta_path, 'w') as f:
+                    json.dump(meta, f)
+                
+                print(f"📝 Renamed UserGen Shader: {fname} -> {new_prompt}")
+                self._send_json({"status": "ok"})
+            else:
+                self.send_error(404, "Metadata not found")
+        except Exception as e:
+            self.send_error(500, str(e))
+
+    def _proxy_to_launcher(self, subpath):
+        """Proxy a request to the launcher service on 8001"""
+        import urllib.request
+        import ssl
+        try:
+             # Ignore SSL verification for local launcher proxy
+             ctx = ssl.create_default_context()
+             ctx.check_hostname = False
+             ctx.verify_mode = ssl.CERT_NONE
+
+             # Launcher might use http or https (check for certs)
+             protocol = 'https' if os.path.exists(os.path.join(BASE_DIR, 'cert.pem')) else 'http'
+             url = f"{protocol}://127.0.0.1:8001{subpath}"
+             
+             req = urllib.request.Request(url)
+             with urllib.request.urlopen(req, timeout=8, context=ctx) as response:
+                 self.send_response(200)
+                 self.send_header('Content-Type', 'application/json')
+                 self.end_headers()
+                 self.wfile.write(response.read())
+        except Exception as e:
+             print(f"❌ Proxy Error to {subpath}: {e}")
+             self.send_error(500, f"Launcher Proxy Error: {e}")
+
     def _send_json(self, data):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
         self.send_header('Pragma', 'no-cache')
         self.send_header('Expires', '0')
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(data, indent=2).encode('utf-8'))
 
@@ -180,7 +411,6 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                     f.write(body)
                 print(f"✅ Legacy Saved {target_file} (Body: {len(body)} bytes)")
                 self.send_response(200)
-                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(b"Saved successfully")
                 return True
@@ -192,6 +422,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
 # Add MIME types for PWA and assets
 http.server.SimpleHTTPRequestHandler.extensions_map.update({
     '.json': 'application/json',
+    '.frag': 'text/plain',
     '.manifest': 'application/manifest+json',
     '.webmanifest': 'application/manifest+json',
     '.js': 'application/javascript',
