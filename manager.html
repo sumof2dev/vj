@@ -121,14 +121,14 @@
 
         .action-btns {
             display: flex;
+            justify-content: center;
             gap: 10px;
             margin-bottom: 1rem;
         }
 
         .btn {
-            display: block;
-            flex: 1;
-            padding: 0.6rem 0.8rem;
+            display: inline-block;
+            padding: 0.6rem 1.2rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             font-size: 0.8rem;
@@ -691,16 +691,6 @@
             <a id="link-help" href="#">Help</a>
         </div>
     </div>
-
-
-
-    <script type="importmap">
-        { "imports": { "@google/genai": "https://esm.run/@google/genai" } }
-    </script>
-    <script type="module">
-        import { GoogleGenAI } from "@google/genai";
-        window.GoogleGenAI = GoogleGenAI;
-    </script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const queryHost = urlParams.get('host');
@@ -805,12 +795,12 @@
                 }
 
                 if (data.active) {
-                    btn.innerText = "Dip out";
+                    btn.innerText = "ACTIVE";
                     btn.className = "btn btn-stop";
                     if (!lastKnownActive) connectLiveDashboard(); // Restore WS if it was dead
                     if (document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
                 } else {
-                    btn.innerText = "Start this bitch";
+                    btn.innerText = "START";
                     btn.className = "btn btn-start";
                 }
                 lastKnownActive = data.active;
@@ -846,7 +836,7 @@
             const originalText = btn.innerText;
 
             btn.classList.add('loading');
-            btn.innerText = action === 'start' ? "Wait for it...Pregaming" : "Oh, shit! Mom's coming...";
+            btn.innerText = action === 'start' ? "43262226" : "Until next time";
 
             try {
                 const res = await fetch(`${LAUNCHER_API}/${action}`);
@@ -938,7 +928,7 @@
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
             ws = new WebSocket(wsUrl);
-
+            ws.binaryType = 'arraybuffer';
             ws.onopen = () => {
                 wsErrorCount = 0;
                 // SSL issue check moved to help.html
@@ -1053,84 +1043,60 @@
                 console.error("WebSocket Error:", err);
             };
 
+            let wsReconnectDelay = 2000;
             ws.onclose = () => {
                 document.getElementById('liveDashboard').style.opacity = '0';
                 setTimeout(() => document.getElementById('liveDashboard').style.display = 'none', 500);
-                setTimeout(connectLiveDashboard, 2000);
+
+                // Exponential backoff for reconnections
+                const backoff = document.hidden ? 15000 : wsReconnectDelay;
+                setTimeout(() => {
+                    connectLiveDashboard();
+                    // Increase delay for next time, cap at 30s
+                    wsReconnectDelay = Math.min(wsReconnectDelay * 1.5, 30000);
+                }, backoff);
             };
 
+            let lastBinaryData = null;
+            let lastStateUpdate = null;
+
             ws.onmessage = (event) => {
+                if (event.data instanceof ArrayBuffer) {
+                    lastBinaryData = event.data;
+                    return;
+                }
+
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.type === 'current_params') {
                         syncUI(msg);
                     }
-                    if (msg.type === 'audio') {
-                        const d = msg.data;
-
-                        // Vol & Vibe
-                        if (d.vol !== undefined) document.getElementById('hubVol').style.width = Math.min(100, d.vol * 100) + '%';
-
-                        // Engine
-                        if (d.transient) {
-                            const tr = document.getElementById('hubTransient');
-                            tr.textContent = d.transient.toUpperCase();
-                            tr.className = 'logic-state ' + d.transient;
-                        }
-                        if (d.bpm) document.getElementById('hubBpm').textContent = Math.round(d.bpm);
-                        if (d.vibe) document.getElementById('hubVibe').textContent = d.vibe.toUpperCase();
-                        if (d.beat) {
-                            const bd = document.getElementById('hubGrid');
-                            bd.style.color = '#fff';
-                            setTimeout(() => bd.style.color = 'var(--primary)', 100);
-                        }
-                        if (d.bins) {
-                            const hubBins = document.getElementById('hubBins');
-                            // Dashboard EQ (Direct 1:1 mapping from 6 native bands)
-                            for (let i = 0; i < 6; i++) {
-                                const bar = hubBins.children[i];
-                                if (!bar) continue;
-
-                                const energy = d.bins[i] || 0;
-
-                                // Internal height: 54px - (6px * 2 padding) = 42px
-                                bar.style.height = Math.max(2, energy * 42) + 'px';
-
-                                const isActive = energy > 0.05;
-                                const isPeak = energy > 0.85;
-                                const barColor = isPeak ? '#f200ff' : (isActive ? 'var(--primary)' : '#333');
-
-                                bar.style.background = barColor;
-                                bar.style.opacity = 0.4 + (energy * 0.6);
-
-                                if (isActive) {
-                                    bar.style.boxShadow = `0 0 10px ${isPeak ? '#f200ff55' : 'var(--primary-glow, #00f2ff44)'}`;
-                                } else {
-                                    bar.style.boxShadow = 'none';
-                                }
-                            }
+                    if (msg.type === 'state') {
+                        lastStateUpdate = msg;
+                        // Immediate update for state changes (vibe, overrides)
+                        if (msg.vibe) document.getElementById('hubVibe').textContent = msg.vibe.toUpperCase();
+                        if (msg.transient) document.getElementById('hubTransient').textContent = msg.transient.toUpperCase();
+                        if (msg.error) {
+                            const st = document.getElementById('status');
+                            if (st) st.innerText = "🛑 " + msg.error;
                         }
 
-                        // Spotify Background & UI
-                        if (d.spotify) {
-                            const sp = d.spotify;
+                        // RESTORE SPOTIFY UI
+                        if (msg.spotify) {
+                            const sp = msg.spotify;
                             document.getElementById('hubSpotify').style.display = 'block';
                             document.getElementById('hubSpotName').textContent = sp.name;
 
                             if (sp.duration_ms && sp.progress_ms) {
                                 document.getElementById('hubSpotProg').style.width = Math.min(100, (sp.progress_ms / sp.duration_ms) * 100) + '%';
                             }
-
                             const art = document.getElementById('hubSpotArt');
                             if (sp.image_low) {
                                 art.src = sp.image_low;
                                 art.style.display = 'block';
                             }
-
-                            // Dynamic Background
                             if (sp.image_high && sp.image_high !== currentBgUrl) {
                                 currentBgUrl = sp.image_high;
-                                // Smooth crossfade trick via CSS
                                 document.body.style.transition = 'background-image 1s ease-in-out';
                                 document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.8)), url('${currentBgUrl}')`;
                             }
@@ -1144,6 +1110,48 @@
                     }
                 } catch (e) { }
             };
+
+            // Throttled UI Update Loop (10Hz)
+            // We sample the high-frequency binary data and update the DOM at a sane rate.
+            setInterval(() => {
+                if (!lastBinaryData) return;
+                const view = new DataView(lastBinaryData);
+
+                // Parsing Schema: < f 6f 6f 4B 5f 3H 513s
+                const vol = view.getFloat32(20, true);
+                const bpm = view.getFloat32(24, true);
+                const beat = view.getUint8(52);
+
+                // Update Meters
+                document.getElementById('hubVol').style.width = Math.min(100, vol * 100) + '%';
+                document.getElementById('hubBpm').textContent = Math.round(bpm);
+
+                if (beat) {
+                    const bd = document.getElementById('hubGrid');
+                    bd.style.transition = 'none';
+                    bd.style.color = '#fff';
+                    setTimeout(() => {
+                        bd.style.transition = 'color 0.2s';
+                        bd.style.color = 'var(--primary)';
+                    }, 50);
+                }
+
+                // Update EQ Bins
+                const hubBins = document.getElementById('hubBins');
+                for (let i = 0; i < 6; i++) {
+                    const bar = hubBins.children[i];
+                    if (!bar) continue;
+
+                    const energy = view.getFloat32(28 + (i * 4), true);
+                    bar.style.height = Math.max(2, energy * 42) + 'px';
+
+                    const isActive = energy > 0.05;
+                    const isPeak = energy > 0.85;
+                    const barColor = isPeak ? '#f200ff' : (isActive ? 'var(--primary)' : '#444');
+                    bar.style.background = barColor;
+                    bar.style.opacity = 0.4 + (energy * 0.6);
+                }
+            }, 100);
         }
 
         // Start live dashboard listener

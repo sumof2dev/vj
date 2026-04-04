@@ -1,0 +1,1597 @@
+{
+    "patterns": {
+        "0": {
+            "file": "pattern_000.jpg",
+            "complexity": 14060,
+            "brightness": 46961
+        },
+        "1": {
+            "file": "pattern_001.jpg",
+            "complexity": 13634,
+            "brightness": 44672
+        },
+        "2": {
+            "file": "pattern_002.jpg",
+            "complexity": 16539,
+            "brightness": 49480
+        },
+        "3": {
+            "file": "pattern_003.jpg",
+            "complexity": 15267,
+            "brightness": 53504
+        },
+        "4": {
+            "file": "pattern_004.jpg",
+            "complexity": 15802,
+            "brightness": 56170
+        },
+        "5": {
+            "file": "pattern_005.jpg",
+            "complexity": 16792,
+            "brightness": 58579
+        },
+        "6": {
+            "file": "pattern_006.jpg",
+            "complexity": 17992,
+            "brightness": 64222
+        },
+        "7": {
+            "file": "pattern_007.jpg",
+            "complexity": 16950,
+            "brightness": 63742
+        },
+        "8": {
+            "file": "pattern_008.jpg",
+            "complexity": 17247,
+            "brightness": 62721
+        },
+        "9": {
+            "file": "pattern_009.jpg",
+            "complexity": 17509,
+            "brightness": 63046
+        },
+        "10": {
+            "file": "pattern_010.jpg",
+            "complexity": 14468,
+            "brightness": 50994
+        },
+        "11": {
+            "file": "pattern_011.jpg",
+            "complexity": 16522,
+            "brightness": 53568
+        },
+        "12": {
+            "file": "pattern_012.jpg",
+            "complexity": 14889,
+            "brightness": 50735
+        },
+        "13": {
+            "file": "pattern_013.jpg",
+            "complexity": 12261,
+            "brightness": 34495
+        },
+        "14": {
+            "file": "pattern_014.jpg",
+            "complexity": 5418,
+            "brightness": 25652
+        },
+        "15": {
+            "file": "pattern_015.jpg",
+            "complexity": 8922,
+            "brightness": 63382
+        },
+        "16": {
+            "file": "pattern_016.jpg",
+            "complexity": 12144,
+            "brightness": 87185
+        },
+        "17": {
+            "file": "pattern_017.jpg",
+            "complexity": 2438,
+            "brightness": 4377
+        },
+        "18": {
+            "file": "pattern_018.jpg",
+            "complexity": 4143,
+            "brightness": 20665
+        },
+        "19": {
+            "file": "pattern_019.jpg",
+            "complexity": 11935,
+            "brightness": 83480
+        },
+        "20": {
+            "file": "pattern_020.jpg",
+            "complexity": 14340,
+            "brightness": 93210
+        },
+        "21": {
+            "file": "pattern_021.jpg",
+            "complexity": 10786,
+            "brightness": 78746
+        },
+        "22": {
+            "file": "pattern_022.jpg",
+            "complexity": 7955,
+            "brightness": 33983
+        },
+        "23": {
+            "file": "pattern_023.jpg",
+            "complexity": 13071,
+            "brightness": 52827
+        },
+        "24": {
+            "file": "pattern_024.jpg",
+            "complexity": 13269,
+            "brightness": 43590
+        },
+        "25": {
+            "file": "pattern_025.jpg",
+            "complexity": 12663,
+            "brightness": 41322
+        },
+        "26": {
+            "file": "pattern_026.jpg",
+            "complexity": 12436,
+            "brightness": 41396
+        },
+        "27": {
+            "file": "pattern_027.jpg",
+            "complexity": 10126,
+            "brightness": 32244
+        },
+        "28": {
+            "file": "pattern_028.jpg",
+            "complexity": 11368,
+            "brightness": 41417
+        },
+        "29": {
+            "file": "pattern_029.jpg",
+            "complexity": 7240,
+            "brightness": 50958
+        },
+        "30": {
+            "file": "pattern_030.jpg",
+            "complexity": 7023,
+            "brightness": 51128
+        },
+        "31": {
+            "file": "pattern_031.jpg",
+            "complexity": 7690,
+            "brightness": 59413
+        },
+        "32": {
+            "file": "pattern_032.jpg",
+            "complexity": 7147,
+            "brightness": 57440
+        },
+        "33": {
+            "file": "pattern_033.jpg",
+            "complexity": 7367,
+            "brightness": 61093
+        },
+        "34": {
+            "file": "pattern_034.jpg",
+            "complexity": 8175,
+            "brightness": 67873
+        },
+        "35": {
+            "file": "pattern_035.jpg",
+            "complexity": 9914,
+            "brightness": 80556
+        },
+        "36": {
+            "file": "pattern_036.jpg",
+            "complexity": 15855,
+            "brightness": 109704
+        },
+        "37": {
+            "file": "pattern_037.jpg",
+            "complexity": 15344,
+            "brightness": 105447
+        },
+        "38": {
+            "file": "pattern_038.jpg",
+            "complexity": 17288,
+            "brightness": 108334
+        },
+        "39": {
+            "file": "pattern_039.jpg",
+            "complexity": 8433,
+            "brightness": 59255
+        },
+        "40": {
+            "file": "pattern_040.jpg",
+            "complexity": 9317,
+            "brightness": 55120
+        },
+        "41": {
+            "file": "pattern_041.jpg",
+            "complexity": 9727,
+            "brightness": 52857
+        },
+        "42": {
+            "file": "pattern_042.jpg",
+            "complexity": 9949,
+            "brightness": 51105
+        },
+        "43": {
+            "file": "pattern_043.jpg",
+            "complexity": 10766,
+            "brightness": 51730
+        },
+        "44": {
+            "file": "pattern_044.jpg",
+            "complexity": 9445,
+            "brightness": 48240
+        },
+        "45": {
+            "file": "pattern_045.jpg",
+            "complexity": 9510,
+            "brightness": 48759
+        },
+        "46": {
+            "file": "pattern_046.jpg",
+            "complexity": 10191,
+            "brightness": 50448
+        },
+        "47": {
+            "file": "pattern_047.jpg",
+            "complexity": 10424,
+            "brightness": 53758
+        },
+        "48": {
+            "file": "pattern_048.jpg",
+            "complexity": 11498,
+            "brightness": 56770
+        },
+        "49": {
+            "file": "pattern_049.jpg",
+            "complexity": 10268,
+            "brightness": 53961
+        },
+        "50": {
+            "file": "pattern_050.jpg",
+            "complexity": 9899,
+            "brightness": 49840
+        },
+        "51": {
+            "file": "pattern_051.jpg",
+            "complexity": 9708,
+            "brightness": 53447
+        },
+        "52": {
+            "file": "pattern_052.jpg",
+            "complexity": 11046,
+            "brightness": 57666
+        },
+        "53": {
+            "file": "pattern_053.jpg",
+            "complexity": 10250,
+            "brightness": 54020
+        },
+        "54": {
+            "file": "pattern_054.jpg",
+            "complexity": 11616,
+            "brightness": 54787
+        },
+        "55": {
+            "file": "pattern_055.jpg",
+            "complexity": 13836,
+            "brightness": 61235
+        },
+        "56": {
+            "file": "pattern_056.jpg",
+            "complexity": 5264,
+            "brightness": 9492
+        },
+        "57": {
+            "file": "pattern_057.jpg",
+            "complexity": 836,
+            "brightness": 1774
+        },
+        "58": {
+            "file": "pattern_058.jpg",
+            "complexity": 12129,
+            "brightness": 84730
+        },
+        "59": {
+            "file": "pattern_059.jpg",
+            "complexity": 9170,
+            "brightness": 57380
+        },
+        "60": {
+            "file": "pattern_060.jpg",
+            "complexity": 11323,
+            "brightness": 76593
+        },
+        "61": {
+            "file": "pattern_061.jpg",
+            "complexity": 10136,
+            "brightness": 74134
+        },
+        "62": {
+            "file": "pattern_062.jpg",
+            "complexity": 8979,
+            "brightness": 62189
+        },
+        "63": {
+            "file": "pattern_063.jpg",
+            "complexity": 10459,
+            "brightness": 77421
+        },
+        "64": {
+            "file": "pattern_064.jpg",
+            "complexity": 10849,
+            "brightness": 79564
+        },
+        "65": {
+            "file": "pattern_065.jpg",
+            "complexity": 9801,
+            "brightness": 62493
+        },
+        "66": {
+            "file": "pattern_066.jpg",
+            "complexity": 11349,
+            "brightness": 79544
+        },
+        "67": {
+            "file": "pattern_067.jpg",
+            "complexity": 11958,
+            "brightness": 79437
+        },
+        "68": {
+            "file": "pattern_068.jpg",
+            "complexity": 12493,
+            "brightness": 82899
+        },
+        "69": {
+            "file": "pattern_069.jpg",
+            "complexity": 10136,
+            "brightness": 74059
+        },
+        "70": {
+            "file": "pattern_070.jpg",
+            "complexity": 14495,
+            "brightness": 88921
+        },
+        "71": {
+            "file": "pattern_071.jpg",
+            "complexity": 15169,
+            "brightness": 71720
+        },
+        "72": {
+            "file": "pattern_072.jpg",
+            "complexity": 11412,
+            "brightness": 56161
+        },
+        "73": {
+            "file": "pattern_073.jpg",
+            "complexity": 7217,
+            "brightness": 34587
+        },
+        "74": {
+            "file": "pattern_074.jpg",
+            "complexity": 5001,
+            "brightness": 19181
+        },
+        "75": {
+            "file": "pattern_075.jpg",
+            "complexity": 5992,
+            "brightness": 23413
+        },
+        "76": {
+            "file": "pattern_076.jpg",
+            "complexity": 5761,
+            "brightness": 19843
+        },
+        "77": {
+            "file": "pattern_077.jpg",
+            "complexity": 5104,
+            "brightness": 16026
+        },
+        "78": {
+            "file": "pattern_078.jpg",
+            "complexity": 4109,
+            "brightness": 14198
+        },
+        "79": {
+            "file": "pattern_079.jpg",
+            "complexity": 3806,
+            "brightness": 15742
+        },
+        "80": {
+            "file": "pattern_080.jpg",
+            "complexity": 5014,
+            "brightness": 23221
+        },
+        "81": {
+            "file": "pattern_081.jpg",
+            "complexity": 6242,
+            "brightness": 31699
+        },
+        "82": {
+            "file": "pattern_082.jpg",
+            "complexity": 7732,
+            "brightness": 38067
+        },
+        "83": {
+            "file": "pattern_083.jpg",
+            "complexity": 8941,
+            "brightness": 46157
+        },
+        "84": {
+            "file": "pattern_084.jpg",
+            "complexity": 9155,
+            "brightness": 48035
+        },
+        "85": {
+            "file": "pattern_085.jpg",
+            "complexity": 9559,
+            "brightness": 46577
+        },
+        "86": {
+            "file": "pattern_086.jpg",
+            "complexity": 7804,
+            "brightness": 37092
+        },
+        "87": {
+            "file": "pattern_087.jpg",
+            "complexity": 7704,
+            "brightness": 39386
+        },
+        "88": {
+            "file": "pattern_088.jpg",
+            "complexity": 6258,
+            "brightness": 33042
+        },
+        "89": {
+            "file": "pattern_089.jpg",
+            "complexity": 16414,
+            "brightness": 95199
+        },
+        "90": {
+            "file": "pattern_090.jpg",
+            "complexity": 6856,
+            "brightness": 26067
+        },
+        "91": {
+            "file": "pattern_091.jpg",
+            "complexity": 7432,
+            "brightness": 28045
+        },
+        "92": {
+            "file": "pattern_092.jpg",
+            "complexity": 4340,
+            "brightness": 16210
+        },
+        "93": {
+            "file": "pattern_093.jpg",
+            "complexity": 4565,
+            "brightness": 15042
+        },
+        "94": {
+            "file": "pattern_094.jpg",
+            "complexity": 5918,
+            "brightness": 20800
+        },
+        "95": {
+            "file": "pattern_095.jpg",
+            "complexity": 9042,
+            "brightness": 37939
+        },
+        "96": {
+            "file": "pattern_096.jpg",
+            "complexity": 7080,
+            "brightness": 22908
+        },
+        "97": {
+            "file": "pattern_097.jpg",
+            "complexity": 7827,
+            "brightness": 32922
+        },
+        "98": {
+            "file": "pattern_098.jpg",
+            "complexity": 7571,
+            "brightness": 32430
+        },
+        "99": {
+            "file": "pattern_099.jpg",
+            "complexity": 6262,
+            "brightness": 26673
+        },
+        "100": {
+            "file": "pattern_100.jpg",
+            "complexity": 7558,
+            "brightness": 35160
+        },
+        "101": {
+            "file": "pattern_101.jpg",
+            "complexity": 7730,
+            "brightness": 36426
+        },
+        "102": {
+            "file": "pattern_102.jpg",
+            "complexity": 7223,
+            "brightness": 34268
+        },
+        "103": {
+            "file": "pattern_103.jpg",
+            "complexity": 7991,
+            "brightness": 36560
+        },
+        "104": {
+            "file": "pattern_104.jpg",
+            "complexity": 8138,
+            "brightness": 37432
+        },
+        "105": {
+            "file": "pattern_105.jpg",
+            "complexity": 8412,
+            "brightness": 35899
+        },
+        "106": {
+            "file": "pattern_106.jpg",
+            "complexity": 9189,
+            "brightness": 40007
+        },
+        "107": {
+            "file": "pattern_107.jpg",
+            "complexity": 9859,
+            "brightness": 46181
+        },
+        "108": {
+            "file": "pattern_108.jpg",
+            "complexity": 8624,
+            "brightness": 44802
+        },
+        "109": {
+            "file": "pattern_109.jpg",
+            "complexity": 11074,
+            "brightness": 50363
+        },
+        "110": {
+            "file": "pattern_110.jpg",
+            "complexity": 10840,
+            "brightness": 51149
+        },
+        "111": {
+            "file": "pattern_111.jpg",
+            "complexity": 10483,
+            "brightness": 54464
+        },
+        "112": {
+            "file": "pattern_112.jpg",
+            "complexity": 10279,
+            "brightness": 44722
+        },
+        "113": {
+            "file": "pattern_113.jpg",
+            "complexity": 9897,
+            "brightness": 40394
+        },
+        "114": {
+            "file": "pattern_114.jpg",
+            "complexity": 6896,
+            "brightness": 26966
+        },
+        "115": {
+            "file": "pattern_115.jpg",
+            "complexity": 5243,
+            "brightness": 11004
+        },
+        "116": {
+            "file": "pattern_116.jpg",
+            "complexity": 6135,
+            "brightness": 24218
+        },
+        "117": {
+            "file": "pattern_117.jpg",
+            "complexity": 4111,
+            "brightness": 8019
+        },
+        "119": {
+            "file": "pattern_119.jpg",
+            "complexity": 4968,
+            "brightness": 10675
+        },
+        "120": {
+            "file": "pattern_120.jpg",
+            "complexity": 5135,
+            "brightness": 14053
+        },
+        "121": {
+            "file": "pattern_121.jpg",
+            "complexity": 5192,
+            "brightness": 11274
+        },
+        "122": {
+            "file": "pattern_122.jpg",
+            "complexity": 4696,
+            "brightness": 8921
+        },
+        "123": {
+            "file": "pattern_123.jpg",
+            "complexity": 4217,
+            "brightness": 8367
+        },
+        "124": {
+            "file": "pattern_124.jpg",
+            "complexity": 5092,
+            "brightness": 12723
+        },
+        "125": {
+            "file": "pattern_125.jpg",
+            "complexity": 5308,
+            "brightness": 12867
+        },
+        "126": {
+            "file": "pattern_126.jpg",
+            "complexity": 7191,
+            "brightness": 14319
+        },
+        "127": {
+            "file": "pattern_127.jpg",
+            "complexity": 7301,
+            "brightness": 19060
+        }
+    },
+    "concert": [
+        {
+            "ch14": 0,
+            "ch15": 255,
+            "file": "concert_000_255.jpg",
+            "complexity": 1264,
+            "brightness": 3487
+        },
+        {
+            "ch14": 28,
+            "ch15": 255,
+            "file": "concert_028_255.jpg",
+            "complexity": 1256,
+            "brightness": 3734
+        },
+        {
+            "ch14": 56,
+            "ch15": 255,
+            "file": "concert_056_255.jpg",
+            "complexity": 1343,
+            "brightness": 4141
+        },
+        {
+            "ch14": 85,
+            "ch15": 255,
+            "file": "concert_085_255.jpg",
+            "complexity": 1403,
+            "brightness": 4317
+        },
+        {
+            "ch14": 113,
+            "ch15": 255,
+            "file": "concert_113_255.jpg",
+            "complexity": 1501,
+            "brightness": 5050
+        },
+        {
+            "ch14": 141,
+            "ch15": 255,
+            "file": "concert_141_255.jpg",
+            "complexity": 1506,
+            "brightness": 4958
+        },
+        {
+            "ch14": 170,
+            "ch15": 255,
+            "file": "concert_170_255.jpg",
+            "complexity": 1457,
+            "brightness": 5187
+        },
+        {
+            "ch14": 198,
+            "ch15": 255,
+            "file": "concert_198_255.jpg",
+            "complexity": 1597,
+            "brightness": 5305
+        }
+    ],
+    "rot_deformations": [
+        {
+            "x": 0,
+            "y": 0,
+            "file": "rot_000_000.jpg",
+            "complexity": 2710,
+            "brightness": 5105
+        },
+        {
+            "x": 0,
+            "y": 36,
+            "file": "rot_000_036.jpg",
+            "complexity": 3061,
+            "brightness": 5150
+        },
+        {
+            "x": 0,
+            "y": 72,
+            "file": "rot_000_072.jpg",
+            "complexity": 2552,
+            "brightness": 4732
+        },
+        {
+            "x": 0,
+            "y": 109,
+            "file": "rot_000_109.jpg",
+            "complexity": 2221,
+            "brightness": 4928
+        },
+        {
+            "x": 0,
+            "y": 145,
+            "file": "rot_000_145.jpg",
+            "complexity": 2562,
+            "brightness": 4639
+        },
+        {
+            "x": 0,
+            "y": 182,
+            "file": "rot_000_182.jpg",
+            "complexity": 2914,
+            "brightness": 4970
+        },
+        {
+            "x": 0,
+            "y": 218,
+            "file": "rot_000_218.jpg",
+            "complexity": 2490,
+            "brightness": 4692
+        },
+        {
+            "x": 0,
+            "y": 255,
+            "file": "rot_000_255.jpg",
+            "complexity": 2583,
+            "brightness": 4820
+        },
+        {
+            "x": 36,
+            "y": 0,
+            "file": "rot_036_000.jpg",
+            "complexity": 2275,
+            "brightness": 5485
+        },
+        {
+            "x": 36,
+            "y": 36,
+            "file": "rot_036_036.jpg",
+            "complexity": 2853,
+            "brightness": 5019
+        },
+        {
+            "x": 36,
+            "y": 72,
+            "file": "rot_036_072.jpg",
+            "complexity": 2962,
+            "brightness": 4911
+        },
+        {
+            "x": 36,
+            "y": 109,
+            "file": "rot_036_109.jpg",
+            "complexity": 2556,
+            "brightness": 4781
+        },
+        {
+            "x": 36,
+            "y": 145,
+            "file": "rot_036_145.jpg",
+            "complexity": 2594,
+            "brightness": 4686
+        },
+        {
+            "x": 36,
+            "y": 182,
+            "file": "rot_036_182.jpg",
+            "complexity": 2654,
+            "brightness": 4965
+        },
+        {
+            "x": 36,
+            "y": 218,
+            "file": "rot_036_218.jpg",
+            "complexity": 2624,
+            "brightness": 4685
+        },
+        {
+            "x": 36,
+            "y": 255,
+            "file": "rot_036_255.jpg",
+            "complexity": 2467,
+            "brightness": 4422
+        },
+        {
+            "x": 72,
+            "y": 0,
+            "file": "rot_072_000.jpg",
+            "complexity": 2667,
+            "brightness": 4589
+        },
+        {
+            "x": 72,
+            "y": 36,
+            "file": "rot_072_036.jpg",
+            "complexity": 2903,
+            "brightness": 5224
+        },
+        {
+            "x": 72,
+            "y": 72,
+            "file": "rot_072_072.jpg",
+            "complexity": 2950,
+            "brightness": 4857
+        },
+        {
+            "x": 72,
+            "y": 109,
+            "file": "rot_072_109.jpg",
+            "complexity": 2792,
+            "brightness": 4769
+        },
+        {
+            "x": 72,
+            "y": 145,
+            "file": "rot_072_145.jpg",
+            "complexity": 2826,
+            "brightness": 4875
+        },
+        {
+            "x": 72,
+            "y": 182,
+            "file": "rot_072_182.jpg",
+            "complexity": 2437,
+            "brightness": 4661
+        },
+        {
+            "x": 72,
+            "y": 218,
+            "file": "rot_072_218.jpg",
+            "complexity": 2696,
+            "brightness": 4764
+        },
+        {
+            "x": 72,
+            "y": 255,
+            "file": "rot_072_255.jpg",
+            "complexity": 2832,
+            "brightness": 5073
+        },
+        {
+            "x": 109,
+            "y": 0,
+            "file": "rot_109_000.jpg",
+            "complexity": 2845,
+            "brightness": 4664
+        },
+        {
+            "x": 109,
+            "y": 36,
+            "file": "rot_109_036.jpg",
+            "complexity": 2799,
+            "brightness": 4870
+        },
+        {
+            "x": 109,
+            "y": 72,
+            "file": "rot_109_072.jpg",
+            "complexity": 2827,
+            "brightness": 4734
+        },
+        {
+            "x": 109,
+            "y": 109,
+            "file": "rot_109_109.jpg",
+            "complexity": 2495,
+            "brightness": 4701
+        },
+        {
+            "x": 109,
+            "y": 145,
+            "file": "rot_109_145.jpg",
+            "complexity": 2632,
+            "brightness": 4951
+        },
+        {
+            "x": 109,
+            "y": 182,
+            "file": "rot_109_182.jpg",
+            "complexity": 3056,
+            "brightness": 4790
+        },
+        {
+            "x": 109,
+            "y": 218,
+            "file": "rot_109_218.jpg",
+            "complexity": 2748,
+            "brightness": 4627
+        },
+        {
+            "x": 109,
+            "y": 255,
+            "file": "rot_109_255.jpg",
+            "complexity": 3059,
+            "brightness": 4986
+        },
+        {
+            "x": 145,
+            "y": 0,
+            "file": "rot_145_000.jpg",
+            "complexity": 3249,
+            "brightness": 5272
+        },
+        {
+            "x": 145,
+            "y": 36,
+            "file": "rot_145_036.jpg",
+            "complexity": 2520,
+            "brightness": 5231
+        },
+        {
+            "x": 145,
+            "y": 72,
+            "file": "rot_145_072.jpg",
+            "complexity": 2781,
+            "brightness": 4851
+        },
+        {
+            "x": 145,
+            "y": 109,
+            "file": "rot_145_109.jpg",
+            "complexity": 2851,
+            "brightness": 5017
+        },
+        {
+            "x": 145,
+            "y": 145,
+            "file": "rot_145_145.jpg",
+            "complexity": 2615,
+            "brightness": 4903
+        },
+        {
+            "x": 145,
+            "y": 182,
+            "file": "rot_145_182.jpg",
+            "complexity": 3240,
+            "brightness": 4948
+        },
+        {
+            "x": 145,
+            "y": 218,
+            "file": "rot_145_218.jpg",
+            "complexity": 2653,
+            "brightness": 5058
+        },
+        {
+            "x": 145,
+            "y": 255,
+            "file": "rot_145_255.jpg",
+            "complexity": 2754,
+            "brightness": 4623
+        },
+        {
+            "x": 182,
+            "y": 0,
+            "file": "rot_182_000.jpg",
+            "complexity": 2905,
+            "brightness": 4901
+        },
+        {
+            "x": 182,
+            "y": 36,
+            "file": "rot_182_036.jpg",
+            "complexity": 2639,
+            "brightness": 5439
+        },
+        {
+            "x": 182,
+            "y": 72,
+            "file": "rot_182_072.jpg",
+            "complexity": 2619,
+            "brightness": 4946
+        },
+        {
+            "x": 182,
+            "y": 109,
+            "file": "rot_182_109.jpg",
+            "complexity": 2932,
+            "brightness": 5156
+        },
+        {
+            "x": 182,
+            "y": 145,
+            "file": "rot_182_145.jpg",
+            "complexity": 2728,
+            "brightness": 4866
+        },
+        {
+            "x": 182,
+            "y": 182,
+            "file": "rot_182_182.jpg",
+            "complexity": 2842,
+            "brightness": 5057
+        },
+        {
+            "x": 182,
+            "y": 218,
+            "file": "rot_182_218.jpg",
+            "complexity": 2958,
+            "brightness": 5085
+        },
+        {
+            "x": 182,
+            "y": 255,
+            "file": "rot_182_255.jpg",
+            "complexity": 2397,
+            "brightness": 5187
+        },
+        {
+            "x": 218,
+            "y": 0,
+            "file": "rot_218_000.jpg",
+            "complexity": 2893,
+            "brightness": 5035
+        },
+        {
+            "x": 218,
+            "y": 36,
+            "file": "rot_218_036.jpg",
+            "complexity": 3064,
+            "brightness": 5034
+        },
+        {
+            "x": 218,
+            "y": 72,
+            "file": "rot_218_072.jpg",
+            "complexity": 2748,
+            "brightness": 4845
+        },
+        {
+            "x": 218,
+            "y": 109,
+            "file": "rot_218_109.jpg",
+            "complexity": 2541,
+            "brightness": 4847
+        },
+        {
+            "x": 218,
+            "y": 145,
+            "file": "rot_218_145.jpg",
+            "complexity": 2726,
+            "brightness": 4778
+        },
+        {
+            "x": 218,
+            "y": 182,
+            "file": "rot_218_182.jpg",
+            "complexity": 2654,
+            "brightness": 4746
+        },
+        {
+            "x": 218,
+            "y": 218,
+            "file": "rot_218_218.jpg",
+            "complexity": 2793,
+            "brightness": 4792
+        },
+        {
+            "x": 218,
+            "y": 255,
+            "file": "rot_218_255.jpg",
+            "complexity": 2714,
+            "brightness": 4683
+        },
+        {
+            "x": 255,
+            "y": 0,
+            "file": "rot_255_000.jpg",
+            "complexity": 2852,
+            "brightness": 4761
+        },
+        {
+            "x": 255,
+            "y": 36,
+            "file": "rot_255_036.jpg",
+            "complexity": 2939,
+            "brightness": 5193
+        },
+        {
+            "x": 255,
+            "y": 72,
+            "file": "rot_255_072.jpg",
+            "complexity": 2758,
+            "brightness": 4849
+        },
+        {
+            "x": 255,
+            "y": 109,
+            "file": "rot_255_109.jpg",
+            "complexity": 2977,
+            "brightness": 4753
+        },
+        {
+            "x": 255,
+            "y": 145,
+            "file": "rot_255_145.jpg",
+            "complexity": 2561,
+            "brightness": 4813
+        },
+        {
+            "x": 255,
+            "y": 182,
+            "file": "rot_255_182.jpg",
+            "complexity": 2647,
+            "brightness": 4752
+        },
+        {
+            "x": 255,
+            "y": 218,
+            "file": "rot_255_218.jpg",
+            "complexity": 2983,
+            "brightness": 4806
+        },
+        {
+            "x": 255,
+            "y": 255,
+            "file": "rot_255_255.jpg",
+            "complexity": 3082,
+            "brightness": 5395
+        }
+    ],
+    "draw_deformations": [
+        {
+            "draw": 0,
+            "drawing": 0,
+            "file": "draw_000_000.jpg",
+            "complexity": 3016,
+            "brightness": 4918
+        },
+        {
+            "draw": 0,
+            "drawing": 36,
+            "file": "draw_000_036.jpg",
+            "complexity": 2833,
+            "brightness": 4695
+        },
+        {
+            "draw": 0,
+            "drawing": 72,
+            "file": "draw_000_072.jpg",
+            "complexity": 3004,
+            "brightness": 5074
+        },
+        {
+            "draw": 0,
+            "drawing": 109,
+            "file": "draw_000_109.jpg",
+            "complexity": 2811,
+            "brightness": 4729
+        },
+        {
+            "draw": 0,
+            "drawing": 145,
+            "file": "draw_000_145.jpg",
+            "complexity": 3045,
+            "brightness": 5068
+        },
+        {
+            "draw": 0,
+            "drawing": 182,
+            "file": "draw_000_182.jpg",
+            "complexity": 2745,
+            "brightness": 4683
+        },
+        {
+            "draw": 0,
+            "drawing": 218,
+            "file": "draw_000_218.jpg",
+            "complexity": 2711,
+            "brightness": 4963
+        },
+        {
+            "draw": 0,
+            "drawing": 255,
+            "file": "draw_000_255.jpg",
+            "complexity": 2894,
+            "brightness": 4978
+        },
+        {
+            "draw": 36,
+            "drawing": 0,
+            "file": "draw_036_000.jpg",
+            "complexity": 2353,
+            "brightness": 4583
+        },
+        {
+            "draw": 36,
+            "drawing": 36,
+            "file": "draw_036_036.jpg",
+            "complexity": 2341,
+            "brightness": 5147
+        },
+        {
+            "draw": 36,
+            "drawing": 72,
+            "file": "draw_036_072.jpg",
+            "complexity": 2964,
+            "brightness": 4898
+        },
+        {
+            "draw": 36,
+            "drawing": 109,
+            "file": "draw_036_109.jpg",
+            "complexity": 2717,
+            "brightness": 4916
+        },
+        {
+            "draw": 36,
+            "drawing": 145,
+            "file": "draw_036_145.jpg",
+            "complexity": 3050,
+            "brightness": 5357
+        },
+        {
+            "draw": 36,
+            "drawing": 182,
+            "file": "draw_036_182.jpg",
+            "complexity": 3047,
+            "brightness": 5314
+        },
+        {
+            "draw": 36,
+            "drawing": 218,
+            "file": "draw_036_218.jpg",
+            "complexity": 2842,
+            "brightness": 5265
+        },
+        {
+            "draw": 36,
+            "drawing": 255,
+            "file": "draw_036_255.jpg",
+            "complexity": 2862,
+            "brightness": 5309
+        },
+        {
+            "draw": 72,
+            "drawing": 0,
+            "file": "draw_072_000.jpg",
+            "complexity": 3206,
+            "brightness": 4987
+        },
+        {
+            "draw": 72,
+            "drawing": 36,
+            "file": "draw_072_036.jpg",
+            "complexity": 2678,
+            "brightness": 5063
+        },
+        {
+            "draw": 72,
+            "drawing": 72,
+            "file": "draw_072_072.jpg",
+            "complexity": 2433,
+            "brightness": 5083
+        },
+        {
+            "draw": 72,
+            "drawing": 109,
+            "file": "draw_072_109.jpg",
+            "complexity": 2466,
+            "brightness": 5026
+        },
+        {
+            "draw": 72,
+            "drawing": 145,
+            "file": "draw_072_145.jpg",
+            "complexity": 2505,
+            "brightness": 5006
+        },
+        {
+            "draw": 72,
+            "drawing": 182,
+            "file": "draw_072_182.jpg",
+            "complexity": 2588,
+            "brightness": 5077
+        },
+        {
+            "draw": 72,
+            "drawing": 218,
+            "file": "draw_072_218.jpg",
+            "complexity": 3081,
+            "brightness": 5051
+        },
+        {
+            "draw": 72,
+            "drawing": 255,
+            "file": "draw_072_255.jpg",
+            "complexity": 3129,
+            "brightness": 5069
+        },
+        {
+            "draw": 109,
+            "drawing": 0,
+            "file": "draw_109_000.jpg",
+            "complexity": 2925,
+            "brightness": 5366
+        },
+        {
+            "draw": 109,
+            "drawing": 36,
+            "file": "draw_109_036.jpg",
+            "complexity": 2835,
+            "brightness": 5405
+        },
+        {
+            "draw": 109,
+            "drawing": 72,
+            "file": "draw_109_072.jpg",
+            "complexity": 3098,
+            "brightness": 5637
+        },
+        {
+            "draw": 109,
+            "drawing": 109,
+            "file": "draw_109_109.jpg",
+            "complexity": 3096,
+            "brightness": 5388
+        },
+        {
+            "draw": 109,
+            "drawing": 145,
+            "file": "draw_109_145.jpg",
+            "complexity": 3004,
+            "brightness": 5209
+        },
+        {
+            "draw": 109,
+            "drawing": 182,
+            "file": "draw_109_182.jpg",
+            "complexity": 2806,
+            "brightness": 5199
+        },
+        {
+            "draw": 109,
+            "drawing": 218,
+            "file": "draw_109_218.jpg",
+            "complexity": 2385,
+            "brightness": 5056
+        },
+        {
+            "draw": 109,
+            "drawing": 255,
+            "file": "draw_109_255.jpg",
+            "complexity": 2371,
+            "brightness": 4902
+        },
+        {
+            "draw": 145,
+            "drawing": 0,
+            "file": "draw_145_000.jpg",
+            "complexity": 2634,
+            "brightness": 5119
+        },
+        {
+            "draw": 145,
+            "drawing": 36,
+            "file": "draw_145_036.jpg",
+            "complexity": 3023,
+            "brightness": 5134
+        },
+        {
+            "draw": 145,
+            "drawing": 72,
+            "file": "draw_145_072.jpg",
+            "complexity": 3150,
+            "brightness": 5121
+        },
+        {
+            "draw": 145,
+            "drawing": 109,
+            "file": "draw_145_109.jpg",
+            "complexity": 2967,
+            "brightness": 5453
+        },
+        {
+            "draw": 145,
+            "drawing": 145,
+            "file": "draw_145_145.jpg",
+            "complexity": 2966,
+            "brightness": 5418
+        },
+        {
+            "draw": 145,
+            "drawing": 182,
+            "file": "draw_145_182.jpg",
+            "complexity": 3128,
+            "brightness": 5821
+        },
+        {
+            "draw": 145,
+            "drawing": 218,
+            "file": "draw_145_218.jpg",
+            "complexity": 3184,
+            "brightness": 5556
+        },
+        {
+            "draw": 145,
+            "drawing": 255,
+            "file": "draw_145_255.jpg",
+            "complexity": 2849,
+            "brightness": 5107
+        },
+        {
+            "draw": 182,
+            "drawing": 0,
+            "file": "draw_182_000.jpg",
+            "complexity": 2943,
+            "brightness": 5207
+        },
+        {
+            "draw": 182,
+            "drawing": 36,
+            "file": "draw_182_036.jpg",
+            "complexity": 2377,
+            "brightness": 4986
+        },
+        {
+            "draw": 182,
+            "drawing": 72,
+            "file": "draw_182_072.jpg",
+            "complexity": 2411,
+            "brightness": 5117
+        },
+        {
+            "draw": 182,
+            "drawing": 109,
+            "file": "draw_182_109.jpg",
+            "complexity": 2506,
+            "brightness": 5159
+        },
+        {
+            "draw": 182,
+            "drawing": 145,
+            "file": "draw_182_145.jpg",
+            "complexity": 3108,
+            "brightness": 5113
+        },
+        {
+            "draw": 182,
+            "drawing": 182,
+            "file": "draw_182_182.jpg",
+            "complexity": 3054,
+            "brightness": 5102
+        },
+        {
+            "draw": 182,
+            "drawing": 218,
+            "file": "draw_182_218.jpg",
+            "complexity": 3004,
+            "brightness": 5453
+        },
+        {
+            "draw": 182,
+            "drawing": 255,
+            "file": "draw_182_255.jpg",
+            "complexity": 2954,
+            "brightness": 5530
+        },
+        {
+            "draw": 218,
+            "drawing": 0,
+            "file": "draw_218_000.jpg",
+            "complexity": 3020,
+            "brightness": 5426
+        },
+        {
+            "draw": 218,
+            "drawing": 36,
+            "file": "draw_218_036.jpg",
+            "complexity": 3026,
+            "brightness": 5488
+        },
+        {
+            "draw": 218,
+            "drawing": 72,
+            "file": "draw_218_072.jpg",
+            "complexity": 3064,
+            "brightness": 5174
+        },
+        {
+            "draw": 218,
+            "drawing": 109,
+            "file": "draw_218_109.jpg",
+            "complexity": 2374,
+            "brightness": 5056
+        },
+        {
+            "draw": 218,
+            "drawing": 145,
+            "file": "draw_218_145.jpg",
+            "complexity": 2689,
+            "brightness": 4988
+        },
+        {
+            "draw": 218,
+            "drawing": 182,
+            "file": "draw_218_182.jpg",
+            "complexity": 2545,
+            "brightness": 5103
+        },
+        {
+            "draw": 218,
+            "drawing": 218,
+            "file": "draw_218_218.jpg",
+            "complexity": 2564,
+            "brightness": 5125
+        },
+        {
+            "draw": 218,
+            "drawing": 255,
+            "file": "draw_218_255.jpg",
+            "complexity": 3357,
+            "brightness": 5121
+        },
+        {
+            "draw": 255,
+            "drawing": 0,
+            "file": "draw_255_000.jpg",
+            "complexity": 3423,
+            "brightness": 5254
+        },
+        {
+            "draw": 255,
+            "drawing": 36,
+            "file": "draw_255_036.jpg",
+            "complexity": 3126,
+            "brightness": 5531
+        },
+        {
+            "draw": 255,
+            "drawing": 72,
+            "file": "draw_255_072.jpg",
+            "complexity": 2902,
+            "brightness": 5398
+        },
+        {
+            "draw": 255,
+            "drawing": 109,
+            "file": "draw_255_109.jpg",
+            "complexity": 3192,
+            "brightness": 5459
+        },
+        {
+            "draw": 255,
+            "drawing": 145,
+            "file": "draw_255_145.jpg",
+            "complexity": 3080,
+            "brightness": 5136
+        },
+        {
+            "draw": 255,
+            "drawing": 182,
+            "file": "draw_255_182.jpg",
+            "complexity": 2869,
+            "brightness": 5089
+        },
+        {
+            "draw": 255,
+            "drawing": 218,
+            "file": "draw_255_218.jpg",
+            "complexity": 3198,
+            "brightness": 5272
+        },
+        {
+            "draw": 255,
+            "drawing": 255,
+            "file": "draw_255_255.jpg",
+            "complexity": 2499,
+            "brightness": 5048
+        }
+    ]
+}

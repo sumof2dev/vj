@@ -1,0 +1,885 @@
+The Evolution and Implementation of
+DMX Control Protocols in Generic Laser
+Projection Systems: An Exhaustive
+Analysis of 6-Channel and 34-Channel
+Architectures
+Executive Summary
+The contemporary landscape of entertainment lighting has been fundamentally altered by the
+democratization of laser projection technology. Once the exclusive domain of high-budget
+touring productions and specialized laser companies, coherent light fixtures have permeated the
+enthusiast, semi-professional, and mobile DJ markets. This shift is largely driven by Original
+Equipment Manufacturers (OEMs) based in the Shenzhen and Guangzhou manufacturing hubs,
+producing hardware marketed under a myriad of brands including Ehaho, Shehds, Big Dipper,
+U'King, Sumger, and Chinly. While the optical hardware—diode arrays and
+galvanometers—has become commoditized and surprisingly robust, the control infrastructure
+remains a complex, often obfuscated labyrinth of non-standardized protocols and proprietary
+firmware logic.
+This report provides a definitive, expert-level technical analysis of the DMX512 control
+implementation within these generic laser systems. Moving beyond the rudimentary 12-channel
+profiles that serve as a functional baseline, this research deconstructs the highly compact
+6-channel modes and the sophisticated, professional-grade 34-channel dual-layer engines
+found in modern fixtures like the Ehaho L2600 and Shehds Constellation series. Through a
+rigorous synthesis of user manuals, firmware behaviors, and cross-brand architectural
+comparisons, the analysis validates the hypothesis that a unified "ShowNET-derived" standard
+governs the high-channel behaviors of these diverse brands. Furthermore, the report explores
+the critical implications of these control maps on operational safety, galvanometer longevity, and
+artistic workflow, providing systems integrators with the requisite knowledge to deploy these
+cost-effective units in professional environments safely and effectively.
+
+1. The Architectural Landscape of Generic Laser
+Control
+To comprehend the nuances of DMX mappings—specifically the divergent philosophies behind
+6-channel and 34-channel modes—one must first analyze the internal architecture of the laser
+projector itself. Unlike conventional intelligent lighting fixtures, which manipulate the intensity or
+position of an incoherent light source, a laser projector is a vector-based graphic device. The
+DMX signal does not control the beam directly; rather, it instructs a microcontroller to execute
+complex mathematical macros that drive the X/Y galvanometers (galvos) and modulate the RGB
+
+laser diodes.
+
+1.1 The Shift from ILDA to DMX-First Architectures
+Historically, the control of entertainment lasers was bifurcated: simple "sound-to-light" fixtures
+for discos and ILDA-controlled projectors for professionals. The ILDA (International Laser
+Display Association) standard relies on a DB-25 parallel connection carrying raw analog voltage
+signals to the scanners and color lines. However, the generic market has aggressively pivoted
+toward a "DMX-First" architecture.
+In this paradigm, the mainboard acts as an embedded computer. It stores a library of
+pre-calculated vector paths (patterns) on an internal ROM or SD card. When a user sends a
+DMX value of "10" on the Pattern channel, the microcontroller retrieves the corresponding
+vector file, applies geometric transformations (calculated in real-time), and outputs the analog
+signals to the galvos. Brands like Shehds and Ehaho have integrated advanced processors
+capable of handling not just simple playback, but dual-layer synthesis and real-time geometric
+correction, features previously exclusive to PC-based software.
+
+1.2 The Controller Ecosystem: Microcontrollers and Latency
+The performance of a generic laser is inextricably linked to the processing power of its
+mainboard. Analysis of the Sumger and Chinly product lines reveals a reliance on
+cost-effective ARM-based microcontrollers. While sufficient for 6-channel operation, these
+processors often struggle with the computational overhead of the 34-channel mode.
+When operating in 34-channel mode, the processor must calculate two independent pattern
+layers (Pattern A and Pattern B), apply distinct size, rotation, and clipping modifiers to each,
+composit them into a single point list, and optimize the scanner path to prevent galvo
+overheating. This computational load creates a phenomenon known as "DMX Latency" or
+"Frame Buffering." Unlike a moving head light, which responds instantly to a Pan/Tilt command,
+a generic laser in high-channel mode may exhibit a latency of 2-5 frames (roughly 30-80ms) as
+the processor recalculates the vector path. This latency is a critical consideration for lighting
+designers attempting to time-code laser hits to fast-paced music; the 34-channel mode offers
+more features but may feel "sluggish" compared to the leaner 6-channel mode.
+
+1.3 The "Generic" Misnomer: OEM Lineage
+While the market is flooded with dozens of brand names, the underlying control logic usually
+traces back to a few key chipset providers.
+●​ The "Big Dipper" Architecture: Found in older U'King models and Big Dipper branded
+units (B102RGB, K800). Characterized by a "Mode" channel that strictly segments DMX,
+Sound, and Auto functions into value ranges.
+●​ The "ShowNET" Architecture: The dominant standard for modern 34-channel fixtures
+from Ehaho, Shehds, and Ibiza Light. This protocol is derived from the Laserworld
+ShowNET mainboard, allowing for highly standardized "Professional Mode" profiles.
+●​ The "Pulse/Chinly" Decoder: A source of significant confusion. Chinly manufactures
+both DMX LED decoders (PWM based) and Laser Projectors. A 12-channel profile for a
+Chinly LED decoder will essentially disable a Chinly laser projector, as the mapping of
+"Red Intensity" (CH1 on decoder) conflicts with "Mode Select" (CH1 on projector).
+
+2. Deconstructing the 6-Channel Protocol
+The 6-channel mode serves as the industry's "Lowest Common Denominator." It is designed for
+maximum compatibility with basic DMX controllers, such as the ubiquitous 192-channel "DMX
+Operator" style boards. In this mode, the fixture effectively behaves as a macro player, stripping
+away granular control in favor of ease of use. However, distinct variations exist between the
+implementation by brands like U'King versus Big Dipper.
+
+2.1 The U'King/Ehaho 6-Channel Standard
+This mapping is the most prevalent across entry-level "Party Light" lasers and the Ehaho L2600
+series when set to 6CH mode. It prioritizes movement and pattern selection over color control.
+Table 1: The U'King/Ehaho 6-Channel DMX Mapping Analysis
+Channel
+Function
+Value Range
+Technical Analysis &
+Implications
+CH 1
+Control Mode
+0-49
+Blackout / Laser Off.
+Serves as a
+software-based safety
+shutter.
+50-99
+Sound Active. The unit
+ignores other channels
+and triggers internal
+ROM programs via the
+onboard microphone.
+100-149
+Auto Run. Cycles
+through ROM programs
+at a preset speed.
+150-255
+DMX Manual Mode.
+This range enables
+Channels 2-6. The
+most common user
+error is leaving this
+fader at 0 or 100,
+resulting in no control.
+CH 2
+Pattern Select
+0-255
+Selects from the
+internal library (typically
+50-128 patterns).
+Values 0-10 often
+default to a "circle" or
+"square" for alignment.
+Higher values access
+complex "tunnel" and
+"liquid sky" animations.
+CH 3
+Pattern Size
+0-127
+Static Size. 0 is usually
+smallest, 127 largest.
+Essential for fitting the
+
+Channel
+
+Function
+
+Value Range
+
+Technical Analysis &
+Implications
+projection to a screen
+or dancefloor.
+128-255
+Dynamic Zoom. The
+pattern automatically
+zooms in/out. 128 is
+slow, 255 is fast. Useful
+for "breathing" effects
+without using console
+effects engines.
+CH 4
+Z-Axis Rotation
+0-127
+Manual Indexing. Sets
+the static angle of the
+pattern.
+128-255
+Auto-Rotation.
+128-191 typically
+rotates clockwise
+(slow-fast), 192-255
+counter-clockwise. This
+relies on the internal
+processor's clock,
+ensuring smooth
+rotation even with low
+DMX refresh rates.
+CH 5
+X-Axis Pan
+0-127
+Manual Position.
+Horizontal placement.
+128-255
+Auto-Pan. Automatic
+scanning left-to-right.
+CH 6
+Y-Axis Tilt
+0-127
+Manual Position.
+Vertical placement.
+128-255
+Auto-Tilt. Automatic
+scanning up-to-down.
+Operational Implications: The most glaring omission in this 6-channel map is Color Control.
+In this mode, the laser's color is typically hard-coded to the pattern (e.g., Pattern 1 is always
+Red, Pattern 2 is Green) or cycles automatically. For a lighting designer, this renders the
+6-channel mode unsuitable for color-coordinated shows. It is strictly a "set and forget" mode for
+dynamic, multi-colored beam shows where specific color matching is secondary to movement.
+Furthermore, the "Auto" ranges on channels 3-6 (Values 128-255) delegate the animation math
+to the fixture. This is beneficial for smoother movement, as the fixture's internal refresh rate
+(often >100Hz) is higher than the standard DMX refresh rate (30-44Hz), resulting in fluid zooms
+and rotations that would look "steppy" if programmed manually on a console using the 0-127
+range.
+
+2.2 The Big Dipper 5/6 Channel Variation
+Big Dipper fixtures, such as the K800 and B102RGB, utilize a mapping that is notoriously
+incompatible with the U'King standard. This often leads to confusion when users attempt to
+
+patch a generic profile.
+Table 2: Big Dipper Legacy 5/6-Channel Mapping
+Channel
+Function
+Value Range
+CH 1
+Mode Select
+0-63
+64-127
+
+Technical Analysis
+Laser OFF.
+Sound Active. Triggers
+internal mic.
+128-191
+Auto Mode. Cycles
+programs.
+192-255
+DMX Mode. Enables
+CH 2-5.
+CH 2
+Pattern Group
+0-255
+Selects the "Theme" or
+folder of patterns (e.g.,
+Geometry, Diffuse
+Network, Tunnel).
+CH 3
+Pattern Select
+0-255
+Selects the specific
+pattern within the
+Group defined in CH 2.
+CH 4
+Color / Strobe
+0-255
+Often a combined
+channel. 0-127 might
+select static colors,
+while 128-255
+introduces strobing.
+CH 5
+X/Y Movement
+0-255
+Often combines X and
+Y movement into a
+single "Movement
+Macro" channel on
+older units.
+Critical Insight: The segmentation of patterns into "Groups" (CH2) and "Patterns" (CH3) is
+distinct to the Big Dipper architecture. A standard generic profile usually maps "Pattern" to a
+single channel. If a user tries to control a Big Dipper unit with a U'King profile, changing the
+"Pattern" fader (CH2) will essentially jump between entirely different categories of effects rather
+than sequential patterns, making coherent show programming impossible.
+
+2.3 The Pulse/Chinly Decoder Conflict
+The brand Chinly presents a unique challenge because they manufacture both laser projectors
+and DMX LED decoders. The market is saturated with "Chinly 12-Channel DMX Decoders".
+Table 3: Chinly LED Decoder Mapping (NOT for Lasers)
+Channel
+Function
+CH 1
+Red Intensity (0-255)
+CH 2
+Green Intensity (0-255)
+CH 3
+Blue Intensity (0-255)
+...
+...
+Operational Hazard: If a technician inadvertently patches a Chinly Laser Projector using a
+profile built for a Chinly LED Decoder, Channel 1 will act as a Red Dimmer.
+●​ Result: When the technician fades up "Red" (CH1) to 100% (Value 255), they are actually
+sending the laser projector the command for "DMX Manual Mode" (see Table 1, Value
+
+150+). The laser will turn on, but likely in a default white state.
+●​ However, if they fade "Red" down to 50% (Value 127), they might trigger "Sound Active
+Mode" (Table 1, Value 50-99).
+●​ Conclusion: This cross-profiling error is the leading cause of "ghosting" or erratic
+behavior in Chinly lasers. The laser interprets intensity data as mode-switching
+commands.
+
+3. The 34-Channel Professional Protocol: The
+ShowNET Standard
+The introduction of the 34-channel mode in generically branded fixtures like the Ehaho L2600,
+Shehds Constellation, and Ibiza Light Scan series marks a pivotal moment in budget laser
+control. Analysis confirms that this mapping is a near-direct clone of the Laserworld ShowNET
+Professional Mode. This standardization allows for a level of cross-brand compatibility
+previously unseen in the generic market.
+The 34-channel protocol is architected around a Dual-Layer Engine, enabling the projector to
+emit two distinct patterns simultaneously (Pattern A and Pattern B) and manipulate them
+independently before compositing them into a single output.
+
+3.1 Architecture of the Dual-Layer Engine
+●​ Layer A (Primary): Controlled by Channels 1 through 17.
+●​ Layer B (Secondary): Controlled by Channels 18 through 34.
+This architecture implies that the microcontroller is interleaving the vector data of two separate
+files. For example, it might draw the points of Pattern A, blank the beam, move to Pattern B,
+draw Pattern B, and repeat. This doubles the mechanical demand on the galvanometers. If
+Pattern A is a complex text string and Pattern B is a dense graphic, the scan rate (kpps)
+effectively halves for each pattern, leading to significant flicker. Successful use of the
+34-channel mode requires the operator to balance the complexity of the two layers.
+
+3.2 Deep Dive: Layer A Control Channels (CH 1-17)
+Table 4: Layer A Parameter Analysis (ShowNET Standard)
+Channel
+Function
+Value Range
+CH 1
+
+Mode / Intensity A
+
+0
+1-255
+
+Advanced Analysis &
+Usage
+Laser OFF.
+Master Intensity
+(Layer A). In many
+firmwares, setting this
+to 255 is required to
+enable the layer. It acts
+as a dimmer, but unlike
+incandescent dimming,
+it functions by
+modulating the pulse
+width of the diode
+
+Channel
+
+Function
+
+Value Range
+
+CH 2
+
+Pattern Select A
+
+0-255
+
+CH 3
+
+Animation Speed
+
+0-127
+
+128-255
+
+CH 4
+
+X-Axis Position
+
+0-255
+
+CH 5
+
+Y-Axis Position
+
+0-255
+
+CH 6
+
+Z-Axis Rotation
+
+0-127
+
+128-255
+
+CH 7
+
+Zoom (X&Y Linked)
+
+0-255
+
+CH 8
+
+X-Axis Zoom
+
+0-255
+
+CH 9
+
+Y-Axis Zoom
+
+0-255
+
+CH 10
+
+Color Mode
+
+0-15
+
+16-255
+
+Advanced Analysis &
+Usage
+drivers.
+Accesses the SD
+Card/ROM frame list.
+Often correlates to
+standard ILDA test
+patterns at low values
+(Grid, Color Palette).
+Manual Frame
+Indexing. Allows
+"scrubbing" through
+animation frames.
+Play Speed. 128 is
+stop, 255 is max speed.
+Crucial for animated
+logos.
+Coarse Pan. 128 is
+center. Used to position
+the projection zone.
+Coarse Tilt. 128 is
+center.
+Static Angle. 0-360
+degrees mapped to
+0-127.
+Spin Effect.
+Clockwise/CCW
+rotation speed.
+Global Size. Safety
+Critical: Value 0 (or 255
+depending on inversion
+settings) can collapse
+the beam to a single
+point. It is best practice
+to limit this channel in
+the console to a safe
+minimum size (e.g.,
+10-255).
+Independent horizontal
+stretch/squash.
+Independent vertical
+stretch/squash.
+Original Colors. Uses
+the color data
+embedded in the ILDA
+file.
+Color Override.
+
+Channel
+
+Function
+
+Value Range
+
+Advanced Analysis &
+Usage
+Forces the pattern to
+specific colors (Red,
+Green, Blue, Rainbow)
+regardless of original
+file data. Essential for
+color matching with
+lighting rig.
+CH 11
+Scan Speed
+0-255
+Simulates lower scan
+speeds. Reducing this
+value introduces
+deliberate flicker and
+"corner rounding,"
+useful for retro 80s
+aesthetics.
+CH 12
+Visible Points
+0-255
+Drawing Effect.
+Determines how many
+points of the vector are
+drawn. 0=None,
+255=All. Animating this
+creates a "write-on"
+effect where the laser
+traces the logo.
+CH 13-15
+Wave Effects
+0-255
+Applies sine/cosine
+wave distortion to X/Y/Z
+axes (Water ripple
+effects).
+CH 16
+Clipping/Blanking
+0-255
+Sets digital masking
+zones (software
+blanking).
+CH 17
+Reserved/Strobe
+0-255
+Often acts as a
+hardware shutter strobe
+for Layer A.
+Insight: Channel 12 (Visible Points/Drawing) is one of the most powerful tools in the 34-channel
+mode. By linking this channel to a console effect (ramp up), designers can create the illusion of
+the laser "drawing" the pattern live in time with the music, a feature impossible in 6-channel
+mode.
+
+3.3 Deep Dive: Layer B Control Channels (CH 18-34)
+The mapping for Layer B mirrors Layer A almost exactly, shifted by 17 channels.
+●​ CH 18: Mode/Intensity for Layer B.
+●​ CH 19: Pattern Select for Layer B.
+●​ CH 24: Zoom for Layer B.
+●​ ...
+●​ CH 34: Reset / Setup Write.
+
+The "Doomsday" Fader (Channel 34): On ShowNET-based systems, the highest channel
+often serves a dual function. At specific values (e.g., 200-255), it triggers a system reset.
+However, when combined with specific values on other channels (like CH 1 or CH 2), it can act
+as a "Write to Memory" function.
+●​ Risk: If a user accidentally fans their faders and pushes CH 34 to 255 while CH 4
+(X-Position) is offset, the laser might permanently save that offset as the new "Center" in
+its firmware.
+●​ Mitigation: Lighting programmers must Park or Disable Channel 34 in their console
+patch to prevent accidental overwriting of firmware defaults during live busking.
+
+4. Brand-Specific Technical Variations
+While the protocols broadly align with the standards above, OEM firmware customization
+introduces specific quirks that can break standard profiles.
+
+4.1 Ehaho (L2600 & 3D Animation Series)
+Ehaho positions itself in the "semi-pro" tier. Their implementation of the 34-channel mode is
+generally faithful to the ShowNET standard.
+●​ Sound Sensitivity: A critical hardware limitation is that the "Sound Sensitivity" is often
+controlled by a physical potentiometer on the rear chassis, not a DMX channel. Even in
+DMX mode, if "Sound Active" is triggered via Channel 1, the sensitivity is dictated by that
+physical knob. This prevents remote adjustment of audio triggers.
+●​ Blackout Behavior: In 6-channel mode, Ehaho units often require Channel 1 to be held
+at a specific high value (150-255) to emit light. Values 0-9 usually engage a physical
+shutter blackout (if equipped) or diode suppression.
+
+4.2 Shehds (Constellation Series)
+Shehds integrates a modern mainboard that supports Bluetooth APP control alongside DMX.
+●​ RJ45 Connectivity: Many Shehds lasers feature RJ45 ports labelled "DMX". Users often
+mistake these for "ILDA over CAT5." In reality, they are usually carrying standard DMX512
+signals using a proprietary pinout (often Pins 1/2 as Data+/-, ignoring standard ESTA
+pinouts). Adapters are required.
+●​ 19-Channel "DJ Mode": Shehds units often default to a 19-channel mode out of the box.
+This is a truncated version of the 34-channel mode that exposes only Layer A and global
+settings, removing the Layer B (Dual Pattern) functionality to save DMX addresses.
+●​ Mapping Discrepancy: Documentation for Shehds often lists "Effect 1 (X-axis flip)" on
+CH 30. In the standard ShowNET map, flip functions are often handled within the "Zoom"
+channels (inverting values 128-255). This suggests Shehds uses a slightly modified
+firmware branch.
+
+4.3 Big Dipper (B102RGB)
+The B102RGB is a 4-aperture laser bar (Red, Green, Blue, Purple typically). Its 15-channel
+DMX mode is a "Multi-Head" implementation.
+●​ CH 1: Global Mode (>192 for DMX).
+
+●​ CH 2: Global Pattern.
+●​ CH 4, 7, 10, 13: These control the "ON/OFF/STROBE" for heads 1, 2, 3, and 4
+respectively.
+●​ Insight: A standard single-head generic laser profile will fail here. The user must treat this
+fixture as a "Pixel Bar" in their console, creating a profile that accounts for the 4 distinct
+control instances for the diodes while sharing the global pattern channel.
+
+4.4 Sumger (DM-RGB400)
+The Sumger DM-RGB400 is notorious for its sparse documentation.
+●​ 12-Channel Mode: This is the standard for Sumger.
+○​ CH 1: Mode (0-63 Off, 64-127 Sound, 128-191 Auto, 192-255 DMX).
+○​ CH 2: Pattern Group.
+○​ CH 3: Pattern Selection.
+○​ CH 4: Color Effect (often a macro channel cycling colors).
+●​ Color Issue: Unlike the 34ch mode, the Sumger 12ch mode rarely offers individual R/G/B
+fader control (0-255 mixing). Instead, CH 4 acts as a "Color Wheel" selecting preset
+combinations (Red, Green, Yellow, etc.). This limits color mixing capabilities significantly.
+
+5. Advanced Profile Strategy & Software Integration
+To effectively control these generic fixtures, lighting designers must adopt specific strategies for
+profile creation in professional software environments.
+
+5.1 QLC+ (Quantum Lighting Control) Strategies
+For QLC+ users, the challenge lies in the "Heads" definition.
+●​ 34-Channel Profile: Create a fixture definition with 2 Heads.
+○​ Map Channels 1-17 to Head 1.
+○​ Map Channels 18-34 to Head 2.
+○​ Define CH 1 and CH 18 as "Intensity" capability.
+○​ Define CH 2 and CH 19 as "Gobo" capability (Pattern).
+○​ Define CH 4/5 and CH 21/22 as "Pan/Tilt" capabilities.
+●​ Benefit: This setup allows QLC+ to use its RGB Matrix functions on the laser. You can
+run a "Plasma" effect across Head 1 and Head 2, causing the two laser layers to
+modulate colors independently.
+
+5.2 GrandMA2 / MA3 Strategies
+●​ Fixture Type: The "Laserworld DS-1000RGB" 34-channel profile is the "Golden Master"
+for Shehds/Ehaho units. It is widely available on the MA Sharenet.
+●​ XYZ Mapping: While generic lasers are not 3D objects, mapping the X-Position (CH 4)
+and Y-Position (CH 5) to the Pan and Tilt attributes in the MA profile allows the use of the
+trackball and "Follow" modes in the 3D visualizer.
+●​ Gobo Bitmap: Since generic lasers use standard ILDA frames, users can import a
+generic "ILDA Gobo Bitmap" set into MA2 to visualize the patterns (Circle, Square,
+Tunnel) on the console layout views, rather than seeing "Gobo 1," "Gobo 2."
+
+5.3 SoundSwitch Strategy
+SoundSwitch is increasingly popular for controlling generic lasers alongside DJ hardware.
+●​ The "Generic" Fallback: SoundSwitch includes a "Generic DMX Laser" profile. However,
+this profile usually assumes a 9-channel map.
+●​ Custom Map for 34ch: Users must create a custom fixture in the SoundSwitch fixture
+manager.
+○​ Map "Color" to CH 9 (Color Select).
+○​ Map "Gobo" to CH 2 (Pattern).
+○​ Crucial: Map "Strobe" to CH 1 (Intensity). In SoundSwitch, the "Strobe" attribute
+often handles the ON/OFF switching. If mapped incorrectly, the laser will not
+blackout during breaks.
+
+6. Operational Safety and Best Practices
+The intersection of high-power lasers (often Class 3B or Class 4, ranging from 500mW to 5W)
+and generic DMX control introduces significant safety vectors that must be managed.
+
+6.1 The "DMX Watchdog" Failure Mode
+Many generic lasers (Big Dipper, Sumger) feature a "DMX Watchdog." If the DMX packet
+stream is interrupted (cable unplugged, terminator missing), the firmware defaults to Sound
+Active Mode.
+●​ Scenario: A DMX cable fails during a quiet ballad. The laser loses signal, reverts to
+Sound Active, picks up the kick drum from the monitors, and immediately starts scanning
+full-power beams into the audience.
+●​ Mitigation:
+1.​ DMX Terminators: Mandatory to prevent signal reflection and packet loss.
+2.​ Menu Settings: Navigate the fixture's menu to find the "No Signal" or "DMX Fail"
+setting. Change it from "Sound" or "Auto" to "Blackout" or "Close." Many cheap
+units lack this menu option; in such cases, the fixture must be powered via a
+switched relay that can be killed remotely.
+
+6.2 The "Static Beam" (Hot Beam) Hazard
+In 34-channel mode, the "Size" channels (CH 7 and CH 24) control the scan angle.
+●​ Risk: If a user accidentally brings the "Size" fader to 0, the X and Y galvos stop moving,
+collapsing the entire energy of the laser (e.g., 2 Watts) into a single stationary point. This
+can instantly cause retinal damage or ignite flammable materials.
+●​ Mitigation:
+○​ Profile Limits: In the console profile, set the Phys Min (Physical Minimum) of the
+Zoom/Size channels to a DMX value of 10 or 20, preventing the user from ever
+hitting 0.
+○​ Invert Logic: Some fixtures (ShowNET standard) invert the zoom (0 = Full Size,
+255 = Small). In this case, limit the Phys Max to 240.
+
+6.3 Galvanometer Health and Scan Speeds
+Generic lasers typically utilize galvos rated at 15kpps to 20kpps (kilo-points per second) at 8
+degrees. High-end units run at 30kpps or 60kpps.
+●​ The "Complex Pattern" Problem: Sending a highly complex ILDA pattern (like a text
+sentence) via DMX CH 2 to a 15kpps generic laser will cause the scanners to struggle.
+The image will distort, corners will round off, and the galvos will generate excessive heat,
+leading to premature failure.
+●​ Best Practice: When using generic lasers (U'King, Sumger), stick to low-vertex-count
+patterns (beams, cones, fans, flat lines). Avoid complex graphics or text unless the unit
+specifically advertises 30kpps+ scanners.
+
+7. Troubleshooting and Diagnostic Guide
+Symptom: The laser is responding to DMX (DMX LED is blinking), but no light is output.
+●​ Diagnosis A: Channel 1 (Intensity/Mode) is not in the "Open" range. Try setting CH 1 to
+255.
+●​ Diagnosis B: The "Visible Points" or "Drawing" channel (CH 13 in 34ch mode) is set to 0.
+Set it to 255.
+●​ Diagnosis C: The interlock (remote safety connector) on the rear panel is missing or
+loose. Generic lasers often ship with a "bypass plug" that must be inserted into the
+Interlock port.
+Symptom: The laser flickers erratically or changes patterns randomly.
+●​ Diagnosis: DMX address conflict or "Mode" channel overlapping. The fixture might be
+hovering on the boundary value between "Auto Mode" and "DMX Mode" (e.g., DMX value
+191/192 on Big Dipper).
+●​ Solution: Force the Mode channel deeper into the DMX range (e.g., 200+) and check
+DMX addressing.
+Symptom: Patterns A and B are clashing or creating a "messy" projection.
+●​ Diagnosis: Both layers are active with complex patterns, overloading the
+processor/galvos.
+●​ Solution: Pull the fader for Channel 18 (Layer B Intensity) to 0. Use dual layers only for
+simple geometry (e.g., Layer A = Circle, Layer B = Dot).
+
+8. Conclusion and Future Outlook
+The control of generic laser projection systems has matured from simple sound-active toys to
+complex, vector-graphics engines capable of professional output. The key to unlocking this
+potential lies in recognizing the ShowNET 34-channel standard as the unifying architecture
+behind brands like Ehaho and Shehds, and distinguishing it from the legacy 6-channel U'King
+and Big Dipper protocols.
+For the systems integrator, the "generic" label is no longer a sign of incompatibility but rather an
+indication of a specific, albeit undocumented, set of standards. By implementing the mapping
+strategies detailed in this report—specifically the use of dual-head profiles for 34ch modes and
+rigorous safety limits on Size and Mode channels—generic lasers can be seamlessly integrated
+into high-level productions. As the market moves forward, the integration of APP control
+
+(Bluetooth/WiFi) seen in Shehds units suggests a future where DMX might be bypassed entirely
+for entry-level users, but for the professional, the 34-channel DMX protocol remains the
+definitive bridge between budget hardware and world-class show control.
+
+9. Appendix: Comprehensive DMX Value Reference
+Tables
+9.1 Generic 6-Channel Mode (U'King/Ehaho Standard)
+Channel
+1
+
+Value
+0-49
+50-99
+100-149
+150-255
+
+2
+
+0-255
+
+3
+
+0-127
+128-255
+
+4
+
+0-127
+128-255
+
+5
+
+0-127
+128-255
+
+6
+
+0-127
+128-255
+
+Function
+Blackout / Safety Off
+Sound Active Mode
+Auto Run Mode
+DMX Manual Mode (Enable
+CH 2-6)
+Pattern Select (0-9 Circle,
+10-19 Square, etc.)
+Static Size (Small -> Large)
+Dynamic Zoom (Speed Slow ->
+Fast)
+Static Z-Rotation (Angle)
+Dynamic Z-Rotation (Spin
+Speed CW/CCW)
+Static X-Position (Left -> Right)
+Dynamic X-Movement (Scan
+Speed)
+Static Y-Position (Down -> Up)
+Dynamic Y-Movement (Scan
+Speed)
+
+9.2 Generic 34-Channel Mode (ShowNET / Shehds / Ibiza Standard)
+(Condensed Primary Channels)
+Ch (A)
+Function
+1
+Mode / Intensity A
+2
+Pattern Select A
+3
+Animation Speed A
+4
+X-Position A
+5
+Y-Position A
+6
+Rotation A
+7
+Zoom A
+8
+Wave/Ripple X
+9
+Color Type A (0-15
+Original)
+10
+Manual Red A
+11
+Manual Green A
+
+Ch (B)
+18
+19
+20
+21
+22
+23
+24
+25
+26
+
+Function
+Mode / Intensity B
+Pattern Select B
+Animation Speed B
+X-Position B
+Y-Position B
+Rotation B
+Zoom B
+Wave/Ripple X
+Color Type B
+
+27
+28
+
+Manual Red B
+Manual Green B
+
+Ch (A)
+12
+13
+14
+16
+
+Function
+Manual Blue A
+Visible Points
+(Drawing)
+Scan Speed / Strobe
+Safety Zone Select
+
+Ch (B)
+29
+30
+31
+34
+
+Function
+Manual Blue B
+Visible Points
+(Drawing)
+Scan Speed / Strobe
+Reset / Setup Write
+
+Works cited
+1. Laser control protocols. Standards, Open Source, and other? ILDA / ART-NET / DMX,
+https://photonlexicon.com/forums/showthread.php/29138-Laser-control-protocols-Standards-Op
+en-Source-and-other-ILDA-ART-NET-DMX 2. Ehaho L2600 3D DJ Laser Party Lights,
+https://www.ehaho.com/products/ehaho-l2600-stage-laser-lights 3. Shehds ConstelLaser 6W
+Programable Waterproof Laser - YouTube, https://www.youtube.com/watch?v=XaL3uMvAKIQ 4.
+laser display system - user manual - SEVEN STARS,
+https://www.ablights.cl/manuales/daba6a2778d6397613fb0bb92f920cd5.pdf 5. laser
+displaysystem - user manual - AB Lights,
+https://www.ablights.cl/manuales/5a7d251358036ea702503de70bc6bb69.pdf 6. Channel Value
+Function ShowNET Laser Mainboard - Professional Mode DMX Chart - Laserworld,
+https://www.laserworld.com/images/al_gfx/online-manual/DMX-tables/DMX-Table-ShowNET-Las
+er-Mainboard_-_professional_Mode.pdf 7. 2.3. Laser mainboard with DIP switches - DMX
+control - Laserworld,
+https://www.laserworld.com/en/laser-online-user-manual/shownet-dip-switch-panel/dmx-control.
+html 8. DMX Channel Functions and Values - LightParts,
+https://www.lightparts.com/mm5/graphics/00000001/elar-216-dmx-traits.pdf 9.
+PDF-Manual-12-Channel-DMX-Driver.pdf - German Light Products,
+https://www.germanlightproducts.com/wp-content/uploads/2020/04/PDF-Manual-12-Channel-D
+MX-Driver.pdf 10. eHAHO L2600 RGB Laser Light User Manual - Manuals.plus,
+https://manuals.plus/m/10021a2d9d966306a4eb6340e6a7a15ee06d0f924ba07039361713d0d8
+468492 11. U`King DJ Disco Party Lights RGB Stage Lighting Beam Light Animation 3D Laser
+User Manual - device.report,
+https://device.report/manuals/uking-dj-disco-party-lights-user-manual 12. U`KING 3D Animation
+Stage Effect Party Light RGB Full Color Laser Lights DMX | eBay,
+https://www.ebay.com/itm/315104656999 13. laser display system - Без названия,
+https://www.big-pro.com/public/upload/passport/passport0128.pdf 14. SHEHDS APP Control
+1W RGB Laser Projector Double Pattern Animation Stage Scanner Light,
+https://shehds.com/products/shehds-1w-rgb-scan-laser-double-pattern-superimposed-for-perfor
+mance-stage-dj-nightclub-wedding 15. SHEHDS ConstelLaser Waterproof 6W RGB Animation
+Laser Light ...,
+https://shehds.com/products/new-constellaser-waterproof-6w-rgb-animation-laser-light-recharge
+able-one-piece-housing-touchscreens 16. B102RGB/4 Four Eyes 560mW RGBV Laser Light bigdipper-laser,
+https://bigdipper-laser.com/products/big-dipper-b102rgb-4-four-eyes-rgb-laser-light-dmx-controll
+ed-blue-lazer-light-for-disco-ktv-club-1-year-war 17. Sumger DM-RGB400 Professional DMX512
+LED Stage Light RGB Laser Scanner,
+https://forums.pioneerdj.com/hc/en-us/community/posts/360060597391-Sumger-DM-RGB400-P
+rofessional-DMX512-LED-Stage-Light-RGB-Laser-Scanner 18. FLASH RGB 400 | BSL-Lighting,
+https://www.bsl-lighting.com/wp-content/uploads/2015/01/FLASH-RGB-400-Manual.pdf 19.
+
+QLC+ Video Tutorial #3: Fixture Editor - YouTube,
+https://www.youtube.com/watch?v=D3omuD6F9RI 20. Create Custom Fixture Definitions YouTube, https://www.youtube.com/watch?v=vAkVfQqTXaI 21. Programming Sumger DM-RGY
+200 Laser Fixture with DMXIS from Enttec - YouTube,
+https://www.youtube.com/watch?v=cysZVXz3WBo 22. How to control scanning laser via DMX? :
+r/lightingdesign - Reddit,
+https://www.reddit.com/r/lightingdesign/comments/yrqhpf/how_to_control_scanning_laser_via_d
+mx/ 23. Big Dipper Original DJ Laser Light K800 | Full Testing | DJ Guruji - YouTube,
+https://www.youtube.com/watch?v=iE42wbAujs0
+
+

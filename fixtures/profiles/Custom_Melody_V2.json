@@ -1,0 +1,474 @@
+{
+  "id": "prof_melody_custom_v2",
+  "name": "Custom Melody V2",
+  "fixtureId": "fix_1774209417123",
+  "mappings": [
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 215
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 250
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "cycle",
+        "source": "bar",
+        "cal": {
+          "min": 0,
+          "center": 48,
+          "max": 96
+        },
+        "audio": {
+          "smoothing": 0,
+          "threshold": 0,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "direct",
+        "source": "raw",
+        "bin_idx": 1,
+        "cal": {
+          "min": 64,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "lfo",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 124,
+          "center": 158,
+          "max": 192
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.05,
+          "react": 0.3,
+          "smoothing": 0.99,
+          "hold": 0.2
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "lfo",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 124,
+          "center": 158,
+          "max": 192
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.05,
+          "react": 0.3,
+          "smoothing": 0.99,
+          "hold": 0.4,
+          "invert": true
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 255
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "source": "raw",
+        "bin_idx": 0,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 127
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "direct",
+        "source": "raw",
+        "bin_idx": 4,
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5,
+          "react": 1
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "behavior": "static",
+        "value": 0
+      },
+      {
+        "vibe": "high",
+        "behavior": "direct",
+        "source": "flux",
+        "bin_idx": 5
+      },
+      {
+        "vibe": "drop",
+        "behavior": "direct",
+        "source": "flux",
+        "bin_idx": 5
+      }
+    ]
+  ]
+}

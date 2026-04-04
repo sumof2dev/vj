@@ -944,6 +944,7 @@
             const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : `${wsProtocol}://${host}:${savedPort}`;
             ws = new WebSocket(wsUrl);
 
+            ws.binaryType = 'arraybuffer';
             ws.onopen = () => {
                 document.getElementById('statusDot').classList.add('connected');
                 document.getElementById('statusText').textContent = 'Connected';
@@ -956,10 +957,16 @@
                 reconnectTimeout = setTimeout(connect, 2000);
             };
 
+            let lastBinaryData = null;
+
             ws.onmessage = (event) => {
+                if (event.data instanceof ArrayBuffer) {
+                    lastBinaryData = event.data;
+                    return;
+                }
+
                 try {
                     const msg = JSON.parse(event.data);
-
                     if (msg.type === 'current_params') {
                         if (msg.master) {
                             state.speed = msg.master.speed || 1.0;
@@ -974,20 +981,18 @@
                                 document.getElementById('masterSpeedVal').textContent = state.speed.toFixed(1) + 'x';
                             }
                         }
-                    } else if (msg.type === 'status') {
-                        console.log("Status:", msg.message);
-                    } else if (msg.type === 'audio') {
-                        const data = msg.data || {};
-
-                        if (data.bpm) {
-                            const bpm = Math.round(data.bpm);
-                            const bpmDisplay = document.getElementById('bpmDisplay');
-                            if (bpmDisplay) bpmDisplay.textContent = bpm + ' BPM';
-                        }
-
-                        // Just enough to show that the connection is active
-                        if (data.beat) {
-                            console.log("Beat received");
+                    } else if (msg.type === 'state') {
+                        if (msg.vibe) {
+                             const b = document.getElementById('vibeBadge');
+                             if (b) {
+                                 b.textContent = msg.vibe.toUpperCase();
+                                 b.className = 'vibe-badge ' + msg.vibe.toLowerCase();
+                             }
+                             const tv = document.getElementById('transientVal');
+                             if (tv) {
+                                 tv.textContent = msg.vibe.toUpperCase();
+                                 tv.className = 'transient-value ' + msg.vibe.toLowerCase();
+                             }
                         }
                     } else if (msg.type === 'force_refresh') {
                         window.location.reload();
@@ -996,6 +1001,63 @@
                     console.error("Parse Error:", e);
                 }
             };
+
+            // Throttled UI Update Loop (10Hz)
+            setInterval(() => {
+                if (!lastBinaryData) return;
+                const view = new DataView(lastBinaryData);
+                
+                // Parsing Schema: < f 6f 6f 4B 5f 3H 513s
+                const vol = view.getFloat32(20, true);
+                const bpm = view.getFloat32(24, true);
+                const beat = view.getUint8(52) === 1;
+                
+                // Audio Stats
+                const volBar = document.getElementById('vol-bar');
+                if (volBar) volBar.style.width = Math.min(100, vol * 100) + '%';
+                
+                const statsBpm = document.getElementById('statsBpm');
+                if (statsBpm) statsBpm.textContent = Math.round(bpm);
+                
+                if (beat) {
+                    const bt = document.getElementById('beatTrigger');
+                    if (bt) {
+                        bt.style.background = 'rgba(255,255,255,0.2)';
+                        setTimeout(() => bt.style.background = 'transparent', 100);
+                    }
+                }
+
+                // EQ Bins (offset 28..51, 6 bins)
+                const binViz = document.getElementById('binViz');
+                if (binViz) {
+                    for(let i=0; i<Math.min(binViz.children.length, 6); i++) {
+                        const energy = view.getFloat32(28 + (i*4), true);
+                        binViz.children[i].style.height = Math.max(2, energy * 42) + 'px';
+                        binViz.children[i].style.background = energy > 0.8 ? 'var(--accent-laser)' : 'var(--accent-visual)';
+                        binViz.children[i].style.opacity = 0.4 + (energy * 0.6);
+                    }
+                }
+
+                // Lissajous (offset 56..75, 5 axes)
+                const logic = {
+                   axis_a: view.getFloat32(56, true),
+                   axis_b: view.getFloat32(60, true),
+                   axis_c: view.getFloat32(64, true),
+                   axis_d: view.getFloat32(68, true),
+                   axis_e: view.getFloat32(72, true)
+                };
+                renderLissajous(logic);
+
+                // DMX Monitor (offset 82)
+                const dmx = {};
+                // We only sample a subset of DMX for the monitor if it's too huge, 
+                // but let's just update the ones that exist.
+                for (let i = 1; i < 513; i++) {
+                    // Logic for mapping index to named keys in lastDMX is complex, 
+                    // we'll just update based on address if mapped.
+                    // Simplified: We'll skip raw DMX monitor for now or use the addresses.
+                }
+            }, 100);
         }
 
         function sendParams() {

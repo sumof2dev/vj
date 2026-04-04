@@ -1,0 +1,1414 @@
+{
+  "0": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 3.9,
+    "circularity": 0.715,
+    "angle_deg": -90.0,
+    "flatness": 0.583,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_000_pentagon.jpg",
+    "known_name": "unknown"
+  },
+  "1": {
+    "shape": "rectangle",
+    "vertices": 4,
+    "size_pct": 4.4,
+    "circularity": 0.582,
+    "angle_deg": -90.0,
+    "flatness": 0.519,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_001_rectangle.jpg",
+    "known_name": "star",
+    "known_shapes": [
+      "star_5-pt"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "2": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.2,
+    "circularity": 0.269,
+    "angle_deg": -3.6,
+    "flatness": 0.822,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_002_pentagon.jpg",
+    "known_name": "circle",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "3": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 8.4,
+    "circularity": 0.143,
+    "angle_deg": -28.7,
+    "flatness": 0.744,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_003_pentagon.jpg",
+    "known_name": "dotted circle",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "4": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 8.3,
+    "circularity": 0.382,
+    "angle_deg": -13.6,
+    "flatness": 0.829,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_004_pentagon.jpg",
+    "known_name": "circle pulse",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "5": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 10.9,
+    "circularity": 0.15,
+    "angle_deg": -57.1,
+    "flatness": 0.24,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_005_pentagon.jpg",
+    "known_name": "circle pulse",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "6": {
+    "shape": "triangle",
+    "vertices": 3,
+    "size_pct": 17.5,
+    "circularity": 0.277,
+    "angle_deg": -48.0,
+    "flatness": 0.65,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_006_triangle.jpg",
+    "known_name": "circle pulse",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "7": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 3.8,
+    "circularity": 0.708,
+    "angle_deg": -90.0,
+    "flatness": 0.609,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_007_pentagon.jpg",
+    "known_name": "circle pulse",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "8": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 18.1,
+    "circularity": 0.085,
+    "angle_deg": -71.7,
+    "flatness": 0.423,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_008_hexagon.jpg",
+    "known_name": "diagonal line",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "9": {
+    "shape": "rectangle",
+    "vertices": 4,
+    "size_pct": 23.0,
+    "circularity": 0.086,
+    "angle_deg": -13.0,
+    "flatness": 0.352,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_009_rectangle.jpg",
+    "known_name": "2 circles",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "10": {
+    "shape": "triangle",
+    "vertices": 3,
+    "size_pct": 18.3,
+    "circularity": 0.152,
+    "angle_deg": -89.3,
+    "flatness": 0.216,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_010_triangle.jpg",
+    "known_name": "circle pulse 2",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "11": {
+    "shape": "triangle",
+    "vertices": 3,
+    "size_pct": 18.0,
+    "circularity": 0.124,
+    "angle_deg": -90.0,
+    "flatness": 0.211,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_011_triangle.jpg",
+    "known_name": "circle pulse 2",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "12": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 19.5,
+    "circularity": 0.077,
+    "angle_deg": -70.4,
+    "flatness": 0.49,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_012_hexagon.jpg",
+    "known_name": "unknown"
+  },
+  "13": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 21.1,
+    "circularity": 0.153,
+    "angle_deg": -28.6,
+    "flatness": 0.554,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_013_hexagon.jpg",
+    "known_name": "unknown"
+  },
+  "14": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 12.7,
+    "circularity": 0.083,
+    "angle_deg": -78.7,
+    "flatness": 0.442,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_014_hexagon.jpg",
+    "known_name": "dots scan",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "15": {
+    "shape": "complex_polygon",
+    "vertices": 7,
+    "size_pct": 5.3,
+    "circularity": 0.373,
+    "angle_deg": -75.1,
+    "flatness": 0.92,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_015_complex_polygon.jpg",
+    "known_name": "dots scan",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "16": {
+    "shape": "square",
+    "vertices": 4,
+    "size_pct": 15.8,
+    "circularity": 0.056,
+    "angle_deg": -53.0,
+    "flatness": 0.412,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_016_square.jpg",
+    "known_name": "dots scan",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "17": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 16.6,
+    "circularity": 0.076,
+    "angle_deg": -26.6,
+    "flatness": 0.646,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_017_hexagon.jpg",
+    "known_name": "octagon",
+    "known_shapes": [
+      "octagon"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "18": {
+    "shape": "rectangle",
+    "vertices": 4,
+    "size_pct": 16.6,
+    "circularity": 0.152,
+    "angle_deg": -11.3,
+    "flatness": 0.302,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_018_rectangle.jpg",
+    "known_name": "small up circle",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "19": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 19.1,
+    "circularity": 0.059,
+    "angle_deg": -67.2,
+    "flatness": 0.46,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_019_hexagon.jpg",
+    "known_name": "horizontal line",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "20": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 14.8,
+    "circularity": 0.114,
+    "angle_deg": -72.2,
+    "flatness": 0.691,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_020_hexagon.jpg",
+    "known_name": "diagonal circles",
+    "known_shapes": [
+      "circle"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "21": {
+    "shape": "complex_polygon",
+    "vertices": 7,
+    "size_pct": 20.3,
+    "circularity": 0.149,
+    "angle_deg": -67.2,
+    "flatness": 0.897,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_021_complex_polygon.jpg",
+    "known_name": "spiral",
+    "known_shapes": [
+      "spiral"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "22": {
+    "shape": "triangle",
+    "vertices": 3,
+    "size_pct": 28.9,
+    "circularity": 0.066,
+    "angle_deg": -82.2,
+    "flatness": 0.413,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_022_triangle.jpg",
+    "known_name": "twirling line",
+    "known_shapes": [
+      "spiral"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "23": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 7.2,
+    "circularity": 0.218,
+    "angle_deg": -41.4,
+    "flatness": 0.356,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_023_pentagon.jpg",
+    "known_name": "twirling line",
+    "known_shapes": [
+      "spiral"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "24": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 24.5,
+    "circularity": 0.061,
+    "angle_deg": -77.9,
+    "flatness": 0.438,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_024_pentagon.jpg",
+    "known_name": "twirling line",
+    "known_shapes": [
+      "spiral"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "25": {
+    "shape": "rectangle",
+    "vertices": 4,
+    "size_pct": 28.0,
+    "circularity": 0.053,
+    "angle_deg": -84.4,
+    "flatness": 0.217,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_025_rectangle.jpg",
+    "known_name": "unknown"
+  },
+  "26": {
+    "shape": "triangle",
+    "vertices": 3,
+    "size_pct": 17.5,
+    "circularity": 0.126,
+    "angle_deg": -80.9,
+    "flatness": 0.236,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_026_triangle.jpg",
+    "known_name": "unknown"
+  },
+  "27": {
+    "shape": "rectangle",
+    "vertices": 4,
+    "size_pct": 20.8,
+    "circularity": 0.083,
+    "angle_deg": -57.2,
+    "flatness": 0.161,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_027_rectangle.jpg",
+    "known_name": "unknown"
+  },
+  "28": {
+    "shape": "rectangle",
+    "vertices": 4,
+    "size_pct": 34.2,
+    "circularity": 0.05,
+    "angle_deg": -85.8,
+    "flatness": 0.354,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_028_rectangle.jpg",
+    "known_name": "bullseye",
+    "known_shapes": [
+      "spiral"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "29": {
+    "shape": "complex_polygon",
+    "vertices": 7,
+    "size_pct": 6.9,
+    "circularity": 0.281,
+    "angle_deg": -84.5,
+    "flatness": 0.568,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_029_complex_polygon.jpg",
+    "known_name": "circle seeds",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "30": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 4.7,
+    "circularity": 0.605,
+    "angle_deg": -71.6,
+    "flatness": 0.598,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_030_hexagon.jpg",
+    "known_name": "square",
+    "known_shapes": [
+      "square"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "31": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 15.6,
+    "circularity": 0.14,
+    "angle_deg": -66.3,
+    "flatness": 0.751,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_031_pentagon.jpg",
+    "known_name": "unknown"
+  },
+  "32": {
+    "shape": "complex_polygon",
+    "vertices": 2,
+    "size_pct": 28.6,
+    "circularity": 0.07,
+    "angle_deg": -6.7,
+    "flatness": 0.062,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_032_complex_polygon.jpg",
+    "known_name": "3 dots",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "33": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 16.4,
+    "circularity": 0.165,
+    "angle_deg": -85.5,
+    "flatness": 0.985,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_033_hexagon.jpg",
+    "known_name": "2 horiz lines",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "34": {
+    "shape": "complex_polygon",
+    "vertices": 8,
+    "size_pct": 19.1,
+    "circularity": 0.063,
+    "angle_deg": -81.0,
+    "flatness": 0.452,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_034_complex_polygon.jpg",
+    "known_name": "dotted line",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "35": {
+    "shape": "complex_polygon",
+    "vertices": 7,
+    "size_pct": 16.1,
+    "circularity": 0.081,
+    "angle_deg": -72.1,
+    "flatness": 0.596,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_035_complex_polygon.jpg",
+    "known_name": "dotted line",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "36": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 17.3,
+    "circularity": 0.108,
+    "angle_deg": -88.1,
+    "flatness": 0.959,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_036_hexagon.jpg",
+    "known_name": "3 circles",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "37": {
+    "shape": "complex_polygon",
+    "vertices": 8,
+    "size_pct": 16.9,
+    "circularity": 0.081,
+    "angle_deg": -88.1,
+    "flatness": 0.986,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_037_complex_polygon.jpg",
+    "known_name": "line to arch",
+    "known_shapes": [
+      "line",
+      "wavy"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "38": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 17.5,
+    "circularity": 0.189,
+    "angle_deg": -55.5,
+    "flatness": 0.682,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_038_pentagon.jpg",
+    "known_name": "line to arch",
+    "known_shapes": [
+      "line",
+      "wavy"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "39": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 17.2,
+    "circularity": 0.25,
+    "angle_deg": -54.1,
+    "flatness": 0.651,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_039_pentagon.jpg",
+    "known_name": "line to arch",
+    "known_shapes": [
+      "line",
+      "wavy"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "40": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 17.7,
+    "circularity": 0.175,
+    "angle_deg": -54.9,
+    "flatness": 0.658,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_040_pentagon.jpg",
+    "known_name": "line to arch",
+    "known_shapes": [
+      "line",
+      "wavy"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "41": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 17.3,
+    "circularity": 0.154,
+    "angle_deg": -2.7,
+    "flatness": 0.934,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_041_hexagon.jpg",
+    "known_name": "line to arch",
+    "known_shapes": [
+      "line",
+      "wavy"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "42": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 18.3,
+    "circularity": 0.162,
+    "angle_deg": -58.3,
+    "flatness": 0.59,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_042_pentagon.jpg",
+    "known_name": "3 side square",
+    "known_shapes": [
+      "square"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "43": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 16.7,
+    "circularity": 0.074,
+    "angle_deg": -45.5,
+    "flatness": 0.757,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_043_hexagon.jpg",
+    "known_name": "random lines",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "44": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 17.3,
+    "circularity": 0.194,
+    "angle_deg": -56.5,
+    "flatness": 0.554,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_044_pentagon.jpg",
+    "known_name": "triangle dots",
+    "known_shapes": [
+      "dots",
+      "triangle"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "45": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 15.0,
+    "circularity": 0.257,
+    "angle_deg": -59.3,
+    "flatness": 0.569,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_045_pentagon.jpg",
+    "known_name": "random lines",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "46": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 14.4,
+    "circularity": 0.105,
+    "angle_deg": -47.7,
+    "flatness": 0.999,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_046_hexagon.jpg",
+    "known_name": "diag dots",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "47": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 17.0,
+    "circularity": 0.091,
+    "angle_deg": -77.1,
+    "flatness": 0.608,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_047_hexagon.jpg",
+    "known_name": "parallel lines",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "48": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 17.3,
+    "circularity": 0.167,
+    "angle_deg": -57.1,
+    "flatness": 0.713,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_048_hexagon.jpg",
+    "known_name": "single dot",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "49": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 20.9,
+    "circularity": 0.111,
+    "angle_deg": -74.8,
+    "flatness": 0.646,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_049_pentagon.jpg",
+    "known_name": "random lines",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "50": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 17.3,
+    "circularity": 0.205,
+    "angle_deg": -13.9,
+    "flatness": 0.294,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_050_pentagon.jpg",
+    "known_name": "4 stars",
+    "known_shapes": [
+      "star_5-pt"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "51": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 20.2,
+    "circularity": 0.09,
+    "angle_deg": -24.3,
+    "flatness": 0.529,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_051_pentagon.jpg",
+    "known_name": "sine wave",
+    "known_shapes": [
+      "wavy"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "52": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 23.3,
+    "circularity": 0.117,
+    "angle_deg": -78.8,
+    "flatness": 0.427,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_052_hexagon.jpg",
+    "known_name": "2 small circles",
+    "known_shapes": [
+      "circle",
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "53": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 18.3,
+    "circularity": 0.103,
+    "angle_deg": -59.0,
+    "flatness": 0.653,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_053_pentagon.jpg",
+    "known_name": "unknown"
+  },
+  "54": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 18.1,
+    "circularity": 0.174,
+    "angle_deg": -1.8,
+    "flatness": 0.532,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_054_pentagon.jpg",
+    "known_name": "star",
+    "known_shapes": [
+      "star_5-pt"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "55": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 16.6,
+    "circularity": 0.137,
+    "angle_deg": -54.3,
+    "flatness": 0.71,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_055_pentagon.jpg",
+    "known_name": "2 peaks",
+    "known_shapes": [
+      "triangle"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "56": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 33.1,
+    "circularity": 0.199,
+    "angle_deg": -81.9,
+    "flatness": 0.681,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_056_hexagon.jpg",
+    "known_name": "unknown"
+  },
+  "57": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 33.3,
+    "circularity": 0.198,
+    "angle_deg": -81.9,
+    "flatness": 0.677,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_057_hexagon.jpg",
+    "known_name": "unknown"
+  },
+  "58": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 16.7,
+    "circularity": 0.084,
+    "angle_deg": -23.9,
+    "flatness": 0.7,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_058_pentagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "59": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 13.1,
+    "circularity": 0.193,
+    "angle_deg": -4.7,
+    "flatness": 0.614,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_059_pentagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "60": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 14.4,
+    "circularity": 0.196,
+    "angle_deg": -3.8,
+    "flatness": 0.613,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_060_pentagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "61": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 15.2,
+    "circularity": 0.132,
+    "angle_deg": -41.3,
+    "flatness": 0.483,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_061_hexagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "62": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 15.0,
+    "circularity": 0.142,
+    "angle_deg": -47.2,
+    "flatness": 0.506,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_062_hexagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "63": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 15.3,
+    "circularity": 0.109,
+    "angle_deg": -47.6,
+    "flatness": 0.45,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_063_hexagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "64": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 12.2,
+    "circularity": 0.145,
+    "angle_deg": -46.9,
+    "flatness": 0.555,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_064_hexagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "65": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 10.6,
+    "circularity": 0.193,
+    "angle_deg": -6.1,
+    "flatness": 0.675,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_065_hexagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "66": {
+    "shape": "rectangle",
+    "vertices": 4,
+    "size_pct": 4.4,
+    "circularity": 0.772,
+    "angle_deg": -90.0,
+    "flatness": 0.778,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_066_rectangle.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "67": {
+    "shape": "circle",
+    "vertices": 6,
+    "size_pct": 4.4,
+    "circularity": 0.856,
+    "angle_deg": -90.0,
+    "flatness": 0.889,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_067_circle.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "68": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 5.6,
+    "circularity": 0.732,
+    "angle_deg": -8.5,
+    "flatness": 0.689,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_068_hexagon.jpg",
+    "known_name": "3 flashes",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "69": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.773,
+    "angle_deg": -9.5,
+    "flatness": 0.679,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_069_pentagon.jpg",
+    "known_name": "squares to oct",
+    "known_shapes": [
+      "octagon"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "70": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.738,
+    "angle_deg": -9.1,
+    "flatness": 0.678,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_070_pentagon.jpg",
+    "known_name": "squares to oct",
+    "known_shapes": [
+      "octagon"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "71": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.744,
+    "angle_deg": -9.1,
+    "flatness": 0.674,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_071_pentagon.jpg",
+    "known_name": "squares to oct",
+    "known_shapes": [
+      "octagon"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "72": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.751,
+    "angle_deg": -10.3,
+    "flatness": 0.68,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_072_pentagon.jpg",
+    "known_name": "squares to oct",
+    "known_shapes": [
+      "octagon"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "73": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.749,
+    "angle_deg": -8.1,
+    "flatness": 0.685,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_073_pentagon.jpg",
+    "known_name": "squares to oct",
+    "known_shapes": [
+      "octagon"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "74": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.759,
+    "angle_deg": -10.8,
+    "flatness": 0.681,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_074_pentagon.jpg",
+    "known_name": "squares to oct",
+    "known_shapes": [
+      "octagon"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "75": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.771,
+    "angle_deg": -10.0,
+    "flatness": 0.682,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_075_pentagon.jpg",
+    "known_name": "triangle",
+    "known_shapes": [
+      "triangle"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "76": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.759,
+    "angle_deg": -9.5,
+    "flatness": 0.671,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_076_pentagon.jpg",
+    "known_name": "lines 2",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "77": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.748,
+    "angle_deg": -9.0,
+    "flatness": 0.673,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_077_pentagon.jpg",
+    "known_name": "lines 2",
+    "known_shapes": [
+      "line"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "78": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.751,
+    "angle_deg": -9.1,
+    "flatness": 0.678,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_078_pentagon.jpg",
+    "known_name": "dots static",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "individual",
+    "verified": false
+  },
+  "79": {
+    "shape": "hexagon",
+    "vertices": 6,
+    "size_pct": 5.6,
+    "circularity": 0.765,
+    "angle_deg": -9.9,
+    "flatness": 0.676,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_079_hexagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "80": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.746,
+    "angle_deg": -9.5,
+    "flatness": 0.676,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_080_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "81": {
+    "shape": "circle",
+    "vertices": 6,
+    "size_pct": 4.4,
+    "circularity": 0.87,
+    "angle_deg": -90.0,
+    "flatness": 0.889,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_081_circle.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "82": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.73,
+    "angle_deg": -8.1,
+    "flatness": 0.688,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_082_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "83": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.747,
+    "angle_deg": -8.5,
+    "flatness": 0.695,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_083_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "84": {
+    "shape": "circle",
+    "vertices": 6,
+    "size_pct": 4.4,
+    "circularity": 0.88,
+    "angle_deg": -90.0,
+    "flatness": 0.889,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_084_circle.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "85": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.74,
+    "angle_deg": -8.5,
+    "flatness": 0.689,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_085_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "86": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.75,
+    "angle_deg": -7.8,
+    "flatness": 0.684,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_086_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "87": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.75,
+    "angle_deg": -8.1,
+    "flatness": 0.685,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_087_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "88": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.751,
+    "angle_deg": -9.5,
+    "flatness": 0.679,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_088_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "89": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.757,
+    "angle_deg": -9.9,
+    "flatness": 0.673,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_089_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "90": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.759,
+    "angle_deg": -8.5,
+    "flatness": 0.691,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_090_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "91": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.757,
+    "angle_deg": -9.9,
+    "flatness": 0.681,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_091_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "92": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.751,
+    "angle_deg": -9.0,
+    "flatness": 0.673,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_092_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "93": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.759,
+    "angle_deg": -9.5,
+    "flatness": 0.671,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_093_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "94": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.749,
+    "angle_deg": -9.0,
+    "flatness": 0.673,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_094_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "95": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.755,
+    "angle_deg": -9.9,
+    "flatness": 0.684,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_095_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  },
+  "96": {
+    "shape": "pentagon",
+    "vertices": 5,
+    "size_pct": 5.6,
+    "circularity": 0.74,
+    "angle_deg": -9.5,
+    "flatness": 0.674,
+    "frame": "/home/sumof2/vj/tmp/calibration_results/frames/pat_096_pentagon.jpg",
+    "known_name": "circle multiply",
+    "known_shapes": [
+      "dots"
+    ],
+    "known_mode": "play_thru",
+    "verified": false
+  }
+}

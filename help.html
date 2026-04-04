@@ -591,12 +591,6 @@ dtoverlay=hifiberry-dacplus</pre>
                     <button class="btn" style="background:rgba(255, 51, 102, 0.2); color:#ff3366; width:auto; padding: 10px 20px;"
                         onclick="runDebug('sudo alsa force-reload')">Force ALSA Reload</button>
                 </div>
-
-                <div id="debugOutputContainer" style="display:none; margin-top:2rem;">
-                    <label style="color:var(--accent); font-size:0.7rem;">Terminal Output:</label>
-                    <pre id="debugConsoleText"
-                        style="margin-top:8px; border-color:var(--accent); color:#0f0; font-size:0.75rem; white-space:pre-wrap;"></pre>
-                </div>
             </div>
 
             <!-- SECTION: LOGS -->
@@ -731,7 +725,8 @@ dtoverlay=hifiberry-dacplus</pre>
         // --- ORIGINAL SPOTIFY LOGIC ---
         async function loadCreds() {
             try {
-                const res = await fetch('/spotify_creds.json');
+                const baseUrl = LAUNCHER_API || (window.location.protocol + "//" + window.location.hostname + ":8001");
+                const res = await fetch(`${baseUrl}/spotify_creds.json`);
                 if (res.ok) {
                     const data = await res.json();
                     document.getElementById('clientId').value = data.SPOT_CLIENT_ID || '';
@@ -755,7 +750,8 @@ dtoverlay=hifiberry-dacplus</pre>
             };
 
             try {
-                const res = await fetch('/spotify_creds.json', {
+                const baseUrl = LAUNCHER_API || (window.location.protocol + "//" + window.location.hostname + ":8001");
+                const res = await fetch(`${baseUrl}/spotify_creds.json`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -865,10 +861,9 @@ dtoverlay=hifiberry-dacplus</pre>
         }
 
         async function runDebug(cmd) {
-            const container = document.getElementById('debugOutputContainer');
             const output = document.getElementById('debugConsoleText');
 
-            container.style.display = 'block';
+            output.style.display = 'block';
             output.textContent = "> Executing: " + cmd + "\n...";
             output.style.color = "#aaa";
 
@@ -910,11 +905,15 @@ dtoverlay=hifiberry-dacplus</pre>
                      if (btn) { btn.disabled = false; btn.innerText = "Run Engine Calibration"; }
                  }
              };
+             ws.binaryType = 'arraybuffer';
              ws.onmessage = (event) => {
+                 if (event.data instanceof ArrayBuffer) return; // Binary frames are for visualizers
                  try {
                      const msg = JSON.parse(event.data);
-                     if (msg.type.startsWith('calibration_')) handleCalibrationMessage(msg);
-                 } catch(e) {}
+                     if (msg.type && msg.type.startsWith('calibration_')) handleCalibrationMessage(msg);
+                 } catch(e) {
+                     // Non-JSON or unsupported format
+                 }
              };
              ws.onerror = (e) => {
                  console.error("WebSocket Error:", e);
@@ -1050,6 +1049,7 @@ dtoverlay=hifiberry-dacplus</pre>
 
         connectWS();
         loadCreds();
+        showSection('setup', document.querySelector('.nav-item'));
     </script>
 </body>
 

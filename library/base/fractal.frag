@@ -36,9 +36,10 @@ void main() {
 
     vec2 z = uv;
     float iterations = 0.0;
-    int MAX_ITERATIONS = 50 + int(u_vol * 30.0 + u_flux * 20.0); // More iterations with volume/flux for detail
+    int MAX_ITERATIONS = 20 + int(u_vol * 15.0 + u_flux * 10.0); // Capped iterations for Pi 5 WebGL
 
-    for (int i = 0; i < MAX_ITERATIONS; i++) {
+    for (int i = 0; i < 45; i++) {
+        if (i >= MAX_ITERATIONS) break;
         if (dot(z, z) > 4.0) { // Check for divergence
             break;
         }

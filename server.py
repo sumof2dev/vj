@@ -39,6 +39,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip('/')
+        print(f"DEBUG: GET Request Path: {path} (Full: {self.path})")
 
         # Handle root or default
         if path == '':
@@ -63,13 +64,17 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
 
         # API: Get Specific Fixture or Stage Config
         if path.startswith('/api/fixtures/'):
-            fname = path.split('/')[-1]
-            self._handle_get_fixture(fname)
+            subpath = path[len('/api/fixtures/'):]
+            self._handle_get_fixture(subpath)
             return
 
         # NEW: Global Proxy for Launcher Status (if hit on 8000)
         if path == '/status':
              self._proxy_to_launcher('/status')
+             return
+
+        if path == '/capture':
+             self._proxy_to_camera(self.path) # Forward the full query string with t= timestamp
              return
 
         if path == '/start':
@@ -83,6 +88,10 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         if path == '/restart' or path == '/api/restart':
              self._proxy_to_launcher('/restart')
              return
+        
+        if path == '/shell':
+             self._proxy_to_launcher(self.path) # Forward the full query string
+             return
 
         return super().do_GET()
 
@@ -92,8 +101,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
 
         # API: Save Fixture
         if path.startswith('/api/fixtures/'):
-            fname = path.split('/')[-1]
-            self._handle_save_fixture(fname)
+            subpath = path[len('/api/fixtures/'):]
+            self._handle_save_fixture(subpath)
             return
 
         # Legacy saves (config.json, etc)
@@ -133,7 +142,39 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip('/')
         
-        # API: Delete UserGen Shader
+        # API: Soft Delete Fixture/Profile
+        if path.startswith('/api/fixtures/'):
+            fname = path[len('/api/fixtures/'):]
+            if '..' in fname:
+                self.send_error(403, "Invalid filename")
+                return
+
+            fpath = os.path.abspath(os.path.join(BASE_DIR, 'fixtures', fname))
+            if not fpath.startswith(os.path.join(BASE_DIR, 'fixtures')):
+                self.send_error(403, "Permission Denied")
+                return
+
+            if os.path.exists(fpath):
+                try:
+                    # SOFT DELETE: Move to backup
+                    backup_dir = os.path.join(BASE_DIR, 'fixtures', 'backup')
+                    if not os.path.exists(backup_dir): os.makedirs(backup_dir)
+                    
+                    target_name = os.path.basename(fname)
+                    # Add timestamp to prevent name collisions in backup
+                    backup_name = f"{int(time.time())}_{target_name}"
+                    backup_path = os.path.join(backup_dir, backup_name)
+                    
+                    os.rename(fpath, backup_path)
+                    print(f"🗑️ SOFT DELETE: Moved {fname} to backup/{backup_name}")
+                    self._send_json({"status": "ok", "archived": backup_name})
+                except Exception as e:
+                    self.send_error(500, str(e))
+            else:
+                self.send_error(404, "File not found")
+            return
+
+        # API: Delete UserGen Shader (Existing Logic)
         if path == '/api/usergen/delete':
             from urllib.parse import parse_qs, unquote
             qs = parse_qs(parsed.query)
@@ -171,17 +212,33 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         self.send_error(501, "Not Implemented")
 
     def _handle_list_fixtures(self):
-        """List all .json files in fixtures/"""
+        """Recursively list all .json files in fixtures/"""
         fixtures_dir = os.path.join(BASE_DIR, 'fixtures')
         try:
-            files = [f for f in os.listdir(fixtures_dir) if f.endswith('.json')]
-            self._send_json(files)
+            if not os.path.exists(fixtures_dir):
+                os.makedirs(fixtures_dir)
+                os.makedirs(os.path.join(fixtures_dir, 'configs'))
+                os.makedirs(os.path.join(fixtures_dir, 'profiles'))
+
+            results = []
+            for root, dirs, files in os.walk(fixtures_dir):
+                # Ignore the backup directory during listing
+                if 'backup' in dirs:
+                    dirs.remove('backup')
+                
+                for f in files:
+                    if f.endswith('.json') and not f.startswith('.'):
+                        # Calculate path relative to 'fixtures'
+                        rel_path = os.path.relpath(os.path.join(root, f), fixtures_dir)
+                        results.append(rel_path)
+            self._send_json(results)
         except Exception as e:
+            print(f"❌ Error listing fixtures: {e}")
             self.send_error(500, str(e))
 
     def _handle_get_fixture(self, fname):
-        """Read a JSON file from fixtures/"""
-        if '..' in fname or '/' in fname:
+        """Read a JSON file from fixtures/ (allows subdirectories)"""
+        if '..' in fname:
             self.send_error(403, "Invalid filename")
             return
 
@@ -198,26 +255,33 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, str(e))
 
     def _handle_save_fixture(self, fname):
-        """Save a JSON file to fixtures/"""
-        if '..' in fname or '/' in fname or not fname.endswith('.json'):
+        """Save a JSON file to fixtures/ (allows subdirectories)"""
+        if '..' in fname or not fname.endswith('.json'):
             self.send_error(403, "Invalid filename")
             return
 
-        length = int(self.headers['Content-Length'])
-        body = self.rfile.read(length)
-        
         try:
+            length = int(self.headers['Content-Length'])
+            body = self.rfile.read(length)
+            
             # Validate JSON
             json.loads(body)
             
             fpath = os.path.join(BASE_DIR, 'fixtures', fname)
+            fdir = os.path.dirname(fpath)
+            if not os.path.exists(fdir):
+                os.makedirs(fdir)
+            
             with open(fpath, 'wb') as f:
                 f.write(body)
             
-            print(f"✅ Saved fixture: {fname} (Body: {len(body)} bytes)")
+            print(f"✅ Saved Fixture: {fname} ({len(body)} bytes)")
             self._send_json({"status": "ok", "file": fname})
         except json.JSONDecodeError:
             self.send_error(400, "Invalid JSON")
+        except Exception as e:
+            print(f"❌ Error saving fixture to {fname}: {e}")
+            self.send_error(500, str(e))
         except Exception as e:
             self.send_error(500, str(e))
 
@@ -355,6 +419,32 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(404, "Metadata not found")
         except Exception as e:
             self.send_error(500, str(e))
+
+    def _proxy_to_camera(self, subpath):
+        """Proxy a request to the camera service on 8004"""
+        import urllib.request
+        try:
+             # Camera service on 8004 is usually internal HTTP (no SSL)
+             url = f"http://127.0.0.1:8004{subpath}"
+             
+             req = urllib.request.Request(url)
+             with urllib.request.urlopen(req, timeout=5) as response:
+                 self.send_response(200)
+                 # MJPEG/JPEG content type 
+                 for header, value in response.getheaders():
+                     if header.lower() in ['content-type', 'content-length']:
+                         self.send_header(header, value)
+                 self.end_headers()
+                 self.wfile.write(response.read())
+        except Exception as e:
+             # Fallback: if camera server is down, return a blank black image or error
+             print(f"❌ Camera Proxy Error: {e}")
+             self._send_placeholder_img()
+
+    def _send_placeholder_img(self):
+        """Sends a 1x1 black pixel or 404 if camera is dead"""
+        self.send_response(404)
+        self.end_headers()
 
     def _proxy_to_launcher(self, subpath):
         """Proxy a request to the launcher service on 8001"""

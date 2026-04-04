@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ehaho Hardware Calibration</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0b0e;
+            --surface: #14161c;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.4);
+            --danger: #ef4444;
+            --success: #10b981;
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 320px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+        }
+
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #controls {
+            width: 380px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        h1 { margin: 0 0 8px 0; font-size: 1.5rem; letter-spacing: -0.5px; }
+        .subtitle { font-size: 0.9rem; color: var(--text-dim); margin-bottom: 24px; }
+
+        .phase-list { list-style: none; padding: 0; margin: 0; }
+        .phase-item {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            transition: 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        .phase-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+        .phase-item.complete::after {
+            content: "✓";
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        #feed-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
+        }
+        #live-feed {
+            max-width: 100%;
+            max-height: 100%;
+            border: 1px solid var(--accent);
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.2);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            background: rgba(0,0,0,0.7);
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .step-info { margin-top: 32px; flex: 1; opacity: 0.4; transition: 0.5s; }
+        .step-info.active { opacity: 1; }
+
+        .btn {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .btn:hover { transform: scale(1.02); filter: brightness(1.2); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .slider-group { margin-bottom: 20px; }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: var(--text-dim);
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+            background: rgba(255, 255, 255, 0.05);
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="number"] {
+            background: transparent;
+            border: none;
+            color: var(--accent);
+            font-family: inherit;
+            font-weight: bold;
+            width: 40px;
+            text-align: right;
+            outline: none;
+        }
+
+        .toggle-lock {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            cursor: pointer;
+        }
+        .toggle-lock.locked { background: var(--accent); border-color: transparent; }
+
+        #log {
+            margin-top: auto;
+            background: #000;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            height: 120px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+        .log-entry { margin-bottom: 4px; color: var(--text-dim); }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Calibration</h1>
+        <div class="subtitle">Ehaho Digital Twin Hardware Verification</div>
+        <div style="margin-bottom: 20px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+            <div class="slider-label" style="margin-bottom: 8px">Target Fixture</div>
+            <select id="fixture-select" onchange="setTarget(this.value)" style="width: 100%; background: var(--bg); color: #fff; border: 1px solid var(--border); padding: 8px; border-radius: 4px;"></select>
+            <button class="btn" onclick="blackoutOthers()" style="margin-top: 10px; font-size: 0.8rem; padding: 8px; background: var(--danger)">Stop & Blackout Others</button>
+        </div>
+
+        <ul class="phase-list">
+            <li class="phase-item active" id="phase-0" onclick="jumpToPhase(0)">Phase 0: Base Frame</li>
+            <li class="phase-item" id="phase-1" onclick="jumpToPhase(1)">Phase 1: Light & Threshold</li>
+            <li class="phase-item" id="phase-2" onclick="jumpToPhase(2)">Phase 2: Zoom Calibration</li>
+            <li class="phase-item" id="phase-3" onclick="jumpToPhase(3)">Phase 3: Pattern Mapping</li>
+            <li class="phase-item" id="phase-4" onclick="jumpToPhase(4)">Phase 4: Position Logic</li>
+            <li class="phase-item" id="phase-5" onclick="jumpToPhase(5)">Phase 5: 3D Rotation</li>
+        </ul>
+
+        <div class="step-info active" id="current-step-ui">
+            <h3 id="step-title">Prepare Dark Frame</h3>
+            <p id="step-desc" style="font-size: 0.9rem; color: var(--text-dim);">Ensure all lasers and stage lights are OFF. We need a dark reference frame.</p>
+            <div id="manual-controls" style="display:none; margin-top: 15px;">
+                <button class="btn" style="background: var(--success); margin-bottom: 5px;" onclick="triggerCurrentPhase()">▶ START SCAN (FETCH)</button>
+                <div style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 10px;">If fetch fails, use the total bypass:</div>
+                <a id="hard-link" class="btn" style="background: var(--primary); text-decoration: none; display: inline-block;" target="_blank">⚡ HARD SCAN TRIGGER (NEW TAB)</a>
+            </div>
+            <button class="btn" onclick="nextPhase()">Confirm & Continue</button>
+        </div>
+
+        <div id="log"></div>
+    </div>
+
+    <div id="main">
+        <div id="feed-container">
+            <div class="overlay">
+                <span style="color: var(--accent)">●</span> <span id="status">CONNECTING...</span>
+            </div>
+            <img id="live-feed" src="" alt="Live Feed">
+        </div>
+    </div>
+
+    <div id="controls">
+        <div style="margin-bottom: 24px">
+            <h3 style="margin:0 0 12px 0; font-size: 1rem">Manual Overrides</h3>
+            <div id="slider-container"></div>
+        </div>
+        <div id="diagnostics-panel" style="margin-top: 32px">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                 <h3 style="margin:0; font-size: 1rem">Captured Frames</h3>
+                 <span id="frame-count" style="font-size: 0.7rem; color: var(--accent)">0 Frames</span>
+            </div>
+            <div id="frame-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+        <style>
+            .thumb-item { position: relative; border-radius: 4px; border: 1px solid var(--border); overflow: hidden; background: #000; cursor: pointer; transition: 0.2s; aspect-ratio: 1; }
+            .thumb-item:hover { border-color: var(--accent); transform: scale(1.05); z-index: 10; }
+            .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+            .thumb-item span { position: absolute; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); font-size: 0.5rem; text-align: center; color: var(--text-dim); }
+        </style>
+    </div>
+
+    <script>
+        let ws = null;
+        let config = null;
+        let activeFixture = "Left1";
+        let lockedChannels = new Set();
+        let phase = 0;
+        let captureTimer = null;
+        let dmx_state = {};
+
+        // --- CORE UI ---
+        async function init() {
+            try {
+                const res = await fetch(`/load_config`);
+                config = await res.json();
+                console.log("Config loaded:", config);
+                populateFixtureSelect();
+                setTarget(activeFixture);
+                connectWS();
+                startFeed();
+                log("System initialized. Config loaded.");
+            } catch (e) {
+                log("Error: " + e.message, true);
+            }
+        }
+
+        function populateFixtureSelect() {
+            const select = document.getElementById('fixture-select');
+            config.stage.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.innerText = `${s.id} (Addr: ${s.address})`;
+                select.appendChild(opt);
+            });
+            select.value = activeFixture;
+        }
+
+        function setTarget(id) {
+            activeFixture = id;
+            log(`Target switched to ${id}`);
+            renderSliders();
+        }
+
+        async function blackoutOthers() {
+            log("🚫 Performing Global Blackout (Zero out all except target)...");
+            const targetInst = config.stage.find(s => s.id === activeFixture);
+            
+            const overrides = [];
+            config.stage.forEach(s => {
+                const base = parseInt(s.address);
+                const fix = config.fixtures.find(f => f.id === s.fixtureId);
+                const count = fix.channels.length;
+                
+                // If this is NOT the target, set ALL its channels to 0
+                if (s.id !== activeFixture) {
+                    for(let i=0; i < count; i++) {
+                        overrides.push({ address: base + i, value: 0 });
+                    }
+                }
+            });
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(json({
+                    "type": "laser_override",
+                    "overrides": overrides
+                }));
+                log(`✅ Blackout sent for ${config.stage.length - 1} other fixtures.`);
+            }
+        }
+
+        function log(msg, error=false) {
+            const di = document.createElement('div');
+            di.className = 'log-entry';
+            if (error) di.style.color = 'var(--danger)';
+            di.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            const logBox = document.getElementById('log');
+            logBox.prepend(di);
+        }
+
+        function renderSliders() {
+            const container = document.getElementById('slider-container');
+            container.innerHTML = "";
+            const inst = config.stage.find(s => s.id === activeFixture);
+            const fix = config.fixtures.find(f => f.id === inst.fixtureId);
+            const base = parseInt(inst.address) + (parseInt(inst.offset) || 0);
+
+            fix.channels.forEach((ch, i) => {
+                const addr = base + (parseInt(ch.addrOffset) || i);
+                dmx_state[addr] = 0;
+                
+                const group = document.createElement('div');
+                group.className = 'slider-group';
+                group.innerHTML = `
+                    <div class="slider-label">
+                        <span>CH ${addr}: ${ch.name}</span>
+                        <span>
+                            <button class="toggle-lock" id="lock-${addr}" onclick="toggleLock(${addr})">LOCK</button>
+                            Value: <input type="number" value="0" id="num-${addr}" onchange="updateDMX(${addr}, this.value)">
+                        </span>
+                    </div>
+                    <input type="range" min="0" max="255" value="0" id="range-${addr}" oninput="updateDMX(${addr}, this.value)">
+                `;
+                container.appendChild(group);
+            });
+        }
+
+        function connectWS() {
+            ws = new WebSocket(`wss://${window.location.hostname}:8765`);
+            ws.onopen = () => {
+                document.getElementById('status').innerText = "LIVE & CONNECTED";
+                log("WebSocket connected.");
+            };
+            ws.onclose = () => {
+                document.getElementById('status').innerText = "DISCONNECTED";
+                setTimeout(connectWS, 1000);
+            };
+            ws.onmessage = (e) => {
+                // Handle status updates if needed
+            };
+        }
+
+        function startFeed() {
+            const img = document.getElementById('live-feed');
+            setInterval(() => {
+                img.src = `/capture?t=${Date.now()}`;
+            }, 300);
+        }
+
+        function toggleLock(addr) {
+            const btn = document.getElementById(`lock-${addr}`);
+            if (lockedChannels.has(addr)) {
+                lockedChannels.delete(addr);
+                btn.classList.remove('locked');
+            } else {
+                lockedChannels.add(addr);
+                btn.classList.add('locked');
+            }
+        }
+
+        function updateDMX(addr, val) {
+            val = Math.max(0, Math.min(255, parseInt(val)));
+            dmx_state[addr] = val;
+            document.getElementById(`num-${addr}`).value = val;
+            document.getElementById(`range-${addr}`).value = val;
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(json({
+                    "type": "laser_override",
+                    "overrides": [{ address: addr, value: val }]
+                }));
+            }
+        }
+
+        // Shortcut for automation
+        function json(obj) { return JSON.stringify(obj); }
+
+        const AUTO_PHASES = ["zoom", "pattern", "position", "rotation"];
+
+        function triggerCurrentPhase() {
+            try {
+                const p = PHASES[phase];
+                console.log("Triggering current phase:", p);
+                if (AUTO_PHASES.includes(p.id)) {
+                    triggerBackendPhase(p.id);
+                } else {
+                    log(`Phase ${p.id} is manual. Use sliders or click Confirm.`);
+                }
+            } catch (e) {
+                alert(`Trigger Error: ${e.message}`);
+                console.error(e);
+            }
+        }
+
+        async function triggerBackendPhase(name) {
+            log(`📡 SENDING TRIGGER: ${name.toUpperCase()} for ${activeFixture}`);
+            log(`⚡ Triggering Backend Autonomous Phase: ${name}...`);
+            try {
+                // Pure GET: Standard compliant, no body.
+                const res = await fetch(`/start_phase?phase=${name}&fixture=${activeFixture}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                
+                log(`📡 Backend acknowledged phase ${name}.`);
+
+                // Start polling for progress
+                const poller = setInterval(async () => {
+                    try {
+                        const sres = await fetch(`/status`);
+                        const status = await sres.json();
+                        
+                        if (status.phase === name) {
+                            const pct = Math.round(status.progress * 100);
+                            document.getElementById('status').innerText = `CALIBRATING ${name.toUpperCase()} (${pct}%)`;
+                            if (document.getElementById('frame-count')) {
+                                document.getElementById('frame-count').innerText = `${status.frames} Captured`;
+                            }
+                        } else if (status.phase === "idle" || status.phase === "done") {
+                            clearInterval(poller);
+                            document.getElementById('status').innerText = "LIVE & CONNECTED";
+                            log(`✅ Backend Phase ${name} complete.`);
+                            if (typeof updateGrid === 'function') updateGrid(name);
+                            alert(`Phase ${name} finished. Review frames in grid.`);
+                        }
+                    } catch (e) {
+                         console.warn("Poll failed", e);
+                    }
+                }, 1000);
+            } catch (e) {
+                log(`❌ FAILED TO TRIGGER BACKEND: ${e.message}`, true);
+                alert(`CRITICAL ERROR: Could not start backend phase.\nError: ${e.message}`);
+            }
+        }
+
+        // --- SEQUENCE LOGIC ---
+        const PHASES = [
+            { id: "base", title: "Base Frame", desc: "Lasers OFF. Recording ambient noise." },
+            { id: "light", title: "Dimmer & Threshold", desc: "Bring Dimmer to 215. Lock Pattern Group to 250." },
+            { id: "zoom", title: "Zoom Calibration", desc: "AUTONOMOUS: Backend will sweep Zoom 0-255." },
+            { id: "pattern", title: "Pattern Identification", desc: "AUTONOMOUS: Backend will sweep Patterns 0-96." },
+            { id: "position", title: "Position Logic", desc: "Small Zoom. Capture X/Y ranges." },
+            { id: "rotation", title: "3D Rotation", desc: "Triangle Pattern. Sweep X/Y/Z rotation axes." }
+        ];
+
+        function jumpToPhase(idx) {
+            if (idx === phase) return; // already here
+            // Mark all phases up to idx as complete
+            for (let i = 0; i < PHASES.length; i++) {
+                const el = document.getElementById(`phase-${i}`);
+                el.classList.remove('active');
+                if (i < idx) el.classList.add('complete');
+                else el.classList.remove('complete');
+            }
+            phase = idx;
+            const p = PHASES[phase];
+            document.getElementById(`phase-${phase}`).classList.add('active');
+            document.getElementById('step-title').innerText = p.title;
+            document.getElementById('step-desc').innerText = p.desc;
+            log(`⏭️ Jumped to Phase ${idx}: ${p.title}`);
+
+            // Show/hide manual controls
+            const mc = document.getElementById('manual-controls');
+            const hl = document.getElementById('hard-link');
+            if (AUTO_PHASES.includes(p.id)) {
+                mc.style.display = 'block';
+                hl.href = `/start_phase?phase=${p.id}&fixture=${activeFixture}`;
+            } else {
+                mc.style.display = 'none';
+            }
+        }
+
+        async function nextPhase() {
+            document.getElementById(`phase-${phase}`).classList.remove('active');
+            document.getElementById(`phase-${phase}`).classList.add('complete');
+            phase++;
+            
+            if (phase >= PHASES.length) {
+                log("Calibration Complete!");
+                return;
+            }
+
+            const p = PHASES[phase];
+            document.getElementById(`phase-${phase}`).classList.add('active');
+            document.getElementById('step-title').innerText = p.title;
+            document.getElementById('step-desc').innerText = p.desc;
+            
+            // Toggle manual control visibility
+            const mc = document.getElementById('manual-controls');
+            const hl = document.getElementById('hard-link');
+            if (AUTO_PHASES.includes(p.id)) {
+                mc.style.display = 'block';
+                hl.href = `/start_phase?phase=${p.id}&fixture=${activeFixture}`;
+            } else {
+                mc.style.display = 'none';
+            }
+
+            // Automation for Phase Entrances
+            if (p.id === "light") {
+                log("Auto-setting Dimmer to 215...");
+                const dimmer = findAddrByRole("dim");
+                const patGroup = findAddrByRole("group");
+                updateDMX(dimmer, 215);
+                updateDMX(patGroup, 250);
+            } else if (AUTO_PHASES.includes(p.id)) {
+                triggerBackendPhase(p.id);
+            }
+        }
+
+        function findAddrByRole(role) {
+            const inst = config.stage.find(s => s.id === activeFixture);
+            const fix = config.fixtures.find(f => f.id === inst.fixtureId);
+            const base = parseInt(inst.address) + (parseInt(inst.offset) || 0);
+            const ch = fix.channels.find(c => c.role === role);
+            if (!ch) return null;
+            return base + (parseInt(ch.addrOffset) || fix.channels.indexOf(ch));
+        }
+
+        async function updateGrid(name) {
+             const grid = document.getElementById('frame-grid');
+             if (!grid) return;
+             grid.innerHTML = "";
+             // Fetch a subset of captured frame thumbnails to review
+             for (let i = 0; i < 20; i++) {
+                 const item = document.createElement('div');
+                 item.className = 'thumb-item';
+                 item.innerHTML = `<img src="/capture?t=${Date.now()}_${i}" alt="Frame"><span>${name}_${i}</span>`;
+                 grid.appendChild(item);
+             }
+        }
+
+        // --- INITIALIZE ---
+        init();
+    </script>
+</body>
+</html>

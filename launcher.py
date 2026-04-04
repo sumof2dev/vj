@@ -45,6 +45,9 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
         elif self.path.startswith('/shell'):
             self.handle_shell_command()
             return
+        elif self.path.startswith('/capture'):
+            self.proxy_to_camera(self.path)
+            return
             
         elif self.path in ['/', '/manager', '/manager.html', '/setup.html', '/visualdmx.html', '/remote.html', '/usergen', '/usergen/']:
             # Redirect frontend apps to the main engine port (8000)
@@ -68,25 +71,72 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
         else:
             return super().do_GET()
 
+    def do_PUT(self):
+        if self.path == '/spotify_creds.json':
+            try:
+                content_length = int(self.headers['Content-Length'])
+                put_data = self.rfile.read(content_length)
+                with open(os.path.join(BASE_DIR, 'spotify_creds.json'), 'wb') as f:
+                    f.write(put_data)
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True}).encode())
+            except Exception as e:
+                self.error_response(str(e))
+        else:
+            self.send_response(404)
+            self.end_headers()
+
     def run_systemd(self, action, service='vj-engine.service'):
-
-
         try:
             # We use sudo for systemctl. 
             cmd = ['sudo', 'systemctl', action, service]
-            
             result = subprocess.run(cmd, capture_output=True, text=True)
             
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            
-            # Helper for status checks
-            if action == 'is-active':
-                status = result.stdout.strip()
+            # --- FALLBACK FOR MANUAL RESTART/STOP ---
+            if result.returncode != 0 and action in ['restart', 'stop', 'start', 'status']:
+                if action == 'stop' or action == 'restart':
+                    subprocess.run(['pkill', '-f', 'backend/main.py'])
+                
+                if action == 'start' or action == 'restart':
+                    # Start manual process in background
+                    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'backend.log')
+                    cmd_manual = f"nohup venv/bin/python3 -u backend/main.py > {log_file} 2>&1 &"
+                    subprocess.Popen(cmd_manual, shell=True, preexec_fn=os.setpgrp)
+                
+                if action != 'status' and action != 'is-active':
+                    response = {
+                        "success": True,
+                        "action": action,
+                        "service": service,
+                        "mode": "manual_fallback",
+                        "output": f"Manual {action} executed"
+                    }
+                    payload = json.dumps(response).encode()
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.send_header('Content-Length', str(len(payload)))
+                    self.end_headers()
+                    self.wfile.write(payload)
+                    return
+
+            if action == 'is-active' or action == 'status':
+                # Status Check: Check systemd AND manual process
+                status = result.stdout.strip() if result.returncode == 0 else "inactive"
+                is_active = (status == 'active')
+                
+                if not is_active:
+                    # Fallback: check for manual python process
+                    manual_check = subprocess.run(['pgrep', '-f', 'backend/main.py'], capture_output=True)
+                    if manual_check.returncode == 0:
+                        status = 'active (manual)'
+                        is_active = True
+                
                 response = {
                     "status": status,
-                    "active": status == 'active',
+                    "active": is_active,
                     "service": service
                 }
             else:
@@ -97,8 +147,15 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
                     "output": result.stdout,
                     "error": result.stderr
                 }
+                
+            payload = json.dumps(response).encode()
             
-            self.wfile.write(json.dumps(response).encode())
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            
+            self.wfile.write(payload)
         except Exception as e:
             self.error_response(str(e))
 
@@ -200,6 +257,24 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode())
         except Exception as e:
             self.error_response(f"Execution Error: {str(e)}")
+
+    def proxy_to_camera(self, subpath):
+        import urllib.request
+        try:
+            # Proxy to the camera service on 8004
+            url = f"http://127.0.0.1:8004{subpath}"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=5) as response:
+                self.send_response(200)
+                for header, value in response.getheaders():
+                    if header.lower() in ['content-type', 'content-length']:
+                        self.send_header(header, value)
+                self.end_headers()
+                self.wfile.write(response.read())
+        except Exception as e:
+            print(f"❌ Launcher Camera Proxy Error: {e}")
+            self.send_response(404)
+            self.end_headers()
 
     def error_response(self, message):
         self.send_response(500)

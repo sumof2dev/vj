@@ -40,7 +40,7 @@ void main() {
     // Voxel grid properties
     float gridSize = 0.4 + (u_high * 0.2);
     
-    for(int i = 0; i < 40; i++) {
+    for(int i = 0; i < 25; i++) {
         vec3 p = ro + rd * t;
         
         // Space repetition for voxels

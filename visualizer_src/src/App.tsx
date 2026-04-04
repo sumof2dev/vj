@@ -25,12 +25,14 @@ CRITICAL RULES:
 - Start your code with "precision highp float;".
 - Declare "varying vec2 vUv;" at the top.
 - Use the following uniforms. Do not invent new uniforms:
-  uniform float u_time;
+  uniform float u_time;       // Absolute time
+  uniform float u_clock;      // Audio-modulated time (USE THIS FOR SMOOTH CONTINUOUS MOTION)
   uniform vec2 u_resolution;
-  uniform float u_bass; 
-  uniform float u_flux; 
-  uniform float u_vol; 
-  uniform float u_high; 
+  uniform float u_bass;       // 0.0 to 1.5+ (Kicks/Lows)
+  uniform float u_flux;       // 0.0 to 1.5+ (Energy changes)
+  uniform float u_vol;        // 0.0 to 1.5+ (Overall volume)
+  uniform float u_intensity;  // Smoothed overall volume
+  uniform float u_high;       // 0.0 to 1.5+ (Hi-hats/Highs)
   uniform float u_dmxRot;
   uniform float u_axis_a;
   uniform float u_axis_b;
@@ -43,18 +45,27 @@ mat2 rotate2d(float _angle){
     return mat2(cos(_angle),-sin(_angle),
                 sin(_angle),cos(_angle));
 }
+vec3 palette( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) ); // Cosine based color palette
+}
 
-DESIGN GUIDELINES:
-- Use vUv for coordinates (0.0 to 1.0).
-- Tie structural movement (speed, warping) to u_time and u_flux.
-- Tie explosive size, brightness, and thickness to u_bass.
+DESIGN GUIDELINES (MESMERIZING & IMPACTFUL):
+- Center the coordinate system: vec2 uv = (vUv - 0.5) * 2.0;
+- Fix aspect ratio if needed: uv.x *= u_resolution.x / u_resolution.y;
+- Use Signed Distance Fields (SDFs), fractals, kaleidoscope mirroring (abs(uv)), or infinite tunnels.
+- Tie continuous forward/rotational movement to u_clock to prevent jitter.
+- Tie explosive scale, thickness, and glow directly to u_bass or u_flux.
 - Rotate the primary geometric space using rotate2d(u_dmxRot).
-- Ensure the output is additive-blend friendly (pure black vec4(0.0) for empty space).
-- The shader should calculate a final color for "gl_FragColor".
-- Focus on high-contrast, geometric, and psychedelic patterns.
-- APPLY HIGH BLACK POINT: In your final gl_FragColor calculation, always apply a high black point for extreme contrast.
+- Output must be additive-blend friendly (pure black vec4(0.0) for empty space).
+
+PERFORMANCE GUIDELINES (EFFICIENT GPU USAGE):
+- STRICTLY FORBIDDEN: Do not use branching "if/else" statements. Use step(), smoothstep(), and mix() instead.
+- STRICTLY FORBIDDEN: Do not use loops with high iterations (max 16 if absolutely necessary for raymarching/fractals).
+- Rely on fract() for infinite repetition instead of looping.
+
+CONTRAST RULE:
+- APPLY HIGH BLACK POINT: In your final gl_FragColor calculation, always apply a high black point for extreme contrast to make lasers and LEDs pop.
   Example logic: color.rgb = (color.rgb - 0.2) / 0.8; color.rgb = clamp(color.rgb, 0.0, 1.0);
-- Keep the code concise and efficient.
 `;
 
 const DEFAULT_FRAGMENT_SHADER = `
@@ -91,8 +102,8 @@ void main() {
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [shaderDescription, setShaderDescription] = useState("");
-  const [status, setStatus] = useState("Connected. Waiting for prompt...");
-  const [statusColor, setStatusColor] = useState("text-emerald-400");
+  const [status, setStatus] = useState("Connecting...");
+  const [statusColor, setStatusColor] = useState("text-amber-400");
   const [isGenerating, setIsGenerating] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [hasApiKey, setHasApiKey] = useState(false);
@@ -101,7 +112,7 @@ export default function App() {
   const [libraryVisuals, setLibraryVisuals] = useState<{ file: string; prompt: string; type?: string }[]>([]);
   const libraryRef = useRef<{ file: string; prompt: string; type?: string }[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [showToolbar, setShowToolbar] = useState(true);
+  const [showToolbar, setShowToolbar] = useState(false);
   const [autoCycle, setAutoCycle] = useState(true);
   const autoCycleRef = useRef(true);
   const [selectedModel, setSelectedModel] = useState(localStorage.getItem('vj_gemini_model') || "gemini-3-flash");
@@ -354,42 +365,66 @@ export default function App() {
 
     const connect = () => {
       socket = new WebSocket(wsUrl);
+      socket.binaryType = 'arraybuffer';
       socket.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          const view = new DataView(event.data);
+          // Schema: < f 6f 6f 4B 5f 3H 513s
+          const mTime = view.getFloat32(0, true);
+          const flux = view.getFloat32(4, true);
+          const bass = view.getFloat32(8, true);
+          // const mid = view.getFloat32(12, true);
+          const high = view.getFloat32(16, true);
+          const vol = view.getFloat32(20, true);
+          // const bpm = view.getFloat32(24, true);
+
+          uniformsRef.current.u_time.value = mTime;
+          targetMods.flux = flux;
+          targetMods.bass = bass;
+          targetMods.high = high;
+          targetMods.vol = vol;
+
+          logicState.axis_a = view.getFloat32(56, true);
+          logicState.axis_b = view.getFloat32(60, true);
+          logicState.axis_c = view.getFloat32(64, true);
+          logicState.axis_d = view.getFloat32(68, true);
+          logicState.axis_e = view.getFloat32(72, true);
+
+          const baseIdx = view.getUint16(76, true);
+          const fxIdx = view.getUint16(78, true);
+
+          // Auto-Cycle logic (Throttled by internal state tracking in update thread)
+          if (autoCycleRef.current) {
+            if (baseIdx !== lastBase) {
+              lastBase = baseIdx;
+              baseManualRef.current = false;
+              const bases = libraryRef.current.filter(h => h.type === 'base' || !h.type || h.type === 'unknown');
+              if (bases.length) loadFromLibrary(bases[baseIdx % bases.length], 'base');
+            }
+            if (fxIdx !== lastFx) {
+              lastFx = fxIdx;
+              fxManualRef.current = false;
+              const bases = libraryRef.current.filter(h => h.type === 'base' || !h.type || h.type === 'unknown');
+              const fxs = libraryRef.current.filter(h => h.type === 'fx');
+              const fxRatio = bases.length > 0 ? (fxs.length / bases.length) : 0;
+              const seededRand = ((fxIdx * 9301 + 49297) % 233280) / 233280.0;
+
+              if (fxs.length > 0 && seededRand <= fxRatio) {
+                loadFromLibrary(fxs[fxIdx % fxs.length], 'fx');
+                if (fxMeshRef.current) fxMeshRef.current.visible = true;
+              } else if (fxMeshRef.current && fxs.length > 0 && !fxManualRef.current) {
+                fxMeshRef.current.visible = false;
+              }
+            }
+          }
+          return;
+        }
+
         try {
           const msg = JSON.parse(event.data);
-          if (msg.type === "audio") {
-            if (msg.logic) logicState = msg.logic;
-            if (msg.master_time !== undefined) uniformsRef.current.u_time.value = msg.master_time;
-            if (msg.data?.mods) {
-              targetMods.flux = msg.data.mods.flux || 0;
-              targetMods.bass = msg.data.mods.bass || 0;
-              targetMods.high = msg.data.mods.high || 0;
-              targetMods.vol = msg.data.mods.vol || 0;
-            }
-            // Auto-Cycle logic
-            if (autoCycleRef.current) {
-              if (msg.base_layer !== undefined && msg.base_layer !== lastBase) {
-                lastBase = msg.base_layer;
-                baseManualRef.current = false;
-                const bases = libraryRef.current.filter(h => h.type === 'base' || !h.type || h.type === 'unknown');
-                if (bases.length) loadFromLibrary(bases[msg.base_layer % bases.length], 'base');
-              }
-              if (msg.fx_layer !== undefined && msg.fx_layer !== lastFx) {
-                lastFx = msg.fx_layer;
-                fxManualRef.current = false;
-                const bases = libraryRef.current.filter(h => h.type === 'base' || !h.type || h.type === 'unknown');
-                const fxs = libraryRef.current.filter(h => h.type === 'fx');
-                const fxRatio = bases.length > 0 ? (fxs.length / bases.length) : 0;
-                const seededRand = ((msg.fx_layer * 9301 + 49297) % 233280) / 233280.0;
-                
-                if (fxs.length > 0 && seededRand <= fxRatio) {
-                  loadFromLibrary(fxs[msg.fx_layer % fxs.length], 'fx');
-                  if (fxMeshRef.current) fxMeshRef.current.visible = true;
-                } else if (fxMeshRef.current && fxs.length > 0 && !fxManualRef.current) {
-                  fxMeshRef.current.visible = false;
-                }
-              }
-            }
+          // Discrete state updates (Vibe change, preset change, errors)
+          if (msg.type === "state") {
+            if (msg.error) setStatus("⚠️ " + msg.error);
           }
           if (msg.type === "current_params" || msg.type === "visual_params") {
             if (msg.speed !== undefined) remoteParams.speed = msg.speed;
@@ -397,33 +432,42 @@ export default function App() {
           }
         } catch (e) { }
       };
-      socket.onclose = () => { reconnectTimeout = setTimeout(connect, 3000); };
+      socket.onopen = () => {
+        setStatus("Connected. Waiting for prompt...");
+        setStatusColor("text-emerald-400");
+      };
+      socket.onclose = () => {
+        setStatus("Disconnected. Reconnecting...");
+        setStatusColor("text-rose-400");
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
     };
     let lastTime = performance.now();
     const updateLoop = () => {
       const now = performance.now();
       const dt = (now - lastTime) / 1000.0;
       lastTime = now;
-      
-      const sf = 1.0 - Math.pow(0.005, dt); 
+
+      const sf = 1.0 - Math.pow(0.005, dt);
       const amp = remoteParams.amplitude || 1.0;
-      
+
       smoothedMods.flux += (targetMods.flux - smoothedMods.flux) * sf;
       smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * sf;
       smoothedMods.high += (targetMods.high - smoothedMods.high) * sf;
       smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * sf;
-      
+
       // MODULATED CLOCK INTEGRATION
       // Instead of u_time * flux (which jitters), we integrate time * flux into a single increasing value
-      const modSpeed = 1.0 + (smoothedMods.flux * 2.0) + (smoothedMods.bass * 0.5);
+      // Baseline 0.6 matching SERVER_START_TIME * 0.6 sync
+      const modSpeed = 0.6 + (smoothedMods.flux * 1.5) + (smoothedMods.bass * 0.4);
       uniformsRef.current.u_clock.value += dt * modSpeed;
-      
+
       uniformsRef.current.u_flux.value = Math.min(1.5, smoothedMods.flux * amp);
       uniformsRef.current.u_bass.value = Math.min(1.5, smoothedMods.bass * amp);
       uniformsRef.current.u_high.value = Math.min(1.5, smoothedMods.high * amp);
       uniformsRef.current.u_vol.value = Math.min(1.5, smoothedMods.vol * amp);
       uniformsRef.current.u_intensity.value = smoothedMods.vol * amp;
-      
+
       uniformsRef.current.u_speed.value = remoteParams.speed;
       uniformsRef.current.u_axis_a.value = logicState.axis_a || 0;
       uniformsRef.current.u_axis_b.value = logicState.axis_b || 0;
@@ -443,8 +487,8 @@ export default function App() {
     setIsGenerating(true); setStatus(fixMode ? "🔧 Fixing GLSL..." : "⏳ Re-dreaming...");
     try {
       const genAI = new GoogleGenAI({ apiKey: getApiKey() });
-      const response = await genAI.models.generateContent({ 
-        model: selectedModel, 
+      const response = await genAI.models.generateContent({
+        model: selectedModel,
         contents: fixMode ? `Take this ${activeLayer.toUpperCase()} shader and adjust it: "${shaderDescription}". Return ONLY valid GLSL:\n\n${activeLayer === 'base' ? currentBaseCode : currentFxCode}` : `Generate a ${activeLayer.toUpperCase()} shader of ${shaderDescription}`,
         config: { systemInstruction: VJ_SYSTEM_PROMPT }
       });
@@ -454,7 +498,15 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-full h-full bg-black text-white font-sans overflow-hidden" onClick={() => setShowToolbar(!showToolbar)}>
+    <div className="relative w-full h-full bg-black text-white font-sans overflow-hidden" onClick={() => {
+      if (!showToolbar) {
+        setShowToolbar(true);
+      } else {
+        setShowToolbar(false);
+        setShowHistory(false);
+        setShowSettings(false);
+      }
+    }}>
       <canvas ref={canvasRef} className="block w-full h-full" />
       <AnimatePresence>
         {showHistory && (

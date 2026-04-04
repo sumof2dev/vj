@@ -53,17 +53,17 @@ class AudioAnalyzer:
         # Find the peak in the rolling window (last ~5-10s)
         peak = max(self.history_raw_max)
 
-        if peak < 0.05:
+        if peak < 4.0:
             # Signal is basically silence
-            return {"status": "CRITICAL_LOW", "peak": round(peak, 3), "message": "Signal nearly silent. Check Spotify/Main Volume."}
-        if peak < 0.2:
+            return {"status": "CRITICAL_LOW", "peak": float(round(peak, 3)), "message": "Signal nearly silent. Check Spotify/Main Volume."}
+        if peak < 15.0:
             # Signal is workable but weak
-            return {"status": "WEAK", "peak": round(peak, 3), "message": "Signal is weak. Results may be inconsistent."}
-        if peak > 3.0:
+            return {"status": "WEAK", "peak": float(round(peak, 3)), "message": "Signal is weak. Results may be inconsistent."}
+        if peak > 250.0:
             # Overloaded signal
-            return {"status": "OVERLOAD", "peak": round(peak, 3), "message": "Signal is clipping or has high DC offset."}
+            return {"status": "OVERLOAD", "peak": float(round(peak, 3)), "message": "Signal is clipping or has high DC offset."}
         
-        return {"status": "HEALTHY", "peak": round(peak, 3), "message": "Audio signal levels are optimal."}
+        return {"status": "HEALTHY", "peak": float(round(peak, 3)), "message": "Audio signal levels are optimal."}
 
     def set_gain(self, val: float):
         """Set normalization gain (Sensitivity)"""
@@ -90,7 +90,7 @@ class AudioAnalyzer:
         
         # SANE PEAK: Instead of normalizing against absolute max in history (which might be noise),
         # use a minimum baseline for the 'max' so tiny sounds aren't boosted to 100%.
-        sane_peak = max(0.4, max_val)
+        sane_peak = max(0.1, max_val)
         
         if sane_peak - min_val < 0.0001: return 0.0
         
@@ -142,21 +142,21 @@ class AudioAnalyzer:
         # 4. Silence Reset & Peak Tracking
         current_raw_vol = (raw_bass + raw_mid + raw_high) / 3.0
         if not hasattr(self, 'smooth_raw_vol'): self.smooth_raw_vol = 0.0
-        self.smooth_raw_vol = self.smooth_raw_vol * 0.5 + current_raw_vol * 0.5
+        self.smooth_raw_vol = self.smooth_raw_vol * 0.7 + current_raw_vol * 0.3
         raw_vol = self.smooth_raw_vol
         
         current_raw_max = max(raw_bass, raw_mid, raw_high)
         self.history_raw_max.append(current_raw_max)
-        global_peak = max(0.4, max(self.history_raw_max) if self.history_raw_max else 0.4)
+        global_peak = max(0.1, max(self.history_raw_max) if self.history_raw_max else 0.1)
 
-        if raw_vol > 0.03: 
+        if raw_vol > 0.001: 
             self.last_sound_time = now
         elif now - self.last_sound_time > 2.0:
             self.bpm = 120.0
             self.bpm_list = []
             return self.get_empty_state()
         
-        if raw_vol < 0.02:
+        if raw_vol < 0.001:
             return self.get_empty_state()
 
         # --- Timbre (Spectral Ratios) ---
@@ -192,8 +192,6 @@ class AudioAnalyzer:
         out_bins = [0.0] * 6
         for bi in range(6):
             val = float(raw_bins[bi])
-            if bi == 0: val = max(0.0, val - 0.08) * 0.5
-            if bi == 1: val = max(0.0, val - 0.03) * 0.7
             normalized = min(1.0, (val / global_peak) * self.gain)
             
             # --- FREQUENCY-AWARE SMOOTHING ---
@@ -216,7 +214,8 @@ class AudioAnalyzer:
         if len(self.history_flux) > 0:
             avg_flux = sum(self.history_flux) / len(self.history_flux)
             if flux > avg_flux * self.flux_threshold_mult and flux > self.flux_threshold_abs:
-                if now - self.prev_beat_timestamp > 0.35:
+                # Lockout: Prevent double-beats within 300ms (Max 200BPM support)
+                if now - self.prev_beat_timestamp > 0.3:
                     is_beat = True
                     self.beat_count += 1
                     delta = now - self.prev_beat_timestamp

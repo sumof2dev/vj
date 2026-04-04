@@ -1,0 +1,100 @@
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /status
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082391822
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082392120
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082392420
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082392720
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082393020
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082393320
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082393620
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082393920
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082394220
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082394520
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082394820
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082395120
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082395420
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082395720
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082396020
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082396320
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082396620
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082396920
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /backend/static/sim_manifest.json
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082405071
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082405371
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082405671
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082405971
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082406271
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082406571
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082406871
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082407171
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082407471
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082411350
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082411650
+Apr 01 15:27:11 ravebox python3[23058]: ❌ Launcher Camera Proxy Error: <urlopen error [Errno 111] Connection refused>
+Apr 01 15:27:11 ravebox python3[23058]: 📥 Launcher GET: /capture?t=1775082411950127.0.0.1 - - [01/Apr/2026 15:27:11] "GET /capture?t=1775082431750 HTTP/1.1" 404 -
+Apr 01 15:27:12 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:12] "GET /capture?t=1775082432050 HTTP/1.1" 404 -
+Apr 01 15:27:12 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:12] "GET /capture?t=1775082432350 HTTP/1.1" 404 -
+Apr 01 15:27:12 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:12] "GET /capture?t=1775082432650 HTTP/1.1" 404 -
+Apr 01 15:27:13 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:13] "GET /capture?t=1775082432950 HTTP/1.1" 404 -
+Apr 01 15:27:13 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:13] "GET /capture?t=1775082433250 HTTP/1.1" 404 -
+Apr 01 15:27:13 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:13] "GET /capture?t=1775082433550 HTTP/1.1" 404 -
+Apr 01 15:27:13 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:13] "GET /capture?t=1775082433850 HTTP/1.1" 404 -
+Apr 01 15:27:14 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:14] "GET /capture?t=1775082434150 HTTP/1.1" 404 -
+Apr 01 15:27:14 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:14] "GET /capture?t=1775082434450 HTTP/1.1" 404 -
+Apr 01 15:27:14 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:14] "GET /capture?t=1775082434750 HTTP/1.1" 404 -
+Apr 01 15:27:15 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:15] "GET /capture?t=1775082435050 HTTP/1.1" 404 -
+Apr 01 15:27:15 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:15] "GET /capture?t=1775082435350 HTTP/1.1" 404 -
+Apr 01 15:27:15 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:15] "GET /capture?t=1775082435650 HTTP/1.1" 404 -
+Apr 01 15:27:16 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:16] "GET /capture?t=1775082435950 HTTP/1.1" 404 -
+Apr 01 15:27:16 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:16] "GET /capture?t=1775082436250 HTTP/1.1" 404 -
+Apr 01 15:27:16 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:16] "GET /capture?t=1775082436550 HTTP/1.1" 404 -
+Apr 01 15:27:16 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:16] "GET /capture?t=1775082436850 HTTP/1.1" 404 -
+Apr 01 15:27:17 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:17] "GET /capture?t=1775082437153 HTTP/1.1" 404 -
+Apr 01 15:27:17 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:17] "GET /capture?t=1775082437450 HTTP/1.1" 404 -
+Apr 01 15:27:17 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:17] "GET /capture?t=1775082437750 HTTP/1.1" 404 -
+Apr 01 15:27:18 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:18] "GET /capture?t=1775082438050 HTTP/1.1" 404 -
+Apr 01 15:27:18 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:18] "GET /capture?t=1775082438350 HTTP/1.1" 404 -
+Apr 01 15:27:18 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:18] "GET /capture?t=1775082438650 HTTP/1.1" 404 -
+Apr 01 15:27:19 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:19] "GET /capture?t=1775082438950 HTTP/1.1" 404 -
+Apr 01 15:27:19 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:19] "GET /capture?t=1775082439250 HTTP/1.1" 404 -
+Apr 01 15:27:19 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:19] "GET /capture?t=1775082439550 HTTP/1.1" 404 -
+Apr 01 15:27:19 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:19] "GET /capture?t=1775082439850 HTTP/1.1" 404 -
+Apr 01 15:27:20 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:20] "GET /capture?t=1775082440150 HTTP/1.1" 404 -
+Apr 01 15:27:20 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:20] "GET /capture?t=1775082440450 HTTP/1.1" 404 -
+Apr 01 15:27:20 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:20] "GET /capture?t=1775082440750 HTTP/1.1" 404 -
+Apr 01 15:27:21 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:21] "GET /capture?t=1775082441050 HTTP/1.1" 404 -
+Apr 01 15:27:21 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:21] "GET /capture?t=1775082441350 HTTP/1.1" 404 -
+Apr 01 15:27:21 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:21] "GET /capture?t=1775082441650 HTTP/1.1" 404 -
+Apr 01 15:27:22 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:22] "GET /capture?t=1775082441950 HTTP/1.1" 404 -
+Apr 01 15:27:22 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:22] "GET /capture?t=1775082442250 HTTP/1.1" 404 -
+Apr 01 15:27:22 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:22] "GET /capture?t=1775082442550 HTTP/1.1" 404 -
+Apr 01 15:27:22 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:22] "GET /capture?t=1775082442850 HTTP/1.1" 404 -
+Apr 01 15:27:23 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:23] "GET /capture?t=1775082443150 HTTP/1.1" 404 -
+Apr 01 15:27:23 ravebox python3[23058]: 127.0.0.1 - - [01/Apr/2026 15:27:23] "GET /capture?t=1775082443450 HTTP/1.1" 404 -

@@ -21,6 +21,7 @@ class VibeEngine:
         self.transient = "steady"  # "building", "dropping", "tension", "steady"
         self._transient_hold_until = 0  # Hold timer to prevent single-frame flickers
         self._steady_since = 0 # Prevent re-triggering building too fast
+        self.vibe_hysteresis = 1.0 # Faster response for test/calibration
 
     def update(self, audio_state, now=None):
         """
@@ -51,28 +52,19 @@ class VibeEngine:
         density = len(self.beat_history)
 
         # 2. SELECT VIBE (The "Bucket")
-        # Hysteresis: Don't switch faster than every 2 seconds
-        if now - self.last_vibe_change > 2.0:
+        if now - self.last_vibe_change > self.vibe_hysteresis:
             target = self.current_vibe
             
-            # Hybrid Logic: Discrete checks (Density AND Volume) but parameterized by Bias
-            # Bias 0.0 -> Easy to leave Mid (Small Mid Zone)
-            # Bias 1.0 -> Hard to leave Mid (Extreme Mid Zone)
+            # Use original bias-driven thresholds but with more inclusive floors
+            chill_vol_floor = 0.15 * (1.0 - self.mid_vibe_bias)
+            mid_vol_floor = 0.3 * (1.0 - self.mid_vibe_bias)
             
-            # Chill Thresholds: Lower bias makes it easier to hit chill (higher thresholds)
-            chill_density = 2.0 * (1.0 - self.mid_vibe_bias)
-            chill_vol = 0.3 * (1.0 - self.mid_vibe_bias)
-            
-            # High Thresholds: Lower bias makes it easier to hit high (lower thresholds)
-            high_density = 4.0 + (4.0 * self.mid_vibe_bias)
-            high_vol = 0.5 + (0.4 * self.mid_vibe_bias)
-            
-            if density < chill_density and vol < chill_vol:
+            if vol < 0.2:
                 target = "chill"
-            elif density > high_density and vol > high_vol:
-                target = "high"
-            else:
+            elif (density > 1 or vol > 0.08) and density < 8:
                 target = "mid"
+            elif density >= 8 or vol > 0.4:
+                target = "high"
                 
             if target != self.current_vibe:
                 self.current_vibe = target
@@ -106,8 +98,7 @@ class VibeEngine:
             impact_spike = impact - old_impact
 
             # Minimum hold durations per state (seconds)
-            # Increased for more intentional, cinematic phase shifts
-            HOLD_TIMES = {"building": 1.5, "tension": 2.0, "dropping": 4.0}
+            HOLD_TIMES = {"building": 1.5, "tension": 1.5, "dropping": 3.0}
             
             # Use a slightly wider window (8 frames) for smoother transient decisions
             # This ignores percussive gaps that might look like silence (tension)
@@ -122,15 +113,14 @@ class VibeEngine:
                 # STATE MACHINE: steady → building → tension → dropping → steady
                 
                 if self.transient == "steady":
-                    # DEBOUNCE: Stay steady for at least 3.0s after a drop before re-building
                     # Building: Energy is rising, and we're actually loud enough (prevents triggering on noise)
-                    if trend_long > 1.2 and recent_avg > 0.45 and now - self._steady_since > 3.0:
+                    if trend_long > 0.05 and recent_avg > 0.1 and now - self._steady_since > 1.0:
                         self.transient = "building"
                         self._transient_hold_until = now + HOLD_TIMES["building"]
                 
                 elif self.transient == "building":
                     # Advance to TENSION: Sustained drop in energy during a building phase (the breakdown)
-                    if recent_avg < 0.2 and old_energy > 1.8:
+                    if recent_avg < 0.4 and old_energy > 0.05:
                         self.transient = "tension"
                         self._transient_hold_until = now + HOLD_TIMES["tension"]
                     elif trend_long > 0.4:
@@ -140,13 +130,15 @@ class VibeEngine:
                 
                 elif self.transient == "tension":
                     # Advance to DROPPING: Massive recovery (The Drop!)
-                    if bass > 0.6 or (sustained_spike > 0.3 and recent_avg > 0.6):
+                    if bass > 0.005 or sustained_spike > 0.005 or recent_avg > 0.01:
                         self.transient = "dropping"
                         self._transient_hold_until = now + HOLD_TIMES["dropping"]
-                    elif recent_avg < 0.35:
+                    elif recent_avg < 0.1:
                         pass # Still in the break
                     else:
-                        self.transient = "steady" # Tension resolved without a heavy drop
+                        # Logic: If energy recovers slightly WITHOUT a spike, it wasn't a drop, it's just steady again
+                        if recent_avg > 0.1:
+                            self.transient = "steady"
                 
                 elif self.transient == "dropping":
                     # Drop hold finished, return to steady and start the post-drop lockout

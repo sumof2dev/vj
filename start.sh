@@ -25,7 +25,11 @@ else
     sudo -n systemctl stop vj-launcher.service 2>/dev/null
     sudo -n systemctl stop vj-engine.service 2>/dev/null
 
-    echo "🧹 Cleaning up..."
+    echo "🧹 Cleaning up existing manual instances..."
+    pkill -f "backend/main.py" 2>/dev/null
+    pkill -f "launcher.py" 2>/dev/null
+    pkill -f "server.py" 2>/dev/null
+    
     fuser -k -9 8765/tcp > /dev/null 2>&1
     fuser -k -9 8001/tcp > /dev/null 2>&1
     fuser -k -9 8000/tcp > /dev/null 2>&1
@@ -91,6 +95,11 @@ if [ "$START_SERVER" = true ]; then
     $PYTHON_CMD -u server.py &
     SERVER_PID=$!
 fi
+
+# 3. Start Launcher (For UI control & Status)
+echo "🚀 Starting Launcher..."
+$PYTHON_CMD -u launcher.py &
+LAUNCHER_PID=$!
 
 
 echo "✅ LFG!"

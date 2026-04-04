@@ -1,0 +1,331 @@
+{
+  "id": "prof_1774217808170",
+  "name": "MovingHead",
+  "fixtureId": "fix_1774209561055",
+  "mappings": [
+    [
+      {
+        "vibe": "any",
+        "mod": "lfo",
+        "cal": {
+          "min": 0,
+          "center": 50,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 1,
+          "speed": 0.18,
+          "react": 0.75,
+          "return_to_min": false,
+          "threshold": 0,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.41,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "lfo",
+        "cal": {
+          "min": 140,
+          "center": 170,
+          "max": 200
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 1,
+          "speed": 0.42,
+          "react": 0.7,
+          "return_to_min": true,
+          "threshold": 0,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0.37
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "lfo",
+        "cal": {
+          "min": 0,
+          "center": 40,
+          "max": 128
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 0,
+          "speed": 0.11,
+          "react": 0.55,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "lfo",
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 2,
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0.06
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "flux",
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "square",
+          "bin": 0,
+          "speed": 0.21,
+          "react": 0.5,
+          "return_to_min": true,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "lfo",
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 0,
+          "speed": 0.38,
+          "react": 0.9,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "lfo",
+        "cal": {
+          "min": 0,
+          "center": 0,
+          "max": 124
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 3,
+          "speed": 0.05,
+          "react": 0.15,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0.51
+        },
+        "audio": {
+          "smoothing": 0.99,
+          "threshold": 0.13
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "lfo",
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 3,
+          "speed": 0.1,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.99,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "state_machine",
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 0,
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "state_machine",
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 0,
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "state_machine",
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 0,
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ],
+    [
+      {
+        "vibe": "any",
+        "mod": "state_machine",
+        "cal": {
+          "min": 0,
+          "center": 127,
+          "max": 255
+        },
+        "lfo": {
+          "shape": "sine",
+          "bin": 0,
+          "speed": 0.5,
+          "react": 0.5,
+          "return_to_min": false,
+          "threshold": 0.1,
+          "hold": 0,
+          "invert": false,
+          "smoothing": 0
+        },
+        "audio": {
+          "smoothing": 0.5,
+          "threshold": 0.5
+        },
+        "value": 0
+      }
+    ]
+  ]
+}

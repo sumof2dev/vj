@@ -1,0 +1,235 @@
+nohup: ignoring input
+/home/sumof2/vj/scripts/calibration_scan_ehaho.py:48: DeprecationWarning: ssl.SSLContext() without protocol argument is deprecated.
+  ctx = ssl.SSLContext()
+/home/sumof2/vj/scripts/calibration_scan_ehaho.py:48: DeprecationWarning: ssl.PROTOCOL_TLS is deprecated
+  ctx = ssl.SSLContext()
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+[*] Left1 base=1  roles: {'dim': 1, 'clip': 2, 'group': 3, 'pattern': 4, 'zoom': 5, 'z_rot': 6, 'x_pos': 7, 'y_pos': 8, 'x_rot': 9, 'y_rot': 10, 'color': 11, 'dot': 13, 'draw': 14, 'drawing': 15, 'twist': 16, 'grate': 17}
+
+[Phase 1] Pattern Shape Identification (DMX 0–96)
+  PAT   0: pentagon           size=3.9%  circ=0.72
+  PAT   1: rectangle          size=4.4%  circ=0.58
+  PAT   2: pentagon           size=5.2%  circ=0.27
+  PAT   3: pentagon           size=8.4%  circ=0.14
+  PAT   4: pentagon           size=8.3%  circ=0.38
+  PAT   5: pentagon           size=10.9%  circ=0.15
+  PAT   6: triangle           size=17.5%  circ=0.28
+  PAT   7: pentagon           size=3.8%  circ=0.71
+  PAT   8: hexagon            size=18.1%  circ=0.08
+  PAT   9: rectangle          size=23.0%  circ=0.09
+  PAT  10: triangle           size=18.3%  circ=0.15
+  PAT  11: triangle           size=18.0%  circ=0.12
+  PAT  12: hexagon            size=19.5%  circ=0.08
+  PAT  13: hexagon            size=21.1%  circ=0.15
+  PAT  14: hexagon            size=12.7%  circ=0.08
+  PAT  15: complex_polygon    size=5.3%  circ=0.37
+  PAT  16: square             size=15.8%  circ=0.06
+  PAT  17: hexagon            size=16.6%  circ=0.08
+  PAT  18: rectangle          size=16.6%  circ=0.15
+  PAT  19: hexagon            size=19.1%  circ=0.06
+  PAT  20: hexagon            size=14.8%  circ=0.11
+  PAT  21: complex_polygon    size=20.3%  circ=0.15
+  PAT  22: triangle           size=28.9%  circ=0.07
+  PAT  23: pentagon           size=7.2%  circ=0.22
+  PAT  24: pentagon           size=24.5%  circ=0.06
+  PAT  25: rectangle          size=28.0%  circ=0.05
+  PAT  26: triangle           size=17.5%  circ=0.13
+  PAT  27: rectangle          size=20.8%  circ=0.08
+  PAT  28: rectangle          size=34.2%  circ=0.05
+  PAT  29: complex_polygon    size=6.9%  circ=0.28
+  PAT  30: hexagon            size=4.7%  circ=0.60
+  PAT  31: pentagon           size=15.6%  circ=0.14
+  PAT  32: complex_polygon    size=28.6%  circ=0.07
+  PAT  33: hexagon            size=16.4%  circ=0.16
+  PAT  34: complex_polygon    size=19.1%  circ=0.06
+  PAT  35: complex_polygon    size=16.1%  circ=0.08
+  PAT  36: hexagon            size=17.3%  circ=0.11
+  PAT  37: complex_polygon    size=16.9%  circ=0.08
+  PAT  38: pentagon           size=17.5%  circ=0.19
+  PAT  39: pentagon           size=17.2%  circ=0.25
+  PAT  40: pentagon           size=17.7%  circ=0.17
+  PAT  41: hexagon            size=17.3%  circ=0.15
+  PAT  42: pentagon           size=18.3%  circ=0.16
+  PAT  43: hexagon            size=16.7%  circ=0.07
+  PAT  44: pentagon           size=17.3%  circ=0.19
+  PAT  45: pentagon           size=15.0%  circ=0.26
+  PAT  46: hexagon            size=14.4%  circ=0.11
+  PAT  47: hexagon            size=17.0%  circ=0.09
+  PAT  48: hexagon            size=17.3%  circ=0.17
+  PAT  49: pentagon           size=20.9%  circ=0.11
+  PAT  50: pentagon           size=17.3%  circ=0.20
+  PAT  51: pentagon           size=20.2%  circ=0.09
+  PAT  52: hexagon            size=23.3%  circ=0.12
+  PAT  53: pentagon           size=18.3%  circ=0.10
+  PAT  54: pentagon           size=18.1%  circ=0.17
+  PAT  55: pentagon           size=16.6%  circ=0.14
+  PAT  56: hexagon            size=33.1%  circ=0.20
+  PAT  57: hexagon            size=33.3%  circ=0.20
+  PAT  58: pentagon           size=16.7%  circ=0.08
+  PAT  59: pentagon           size=13.1%  circ=0.19
+  PAT  60: pentagon           size=14.4%  circ=0.20
+  PAT  61: hexagon            size=15.2%  circ=0.13
+  PAT  62: hexagon            size=15.0%  circ=0.14
+  PAT  63: hexagon            size=15.3%  circ=0.11
+  PAT  64: hexagon            size=12.2%  circ=0.15
+  PAT  65: hexagon            size=10.6%  circ=0.19
+  PAT  66: rectangle          size=4.4%  circ=0.77
+  PAT  67: circle             size=4.4%  circ=0.86
+  PAT  68: hexagon            size=5.6%  circ=0.73
+  PAT  69: pentagon           size=5.6%  circ=0.77
+  PAT  70: pentagon           size=5.6%  circ=0.74
+  PAT  71: pentagon           size=5.6%  circ=0.74
+  PAT  72: pentagon           size=5.6%  circ=0.75
+  PAT  73: pentagon           size=5.6%  circ=0.75
+  PAT  74: pentagon           size=5.6%  circ=0.76
+  PAT  75: pentagon           size=5.6%  circ=0.77
+  PAT  76: pentagon           size=5.6%  circ=0.76
+  PAT  77: pentagon           size=5.6%  circ=0.75
+  PAT  78: pentagon           size=5.6%  circ=0.75
+  PAT  79: hexagon            size=5.6%  circ=0.76
+  PAT  80: pentagon           size=5.6%  circ=0.75
+  PAT  81: circle             size=4.4%  circ=0.87
+  PAT  82: pentagon           size=5.6%  circ=0.73
+  PAT  83: pentagon           size=5.6%  circ=0.75
+  PAT  84: circle             size=4.4%  circ=0.88
+  PAT  85: pentagon           size=5.6%  circ=0.74
+  PAT  86: pentagon           size=5.6%  circ=0.75
+  PAT  87: pentagon           size=5.6%  circ=0.75
+  PAT  88: pentagon           size=5.6%  circ=0.75
+  PAT  89: pentagon           size=5.6%  circ=0.76
+  PAT  90: pentagon           size=5.6%  circ=0.76
+  PAT  91: pentagon           size=5.6%  circ=0.76
+  PAT  92: pentagon           size=5.6%  circ=0.75
+  PAT  93: pentagon           size=5.6%  circ=0.76
+  PAT  94: pentagon           size=5.6%  circ=0.75
+  PAT  95: pentagon           size=5.6%  circ=0.75
+  PAT  96: pentagon           size=5.6%  circ=0.74
+
+[*] Using triangle at DMX 6 for remaining phases
+
+[Phase 2] Zoom Calibration (Pattern DMX=6)
+  ZOOM   0: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM   4: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM   8: 4.4%  dynamic=False  [static]  motion=0.0px
+  ZOOM  12: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  16: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  20: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  24: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  28: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  32: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  36: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  40: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  44: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  48: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  52: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  56: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  60: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  64: 4.4%  dynamic=False  [static]  motion=0.0px
+  ZOOM  68: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  72: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  76: 4.4%  dynamic=False  [static]  motion=0.0px
+  ZOOM  80: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  84: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  88: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  92: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM  96: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM 100: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM 104: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM 108: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM 112: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM 116: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM 120: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM 124: 5.6%  dynamic=False  [static]  motion=0.0px
+  ZOOM 128: 5.6%  dynamic=False  [static]  motion=1.0px
+  ZOOM 132: 5.1%  dynamic=True  [spinning]  motion=81.5px
+TimeoutError: timed out while closing connection
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/sumof2/vj/scripts/calibration_scan_ehaho.py", line 539, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/home/sumof2/vj/scripts/calibration_scan_ehaho.py", line 500, in run
+    report["zoom"] = await phase_zoom(ws, cap, addrs, triangle_dmx)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sumof2/vj/scripts/calibration_scan_ehaho.py", line 205, in phase_zoom
+    await send_dmx(ws, [{"address": addrs["zoom"], "value": dmx}])
+  File "/home/sumof2/vj/scripts/calibration_scan_ehaho.py", line 45, in send_dmx
+    await ws.send(json.dumps({"type": "laser_override", "overrides": overrides}))
+  File "/home/sumof2/vj/venv/lib/python3.13/site-packages/websockets/asyncio/connection.py", line 478, in send
+    async with self.send_context():
+               ~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/contextlib.py", line 214, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sumof2/vj/venv/lib/python3.13/site-packages/websockets/asyncio/connection.py", line 965, in send_context
+    raise self.protocol.close_exc from original_exc
+websockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received

@@ -1,0 +1,482 @@
+[
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 0,
+        "complexity": 1739,
+        "brightness": 4592
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 28,
+        "complexity": 1706,
+        "brightness": 4520
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 56,
+        "complexity": 1640,
+        "brightness": 4303
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 85,
+        "complexity": 1783,
+        "brightness": 4807
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 113,
+        "complexity": 1741,
+        "brightness": 4846
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 141,
+        "complexity": 966,
+        "brightness": 2810
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 170,
+        "complexity": 1801,
+        "brightness": 4867
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 198,
+        "complexity": 1708,
+        "brightness": 4627
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 226,
+        "complexity": 1838,
+        "brightness": 5116
+    },
+    {
+        "ch14_delay": 0,
+        "ch15_draw": 255,
+        "complexity": 1264,
+        "brightness": 3487
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 0,
+        "complexity": 1188,
+        "brightness": 3386
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 28,
+        "complexity": 1116,
+        "brightness": 3430
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 56,
+        "complexity": 1187,
+        "brightness": 3378
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 85,
+        "complexity": 1455,
+        "brightness": 5026
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 113,
+        "complexity": 1377,
+        "brightness": 4941
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 141,
+        "complexity": 1063,
+        "brightness": 3191
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 170,
+        "complexity": 1774,
+        "brightness": 5055
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 198,
+        "complexity": 1767,
+        "brightness": 4901
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 226,
+        "complexity": 1918,
+        "brightness": 5213
+    },
+    {
+        "ch14_delay": 28,
+        "ch15_draw": 255,
+        "complexity": 1256,
+        "brightness": 3734
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 0,
+        "complexity": 1520,
+        "brightness": 4372
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 28,
+        "complexity": 1568,
+        "brightness": 4203
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 56,
+        "complexity": 1437,
+        "brightness": 4215
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 85,
+        "complexity": 1718,
+        "brightness": 5396
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 113,
+        "complexity": 1736,
+        "brightness": 5370
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 141,
+        "complexity": 1078,
+        "brightness": 3539
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 170,
+        "complexity": 1925,
+        "brightness": 5440
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 198,
+        "complexity": 1848,
+        "brightness": 5287
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 226,
+        "complexity": 1887,
+        "brightness": 5632
+    },
+    {
+        "ch14_delay": 56,
+        "ch15_draw": 255,
+        "complexity": 1343,
+        "brightness": 4141
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 0,
+        "complexity": 2018,
+        "brightness": 5653
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 28,
+        "complexity": 1913,
+        "brightness": 5584
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 56,
+        "complexity": 1946,
+        "brightness": 5366
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 85,
+        "complexity": 1985,
+        "brightness": 5873
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 113,
+        "complexity": 1931,
+        "brightness": 5764
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 141,
+        "complexity": 1167,
+        "brightness": 3824
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 170,
+        "complexity": 1941,
+        "brightness": 5613
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 198,
+        "complexity": 1871,
+        "brightness": 5375
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 226,
+        "complexity": 1983,
+        "brightness": 5822
+    },
+    {
+        "ch14_delay": 85,
+        "ch15_draw": 255,
+        "complexity": 1403,
+        "brightness": 4317
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 0,
+        "complexity": 2095,
+        "brightness": 6567
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 28,
+        "complexity": 2080,
+        "brightness": 6736
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 56,
+        "complexity": 2056,
+        "brightness": 6346
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 85,
+        "complexity": 2068,
+        "brightness": 6689
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 113,
+        "complexity": 2115,
+        "brightness": 6537
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 141,
+        "complexity": 1237,
+        "brightness": 4468
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 170,
+        "complexity": 2122,
+        "brightness": 6474
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 198,
+        "complexity": 2042,
+        "brightness": 6401
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 226,
+        "complexity": 2053,
+        "brightness": 6673
+    },
+    {
+        "ch14_delay": 113,
+        "ch15_draw": 255,
+        "complexity": 1501,
+        "brightness": 5050
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 0,
+        "complexity": 2041,
+        "brightness": 6392
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 28,
+        "complexity": 2141,
+        "brightness": 6868
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 56,
+        "complexity": 2142,
+        "brightness": 6749
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 85,
+        "complexity": 2193,
+        "brightness": 6751
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 113,
+        "complexity": 2044,
+        "brightness": 6386
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 141,
+        "complexity": 1276,
+        "brightness": 4668
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 170,
+        "complexity": 2141,
+        "brightness": 6800
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 198,
+        "complexity": 2033,
+        "brightness": 6789
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 226,
+        "complexity": 1958,
+        "brightness": 6262
+    },
+    {
+        "ch14_delay": 141,
+        "ch15_draw": 255,
+        "complexity": 1506,
+        "brightness": 4958
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 0,
+        "complexity": 2028,
+        "brightness": 6639
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 28,
+        "complexity": 2065,
+        "brightness": 6371
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 56,
+        "complexity": 2128,
+        "brightness": 6757
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 85,
+        "complexity": 2008,
+        "brightness": 6604
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 113,
+        "complexity": 2172,
+        "brightness": 6853
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 141,
+        "complexity": 1304,
+        "brightness": 4615
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 170,
+        "complexity": 2122,
+        "brightness": 6699
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 198,
+        "complexity": 1997,
+        "brightness": 6404
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 226,
+        "complexity": 2151,
+        "brightness": 6855
+    },
+    {
+        "ch14_delay": 170,
+        "ch15_draw": 255,
+        "complexity": 1457,
+        "brightness": 5187
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 0,
+        "complexity": 2205,
+        "brightness": 7038
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 28,
+        "complexity": 2118,
+        "brightness": 6616
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 56,
+        "complexity": 2160,
+        "brightness": 6674
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 85,
+        "complexity": 2111,
+        "brightness": 7109
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 113,
+        "complexity": 2102,
+        "brightness": 6483
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 141,
+        "complexity": 1363,
+        "brightness": 4791
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 170,
+        "complexity": 2201,
+        "brightness": 6838
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 198,
+        "complexity": 2068,
+        "brightness": 6773
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 226,
+        "complexity": 2074,
+        "brightness": 6847
+    },
+    {
+        "ch14_delay": 198,
+        "ch15_draw": 255,
+        "complexity": 1597,
+        "brightness": 5305
+    }
+]

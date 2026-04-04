@@ -22,13 +22,14 @@ void main() {
 
     float d = 0.0; // Accumulator for fractal iteration 'distance'
     float scaleFactor = 2.0 + u_flux * 0.7; // Base scale influenced by flux, causes patterns to "grow" or "zoom"
-    int iterations = 6 + int(u_bass * 7.0); // More iterations with bass for increased complexity and "growth"
+    int num_iterations = 6 + int(u_bass * 7.0); // More iterations with bass for increased complexity and "growth"
 
     // Animate the base offset for the fractal folding pattern
     // This creates a pulsing, breathing effect of the fractal geometry
     vec2 fractalOffset = vec2(sin(u_time * 0.25 + u_flux * 0.1), cos(u_time * 0.3 + u_flux * 0.15)) * (0.2 + u_vol * 0.3);
     
-    for (int i = 0; i < iterations; i++) {
+    for (int i = 0; i < 15; i++) {
+        if (i >= num_iterations) break;
         // Core fractal folding operation: absolute value, scale, and offset
         uv = abs(uv) * scaleFactor - (1.0 + u_high * 0.2) + fractalOffset; 
         

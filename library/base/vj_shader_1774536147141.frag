@@ -67,12 +67,13 @@ void main() {
     float totalDist = 0.0;
     float maxDist = 70.0; // Reduced max distance
     float hitDist = 0.01; // Increased hit distance for coarser hits
-    int maxSteps = 60; // Reduced max steps for performance
+    int maxSteps = 30; // Reduced max steps for performance
 
     vec3 hitPos = vec3(0.0);
     float d = 0.0;
     
-    for (int i = 0; i < maxSteps; i++) {
+    for (int i = 0; i < 30; i++) {
+        if (i >= maxSteps) break;
         hitPos = ro + rd * totalDist; 
         d = map(hitPos); 
         if (d < hitDist || totalDist > maxDist) break; 

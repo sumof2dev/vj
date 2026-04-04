@@ -1,0 +1,108 @@
+{
+  "id": "fix_1774209417123",
+  "name": "Ehaho Laser",
+  "channels": [
+    {
+      "name": "Dim",
+      "role": "Dim",
+      "default": 220,
+      "currentValue": 220
+    },
+    {
+      "name": "Clip",
+      "role": "clip",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Group",
+      "role": "group",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Patterns",
+      "role": "patterns",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Zoom",
+      "role": "zoom",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Rotate Z",
+      "role": "rotate z",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "X Pos",
+      "role": "x pos",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Y Pos",
+      "role": "y pos",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "X Rot",
+      "role": "x rot",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Y Rot",
+      "role": "y rot",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Color1",
+      "role": "color1",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Color2",
+      "role": "color2",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Dots",
+      "role": "dots",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Draw",
+      "role": "draw",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Drawing",
+      "role": "drawing",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Twist",
+      "role": "twist",
+      "default": 0,
+      "currentValue": 0
+    },
+    {
+      "name": "Grating",
+      "role": "grating",
+      "default": 0,
+      "currentValue": 0
+    }
+  ]
+}

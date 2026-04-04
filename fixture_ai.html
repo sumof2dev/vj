@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- RaveBox Fixture AI Engine V2.0.2 -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -411,6 +412,59 @@
             box-shadow: 0 0 10px var(--success);
         }
 
+        /* --- CHAT SECTION --- */
+        #step-chat {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .chat-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .chat-bubble {
+            padding: 12px 18px;
+            border-radius: 12px;
+            max-width: 85%;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .chat-bubble.ai {
+            background: var(--panel);
+            color: var(--text);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border);
+        }
+
+        .chat-bubble.user {
+            background: var(--accent);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 10px;
+            padding-top: 10px;
+        }
+
+        .chat-input-row input {
+            flex: 1;
+        }
+
         /* --- ANIMATIONS --- */
         .fade-in {
             animation: fadeIn 0.5s ease-out forwards;
@@ -432,14 +486,20 @@
             }
         }
     </style>
+    <!-- PDF.js for manual text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
 
     <header>
         <div class="header-content">
-            <div class="logo">RAVE<span>BOX</span> FIXTURE AI</div>
-            <div class="btn-settings" onclick="openSettings()" title="Settings">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <div class="logo">RAVE<span>BOX</span> AI PROFILER</div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-secondary btn-sm" onclick="window.location.href='setup.html?tab=fixture'" style="padding: 6px 12px; font-size: 0.8rem;">← Back to Setup</button>
+                <div class="btn-settings" onclick="openSettings()" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </div>
             </div>
         </div>
     </header>
@@ -447,21 +507,63 @@
     <main>
         <!-- STEP 1: UPLOAD -->
         <section id="step-upload" class="card fade-in">
-            <div class="card-title">Extract Fixture from Manual</div>
-            <div class="card-subtitle">Take a photo of the DMX channel table in your manual. Our AI will build the profile for you.</div>
+            <div class="card-title" id="mode-title">Create AI Profile</div>
+            <div class="card-subtitle" id="mode-subtitle">Pick a method to generate your DMX profile.</div>
             
-            <div class="upload-zone" id="drop-zone">
-                <i class="upload-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path><line x1="16" y1="5" x2="22" y2="5"></line><line x1="19" y1="2" x2="19" y2="8"></line><circle cx="9" cy="11" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
-                </i>
-                <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px;">Upload or Take Photo</div>
-                <div style="font-size: 0.8rem; color: var(--text-dim);">DMX table image (JPG, PNG)</div>
-                <input type="file" id="file-input" accept="image/*">
+            <!-- MODE SELECTOR -->
+            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+                <button id="btn-mode-new" class="btn btn-sm" style="flex: 1; background: var(--accent); color: white;" onclick="setSubMode('new')">New Fixture (Manual)</button>
+                <button id="btn-mode-existing" class="btn btn-sm btn-secondary" style="flex: 1;" onclick="setSubMode('existing')">Existing Fixture (Library)</button>
             </div>
+
+            <div id="mode-new-content">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 0.8fr; gap: 15px; margin-bottom: 25px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div>
+                        <label>Fixture Brand</label>
+                        <input type="text" id="ai-brand" placeholder="e.g. Ehaho">
+                    </div>
+                    <div>
+                        <label>Model Name</label>
+                        <input type="text" id="ai-model" placeholder="e.g. L2600">
+                    </div>
+                    <div>
+                        <label>Target Channels</label>
+                        <input type="number" id="ai-ch-count" placeholder="e.g. 12" min="1" max="512">
+                    </div>
+                </div>
+                
+                <div class="upload-zone" id="drop-zone">
+                    <button id="btn-clear" onclick="event.stopPropagation(); clearFiles();" style="display: none; position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--text-dim); border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; font-weight: bold; z-index: 10; transition: all 0.2s; align-items: center; justify-content: center;" title="Clear Selection">×</button>
+                    <i class="upload-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path><line x1="16" y1="5" x2="22" y2="5"></line><line x1="19" y1="2" x2="19" y2="8"></line><circle cx="9" cy="11" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
+                    </i>
+                    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px;">Upload Manual Image/PDF</div>
+                    <div style="font-size: 0.8rem; color: var(--text-dim);" id="file-label">DMX table image or PDF manual</div>
+                    <input type="file" id="file-input" accept="image/*,application/pdf" multiple>
+                </div>
+            </div>
+
+            <div id="mode-existing-content" style="display: none;">
+                <div style="margin-bottom: 20px;">
+                    <label>Select Hardware Fixture</label>
+                    <select id="existing-fixture-select">
+                        <option value="">-- Choose Fixture --</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Behavior Inspiration (Optional)</label>
+                    <textarea id="ai-inspiration" placeholder="e.g. 'Chill blue waves', 'Fast red strobe patterns', 'Aggressive club vibe'..." style="min-height: 100px; resize: vertical;"></textarea>
+                </div>
+            </div>
+
+            <button id="btn-analyze" class="btn" style="width: 100%; margin-top: 15px; display: none; background: var(--accent); color: white;" onclick="analyzeFiles()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                Start AI Extraction
+            </button>
 
             <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px; color: var(--success); font-weight: 700; font-size: 0.9rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                Powered by Gemini 2.0 Flash
+                Powered by <span id="model-label">Gemini 3 Flash</span>
             </div>
         </section>
 
@@ -504,6 +606,22 @@
                 </div>
             </div>
         </section>
+        <!-- STEP 4: CHAT REFINEMENT -->
+        <section id="step-chat" class="card fade-in" style="display: none;">
+            <div class="card-title">AI Needs Clarification</div>
+            <div class="card-subtitle" id="chat-subtitle">The AI found a discrepancy or multiple modes. Please clarify its confusion below.</div>
+            
+            <div id="chat-history" class="chat-container"></div>
+
+            <div class="chat-input-row" style="margin-top:20px; display:flex; gap:10px;">
+                <input type="text" id="chat-reply-input" placeholder="e.g. 'Use 1-17 only' or 'Version 2 mode'..." onkeydown="if(event.key==='Enter') window.sendChatReply()">
+                <button class="btn" onclick="window.sendChatReply()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    Send
+                </button>
+            </div>
+            <button class="btn btn-secondary" onclick="resetUI()" style="margin-top:15px; width:100%; opacity:0.6;">Cancel & Reset</button>
+        </section>
     </main>
 
     <!-- SETTINGS MODAL -->
@@ -515,8 +633,20 @@
             </div>
             <div>
                 <label>Gemini API Key</label>
-                <input type="password" id="gemini-key" placeholder="AI_Studio_Key_Here">
+                <input type="text" id="gemini-key" placeholder="AI_Studio_Key_Here">
                 <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 8px;">Key is stored safely in your browser's LocalStorage.</div>
+            </div>
+            <div>
+                <label>AI Model Selection</label>
+                <select id="ai-model-select" onchange="updateModelLabel()">
+                    <option value="gemini-3-flash" selected>Gemini 3 Flash</option>
+                    <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    <option value="deep-research-pro-preview">Deep Research Pro Preview</option>
+                </select>
             </div>
             <div>
                 <label>Backend Host / IP</label>
@@ -535,54 +665,163 @@
     <script type="importmap">
         {
           "imports": {
-            "@google/genai": "https://esm.run/@google/genai"
+            "google-genai-sdk": "https://cdn.jsdelivr.net/npm/@google/generative-ai/dist/index.mjs"
           }
         }
     </script>
 
     <script type="module">
-        import { GoogleGenAI } from "@google/genai";
+        const APP_VERSION = "43262226"; // Stamped by deploy.sh
+        import { GoogleGenerativeAI } from "google-genai-sdk";
 
         // Global State
-        let db = JSON.parse(localStorage.getItem('ravebox_v2_db')) || { fixtures: [], profiles: [], stage: [], presets: [] };
+        let db;
+        try {
+            db = JSON.parse(localStorage.getItem('ravebox_v2_db')) || { fixtures: [], profiles: [], stage: [], presets: [] };
+        } catch (e) {
+            db = { fixtures: [], profiles: [], stage: [], presets: [] };
+        }
+        
+        // Ensure standard structure
+        if (!db.fixtures) db.fixtures = [];
+        if (!db.profiles) db.profiles = [];
+        if (!db.stage) db.stage = [];
+        if (!db.presets) db.presets = [];
+
         let currentFixture = null;
         let ws = null;
         let dmxConnected = false;
+        let pendingFiles = [];
+        let chatHistory = [];
+        let currentSubMode = 'new';
+        
+        // STANDARD ROLES & BEHAVIOR TEMPLATES
+        const WORKFLOW_ROLES = {
+            "dimmer": { name: "Dimmer", keywords: ["dim", "dimmer", "intensity", "brightness"], behavior: "direct", source: "flux" },
+            "switch": { name: "Switch (On/Off)", keywords: ["switch", "on/off", "laser", "enable"], behavior: "static", value: 255 },
+            "clip": { name: "Clip / Boundary", keywords: ["clip", "boundry", "out of bounds", "blanking"], behavior: "static", value: 0 },
+            "group": { name: "Pattern Group", keywords: ["group", "category", "library"], behavior: "static" },
+            "patterns": { name: "Patterns / Gobos", keywords: ["pattern", "gobo", "shape", "listing"], behavior: "lfo", shape: "square", source: "beat" },
+            "zoom": { name: "Zoom / Size", keywords: ["zoom", "zooming", "scale", "size"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.05 },
+            "rotation": { name: "Rotation / Spin", keywords: ["rotation", "spin", "z-rot", "roll"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.04 },
+            "x_pos": { name: "X Position (Pan)", keywords: ["x pos", "pan", "x move", "x moving"], behavior: "direct", source: "flux" },
+            "y_pos": { name: "Y Position (Tilt)", keywords: ["y pos", "tilt", "y move", "y moving"], behavior: "direct", source: "flux" },
+            "color": { name: "Color (Flipping)", keywords: ["color", "color section", "color1", "color2", "red", "blue", "rgb", "yellow"], behavior: "lfo", shape: "square", source: "beat" },
+            "strobe": { name: "Strobe / Dots", keywords: ["strobe", "flash", "dots", "shutter"], behavior: "direct", source: "flux" },
+            "draw": { name: "Draw / Speed", keywords: ["draw", "drawing", "writing"], behavior: "static" },
+            "twist": { name: "Twist / Distort", keywords: ["twist", "twisting", "distort", "warp"], behavior: "lfo", shape: "sine", speed: 0.8, source: "ratio" },
+            "grating": { name: "Grating / Split", keywords: ["grating", "grate", "split"], behavior: "static" },
+            "other": { name: "Other / Effect", keywords: ["custom", "effect", "generic", "unknown", "reset"], behavior: "static" }
+        };
 
         // Initialize UI
         function init() {
             document.getElementById('gemini-key').value = localStorage.getItem('vj_gemini_api_key') || "";
             document.getElementById('backend-host').value = localStorage.getItem('vj_backend_host') || window.location.hostname;
+            const savedModel = localStorage.getItem('vj_gemini_model') || "gemini-3-flash";
+            document.getElementById('ai-model-select').value = savedModel;
+            updateModelLabel();
             connectWS();
+
+            // Populate existing fixtures
+            const select = document.getElementById('existing-fixture-select');
+            db.fixtures.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.innerText = f.name;
+                select.appendChild(opt);
+            });
+
+            // Check URL mode
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'existing') {
+                setSubMode('existing');
+            }
+        }
+        window.onload = init;
+
+        window.setSubMode = (mode) => {
+            currentSubMode = mode;
+            const isNew = mode === 'new';
+            document.getElementById('mode-new-content').style.display = isNew ? 'block' : 'none';
+            document.getElementById('mode-existing-content').style.display = isNew ? 'none' : 'block';
+            
+            const btnNew = document.getElementById('btn-mode-new');
+            const btnExt = document.getElementById('btn-mode-existing');
+            
+            if (isNew) {
+                btnNew.classList.remove('btn-secondary');
+                btnNew.style.background = 'var(--accent)';
+                btnNew.style.color = 'white';
+                btnExt.classList.add('btn-secondary');
+                btnExt.style.background = '';
+                btnExt.style.color = '';
+                document.getElementById('btn-analyze').style.display = pendingFiles.length > 0 ? 'flex' : 'none';
+            } else {
+                btnExt.classList.remove('btn-secondary');
+                btnExt.style.background = 'var(--accent)';
+                btnExt.style.color = 'white';
+                btnNew.classList.add('btn-secondary');
+                btnNew.style.background = '';
+                btnNew.style.color = '';
+                document.getElementById('btn-analyze').style.display = 'flex';
+                document.getElementById('btn-analyze').innerText = "Start AI Generation";
+            }
+        };
+
+        function updateModelLabel() {
+            const select = document.getElementById('ai-model-select');
+            const label = select.options[select.selectedIndex].text;
+            document.getElementById('model-label').innerText = label;
         }
 
+        let isConnecting = false;
         // --- WEBSOCKET LOGIC ---
         function connectWS() {
-            const host = document.getElementById('backend-host').value;
+            if (isConnecting) return;
+            isConnecting = true;
+            
+            const host = document.getElementById('backend-host').value || window.location.hostname;
+            const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
+            const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+
+            // Smart Tunnel: Resolve secret codes to *.ravebox.love
             const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
-            const isCustomTunnel = boxName.endsWith('.ravebox.love') && boxName !== 'ravebox.love';
-            const wsHost = isCustomTunnel ? 'ws-' + boxName : host;
-            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+            
+            const baseHost = (isCustomTunnel ? boxName.replace(/^(api-|ws-)/, '') : boxName);
+            const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
+            
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const port = localStorage.getItem('vj_ws_port') || '8765';
+            const url = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${port}`);
             
-            const url = isCustomTunnel ? `${protocol}://${wsHost}` : `${protocol}://${host}:${port}`;
-            
-            if (ws) ws.close();
+            if (ws) {
+                ws.onclose = null; // Prevent reconnection loop when we manually close
+                ws.close();
+            }
             
             try {
                 ws = new WebSocket(url);
                 ws.onopen = () => {
                     dmxConnected = true;
+                    isConnecting = false;
                     updateStatusUI(true);
-                    console.log("✅ DMX Connected");
+                    console.log("✅ DMX Connected to " + url);
                 };
                 ws.onclose = () => {
                     dmxConnected = false;
+                    isConnecting = false;
                     updateStatusUI(false);
                     setTimeout(connectWS, 5000);
                 };
+                ws.onerror = (err) => {
+                    isConnecting = false;
+                    console.error("WS Error", err);
+                };
                 ws.onmessage = (e) => {};
             } catch (e) {
+                isConnecting = false;
                 console.error("WS Connect Error", e);
             }
         }
@@ -605,135 +844,334 @@
             ws.send(JSON.stringify({ type: 'laser_override', overrides }));
         }
 
-        // --- IMAGE ANALYSIS ---
-        async function analyzeImage(file) {
-            const apiKey = localStorage.getItem('vj_gemini_api_key');
-            if (!apiKey) {
-                openSettings();
-                alert("Please enter your Gemini API Key first.");
+        // --- FILE SELECTION ---
+        window.handleFiles = (files) => {
+            if (!files || files.length === 0) return;
+            pendingFiles = Array.from(files);
+            
+            const label = document.getElementById('file-label');
+            const dropZone = document.getElementById('drop-zone');
+            const btn = document.getElementById('btn-analyze');
+            const btnClear = document.getElementById('btn-clear');
+            
+            label.innerHTML = `<span style="color:var(--accent); font-weight:bold;">${pendingFiles.length} File(s) Ready</span> - Click below to start`;
+            dropZone.style.borderColor = "var(--accent)";
+            dropZone.style.background = "rgba(var(--accent-rgb), 0.05)";
+            
+            btn.style.display = 'flex';
+            btn.style.justifyContent = 'center';
+            btn.style.alignItems = 'center';
+            btnClear.style.display = 'block';
+        }
+
+        window.clearFiles = () => {
+            pendingFiles = [];
+            const label = document.getElementById('file-label');
+            const dropZone = document.getElementById('drop-zone');
+            const btn = document.getElementById('btn-analyze');
+            const btnClear = document.getElementById('btn-clear');
+            const input = document.getElementById('file-input');
+            
+            label.innerText = "DMX table image or PDF manual";
+            dropZone.style.borderColor = "";
+            dropZone.style.background = "";
+            btn.style.display = 'none';
+            btnClear.style.display = 'none';
+            input.value = "";
+        }
+
+        const REFERENCE_GUIDELINE = `
+RaveBox DMX ROLE STANDARD:
+- role: "dimmer", "pattern", "color", "x_pos", "y_pos", "zoom", "z_rot", "strobe", "clip", "group"
+
+BEHAVIOR SCHEMAS:
+- behavior: "static" -> Single FIXED constant value (non-changing). Field: "value" (0-255). Ignores 'cal' range.
+- behavior: "direct" -> Signal intensity (flux/bins) maps directly into 'cal' range.
+- behavior: "lfo" -> Oscillator-driven. FOR STEPPED/HELD VALUES within a range (e.g. 10-100), use shape="square".
+- behavior: "cycle" -> Sequencing steps (0-128 map).
+
+LOGIC MATRIX & RANGES:
+- All sources map to [-1.0, 1.0]. 
+- -1.0 maps to cal.min, 0.0 to cal.center, 1.0 to cal.max.
+- Source options: "raw", "ratio", "attack", "flux", "volume", "beat", "bar".
+- bin_idx: (0-5). 0BASS, 5AIR.
+`;
+
+        // --- MULTI-SOURCE ANALYSIS ---
+        window.analyzeFiles = async () => {
+            const isExisting = currentSubMode === 'existing';
+            const files = pendingFiles;
+            
+            if (!isExisting && (files.length === 0)) {
+                alert("Please upload at least one image or PDF of the DMX table.");
+                return;
+            }
+            
+            if (isExisting && !document.getElementById('existing-fixture-select').value) {
+                alert("Please select a fixture from your library.");
                 return;
             }
 
+            let apiKey = localStorage.getItem('vj_gemini_api_key') || document.getElementById('gemini-key').value;
+            apiKey = apiKey ? apiKey.trim() : "";
+            if (!apiKey || apiKey.length < 10) {
+                openSettings();
+                alert("Please enter a valid Gemini API Key in Settings.");
+                return;
+            }
+
+            const brand = document.getElementById('ai-brand').value || "Generic";
+            const fixModel = document.getElementById('ai-model').value || "Unknown";
+            const targetChCount = document.getElementById('ai-ch-count').value || "";
+            const inspiration = document.getElementById('ai-inspiration').value || "Standard audio-reactive behavior";
+
             setStep('loading');
 
-            try {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = async () => {
-                    const base64Data = reader.result.split(',')[1];
-                    const prompt = `Role: You are an expert Stage Lighting Technician and Data Extraction AI.
+            // Construct Prompt
+            let targetChCountVal = document.getElementById('ai-ch-count').value || "";
+            let limitText = targetChCountVal ? `STRICT EXTRACTION LIMIT: Only extract precisely ${targetChCountVal} channels. Ignore any data beyond this channel count.` : "Extract the full DMX table found in the images.";
+            let systemPrompt = "";
+            let contextParts = [];
 
-Task: You will be provided with an image of a DMX fixture manual (specifically the DMX channel table). Your job is to extract the channel list and output a strict JSON object that formats the channels for a user interface.
+            if (isExisting) {
+                const fixId = document.getElementById('existing-fixture-select').value;
+                const fixture = db.fixtures.find(f => f.id === fixId);
+                
+                systemPrompt = `You are the RaveBox Lighting AI. You are generating a behavioral profile for an EXISTING hardware fixture.
+                
+FIXTURE DATA:
+${JSON.stringify(fixture)}
 
-Extraction Rules:
+USER REQUEST / INSPIRATION:
+"${inspiration}"
 
-Focus Only on Primary Functions: Look ONLY at the "Channel" and "Function" columns. Completely ignore the specific DMX value ranges (e.g., 0-127, 128-255) and their sub-descriptions.
+MASTER GUIDELINE (Roles):
+${REFERENCE_GUIDELINE}
 
-Standardize the name: Combine the channel number and a short, clean description of the function. Format it as "{Channel Number}-{Short Name}". Keep the short name to 1-3 words. (Example: "CH5: PATTERN ZOOMIN/OUT" becomes "5-Zoom").
+VIBE CATEGORIES:
+- 'chill': Minimal activity, low intensity.
+- 'mid': Standard rhythm, moderate pulsing.
+- 'high': Peak energy, fast strobes, aggressive.
+- 'build': Energy rising.
+- 'drop': Sudden peak or breakdown shift.
+- 'any': All-purpose/fallback (Every channel MUST have at least one 'any' rule).
 
-Assign a role: Based on standard generic laser/lighting architectures, assign a short identifier string to the role key. Use the following guide to guess the best role:
+### ROLE TAXONOMY:
+You MUST categorize every channel into one of these roles: ${Object.keys(WORKFLOW_ROLES).join(', ')}.
+- AI Logic Mapping: sources are [-1.0, 1.0]. -1.0 maps to cal.min, 0.0 to cal.center, 1.0 to cal.max.
+- If multiple DMX layouts exist, pick the mode with the HIGHEST channel count.
 
-Dimmer, Intensity, On/Off, Laser On -> dim or dimmer
-Pattern Selection, Gobo -> pattern
-Group Selection, Folder -> group
-Zoom, Size, Scale -> zoom
-X Moving, Horizontal Position, Pan -> x_pos
-Y Moving, Vertical Position, Tilt -> y_pos
-Rotation, Roll, Spin -> z_rot or rotation
-Colors, RGB, Color Wheel -> color
-Strobe, Flash -> strobe
-Out of bounds, Blanking, Clipping -> clip
-If unknown or a combined movement macro -> movement or leave blank ""
+OUTPUT FORMAT: Return a valid RAW JSON object with "fixture" and "profile" keys.
+NOTE: Do NOT use custom role names. Stick strictly to the taxonomy provided.
+`;
+                contextParts.push({ text: systemPrompt });
+            } else {
+                systemPrompt = `You are the RaveBox Lighting AI. Your task is to extract DMX channel tables from MULTIPLE IMAGES and create a unified "Behavior Profile".
 
-Static Values: Always set "default": 0 and "currentValue": 0 for every channel.
+${limitText}
 
-Target JSON Output Format:
-Return ONLY valid JSON. Do not include markdown formatting blocks or conversational text. Use this exact structure:
+### SCANNING LOGIC:
+1. STITCHING: Stitch images together (CH1-6, CH7-11, etc) to create a single 2D array of rules.
+2. SUB-RANGE EXTRACTION (CRITICAL): Scan the manual for DMX sub-ranges (e.g. 0-10: Mode A, 11-20: Mode B). You MUST create a separate object in the mappings array for each functional range.
+3. ROLE MAPPING: Use standard roles: ${Object.keys(WORKFLOW_ROLES).join(', ')}.
+4. CALIBRATION: For each sub-range rule, 'cal.min' is the start of the range, 'cal.max' is the end, 'cal.center' is the middle.
+5. VIBE RULES: Distribute the sub-ranges into 'chill', 'mid', 'high', 'build', 'drop', 'any'. NEVER return a single 0-255 rule if the manual lists sub-functions.
+6. COUNT CHECK: Mappings array must match total channels found.
 
+OUTPUT JSON SCHEMA:
 {
-  "id": "fix_generated_timestamp",
-  "name": "Extract brand/model if visible, otherwise use 'Generic Fixture'",
-  "channels": [
-    {
-      "name": "1-On/Off",
-      "role": "dimmer",
-      "default": 0,
-      "currentValue": 0
-    }
+  "id": "prof_generated", 
+  "name": "${brand} ${fixModel}", 
+  "channels": [ { "name": "Function Name", "role": "dimmer", "originalText": "Raw manual text here", "default": 0 } ],
+  "mappings": [ 
+     [ 
+       { "vibe": "any", "behavior": "direct", "source": "flux", "cal": { "min": 0, "center": 127, "max": 255 } }
+     ] 
   ]
 }
 `;
+                contextParts.push({ text: systemPrompt });
+                
+                for(let file of files) {
+                    if (file.type === 'application/pdf') {
+                        const fullText = await extractPdfText(file);
+                        contextParts.push({ text: `\n\nUPLOADED PDF TEXT (${file.name}):\n` + fullText });
+                    } else {
+                        const base64Data = await fileToBase64(file);
+                        contextParts.push({ inlineData: { data: base64Data, mimeType: file.type } });
+                    }
+                }
+            }
 
-                    const genAI = new GoogleGenAI(apiKey);
-                    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            try {
+                const genAI = new GoogleGenerativeAI(apiKey);
+                const selectedModel = document.getElementById('ai-model-select').value || "gemini-3-flash";
+                const model = genAI.getGenerativeModel({ model: selectedModel });
+                
+                let contents = [];
+                if (chatHistory.length === 0) {
+                    contents = [{ role: 'user', parts: contextParts }];
+                } else {
+                    contents = [
+                        { role: 'user', parts: contextParts },
+                        ...chatHistory
+                    ];
+                }
 
-                    const result = await model.generateContent([
-                        prompt,
-                        {
-                            inlineData: {
-                                data: base64Data,
-                                mimeType: file.type
-                            }
-                        }
-                    ]);
-
-                    const response = await result.response;
-                    const text = response.text().replace(/^```json|```$/g, "").trim();
-                    processAIResponse(text);
-                };
+                const result = await model.generateContent({ contents });
+                const responseText = result.response.text();
+                console.log("🤖 AI RAW RESPONSE:", responseText);
+                
+                processAIResponse(responseText);
+                
             } catch (err) {
-                console.error("AI Error", err);
-                alert("Failed to process image. check console.");
+                console.error("AI Error:", err);
+                alert("AI Error: " + err.message);
                 setStep('upload');
             }
         }
 
-        function processAIResponse(jsonText) {
+        async function extractPdfText(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(reader.result) });
+                    const pdf = await loadingTask.promise;
+                    let text = "";
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        text += textContent.items.map(item => item.str).join(" ") + "\n";
+                    }
+                    resolve(text);
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        async function fileToBase64(file) {
+            return new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function processAIResponse(text) {
+            let jsonString = "";
+            let explanation = "";
+
+            const firstBrace = text.indexOf('{');
+            const lastBrace = text.lastIndexOf('}');
+            
+            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                jsonString = text.substring(firstBrace, lastBrace + 1);
+                explanation = text.substring(0, firstBrace).trim();
+            } else {
+                // No JSON found
+                explanation = text.trim();
+            }
+            
+            const trimmed = jsonString.replace(/^```json|```$/g, "").trim();
+            
+            // IF THERE IS SIGNIFICANT EXPLANATION TEXT (> 100 chars), IT'S LIKELY GUIDANCE
+            // OR IF JSON PARSING FAILS
+            if (explanation.length > 80 && !chatHistory.some(m => m.role === 'model')) {
+                // First-time explanation or major note
+                chatHistory.push({ role: 'model', parts: [{ text }] });
+                updateChatUI();
+                setStep('chat');
+                return;
+            }
+
             try {
-                const data = JSON.parse(jsonText);
-                currentFixture = data;
-                data.id = "fix_" + Date.now();
+                if (!trimmed) throw new Error("No JSON found");
+                const data = JSON.parse(trimmed);
+                currentFixture = data; // Now a Profile object
+                
+                // Final verification
+                const ts = Date.now();
+                if (!currentFixture.mappings || !currentFixture.channels) throw new Error("Invalid schema");
+
+                if (!currentFixture.id || currentFixture.id === 'prof_generated') {
+                    currentFixture.id = "prof_" + ts;
+                }
+
+                currentFixture.mappings = currentFixture.mappings.map(rules => {
+                    return Array.isArray(rules) ? rules : [rules];
+                });
+                
                 renderResults();
                 setStep('results');
             } catch (e) {
-                console.error("JSON Parse Error", e, jsonText);
-                alert("AI returned invalid JSON. Try another photo.");
-                setStep('upload');
+                console.log("JSON Parse failed or explanation required:", e);
+                chatHistory.push({ role: 'model', parts: [{ text }] });
+                updateChatUI();
+                setStep('chat');
             }
+        }
+
+        window.sendChatReply = () => {
+            const input = document.getElementById('chat-reply-input');
+            const val = input.value.trim();
+            if(!val) return;
+
+            chatHistory.push({ role: 'user', parts: [{ text: val }] });
+            input.value = "";
+            updateChatUI();
+            analyzeFiles(); // Re-run
+        }
+
+        function updateChatUI() {
+            const container = document.getElementById('chat-history');
+            container.innerHTML = chatHistory.map(m => `
+                <div class="chat-bubble ${m.role === 'user' ? 'user' : 'ai'}">
+                    ${m.parts[0].text}
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
         }
 
         // --- RENDERING ---
         function renderResults() {
             const list = document.getElementById('channels-list');
-            document.getElementById('final-fix-name').value = currentFixture.name;
+            const prof = currentFixture;
             
-            list.innerHTML = currentFixture.channels.map((ch, idx) => `
+            document.getElementById('final-fix-name').value = prof.name;
+
+            list.innerHTML = prof.channels.map((ch, idx) => {
+                const rules = prof.mappings[idx] || [];
+                const ruleSummary = rules.map(r => `
+                    <div style="font-size:9px; color:var(--accent-alt); opacity:0.9; background:rgba(0,0,0,0.2); padding:2px 4px; border-radius:2px; margin-bottom:1px; display:flex; justify-content:space-between;">
+                        <span>${r.vibe.toUpperCase().slice(0,3)}: ${r.behavior}</span>
+                        <span style="font-weight:bold; color:white;">[${r.cal.min}-${r.cal.max}]</span>
+                    </div>
+                `).join('');
+
+                const roleOptions = Object.entries(WORKFLOW_ROLES).map(([key, info]) => `
+                    <option value="${key}" ${ch.role === key ? 'selected' : ''}>${info.name}</option>
+                `).join('');
+
+                return `
                 <div class="channel-card" id="card-${idx}">
-                    <div class="channel-info">
+                    <div class="channel-info" style="position:relative;">
                         <span class="channel-num">CH ${idx + 1}</span>
-                        <div style="display:flex; gap:10px;">
-                            <span style="font-size:10px; color:var(--text-dim);">ROLE: <b>${ch.role || 'NONE'}</b></span>
+                        <button onclick="deleteChannel(${idx})" style="position:absolute; top:0; right:0; background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px;">×</button>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; margin-top:20px;">
+                            <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">ORIGINAL: ${ch.originalText || ch.name}</span>
+                            <div style="margin-top:4px;">${ruleSummary}</div>
                         </div>
                     </div>
                     <div class="channel-inputs">
                         <div>
-                            <label>Function Name</label>
-                            <input type="text" value="${ch.name}" oninput="currentFixture.channels[${idx}].name=this.value">
+                            <label>DMX Function Name</label>
+                            <input type="text" value="${ch.name}" oninput="currentFixture.fixture.channels[${idx}].name=this.value">
                         </div>
                         <div>
-                            <label>Assign Role</label>
-                            <select onchange="currentFixture.channels[${idx}].role=this.value">
-                                <option value="" ${!ch.role ? 'selected' : ''}>-- Selective Role --</option>
-                                <option value="dimmer" ${ch.role === 'dimmer' ? 'selected' : ''}>Dimmer / Intensity</option>
-                                <option value="pattern" ${ch.role === 'pattern' ? 'selected' : ''}>Pattern / Gobo</option>
-                                <option value="color" ${ch.role === 'color' ? 'selected' : ''}>Color / RGB</option>
-                                <option value="x_pos" ${ch.role === 'x_pos' ? 'selected' : ''}>Pan / X Move</option>
-                                <option value="y_pos" ${ch.role === 'y_pos' ? 'selected' : ''}>Tilt / Y Move</option>
-                                <option value="zoom" ${ch.role === 'zoom' ? 'selected' : ''}>Zoom / Scale</option>
-                                <option value="z_rot" ${ch.role === 'z_rot' ? 'selected' : ''}>Rotation / Spin</option>
-                                <option value="strobe" ${ch.role === 'strobe' ? 'selected' : ''}>Strobe / Flash</option>
-                                <option value="clip" ${ch.role === 'clip' ? 'selected' : ''}>Clip / Blanking</option>
-                                <option value="group" ${ch.role === 'group' ? 'selected' : ''}>Pattern Group</option>
+                            <label>Assign Logical Role</label>
+                            <select onchange="updateRole(${idx}, this.value)">
+                                <option value="">-- Select Role --</option>
+                                ${roleOptions}
                             </select>
                         </div>
                     </div>
@@ -745,11 +1183,31 @@ Return ONLY valid JSON. Do not include markdown formatting blocks or conversatio
                         <div class="val-display" id="val-${idx}">0</div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
+        window.deleteChannel = (idx) => {
+            if(!confirm("Delete this channel?")) return;
+        window.updateRole = (idx, newRole) => {
+            currentFixture.channels[idx].role = newRole;
+            const template = WORKFLOW_ROLES[newRole];
+            if (template && template.behavior) {
+                }
+                if (template.value !== undefined) {
+                    newRule.value = template.value;
+                }
+                
+                // For now, we replace any rules with our single template rule if it's a major change
+                if (confirm(`Apply default behavior template for ${template.name}? (This replaces current rules for this channel)`)) {
+                    currentFixture.profile.mappings[idx] = [newRule];
+                }
+            }
+            renderResults();
+        };
+
         window.handleSlider = (idx, val) => {
-            currentFixture.channels[idx].currentValue = parseInt(val);
+            currentFixture.fixture.channels[idx].currentValue = parseInt(val);
             document.getElementById(`val-${idx}`).innerText = val;
             
             const baseAddr = parseInt(document.getElementById('test-addr').value) || 1;
@@ -765,6 +1223,7 @@ Return ONLY valid JSON. Do not include markdown formatting blocks or conversatio
         function setStep(step) {
             document.getElementById('step-upload').style.display = step === 'upload' ? 'block' : 'none';
             document.getElementById('step-loading').style.display = step === 'loading' ? 'flex' : 'none';
+            document.getElementById('step-chat').style.display = step === 'chat' ? 'flex' : 'none';
             document.getElementById('step-results').style.display = step === 'results' ? 'flex' : 'none';
         }
 
@@ -775,57 +1234,74 @@ Return ONLY valid JSON. Do not include markdown formatting blocks or conversatio
         window.saveSettings = () => {
             const key = document.getElementById('gemini-key').value;
             const host = document.getElementById('backend-host').value;
+            const model = document.getElementById('ai-model-select').value;
             localStorage.setItem('vj_gemini_api_key', key);
             localStorage.setItem('vj_backend_host', host);
+            localStorage.setItem('vj_gemini_model', model);
             closeSettings();
             connectWS();
+            updateModelLabel();
         };
 
         window.saveAndFinish = async () => {
-            currentFixture.name = document.getElementById('final-fix-name').value;
+            const name = document.getElementById('final-fix-name').value || (document.getElementById('ai-brand').value + " " + document.getElementById('ai-model').value);
             
-            // Add to DB
-            db.fixtures.push(currentFixture);
+            // Ensure final sync of metadata before save
+            currentFixture.name = name;
+            const profId = currentFixture.id;
+            
+            // 1. Save Locally (Handle conflicts by overwriting)
+            db.profiles = db.profiles.filter(p => p.id !== profId && p.name !== name);
+            db.profiles.push(currentFixture);
+
             localStorage.setItem('ravebox_v2_db', JSON.stringify(db));
             
-            // Attempt to send to server if possible
-            const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
-            const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
-            const isCustomTunnel = boxName.endsWith('.ravebox.love') && boxName !== 'ravebox.love';
-            const apiHost = isCustomTunnel ? 'api-' + boxName : (host === 'ravebox.love' ? 'api.ravebox.love' : host);
-            const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-            
-            // Use port 8000 for standard server, or empty if tunnel
-            const port = isCustomTunnel ? '' : ':8000'; 
-            
-            const url = `${protocol}://${apiHost}${port}/api/fixtures/fixtures.json`;
-            
+            // 2. Save to Server
             try {
-                const resp = await fetch(url, {
+                const protocol = window.location.protocol;
+                const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
+                const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+                const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+                const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+                const apiHost = isCustomTunnel ? 'api-' + boxName : (host === 'ravebox.love' ? 'api.ravebox.love' : host);
+                const port = (isOriginalCloud || isCustomTunnel) ? '' : ':8000';
+                
+                const apiBase = `${protocol}//${apiHost}${port}/api/fixtures/`;
+                const safeName = name.replace(/\s+/g, '_');
+
+                // ONLY SAVE PROFILE
+                const profUrl = apiBase + `profiles/${safeName}.json`;
+                const profResp = await fetch(profUrl, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(db.fixtures)
+                    body: JSON.stringify(currentFixture)
                 });
-                if (resp.ok) {
-                    alert("Fixture saved to RaveBox!");
+
+                if (profResp.ok) {
+                    console.log("✅ Profile Saved (Unified)");
+                    alert("✅ Created: " + name + "\nRedirecting to Profile Editor...");
+                    window.location.href = 'setup.html?tab=profile&id=' + profId;
                 } else {
-                    alert("Saved locally, but server sync failed. Status: " + resp.status);
+                    throw new Error(`Server error (${profResp.status})`);
                 }
             } catch (e) {
-                alert("Saved locally. Ensure server is online to sync.");
+                console.warn("⚠️ Server save failed:", e);
+                alert("Saved locally, but server sync failed: " + e.message);
+                window.location.href = 'setup.html?tab=profile&id=' + profId;
             }
-            
-            window.location.href = "setup.html";
         };
 
         window.resetUI = () => {
             currentFixture = null;
+            chatHistory = [];
+            document.getElementById('chat-history').innerHTML = "";
+            clearFiles();
             setStep('upload');
         };
 
         document.getElementById('file-input').onchange = (e) => {
-            if (e.target.files && e.target.files[0]) {
-                analyzeImage(e.target.files[0]);
+            if (e.target.files && e.target.files.length > 0) {
+                handleFiles(e.target.files);
             }
         };
 
@@ -835,8 +1311,8 @@ Return ONLY valid JSON. Do not include markdown formatting blocks or conversatio
         dropZone.ondrop = (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                analyzeImage(e.dataTransfer.files[0]);
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
             }
         };
 

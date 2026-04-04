@@ -1,0 +1,770 @@
+[
+    {
+        "dmx": 0,
+        "complexity": 14060,
+        "brightness": 46961,
+        "active": true
+    },
+    {
+        "dmx": 1,
+        "complexity": 13634,
+        "brightness": 44672,
+        "active": true
+    },
+    {
+        "dmx": 2,
+        "complexity": 16539,
+        "brightness": 49480,
+        "active": true
+    },
+    {
+        "dmx": 3,
+        "complexity": 15267,
+        "brightness": 53504,
+        "active": true
+    },
+    {
+        "dmx": 4,
+        "complexity": 15802,
+        "brightness": 56170,
+        "active": true
+    },
+    {
+        "dmx": 5,
+        "complexity": 16792,
+        "brightness": 58579,
+        "active": true
+    },
+    {
+        "dmx": 6,
+        "complexity": 17992,
+        "brightness": 64222,
+        "active": true
+    },
+    {
+        "dmx": 7,
+        "complexity": 16950,
+        "brightness": 63742,
+        "active": true
+    },
+    {
+        "dmx": 8,
+        "complexity": 17247,
+        "brightness": 62721,
+        "active": true
+    },
+    {
+        "dmx": 9,
+        "complexity": 17509,
+        "brightness": 63046,
+        "active": true
+    },
+    {
+        "dmx": 10,
+        "complexity": 14468,
+        "brightness": 50994,
+        "active": true
+    },
+    {
+        "dmx": 11,
+        "complexity": 16522,
+        "brightness": 53568,
+        "active": true
+    },
+    {
+        "dmx": 12,
+        "complexity": 14889,
+        "brightness": 50735,
+        "active": true
+    },
+    {
+        "dmx": 13,
+        "complexity": 12261,
+        "brightness": 34495,
+        "active": true
+    },
+    {
+        "dmx": 14,
+        "complexity": 5418,
+        "brightness": 25652,
+        "active": true
+    },
+    {
+        "dmx": 15,
+        "complexity": 8922,
+        "brightness": 63382,
+        "active": true
+    },
+    {
+        "dmx": 16,
+        "complexity": 12144,
+        "brightness": 87185,
+        "active": true
+    },
+    {
+        "dmx": 17,
+        "complexity": 2438,
+        "brightness": 4377,
+        "active": true
+    },
+    {
+        "dmx": 18,
+        "complexity": 4143,
+        "brightness": 20665,
+        "active": true
+    },
+    {
+        "dmx": 19,
+        "complexity": 11935,
+        "brightness": 83480,
+        "active": true
+    },
+    {
+        "dmx": 20,
+        "complexity": 14340,
+        "brightness": 93210,
+        "active": true
+    },
+    {
+        "dmx": 21,
+        "complexity": 10786,
+        "brightness": 78746,
+        "active": true
+    },
+    {
+        "dmx": 22,
+        "complexity": 7955,
+        "brightness": 33983,
+        "active": true
+    },
+    {
+        "dmx": 23,
+        "complexity": 13071,
+        "brightness": 52827,
+        "active": true
+    },
+    {
+        "dmx": 24,
+        "complexity": 13269,
+        "brightness": 43590,
+        "active": true
+    },
+    {
+        "dmx": 25,
+        "complexity": 12663,
+        "brightness": 41322,
+        "active": true
+    },
+    {
+        "dmx": 26,
+        "complexity": 12436,
+        "brightness": 41396,
+        "active": true
+    },
+    {
+        "dmx": 27,
+        "complexity": 10126,
+        "brightness": 32244,
+        "active": true
+    },
+    {
+        "dmx": 28,
+        "complexity": 11368,
+        "brightness": 41417,
+        "active": true
+    },
+    {
+        "dmx": 29,
+        "complexity": 7240,
+        "brightness": 50958,
+        "active": true
+    },
+    {
+        "dmx": 30,
+        "complexity": 7023,
+        "brightness": 51128,
+        "active": true
+    },
+    {
+        "dmx": 31,
+        "complexity": 7690,
+        "brightness": 59413,
+        "active": true
+    },
+    {
+        "dmx": 32,
+        "complexity": 7147,
+        "brightness": 57440,
+        "active": true
+    },
+    {
+        "dmx": 33,
+        "complexity": 7367,
+        "brightness": 61093,
+        "active": true
+    },
+    {
+        "dmx": 34,
+        "complexity": 8175,
+        "brightness": 67873,
+        "active": true
+    },
+    {
+        "dmx": 35,
+        "complexity": 9914,
+        "brightness": 80556,
+        "active": true
+    },
+    {
+        "dmx": 36,
+        "complexity": 15855,
+        "brightness": 109704,
+        "active": true
+    },
+    {
+        "dmx": 37,
+        "complexity": 15344,
+        "brightness": 105447,
+        "active": true
+    },
+    {
+        "dmx": 38,
+        "complexity": 17288,
+        "brightness": 108334,
+        "active": true
+    },
+    {
+        "dmx": 39,
+        "complexity": 8433,
+        "brightness": 59255,
+        "active": true
+    },
+    {
+        "dmx": 40,
+        "complexity": 9317,
+        "brightness": 55120,
+        "active": true
+    },
+    {
+        "dmx": 41,
+        "complexity": 9727,
+        "brightness": 52857,
+        "active": true
+    },
+    {
+        "dmx": 42,
+        "complexity": 9949,
+        "brightness": 51105,
+        "active": true
+    },
+    {
+        "dmx": 43,
+        "complexity": 10766,
+        "brightness": 51730,
+        "active": true
+    },
+    {
+        "dmx": 44,
+        "complexity": 9445,
+        "brightness": 48240,
+        "active": true
+    },
+    {
+        "dmx": 45,
+        "complexity": 9510,
+        "brightness": 48759,
+        "active": true
+    },
+    {
+        "dmx": 46,
+        "complexity": 10191,
+        "brightness": 50448,
+        "active": true
+    },
+    {
+        "dmx": 47,
+        "complexity": 10424,
+        "brightness": 53758,
+        "active": true
+    },
+    {
+        "dmx": 48,
+        "complexity": 11498,
+        "brightness": 56770,
+        "active": true
+    },
+    {
+        "dmx": 49,
+        "complexity": 10268,
+        "brightness": 53961,
+        "active": true
+    },
+    {
+        "dmx": 50,
+        "complexity": 9899,
+        "brightness": 49840,
+        "active": true
+    },
+    {
+        "dmx": 51,
+        "complexity": 9708,
+        "brightness": 53447,
+        "active": true
+    },
+    {
+        "dmx": 52,
+        "complexity": 11046,
+        "brightness": 57666,
+        "active": true
+    },
+    {
+        "dmx": 53,
+        "complexity": 10250,
+        "brightness": 54020,
+        "active": true
+    },
+    {
+        "dmx": 54,
+        "complexity": 11616,
+        "brightness": 54787,
+        "active": true
+    },
+    {
+        "dmx": 55,
+        "complexity": 13836,
+        "brightness": 61235,
+        "active": true
+    },
+    {
+        "dmx": 56,
+        "complexity": 5264,
+        "brightness": 9492,
+        "active": true
+    },
+    {
+        "dmx": 57,
+        "complexity": 836,
+        "brightness": 1774,
+        "active": true
+    },
+    {
+        "dmx": 58,
+        "complexity": 12129,
+        "brightness": 84730,
+        "active": true
+    },
+    {
+        "dmx": 59,
+        "complexity": 9170,
+        "brightness": 57380,
+        "active": true
+    },
+    {
+        "dmx": 60,
+        "complexity": 11323,
+        "brightness": 76593,
+        "active": true
+    },
+    {
+        "dmx": 61,
+        "complexity": 10136,
+        "brightness": 74134,
+        "active": true
+    },
+    {
+        "dmx": 62,
+        "complexity": 8979,
+        "brightness": 62189,
+        "active": true
+    },
+    {
+        "dmx": 63,
+        "complexity": 10459,
+        "brightness": 77421,
+        "active": true
+    },
+    {
+        "dmx": 64,
+        "complexity": 10849,
+        "brightness": 79564,
+        "active": true
+    },
+    {
+        "dmx": 65,
+        "complexity": 9801,
+        "brightness": 62493,
+        "active": true
+    },
+    {
+        "dmx": 66,
+        "complexity": 11349,
+        "brightness": 79544,
+        "active": true
+    },
+    {
+        "dmx": 67,
+        "complexity": 11958,
+        "brightness": 79437,
+        "active": true
+    },
+    {
+        "dmx": 68,
+        "complexity": 12493,
+        "brightness": 82899,
+        "active": true
+    },
+    {
+        "dmx": 69,
+        "complexity": 10136,
+        "brightness": 74059,
+        "active": true
+    },
+    {
+        "dmx": 70,
+        "complexity": 14495,
+        "brightness": 88921,
+        "active": true
+    },
+    {
+        "dmx": 71,
+        "complexity": 15169,
+        "brightness": 71720,
+        "active": true
+    },
+    {
+        "dmx": 72,
+        "complexity": 11412,
+        "brightness": 56161,
+        "active": true
+    },
+    {
+        "dmx": 73,
+        "complexity": 7217,
+        "brightness": 34587,
+        "active": true
+    },
+    {
+        "dmx": 74,
+        "complexity": 5001,
+        "brightness": 19181,
+        "active": true
+    },
+    {
+        "dmx": 75,
+        "complexity": 5992,
+        "brightness": 23413,
+        "active": true
+    },
+    {
+        "dmx": 76,
+        "complexity": 5761,
+        "brightness": 19843,
+        "active": true
+    },
+    {
+        "dmx": 77,
+        "complexity": 5104,
+        "brightness": 16026,
+        "active": true
+    },
+    {
+        "dmx": 78,
+        "complexity": 4109,
+        "brightness": 14198,
+        "active": true
+    },
+    {
+        "dmx": 79,
+        "complexity": 3806,
+        "brightness": 15742,
+        "active": true
+    },
+    {
+        "dmx": 80,
+        "complexity": 5014,
+        "brightness": 23221,
+        "active": true
+    },
+    {
+        "dmx": 81,
+        "complexity": 6242,
+        "brightness": 31699,
+        "active": true
+    },
+    {
+        "dmx": 82,
+        "complexity": 7732,
+        "brightness": 38067,
+        "active": true
+    },
+    {
+        "dmx": 83,
+        "complexity": 8941,
+        "brightness": 46157,
+        "active": true
+    },
+    {
+        "dmx": 84,
+        "complexity": 9155,
+        "brightness": 48035,
+        "active": true
+    },
+    {
+        "dmx": 85,
+        "complexity": 9559,
+        "brightness": 46577,
+        "active": true
+    },
+    {
+        "dmx": 86,
+        "complexity": 7804,
+        "brightness": 37092,
+        "active": true
+    },
+    {
+        "dmx": 87,
+        "complexity": 7704,
+        "brightness": 39386,
+        "active": true
+    },
+    {
+        "dmx": 88,
+        "complexity": 6258,
+        "brightness": 33042,
+        "active": true
+    },
+    {
+        "dmx": 89,
+        "complexity": 16414,
+        "brightness": 95199,
+        "active": true
+    },
+    {
+        "dmx": 90,
+        "complexity": 6856,
+        "brightness": 26067,
+        "active": true
+    },
+    {
+        "dmx": 91,
+        "complexity": 7432,
+        "brightness": 28045,
+        "active": true
+    },
+    {
+        "dmx": 92,
+        "complexity": 4340,
+        "brightness": 16210,
+        "active": true
+    },
+    {
+        "dmx": 93,
+        "complexity": 4565,
+        "brightness": 15042,
+        "active": true
+    },
+    {
+        "dmx": 94,
+        "complexity": 5918,
+        "brightness": 20800,
+        "active": true
+    },
+    {
+        "dmx": 95,
+        "complexity": 9042,
+        "brightness": 37939,
+        "active": true
+    },
+    {
+        "dmx": 96,
+        "complexity": 7080,
+        "brightness": 22908,
+        "active": true
+    },
+    {
+        "dmx": 97,
+        "complexity": 7827,
+        "brightness": 32922,
+        "active": true
+    },
+    {
+        "dmx": 98,
+        "complexity": 7571,
+        "brightness": 32430,
+        "active": true
+    },
+    {
+        "dmx": 99,
+        "complexity": 6262,
+        "brightness": 26673,
+        "active": true
+    },
+    {
+        "dmx": 100,
+        "complexity": 7558,
+        "brightness": 35160,
+        "active": true
+    },
+    {
+        "dmx": 101,
+        "complexity": 7730,
+        "brightness": 36426,
+        "active": true
+    },
+    {
+        "dmx": 102,
+        "complexity": 7223,
+        "brightness": 34268,
+        "active": true
+    },
+    {
+        "dmx": 103,
+        "complexity": 7991,
+        "brightness": 36560,
+        "active": true
+    },
+    {
+        "dmx": 104,
+        "complexity": 8138,
+        "brightness": 37432,
+        "active": true
+    },
+    {
+        "dmx": 105,
+        "complexity": 8412,
+        "brightness": 35899,
+        "active": true
+    },
+    {
+        "dmx": 106,
+        "complexity": 9189,
+        "brightness": 40007,
+        "active": true
+    },
+    {
+        "dmx": 107,
+        "complexity": 9859,
+        "brightness": 46181,
+        "active": true
+    },
+    {
+        "dmx": 108,
+        "complexity": 8624,
+        "brightness": 44802,
+        "active": true
+    },
+    {
+        "dmx": 109,
+        "complexity": 11074,
+        "brightness": 50363,
+        "active": true
+    },
+    {
+        "dmx": 110,
+        "complexity": 10840,
+        "brightness": 51149,
+        "active": true
+    },
+    {
+        "dmx": 111,
+        "complexity": 10483,
+        "brightness": 54464,
+        "active": true
+    },
+    {
+        "dmx": 112,
+        "complexity": 10279,
+        "brightness": 44722,
+        "active": true
+    },
+    {
+        "dmx": 113,
+        "complexity": 9897,
+        "brightness": 40394,
+        "active": true
+    },
+    {
+        "dmx": 114,
+        "complexity": 6896,
+        "brightness": 26966,
+        "active": true
+    },
+    {
+        "dmx": 115,
+        "complexity": 5243,
+        "brightness": 11004,
+        "active": true
+    },
+    {
+        "dmx": 116,
+        "complexity": 6135,
+        "brightness": 24218,
+        "active": true
+    },
+    {
+        "dmx": 117,
+        "complexity": 4111,
+        "brightness": 8019,
+        "active": true
+    },
+    {
+        "dmx": 118,
+        "complexity": 3991,
+        "brightness": 7438,
+        "active": true
+    },
+    {
+        "dmx": 119,
+        "complexity": 4968,
+        "brightness": 10675,
+        "active": true
+    },
+    {
+        "dmx": 120,
+        "complexity": 5135,
+        "brightness": 14053,
+        "active": true
+    },
+    {
+        "dmx": 121,
+        "complexity": 5192,
+        "brightness": 11274,
+        "active": true
+    },
+    {
+        "dmx": 122,
+        "complexity": 4696,
+        "brightness": 8921,
+        "active": true
+    },
+    {
+        "dmx": 123,
+        "complexity": 4217,
+        "brightness": 8367,
+        "active": true
+    },
+    {
+        "dmx": 124,
+        "complexity": 5092,
+        "brightness": 12723,
+        "active": true
+    },
+    {
+        "dmx": 125,
+        "complexity": 5308,
+        "brightness": 12867,
+        "active": true
+    },
+    {
+        "dmx": 126,
+        "complexity": 7191,
+        "brightness": 14319,
+        "active": true
+    },
+    {
+        "dmx": 127,
+        "complexity": 7301,
+        "brightness": 19060,
+        "active": true
+    }
+]

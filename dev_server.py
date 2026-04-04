@@ -14,6 +14,7 @@ import sys
 import subprocess
 import ssl
 import socket
+import time
 from urllib.parse import urlparse
 import urllib.request
 
@@ -55,7 +56,8 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
 
         # API: Get Specific Fixture or Stage Config
         if path.startswith('/api/fixtures/'):
-            fname = path.split('/')[-1]
+            # Allow full relative path after the API prefix
+            fname = path[len('/api/fixtures/'):]
             self._handle_get_fixture(fname)
             return
 
@@ -67,7 +69,8 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
 
         # API: Save Fixture
         if path.startswith('/api/fixtures/'):
-            fname = path.split('/')[-1]
+            # Allow full relative path after the API prefix
+            fname = path[len('/api/fixtures/'):]
             self._handle_save_fixture(fname)
             return
 
@@ -98,20 +101,74 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
             
         self.do_PUT()
 
+    def do_DELETE(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        
+        # API: Soft Delete Fixture/Profile
+        if path.startswith('/api/fixtures/'):
+            fname = path[len('/api/fixtures/'):]
+            if '..' in fname:
+                self.send_error(403, "Invalid filename")
+                return
+
+            fpath = os.path.abspath(os.path.join(BASE_DIR, 'fixtures', fname))
+            if not fpath.startswith(os.path.join(BASE_DIR, 'fixtures')):
+                self.send_error(403, "Permission Denied")
+                return
+
+            if os.path.exists(fpath):
+                try:
+                    # SOFT DELETE: Move to backup
+                    backup_dir = os.path.join(BASE_DIR, 'fixtures', 'backup')
+                    if not os.path.exists(backup_dir): os.makedirs(backup_dir)
+                    
+                    target_name = os.path.basename(fname)
+                    # Add timestamp to prevent name collisions in backup
+                    backup_name = f"{int(time.time())}_{target_name}"
+                    backup_path = os.path.join(backup_dir, backup_name)
+                    
+                    os.rename(fpath, backup_path)
+                    print(f"🗑️ SOFT DELETE: Moved {fname} to backup/{backup_name}")
+                    self._send_json({"status": "ok", "archived": backup_name})
+                except Exception as e:
+                    self.send_error(500, str(e))
+            else:
+                self.send_error(404, "File not found")
+            return
+
+        self.send_error(501, "Not Implemented")
+
     def _handle_list_fixtures(self):
         fixtures_dir = os.path.join(BASE_DIR, 'fixtures')
         if not os.path.exists(fixtures_dir): os.makedirs(fixtures_dir)
         try:
-            files = [f for f in os.listdir(fixtures_dir) if f.endswith('.json')]
-            self._send_json(files)
+            found_files = []
+            for root, dirs, files in os.walk(fixtures_dir):
+                # Ignore the backup directory during listing
+                if 'backup' in dirs:
+                    dirs.remove('backup')
+                    
+                for f in files:
+                    if f.endswith('.json'):
+                        # Create relative path from fixtures_dir
+                        rel_path = os.path.relpath(os.path.join(root, f), fixtures_dir)
+                        found_files.append(rel_path)
+            self._send_json(found_files)
         except Exception as e:
             self.send_error(500, str(e))
 
     def _handle_get_fixture(self, fname):
-        if '..' in fname or '/' in fname:
+        # Decode URL path segments to support 'profiles/name.json'
+        # Basic security: no '..' allowed
+        if '..' in fname:
             self.send_error(403, "Invalid filename")
             return
-        fpath = os.path.join(BASE_DIR, 'fixtures', fname)
+        # Normalize/sanitise to prevent absolute path escapes
+        fpath = os.path.abspath(os.path.join(BASE_DIR, 'fixtures', fname))
+        if not fpath.startswith(os.path.join(BASE_DIR, 'fixtures')):
+            self.send_error(403, "Permission Denied")
+            return
         if not os.path.exists(fpath):
             self.send_error(404, "Fixture not found")
             return
@@ -123,9 +180,17 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, str(e))
 
     def _handle_save_fixture(self, fname):
-        if '..' in fname or '/' in fname or not fname.endswith('.json'):
+        # Basic security: no '..' allowed
+        if '..' in fname:
             self.send_error(403, "Invalid filename")
             return
+        # Support subdirs - ensuring target directory exists
+        fpath = os.path.abspath(os.path.join(BASE_DIR, 'fixtures', fname))
+        if not fpath.startswith(os.path.join(BASE_DIR, 'fixtures')):
+            self.send_error(403, "Permission Denied")
+            return
+        target_dir = os.path.dirname(fpath)
+        if not os.path.exists(target_dir): os.makedirs(target_dir)
         length = int(self.headers['Content-Length'])
         body = self.rfile.read(length)
         try:

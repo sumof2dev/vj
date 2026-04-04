@@ -41,8 +41,9 @@ void main() {
     float max_iterations = 10.0 + u_high * 15.0; // Range: 10 to 25 iterations
     float escape_radius_sq = 16.0; // Squared escape radius for efficiency
 
-    // Fractal iteration loop
-    for (int i = 0; i < int(max_iterations); ++i) {
+    // Fractal iteration loop - Constant boundaries for Pi 5 optimization
+    for (int i = 0; i < 25; ++i) {
+        if (float(i) >= max_iterations) break;
         if (dot(z, z) > escape_radius_sq) {
             break;
         }

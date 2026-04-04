@@ -19,15 +19,26 @@ class ChannelConfig:
         self.threshold = threshold
         self.mod_name = mod_name
 
-    def get_active_rule(self, current_vibe):
+    def get_active_rule(self, current_vibe, current_transient=None):
         """Returns the specific vibe rule if it exists, otherwise falls back to 'any'."""
+        # 1. Check for transient overrides first
+        if current_transient in ['building', 'dropping']:
+            search_vibe = 'build' if current_transient == 'building' else 'drop'
+            for r in self.rules:
+                v = r.get('vibe', '')
+                if v == search_vibe:
+                    return r
+        
+        # 2. Check for exact vibe match or fallback
         fallback = None
         for r in self.rules:
-            if r.get('vibe') == current_vibe:
+            v = r.get('vibe', '')
+            if v == current_vibe:
                 return r
-            if r.get('vibe') == 'any' and fallback is None:
+            # Support 'any' or 'any/fallback' (as requested)
+            if (v == 'any' or v == 'any/fallback') and fallback is None:
                 fallback = r
-        return fallback
+        return fallback if fallback else (self.rules[0] if self.rules else None)
 
 class LogicMatrix:
     # Same as before
@@ -35,9 +46,9 @@ class LogicMatrix:
         self.phases = collections.defaultdict(float)
         self.beat_env = 0.0
         self.beat_count = 0
-        self.state = {}
         self.hold_timers = collections.defaultdict(float)
         self.hold_values = collections.defaultdict(float)
+        self.lfo_samples = collections.defaultdict(float)
 
     def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, active_lfos=None):
         if audio.get('beat', False):
@@ -86,7 +97,8 @@ class LogicMatrix:
                     else: val = max(target_val, current_val - decay_rate)
                     freq = 0
                 else:
-                    freq = (base_speed + (bin_energy * reactivity))
+                    # Scaled by 0.2 to make LFO speed react WAY less to audio
+                    freq = base_speed + (bin_energy * reactivity * 0.1)
                     if base_speed == 0 and freq < 0.05:
                         p_current = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
                         should_complete = False
@@ -96,17 +108,32 @@ class LogicMatrix:
                         if should_complete: freq = 10.0
                         else: freq = 0.0
 
-                    # GLOBAL SPEED LOCK: 0.6x multiplier (Permanent baseline stabilization)
-                    self.phases[lfo_id] += dt * freq * 0.6 * 2.0 * math.pi
-                    p = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
-                    if shape == 'sawtooth': val = (p * 2.0) - 1.0
-                    elif shape == 'triangle': val = 4.0 * abs(p - 0.5) - 1.0
-                    elif shape == 'square': val = 1.0 if p < 0.5 else -1.0
-                    else: val = math.sin(self.phases[lfo_id])
+                    # Update phase with 0.3x baseline multiplier
+                    p_old = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
+                    self.phases[lfo_id] += dt * freq * 0.3 * 2.0 * math.pi
+                    p_new = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
+                    
+                    if shape == 'sawtooth': 
+                        val = (p_new * 2.0) - 1.0
+                    elif shape == 'triangle': 
+                        val = 4.0 * abs(p_new - 0.5) - 1.0
+                    elif shape == 'square': 
+                        # PHASE TRANSITION: Sample energy on edge (Select-and-Hold)
+                        if (p_new < p_old) or (p_old < 0.5 <= p_new) or lfo_id not in self.lfo_samples:
+                            self.lfo_samples[lfo_id] = bin_energy
+                        
+                        s_energy = self.lfo_samples[lfo_id]
+                        amp_scale = (1.0 - reactivity) + (s_energy * reactivity * 1.0)
+                        val = (1.0 if p_new < 0.5 else -1.0) * max(0.0, min(1.0, amp_scale))
+                        # Skip normal amp_scale applied below
+                    else: 
+                        val = math.sin(self.phases[lfo_id])
 
                     if invert: val = -val
-                    amp_scale = (1.0 - reactivity) + (bin_energy * reactivity * 2.0)
-                    val = val * max(0.0, min(1.0, amp_scale))
+                    
+                    if shape != 'square':
+                        amp_scale = (1.0 - reactivity) + (bin_energy * reactivity * 1.0)
+                        val = val * max(0.0, min(1.0, amp_scale))
                     
                 hold_time = float(cfg.get('hold', 0.0))
                 if hold_time > 0:
@@ -131,9 +158,13 @@ class LogicMatrix:
 
         self.state.update({
             'intensity': float(intensity_val),
+            'beat': float((self.beat_env * 2.0) - 1.0),
+            'bar': float(((1.0 if self.beat_count % 4 == 0 else 0.0) * self.beat_env * 2.0) - 1.0),
+            'beat_count': float((self.beat_count % 32) / 32.0 * 2.0 - 1.0),
+            'phrase': float(1.0 if self.state.get('scene_trigger') == 1.0 else -1.0),
+
             'bass': float((s_bass * 2.0) - 1.0),
             'flux': float(min(1.0, (s_flux * 1.5) - 1.0)),
-            'beat': float((self.beat_env * 2.0) - 1.0),
             'audio': float((s_vol * 2.0) - 1.0),
             'frequency': float((max(audio.get('bins', [0.0]*6)[:6]) * 2.0) - 1.0 if audio.get('bins') else -1.0),
             'ratios': [float((r * 2.0) - 1.0) for r in audio.get('ratios', [0.0]*6)],
@@ -189,10 +220,14 @@ class DMXEngine:
         self.channel_latches = {}
         self.prev_vals = collections.defaultdict(float)
         
-        self._config_path = os.path.join('fixtures', 'ravebox_config.json')
+        self._configs_dir = os.path.join('fixtures', 'configs')
+        self._profiles_dir = os.path.join('fixtures', 'profiles')
+        self._stage_path = os.path.join('fixtures', 'stage_config.json')
+        self._presets_path = os.path.join('fixtures', 'presets.json')
+        
         self._fixture_mtime = 0
-        self._fast_cache = {} # Map[profile_id][channel_idx] -> ChannelConfig
-        self.active_presets = [] # List of preset objects active in the current frame
+        self._fast_cache = {} 
+        self.active_presets = [] 
         
         self._load_profiles()
         
@@ -200,23 +235,68 @@ class DMXEngine:
         self._reload_thread.start()
 
     def _load_profiles(self):
-        if not os.path.exists(self._config_path): return
-
-        try:
-            with open(self._config_path, 'r') as f:
-                data = json.load(f)
-        except Exception as e:
-            print(f"Failed to parse config: {e}")
-            return
-
-        self.fixtures = {f['id']: f for f in data.get('fixtures', [])}
-        self.profiles = {p['id']: p for p in data.get('profiles', [])}
-        self.stage_instances = data.get('stage', [])
-        self.presets = data.get('presets', [])
+        print("🔄 DMX Engine Loading Modular Config...")
         
-        # Determine highest channel address from stage instead of dict iteration
+        # 1. Load Hardware Configs
+        self.fixtures = {}
+        if os.path.exists(self._configs_dir):
+            for f in os.listdir(self._configs_dir):
+                if f.endswith('.json'):
+                    try:
+                        with open(os.path.join(self._configs_dir, f), 'r') as file:
+                            data = json.load(file)
+                            if 'id' in data: self.fixtures[data['id']] = data
+                    except: pass
+        
+        # Legacy Monolithic Load
+        legacy_fixtures = os.path.join('fixtures', 'fixtures.json')
+        if os.path.exists(legacy_fixtures):
+            try:
+                with open(legacy_fixtures, 'r') as f:
+                    data = json.load(f)
+                    for fix in data:
+                        if 'id' in fix: self.fixtures[fix['id']] = fix
+            except: pass
+
+        # 2. Load Mated Profiles
+        self.profiles = {}
+        if os.path.exists(self._profiles_dir):
+            for f in os.listdir(self._profiles_dir):
+                if f.endswith('.json'):
+                    try:
+                        with open(os.path.join(self._profiles_dir, f), 'r') as file:
+                            data = json.load(file)
+                            if 'id' in data: self.profiles[data['id']] = data
+                    except: pass
+
+        # Legacy Monolithic Load
+        legacy_profiles = os.path.join('fixtures', 'profiles.json')
+        if os.path.exists(legacy_profiles):
+            try:
+                with open(legacy_profiles, 'r') as f:
+                    data = json.load(f)
+                    for prof in data:
+                        if 'id' in prof: self.profiles[prof['id']] = prof
+            except: pass
+
+        # 3. Load Stage Layout
+        self.stage_instances = []
+        if os.path.exists(self._stage_path):
+            try:
+                with open(self._stage_path, 'r') as f:
+                    self.stage_instances = json.load(f)
+            except: pass
+
+        # 4. Load Presets
+        self.presets = []
+        if os.path.exists(self._presets_path):
+            try:
+                with open(self._presets_path, 'r') as f:
+                    self.presets = json.load(f)
+            except: pass
+        
         self.zone_map = [inst['id'] for inst in self.stage_instances]
-        print(f"📦 DMX Engine Loaded V2 Config! Instances: {len(self.stage_instances)}")
+        print(f"✅ Loaded: {len(self.fixtures)} Fixtures, {len(self.profiles)} Profiles, {len(self.stage_instances)} Stage Instances")
         
         self._build_fast_cache()
 
@@ -226,15 +306,20 @@ class DMXEngine:
         
         for p_id, profile in self.profiles.items():
             self._fast_cache[p_id] = {}
-            fixture = self.fixtures.get(profile.get('fixtureId'))
-            if not fixture: continue
+            
+            # Unified Architecture: Channels are NOW inside the profile
+            channels = profile.get('channels')
+            if not channels:
+                # Fallback to Legacy Fixture ID link
+                fixture = self.fixtures.get(profile.get('fixtureId'))
+                if fixture:
+                    channels = fixture.get('channels', [])
+            
+            if not channels: continue
             
             mappings = profile.get('mappings', [])
-            for ch_idx, channels in enumerate(fixture.get('channels', [])):
-                if ch_idx < len(mappings):
-                    rules = mappings[ch_idx]
-                else:
-                    rules = []
+            for ch_idx, ch in enumerate(channels):
+                rules = mappings[ch_idx] if ch_idx < len(mappings) else []
                     
                 for rule_idx, rule in enumerate(rules):
                     behavior = rule.get('behavior', rule.get('mod', 'static'))
@@ -249,7 +334,7 @@ class DMXEngine:
                         # Inject lfo_id directly into rule for fast lookup
                         rule['_lfo_id'] = lfo_id
                         
-                default_val = 127
+                default_val = ch.get('default', 127)
                 self._fast_cache[p_id][ch_idx] = ChannelConfig(
                     rules=rules,
                     states={}, # State machine maps handled inside specific rules now
@@ -261,14 +346,17 @@ class DMXEngine:
     def _hot_reload_loop(self):
         while True:
             time.sleep(2.0)
-            if not os.path.exists(self._config_path): continue
-            try: mtime = os.path.getmtime(self._config_path)
-            except: continue
-                
-            if self._fixture_mtime != mtime:
-                self._fixture_mtime = mtime
-                print("🔄 Changes detected in ravebox_config.json. Reloading...")
-                self._load_profiles()
+            
+            # Watch for directory or file updates
+            try:
+                # Check Stage Layout mtime as a trigger
+                if os.path.exists(self._stage_path):
+                    mtime = os.path.getmtime(self._stage_path)
+                    if self._fixture_mtime != mtime:
+                        self._fixture_mtime = mtime
+                        print("🔄 Stage Layout Change detected. Reloading...")
+                        self._load_profiles()
+            except: pass
 
     def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
         self._dt = dt
@@ -432,7 +520,8 @@ class DMXEngine:
 
     def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id):
         current_vibe = audio.get('vibe', 'mid')
-        rule = cache.get_active_rule(current_vibe)
+        current_transient = audio.get('transient', 'steady')
+        rule = cache.get_active_rule(current_vibe, current_transient)
         if not rule: return cache.default_val
             
         mod_name = rule.get('mod', 'static')
@@ -494,16 +583,10 @@ class DMXEngine:
         elif source == 'volume':
             val_norm = logic_matrix.state.get('audio', -1.0)
         elif source == 'beat':
-            # Random jump on every beat pulse
-            seed = logic_matrix.beat_count + zone_idx + 7
-            rng = random.Random(seed)
-            val_norm = (rng.random() * 2.0) - 1.0
+            val_norm = logic_matrix.state.get('beat', -1.0)
         elif source == 'bar':
-            # Random jump on every 4th beat (bar)
-            seed = (logic_matrix.beat_count // 4) + zone_idx + 42
-            rng = random.Random(seed)
-            val_norm = (rng.random() * 2.0) - 1.0
-            
+            val_norm = logic_matrix.state.get('bar', -1.0)
+
         # Apply Behavior Action
         if behavior == 'static':
             return rule.get('value', c_center)
@@ -515,16 +598,13 @@ class DMXEngine:
         elif behavior == 'lfo':
             lfo_id = rule.get('_lfo_id', '')
             val_norm = logic_matrix.state.get(lfo_id, 0.0)
-            
         elif behavior == 'cycle':
-            mod = rule.get('mod', 'beat')
-            if mod == '4th beat':
-                seed = (logic_matrix.beat_count // 4) + zone_idx + 42
-            else:
-                seed = logic_matrix.beat_count + zone_idx + 7
-            rng = random.Random(seed)
-            if c_max <= c_min: return rng.randint(c_max, c_min)
-            return rng.randint(c_min, c_max)
+            # Step-through logic using beat_count
+            # If source is bar, step every 4 beats
+            divisor = 4 if source == 'bar' else 1
+            step = (logic_matrix.beat_count // divisor) % 128 # Support up to 16 steps/patterns
+            val_norm = (step / 64.0) - 1.0 # Map 0-16 to -1.0 to 1.0
+
 
         # Apply Soft-Knee Threshold (Re-range to prevent target snapping)
         if val_norm > -1.0: # Skip if already forced off by upstream logic
@@ -577,12 +657,19 @@ class DMXEngine:
 
         inst = next((i for i in self.stage_instances if i['id'] == dev_id or i.get('profileName') == dev_id), None)
         if not inst: return
-        fixture = self.fixtures.get(inst.get('fixtureId'))
-        if not fixture: return
+        profile = self.profiles.get(inst.get('profileId'))
+        channels = []
+        if profile:
+            channels = profile.get('channels', [])
+            if not channels:
+                fixture = self.fixtures.get(inst.get('fixtureId'))
+                if fixture: channels = fixture.get('channels', [])
+        
+        if not channels: return
         
         base = int(inst.get('address', 1)) + int(inst.get('offset', 0))
-        for ch in fixture.get('channels', []):
-            addr = base + int(ch.get('addrOffset', 0))
+        for idx, ch in enumerate(channels):
+            addr = base + idx
             if addr in self.overrides: del self.overrides[addr]
 
     def clear_address_overrides(self, addresses):
