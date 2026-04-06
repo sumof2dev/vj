@@ -249,15 +249,15 @@
         .card {
             background: var(--panel);
             border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            transition: box-shadow 0.3s;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: box-shadow 0.2s;
         }
 
         .card:hover {
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .item-list {
@@ -266,11 +266,35 @@
             padding-top: 15px;
         }
 
+        #stage-list,
+        #saved-profiles-list,
+        #saved-presets-list,
+        #test-ensemble-strips {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 5px; /* Space for scrollbar */
+        }
+
+        /* Custom scrollbar for item-list */
+        .item-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .item-list::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        .item-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+        .item-list::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
         .item-row {
             background: rgba(255, 255, 255, 0.03);
-            border-radius: var(--radius-md);
-            padding: 12px 18px;
-            margin-bottom: 8px;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -288,10 +312,10 @@
             background: #333;
             color: #ccc;
             border: 1px solid #444;
-            padding: 8px 16px;
+            padding: 6px 12px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .btn:hover {
@@ -649,6 +673,32 @@
             border-left: 2px solid orange;
         }
 
+        .compact-slider-row.breeder-active {
+            background: rgba(var(--success-rgb, 46, 213, 115), 0.1) !important;
+            border-left: 2px solid var(--success) !important;
+            height: auto !important;
+            padding: 8px !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+
+        .compact-slider-row.breeder-hidden {
+            display: none !important;
+        }
+
+        .breeder-comparison-tray {
+            width: 100%;
+            margin-top: 4px;
+            font-size: 9px;
+            color: var(--text-dim);
+            background: rgba(0,0,0,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
         .compact-role-label {
             width: 120px;
             font-size: 11px;
@@ -698,6 +748,24 @@
 
         .compact-slider-row.busy .compact-release-btn {
             visibility: visible;
+        }
+
+        .compact-hide-btn {
+            padding: 4px 8px;
+            font-size: 10px;
+            background: rgba(255, 71, 87, 0.05);
+            color: var(--danger);
+            border: 1px solid rgba(255, 71, 87, 0.1);
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s;
+        }
+
+        .compact-hide-btn:hover {
+            opacity: 1;
+            background: rgba(255, 71, 87, 0.2);
+            border-color: var(--danger);
         }
 
         .fixture-picker-pill {
@@ -994,6 +1062,28 @@
             gap: 12px;
             border-top: 1px solid var(--border);
         }
+        .btn-suggestion {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0.5;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-suggestion:hover {
+            opacity: 1;
+            background: rgba(var(--accent-rgb), 0.1);
+            border-color: rgba(var(--accent-rgb), 0.3);
+            color: var(--accent);
+        }
+
         .ai-batch-review-bar {
             position: fixed;
             bottom: 30px;
@@ -1023,6 +1113,23 @@
             from { transform: translateY(-10px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+        /* --- PROFILE EDITOR DENSITY --- */
+        .glass-select, .glass-input { height: 26px !important; padding: 2px 8px !important; font-size: 11px !important; line-height: 1 !important; }
+        .rule-card .glass-select { height: 22px !important; }
+
+        @media (max-width: 600px) {
+            #profile-editor-container { padding: 4px !important; }
+            .channel-card { padding: 6px !important; margin-bottom: 6px !important; border-left-width: 3px !important; }
+            .channel-card-header { padding-bottom: 4px !important; gap: 4px !important; }
+            .channel-card-header .btn { padding: 2px 6px !important; font-size: 10px !important; }
+            .rule-card { padding: 6px !important; margin-bottom: 4px !important; border-radius: 6px !important; }
+            .glass-select, .glass-input { font-size: 11px !important; padding: 4px 6px !important; }
+            label { font-size: 7px !important; margin-bottom: 1px !important; }
+            .vibe-icon-select { width: 30px !important; text-align: center; font-size: 13px !important; }
+            .mobile-role-row { width: 100%; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 4px; margin-top: 4px; }
+            .channel-card-body { padding: 0 !important; }
+            .channel-card:nth-child(even) { background: rgba(255, 255, 255, 0.04) !important; }
+        }
     </style>
 </head>
 
@@ -1041,17 +1148,7 @@
             <span class="sidebar-title">RaveBox Setup</span>
         </div>
 
-        <div class="nav-btn" onclick="switchTab('tab-fixture')" title="Fixture" style="display:none">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <line x1="4" x1="21" y1="21" y2="4"></line>
-                <line x1="14" x1="14" y1="21" y2="14"></line>
-                <line x1="4" x1="4" y1="10" y2="4"></line>
-                <circle cx="4" cy="14" r="4"></circle>
-                <circle cx="14" cy="10" r="4"></circle>
-            </svg>
-            <span class="nav-text">Fixture</span>
-        </div>
+
 
         <div class="nav-btn active" onclick="switchTab('tab-profile')" title="Profiles">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -1126,61 +1223,16 @@
 
     <div class="main">
 
-        <div id="tab-fixture" class="tab-content" style="display:none">
-            <h2>Fixture Profile</h2>
-            <p style="color:var(--text-dim)">Fixture Set Up: Channels and functions - Use DMX chart from manual. Control light with sliders to verify. DMX address is the address (ie A001) set on the fixture.</p>
 
-            <div class="card">
-                <div class="card-title">Add New Fixture</div>
-                <div class="form-row" style="grid-template-columns: 2fr 1fr 1fr;">
-                    <div>
-                        <label>Fixture Name</label>
-                        <input type="text" id="fix-name" placeholder="e.g., Generic 7x10W Wash">
-                    </div>
-                    <div>
-                        <label>DMX Address (1-512)</label>
-                        <input type="number" id="fix-test-addr" value="1" min="1" max="512"
-                            oninput="checkAddrOccupied()">
-                        <div id="addr-warning" class="addr-warning">⚠️ Active engine: Address busy!</div>
-                    </div>
-                    <div>
-                        <label style="opacity:0">Connect</label>
-                        <button id="btn-connect" class="btn btn-primary" style="width:100%"
-                            onclick="toggleConnect()">Connect</button>
-                    </div>
-                </div>
-
-                <label>DMX Channels</label>
-                <div id="fix-channels" class="item-list" style="margin-bottom: 15px;">
-                </div>
-
-                <button class="btn btn-primary btn-sm" onclick="addChannel()">+ Add Channel</button>
-                <button class="btn btn-primary btn-sm" style="background: var(--accent-alt); color: #000; margin-left: 5px;" onclick="window.location.href='fixture_ai.html?v=' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : Date.now())">🪄 Add new profile (AI)</button>
-                <hr style="border:0; border-top:1px solid #333; margin: 20px 0;">
-                <button class="btn btn-primary" onclick="saveFixture()">💾 Save Fixture Profile</button>
-            </div>
-
-            <div class="card">
-                <div class="card-title" style="color: var(--text-dim); border: none; padding: 0; margin-bottom: 20px;">Saved Fixtures</div>
-                
-                <hr style="border:0; border-top:1px solid #333; margin: 15px 0;">
-                <div class="card-title" style="font-size: 0.9rem; color: var(--accent); border:none; margin-bottom: 10px;">Active Fixtures (On Stage)</div>
-                <div id="active-fixtures-list" class="item-list"></div>
-                
-                <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
-                <div class="card-title" style="font-size: 0.9rem; color: var(--text-dim); border:none; margin-bottom: 10px;">Fixture Library</div>
-                <div id="saved-fixtures-list" class="item-list"></div>
-            </div>
-            <datalist id="function-suggestions"></datalist>
-        </div>
 
         <div id="tab-profile" class="tab-content active">
             <div id="profile-list-view">
                 <div class="row" style="justify-content:space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="margin:0; border:none; padding:0;">Behavior Profiles</h2>
-                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 10px;">
                         <button class="btn btn-primary" onclick="createNewProfile()">+ New Profile</button>
-                        <button class="btn btn-primary" style="background: linear-gradient(45deg, var(--accent), var(--accent-alt)); color: #000; font-weight: 800;" onclick="window.location.href='fixture_ai.html?mode=existing&v=' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : Date.now())">✨ Add new profile (AI)</button>
+                        <button class="btn btn-primary" onclick="window.location.href='fixture_ai.html?mode=existing&v=' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : Date.now())">Auto Add</button>
+                        <button class="btn" onclick="document.getElementById('load-behavior-input').click()">Load Profile</button>
                     </div>
                 </div>
                 <p style="color:var(--text-dim); margin-top: -10px; margin-bottom: 20px;">Behavior Set Up: Ranges and Reactivity - Assign DMX value ranges and reactivity profile. This will determine how each channel reacts to the music.</p>
@@ -1193,7 +1245,7 @@
                     <div id="active-profiles-list" class="item-list"></div>
                     
                     <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
-                    <div class="card-title" style="font-size: 0.9rem; color: var(--text-dim); border:none; margin-bottom: 10px;">Behavior Library</div>
+                    <div class="card-title" style="font-size: 0.9rem; color: var(--text-dim); border:none; margin-bottom: 10px;">All Profiles:</div>
                     <div id="saved-profiles-list" class="item-list"></div>
                 </div>
             </div>
@@ -1207,22 +1259,25 @@
                             style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">
                             IDLE</div>
                     </div>
-                    <button class="btn btn-primary" onclick="saveProfile()">💾 Save Profile</button>
-                    <button class="btn btn-primary" style="margin-left: 5px; background: linear-gradient(45deg, var(--accent), var(--accent-alt)); color: #000; font-weight: 800;" onclick="refineProfileGlobal()">✨ Refine Profile</button>
-                    <button class="btn" style="margin-left: 5px;" onclick="downloadBehaviorProfile()">📥 Download Behavior</button>
-                    <button class="btn" style="margin-left: 5px;" onclick="document.getElementById('load-behavior-input').click()">📤 Load Behavior</button>
+                    <button class="btn btn-primary" onclick="saveProfile()" title="Sync changes to the server backend">Save Profile</button>
+                    <button class="btn" style="margin-left: 5px;" onclick="duplicateProfile()">Duplicate</button>
+                    <button class="btn btn-primary" style="margin-left: 5px;" onclick="refineProfileGlobal()">Refine Profile</button>
+                    <button class="btn" style="margin-left: 5px;" onclick="addProfileChannel()">➕ Add Channel</button>
+                    <button class="btn" style="margin-left: 5px;" onclick="downloadBehaviorProfile()">Export JSON</button>
                     <input type="file" id="load-behavior-input" style="display:none" onchange="loadBehaviorProfile(event)">
                 </div>
+                <div id="ai-loading-container" style="display:none; margin-bottom: 20px;">
+                     <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; position: relative;">
+                          <div id="ai-loading-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; position: absolute; top:0; left:0;"></div>
+                     </div>
+                     <div id="ai-loading-text" style="font-size: 10px; color: var(--accent); text-align: right; margin-top: 4px; font-weight: bold; text-transform: uppercase;">Processing...</div>
+                </div>
 
-                <div class="card">
-                    <div class="form-row" style="grid-template-columns: 1fr 1fr;">
-                        <div style="display:none">
-                            <label>Reference Fixture <small style="color:#666">(Fixture Template - Sets channel structure)</small></label>
-                            <select id="prof-base-fixture" onchange="loadProfileChannels()"></select>
-                        </div>
-                        <div>
+                    <div class="form-row">
+                        <div style="flex:1">
                             <label>Profile Label</label>
                             <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
+                            <input type="hidden" id="prof-base-fixture">
                         </div>
                     </div>
                     <div id="prof-mappings" style="margin-top: 10px;"></div>
@@ -1299,22 +1354,9 @@
                         style="margin-top:15px; background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid #333;">
                         <label>Active Triggers</label>
                         <div id="pres-active-triggers" style="margin-bottom:10px;"></div>
-
-                        <div class="form-row"
-                            style="grid-template-columns: 2fr 1fr; align-items: end; gap:10px; margin-top:10px; border-top:1px solid #333; padding-top:10px;">
-                            <div>
-                                <label>IF:</label>
-                                <select id="pres-new-trigger-cat">
-                                    <option value="manual">Manual Activation</option>
-                                    <option value="vibe">Vibe Change</option>
-                                    <option value="state">Performance State</option>
-                                    <option value="volume">Overall Volume</option>
-                                    <option value="bin">Frequency Bin</option>
-                                    <option value="channel">Channel</option>
-                                    <option value="function">Function</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-primary" onclick="addTriggerToCurrentPreset()">AND</button>
+                        
+                        <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; text-align:right;">
+                            <button class="btn btn-primary" onclick="addEmptyTrigger()">+ AND (Add Condition)</button>
                         </div>
                     </div> <!-- Closes line 637 Trigger Box -->
                 </div> <!-- Closes line 632 form-row -->
@@ -1326,20 +1368,18 @@
                     <label style="font-size:1.1rem; font-weight:bold; color:var(--accent);">THEN:</label>
                     <div class="form-row" style="grid-template-columns: 1.5fr 1.5fr auto; align-items: end;">
                         <div>
-                            <label>Channel (Stage Instance)</label>
-                            <select id="pres-add-stage-fix"
-                                onchange="if(this.value) document.getElementById('pres-add-global-func').value=''">
-                                <option value="">-- Select Instance --</option>
+                            <label>Target Fixture</label>
+                            <select id="pres-add-stage-fix">
+                                <option value="global">ALL FIXTURES (Global)</option>
                             </select>
                         </div>
                         <div>
-                            <label>Function (Global)</label>
-                            <select id="pres-add-global-func"
-                                onchange="if(this.value) document.getElementById('pres-add-stage-fix').value=''">
+                            <label>Target Function</label>
+                            <select id="pres-add-global-func">
                                 <option value="">-- Select Function --</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary" onclick="addOverrideToCurrentPreset()">THEN</button>
+                        <button class="btn btn-primary" onclick="addOverrideToCurrentPreset()">ADD ACTION</button>
                     </div>
                 </div>
 
@@ -1413,6 +1453,30 @@
                 </div>
             </div>
 
+            <!-- VIBE BREEDER HUB (RENAMED TO SPEED DATE) -->
+            <div id="vibe-breeder-hub" style="margin-top: 20px; display: none;">
+                <div class="card" style="border-color: var(--accent); background: rgba(var(--accent-rgb), 0.05); padding: 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0; color:var(--accent);">🧬 Profile Litmus Test (Gen <span id="breeder-gen-text">1</span>)</h3>
+                        <div style="display:flex; gap:10px;">
+                            <button id="btn-breeder-start" class="btn btn-sm btn-primary" onclick="startVibeBreeder()">Start AI Litmus Test</button>
+                            <div id="breeder-active-controls" style="display:none; display:flex; gap:8px;">
+                                <button class="btn btn-sm btn-primary" onclick="keepAndBreedSelected()" title="Breed new variations from selected (Thumbs Up) items">Next Generation</button>
+                                <button class="btn btn-sm btn-success" onclick="saveFinalMutant()" title="Save currently auditioned variation as a NEW permanent profile">💾 Finalize As New</button>
+                                <button id="btn-breeder-cancel" class="btn btn-sm" style="background:transparent; border:1px solid #666;" onclick="cancelVibeBreeder()">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="breeder-options-container" style="display:none; margin-top:15px;">
+                        <p style="font-size:0.8rem; color:var(--text-dim);">Audition a variation, then use 👍/👎. Use <b>Next Generation</b> to evolve your favorites or <b>Finalize</b> to save the current sync as a new profile.</p>
+                        <div id="breeder-cards-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ENSEMBLE STRIPS -->
             <div id="test-ensemble-strips" style="margin-top: 10px;">
                 <div id="test-empty-state" style="padding:40px; text-align:center; color:#444; border:2px dashed #222; border-radius:12px;">
@@ -1447,6 +1511,7 @@
 
         savedHost = localStorage.getItem('vj_backend_host');
         const host = savedHost || (onHostedDomain ? '' : window.location.hostname);
+        const isCustomSubdomain = window.location.hostname.endsWith('.ravebox.love') && !onHostedDomain;
         const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
 
         // Smart Tunnel: Resolve secret codes to *.ravebox.love
@@ -1457,10 +1522,10 @@
         const apiHost = isCustomTunnel ? 'api-' + baseHost : host;
         const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
 
-        const API_BASE_ROOT = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? apiHost : apiHost + ':8000'))) : (window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : ""));
-        const BACKEND_ROOT = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'ravebox.love' : (isCustomTunnel ? baseHost : baseHost + ':8000'))) : (window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : ""));
+        const API_BASE_ROOT = isCustomTunnel ? (window.location.protocol + "//" + apiHost) : (isCustomSubdomain ? (window.location.protocol + "//" + window.location.host) : (host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : apiHost + ':8000')) : (window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : ""))));
+        const BACKEND_ROOT = isCustomTunnel ? (window.location.protocol + "//" + baseHost) : (isCustomSubdomain ? (window.location.protocol + "//" + window.location.host) : (host ? (window.location.protocol + "//" + (isOriginalCloud ? 'ravebox.love' : baseHost + ':8000')) : (window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : ""))));
         const API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-        const APP_VERSION = "43262226"; // Updated by deploy.sh
+        const APP_VERSION = "46260808"; // Updated by deploy.sh
 
         let db;
         try {
@@ -1475,15 +1540,21 @@
         }
 
         // --- AI Profile Tuning State ---
-        let pendingAiInstructions = {}; // { 'chIdx_ruleIdx': 'instruction', 'chIdx': 'channel_instruction' }
+        let pendingAiInstructions = {}; 
         let isProcessingAi = false;
-        if (!db.fixtures) db.fixtures = [];
+        let tempChannels = [];
+        let latestOverrides = new Set();
+        let collapsedChannels = new Set();
+        let hiddenTestChannels = JSON.parse(localStorage.getItem('vj_hidden_test_channels') || '{}');
+        let dmx_connected = false;
+        let audioEngineActive = true;
+        let globalFunctions = new Set();
+        let current_editing_fixture_id = null;
+        let selected_offset_idx = -1;
+
         if (!db.profiles) db.profiles = [];
         if (!db.stage) db.stage = [];
         if (!db.presets) db.presets = [];
-
-        let tempChannels = [];
-        let collapsedChannels = new Set();
 
         // --- 2. TAB NAVIGATION ---
         function toggleSidebar() {
@@ -1492,17 +1563,14 @@
 
         function switchTab(tabId, skipReset = false) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            // Support calling from elements that are not nav-btns (pass null for event.target check if needed, but nav uses event.target)
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
             const targetTab = document.getElementById(tabId);
             if (targetTab) targetTab.classList.add('active');
 
-            // Find the nav button by data-tab or innerText if possible
             const navBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
             if (navBtn) navBtn.classList.add('active');
 
-            // Special reset for Profile Editor
             if (tabId === 'tab-profile' && !skipReset) {
                 showProfileList();
             }
@@ -1513,43 +1581,41 @@
                 renderTestTab();
             }
         }
-
-        // --- 3. FIXTURE BUILDER LOGIC ---
-        let selected_offset_idx = -1;
-        let current_editing_fixture_id = null; // Track which fixture we are editing
-        let dmx_connected = false;
-        let audioEngineActive = true;
-        let globalFunctions = new Set();
-
-        function renderFunctionList() {
-            const list = document.getElementById('function-suggestions');
-            if (!list) return;
-            list.innerHTML = Array.from(globalFunctions).sort().map(f => `<option value="${f}">`).join('');
-        }
-
+        
+        // --- 3. UNIFIED PROFILE LOGIC ---
         function updateUniqueFunctions() {
             globalFunctions.clear();
-            
-            // Add PREMADES as source of truth suggestions
-            if (typeof BEHAVIORS !== 'undefined') {
-                BEHAVIORS.filter(b => b.id.startsWith('pre')).forEach(b => {
-                    globalFunctions.add(b.label);
-                });
-            }
-            // Add standard function identifier fallbacks
-            ['X Position', 'Y Position', 'Pattern', 'Intensity', 'Zoom', 'Strobe', 'Color', 'Rotation', 'Drawing'].forEach(f => globalFunctions.add(f));
 
-            // Only collect roles from profiles active in the stage
             const activeProfileIds = new Set(db.stage.map(s => s.profileId));
             const activeProfiles = db.profiles.filter(p => activeProfileIds.has(p.id));
-            const activeFixtureIds = new Set(activeProfiles.map(p => p.fixtureId));
-            const activeFixtures = db.fixtures.filter(f => activeFixtureIds.has(f.id));
-
-            activeFixtures.forEach(f => {
-                f.channels.forEach(ch => { if (ch.role) globalFunctions.add(ch.role); });
+            activeProfiles.forEach(p => {
+                const channels = p.channels || [];
+                channels.forEach(ch => { if (ch.role) globalFunctions.add(ch.role); });
             });
-            renderFunctionList();
+            const list = document.getElementById('function-suggestions');
+            if (list) list.innerHTML = Array.from(globalFunctions).sort().map(f => `<option value="${f}">`).join('');
+            
+            const funcSelect = document.getElementById('pres-add-global-func');
+            if (funcSelect) {
+                const currentVal = funcSelect.value;
+                funcSelect.innerHTML = '<option value="">-- Select Function --</option>' + 
+                    Array.from(globalFunctions).sort().map(f => `<option value="${f}">${f}</option>`).join('');
+                if (currentVal && Array.from(globalFunctions).includes(currentVal)) {
+                    funcSelect.value = currentVal;
+                }
+            }
         }
+
+        function addChannel() {}
+        function renderTempChannels() {}
+        function selectOffset() {}
+        function updateValue() {}
+        function adjustValue() {}
+        function applyLaserOverride() {}
+        function saveFixture() {}
+        function downloadFixtureProfile() {}
+        function loadFixtureProfile() {}
+
 
         function addChannel() {
             const num = tempChannels.length;
@@ -1647,8 +1713,7 @@
                 if (db.stage.some(s => {
                     const instAddr = parseInt(s.address) || 0;
                     const profile = db.profiles.find(p => p.id === s.profileId);
-                    const instFixture = profile ? db.fixtures.find(f => f.id === profile.fixtureId) : null;
-                    const instCount = instFixture ? instFixture.channels.length : 1;
+                    const instCount = profile ? (profile.channels?.length || 1) : 1;
                     return i >= instAddr && i < instAddr + instCount;
                 })) {
                     occupied = true;
@@ -1709,51 +1774,8 @@
             checkAddrOccupied();
         }
 
-        async function saveFixture(silent = false) {
-            const name = document.getElementById('fix-name').value;
-            if (!name) return alert("Need a fixture name");
+        function saveFixture() { console.error("Fixture Builder is deprecated."); }
 
-            const fixtureData = { 
-                id: current_editing_fixture_id || ('fix_' + Date.now()), 
-                name: name, 
-                channels: [...tempChannels] 
-            };
-
-            // Save individual file
-            const fileName = `configs/${name.replace(/\s+/g, '_')}.json`;
-            try {
-                const res = await fetch(`${API_BASE}/${fileName}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(fixtureData)
-                });
-                if (!res.ok) throw new Error("Failed to save fixture config");
-                
-                // Update local memory
-                const idx = db.fixtures.findIndex(f => f.id === fixtureData.id);
-                if (idx !== -1) db.fixtures[idx] = fixtureData;
-                else db.fixtures.push(fixtureData);
-                
-                if (silent) current_editing_fixture_id = fixtureData.id;
-            } catch (err) {
-                alert("Error saving fixture: " + err.message);
-                return;
-            }
-
-            if (silent) {
-                refreshUI();
-                return;
-            }
-
-            // Clear state
-            document.getElementById('fix-name').value = '';
-            tempChannels = [];
-            selected_offset_idx = -1;
-            current_editing_fixture_id = null;
-            updateUniqueFunctions();
-            renderTempChannels();
-            refreshUI();
-        }
 
         function downloadFixtureProfile() {
             const name = document.getElementById('fix-name').value;
@@ -1796,37 +1818,7 @@
             reader.readAsText(file);
         }
 
-        // Keyboard Navigation
-        window.addEventListener('keydown', (e) => {
-            // Only capture if in fixture tab and no inputs are focused (except maybe ranges)
-            if (document.getElementById('tab-fixture').classList.contains('active')) {
-                const focused = document.activeElement.tagName;
-                if (focused === 'INPUT' && document.activeElement.type === 'text') return;
-
-                if (tempChannels.length === 0) return;
-
-                if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    selected_offset_idx = Math.max(0, (selected_offset_idx === -1) ? 0 : selected_offset_idx - 1);
-                    renderTempChannels();
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (selected_offset_idx === -1) selected_offset_idx = 0;
-                    else selected_offset_idx = Math.min(tempChannels.length - 1, selected_offset_idx + 1);
-                    renderTempChannels();
-                } else if (e.key === 'ArrowLeft') {
-                    if (selected_offset_idx !== -1) {
-                        e.preventDefault();
-                        adjustValue(selected_offset_idx, -1);
-                    }
-                } else if (e.key === 'ArrowRight') {
-                    if (selected_offset_idx !== -1) {
-                        e.preventDefault();
-                        adjustValue(selected_offset_idx, 1);
-                    }
-                }
-            }
-        });
+        // Keyboard Navigation Removed (Use Test Hub)
 
         // --- 4. PROFILE BUILDER LOGIC ---
         const BIN_LABELS = [
@@ -1854,146 +1846,70 @@
         ];
 
         const BEHAVIORS = [
-            { id: 'static', label: 'Static Value' },
-            { id: 'direct', label: 'Direct Mapping' },
-            { id: 'lfo', label: 'Continuous Wave (LFO)' },
-            { id: 'pre_zoom_mel', label: 'Zoom (Melody)' },
-            { id: 'pre_zoom_rhy', label: 'Zoom (Rhythm)' },
-            { id: 'pre_rot_mel', label: 'Rotation (Melody)' },
-            { id: 'pre_rot_rhy', label: 'Rotation (Rhythm)' },
-            { id: 'pre_x_mel', label: 'X Pos (Melody)' },
-            { id: 'pre_y_mel', label: 'Y Pos (Melody)' },
-            { id: 'pre_move_rhy', label: 'Movement (Rhythm)' },
-            { id: 'pre_grate_mel', label: 'Grating (Melody)' },
-            { id: 'pre_strobe_rhy', label: 'Strobe (Rhythm)' },
-            { id: 'pre_draw_mel', label: 'Drawing (Melody)' },
-            { id: 'pre_pat_mel', label: 'Pattern (Melody)' },
-            { id: 'pre_pat_rhy', label: 'Pattern (Rhythm)' }
+            { id: 'static', label: 'Static' },
+            { id: 'direct', label: 'Direct' },
+            { id: 'lfo', label: 'LFO' },
+            { id: 'cycle', label: 'Rhythm' },
+            { id: 'random', label: 'Random' }
+        ];
+
+        const EASY_DESCRIPTORS = [
+            { id: 'pulse_beat', label: 'Pulse with Beat', behavior: 'lfo', source: 'beat', shape: 'sawtooth', speed: 1.0 },
+            { id: 'smooth_drift', label: 'Smooth Drift (Flux)', behavior: 'lfo', source: 'flux', shape: 'sine', speed: 0.2 },
+            { id: 'bass_pump', label: 'Bass Pump (0)', behavior: 'direct', source: 'bass', bin: 0, smoothing: 0.5 },
+            { id: 'wavy_shimmer', label: 'Wavy Shimmer', behavior: 'lfo', source: 'raw', shape: 'sine', speed: 0.8 },
+            { id: 'rapid_climb', label: 'Rapid Climb', behavior: 'lfo', source: 'raw', shape: 'sawtooth', speed: 1.2 },
+            { id: 'snap_phrase', label: 'Snap to Phrase', behavior: 'direct', source: 'phrase', smoothing: 0 },
+            { id: 'static_hold', label: 'Hold Fixed Value', behavior: 'static' },
+            { id: 'cycle_random', label: 'Random - On Beat', behavior: 'random', source: 'beat' },
+            { id: 'cycle_slow', label: 'Random - On Bar', behavior: 'random', source: 'bar' },
+            { id: 'macro_fast', label: 'Fasting Ramping', behavior: 'lfo', source: 'beat', shape: 'sawtooth', speed: 1.5 },
+            { id: 'jitter_center', label: 'Jitter Around Center', behavior: 'direct', source: 'flux', smoothing: 0.1 }
         ];
 
         const SOURCES = [
             { id: 'raw', label: 'Raw Volume' },
             { id: 'ratio', label: 'Harmonic Ratio (Timbre)' },
             { id: 'attack', label: 'Attack Velocity (Impact)' },
-            { id: 'flux', label: 'Spectral Flux' }
+            { id: 'flux', label: 'Spectral Flux' },
+            { id: 'beat', label: 'Beat (Cycle)' },
+            { id: 'bar', label: '4th Beat (Bar)' }
         ];
 
-        function updateFreqBinRange(chIdx, ruleIdx, binIdx, key, val) {
+
+
+         function updateFreqBinRange(chIdx, ruleIdx, binIdx, key, val) {
             if (!currentProfileMappings[chIdx][ruleIdx].freq_bins) {
                 currentProfileMappings[chIdx][ruleIdx].freq_bins = Array(6).fill(0).map(() => ({ min: 0, max: 255 }));
             }
             const finalVal = isNaN(val) ? null : val;
             currentProfileMappings[chIdx][ruleIdx].freq_bins[binIdx][key] = finalVal;
-            dirtyChannels.add(parseInt(chIdx));
         }
 
         let currentProfileMappings = [];
-        let dirtyChannels = new Set();
 
-        function applyPremadeLogic(mapping, val) {
-            if (val === 'pre_zoom_mel') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'attack';
-                mapping.bin_idx = 2; // Mids
-                mapping.lfo = { shape: 'sine', speed: 0.1, react: 0.75, return_to_min: true, threshold: 0.1, hold: 0.3, invert: false, smoothing: 0.2 };
-            } else if (val === 'pre_zoom_rhy') {
-                mapping.behavior = 'direct';
-                mapping.source = 'flux';
-                mapping.bin_idx = 0; // Bass
-                mapping.audio = { smoothing: 0, threshold: 0.4, react: 2.0 };
-            } else if (val === 'pre_rot_mel') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'ratio';
-                mapping.bin_idx = 4; // Highs
-                mapping.lfo = { shape: 'sawtooth', speed: 0.2, react: 0.5, return_to_min: false, threshold: 0, hold: 0, invert: false, smoothing: 0.5 };
-            } else if (val === 'pre_rot_rhy') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'raw';
-                mapping.bin_idx = 0; // Bass
-                mapping.lfo = { shape: 'sine', speed: 0.5, react: 1.2, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0.8 };
-            } else if (val === 'pre_x_mel') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'attack';
-                mapping.bin_idx = 2; // Mids
-                mapping.lfo = { shape: 'sine', speed: 0.05, react: 0.3, return_to_min: false, threshold: 0, hold: 0, invert: false, smoothing: 0.9 };
-            } else if (val === 'pre_y_mel') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'attack';
-                mapping.bin_idx = 2; // Mids
-                mapping.lfo = { shape: 'sine', speed: 0.05, react: 0.3, return_to_min: false, threshold: 0, hold: 0.5, invert: true, smoothing: 0.9 };
-            } else if (val === 'pre_move_rhy') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'flux';
-                mapping.bin_idx = 0; // Bass
-                mapping.lfo = { shape: 'triangle', speed: 0.4, react: 1.5, return_to_min: true, threshold: 0.2, hold: 0, invert: false, smoothing: 0.5 };
-            } else if (val === 'pre_grate_mel') {
-                mapping.behavior = 'direct';
-                mapping.source = 'ratio';
-                mapping.bin_idx = 5; // Air
-                mapping.audio = { smoothing: 0.8, threshold: 0.3, react: 1.5 };
-            } else if (val === 'pre_strobe_rhy') {
-                mapping.behavior = 'direct';
-                mapping.source = 'flux';
-                mapping.bin_idx = 0; // Bass
-                mapping.audio = { smoothing: 0, threshold: 0.6, react: 4.0 };
-            } else if (val === 'pre_draw_mel') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'attack';
-                mapping.bin_idx = 1; // Low Mid
-                mapping.lfo = { shape: 'sawtooth', speed: 0.1, react: 0.5, return_to_min: true, threshold: 0.4, hold: 0, invert: false, smoothing: 0 };
-            } else if (val === 'pre_pat_mel') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'attack';
-                mapping.bin_idx = 2; // Mids
-                mapping.lfo = { shape: 'square', speed: 0, react: 1.0, return_to_min: false, threshold: 0.5, hold: 0.8, invert: false, smoothing: 0 };
-            } else if (val === 'pre_pat_rhy') {
-                mapping.behavior = 'lfo';
-                mapping.source = 'flux';
-                mapping.bin_idx = 0; // Bass
-                mapping.lfo = { shape: 'square', speed: 0, react: 0.8, return_to_min: false, threshold: 0.6, hold: 0.4, invert: false, smoothing: 0 };
-            }
-        }
 
-        function updateProfileMapping(chIdx, ruleIdx, key, val) {
-            if (!currentProfileMappings[chIdx]) currentProfileMappings[chIdx] = [];
-            if (!currentProfileMappings[chIdx][ruleIdx]) {
-                currentProfileMappings[chIdx][ruleIdx] = {
-                    vibe: 'any',
-                    mod: 'state_machine',
-                    cal: { min: 0, center: 127, max: 255 },
-                    lfo: { shape: 'sine', bin: 0, speed: 0.5, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 },
-                    audio: { smoothing: 0.5, threshold: 0.5, react: 1.0 },
-                    value: 0
-                };
-            }
-
-            const mapping = currentProfileMappings[chIdx][ruleIdx];
+        function updateProfileMapping(chIdx, ruleIdx, path, val) {
+            const rules = currentProfileMappings[chIdx];
+            const rule = rules[ruleIdx];
             
-            // PREMADE BEHAVIOR LOGIC
-            if (key === 'behavior') {
-                if (val.startsWith('pre_')) {
-                    mapping.premadeId = val;
-                    applyPremadeLogic(mapping, val);
-                } else {
-                    delete mapping.premadeId;
-                    mapping.behavior = val;
-                }
-
-                loadProfileChannels();
-                return;
+            // Core Logic: If they touch a granular slider, the aesthetic is "Custom"
+            if (path.startsWith('lfo.') || path.startsWith('audio.') || path === 'source' || path === 'behavior') {
+                rule.aesthetic_id = 'custom';
             }
 
-            if (key.includes('.')) {
-                const [p, k] = key.split('.');
-                if (!mapping[p]) mapping[p] = {};
-                mapping[p][k] = val;
+            if (path.includes('.')) {
+                const parts = path.split('.');
+                rule[parts[0]][parts[1]] = val;
             } else {
-                mapping[key] = val;
-                if (key === 'mod' || key === 'behavior' || key === 'source') loadProfileChannels();
+                rule[path] = val;
             }
-            dirtyChannels.add(parseInt(chIdx));
+            
+            // Special handling for Premade/Aesthetic overrides
+            if (path === 'behavior') {
+                rule.premadeId = undefined;
+            }
 
-            // AUTO-SYNC TO DATABASE if we are editing an active profile
             if (activeProfileId) {
                 const existing = db.profiles.find(p => p.id === activeProfileId);
                 if (existing) {
@@ -2001,7 +1917,9 @@
                     saveDB();
                 }
             }
+            loadProfileChannels();
         }
+
 
         function addVibeRule(chIdx) {
             if (!currentProfileMappings[chIdx]) currentProfileMappings[chIdx] = [];
@@ -2070,14 +1988,34 @@
                 return;
             }
 
-            const fixId = document.getElementById('prof-base-fixture').value;
-            const fixture = db.fixtures.find(f => f.id === fixId);
+            const fixEl = document.getElementById('prof-base-fixture');
+            const fixId = fixEl ? fixEl.value : null;
+            const fixtureChannels = currentProfileChannels;
             const btn = document.getElementById('ai-process-btn');
 
             if (isProcessingAi) return;
             isProcessingAi = true;
-            btn.innerText = "✨ Processing...";
-            btn.disabled = true;
+            if (btn) {
+                btn.innerText = "📝 Processing...";
+                btn.disabled = true;
+            }
+
+            const loadingContainer = document.getElementById('ai-loading-container');
+            const loadingBar = document.getElementById('ai-loading-bar');
+            const loadingText = document.getElementById('ai-loading-text');
+            if (loadingContainer) {
+                loadingContainer.style.display = 'block';
+                loadingBar.style.width = '10%';
+                loadingBar.style.background = 'var(--accent)';
+                loadingText.innerText = 'Processing...';
+                loadingText.style.color = 'var(--accent)';
+
+                let progress = 10;
+                window.aiProgressInterval = setInterval(() => {
+                    progress += (95 - progress) * 0.15;
+                    loadingBar.style.width = progress + '%';
+                }, 500);
+            }
 
             const systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox.
 Task: Update a behavior profile based on specific user feedback for channels and rules.
@@ -2092,14 +2030,20 @@ GUIDELINES:
 2. EXPANSION EXCEPTION: Only adjust the total range (min/max) if the user explicitly asks to "increase", "expand", or "change" the range.
 3. MULTI-RULE CONTEXT: If multiple vibe rules exist, apply logic for each but maintain the global bounds from the lowest 'min' to highest 'max' defined in the rules.
 4. ENHANCE REACTIVITY: If the user wants more movement, increase LFO speed or audio reaction.
-5. PRESERVE STRUCTURE: Keep the mapping array length identical to the input.
-6. JSON ONLY: Return ONLY the raw JSON array of mappings.
+5. PRESERVE STRUCTURE: YOU MUST RETURN ALL CHANNELS. The mapping array length MUST be exactly ${currentProfileMappings.length}.
+6. SHOW WORK: Return a JSON object with "logic_explanation" (string) and "mappings" (the updated 2D array).
+7. MACRO TRANSFORMATIONS (THE PLAYBOOK): If the user asks for a specific style, apply these exact JSON transformations:
+   - "B-Side" / "Alternate": Toggle 'lfo.invert'. Shift 'bin_idx' to a different frequency band. Select a different 'value' or 'cal.center' for 'index' classes. Swap LFO speeds between X and Y axes if present.
+   - "Rhythmic" / "Punchy": Change 'lfo.shape' to 'square' or 'sawtooth'. Change 'source' to 'attack', 'beat', or 'flux'. Set 'audio.smoothing' low (<0.2) and 'lfo.react' high (1.0). Greatly reduce any position functions to stay near the center of the first sub range entered. Keep rotation functions near their min.
+   - "Liquid" / "Smooth": Change 'lfo.shape' to 'sine'. Change 'source' to 'ratio' or 'raw'. Halve the 'lfo.speed'. Set 'audio.smoothing' high (>0.8).
+8. THE PHYSICAL GUARDRAIL: You are STRICTLY FORBIDDEN from altering 'cal.min' or 'cal.max' boundaries unless the user explicitly requests a wider or narrower physical sweep. Changing these boundaries can crash hardware macros. Only alter the behavior within those bounds.
+9. GLOBAL REFINEMENT: If instructions mention "[GLOBAL REFINEMENT]", apply that logic across ALL channels.
 
 Input Profile Mappings: ${JSON.stringify(currentProfileMappings)}
-Fixture Context: ${JSON.stringify(fixture ? fixture.channels : [])}
+Fixture Context: ${JSON.stringify(fixtureChannels)}
 User Instructions: ${JSON.stringify(pendingAiInstructions)}
 
-Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what is requested or implied by feedback.
+Output: Valid raw JSON object only.
 `;
 
             try {
@@ -2115,20 +2059,34 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                 if (data.error) throw new Error(data.error.message);
                 
                 const responseText = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/^```json|```$/g, "").trim();
-                let newMappings = null;
+                let aiResult = null;
                 try {
-                    newMappings = JSON.parse(responseText);
+                    aiResult = JSON.parse(responseText);
                 } catch(e) {
                     // Try stripping any wrapping text
-                    const match = responseText.match(/\[.*\]/s);
-                    if (match) newMappings = JSON.parse(match[0]);
+                    const match = responseText.match(/\{.*\}/s);
+                    if (match) aiResult = JSON.parse(match[0]);
                 }
 
-                if (newMappings && !Array.isArray(newMappings) && newMappings.mappings) {
-                    newMappings = newMappings.mappings;
+                if (!aiResult) throw new Error("AI returned invalid JSON.");
+
+                let newMappings = aiResult.mappings || aiResult;
+                const logicLog = aiResult.logic_explanation || "";
+
+                if (!Array.isArray(newMappings)) {
+                    // Fallback search for array
+                    const matchArr = responseText.match(/\[.*\]/s);
+                    if (matchArr) newMappings = JSON.parse(matchArr[0]);
                 }
 
                 if (!Array.isArray(newMappings)) throw new Error("AI returned invalid mapping format (expected array).");
+
+                // Update UI log
+                const logEl = document.getElementById('ai-response-log');
+                if (logEl) {
+                    logEl.innerText = logicLog;
+                    logEl.style.display = 'block';
+                }
 
                 // Auto-sync back to the actual profile object
                 currentProfileMappings = newMappings;
@@ -2143,16 +2101,33 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                 pendingAiInstructions = {}; // Clear after success
                 loadProfileChannels();
                 updateAiReviewBar();
-                alert("✨ Updates applied to behavior!");
+                if (loadingContainer) {
+                    clearInterval(window.aiProgressInterval);
+                    loadingBar.style.width = '100%';
+                    loadingText.innerText = 'Done!';
+                    loadingText.style.color = 'var(--success)';
+                }
             } catch (err) {
                 console.error(err);
-                alert("AI Processing failed: " + err.message);
+                if (loadingContainer) {
+                    clearInterval(window.aiProgressInterval);
+                    loadingBar.style.width = '100%';
+                    loadingBar.style.background = 'var(--danger)';
+                    loadingText.innerText = 'Failed: ' + err.message;
+                    loadingText.style.color = 'var(--danger)';
+                }
             } finally {
                 isProcessingAi = false;
                 if (btn) {
                     btn.innerText = "Review & Apply";
                     btn.disabled = false;
                 }
+                setTimeout(() => {
+                    if (loadingContainer) {
+                        loadingContainer.style.display = 'none';
+                        loadingBar.style.width = '0%';
+                    }
+                }, 3000);
             }
         }
 
@@ -2200,6 +2175,8 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
         async function refineProfileGlobal() {
             const modal = document.getElementById('ai-refine-modal');
             const textarea = document.getElementById('ai-master-textarea');
+            const logEl = document.getElementById('ai-response-log');
+            if (logEl) logEl.style.display = 'none';
             
             // Build the aggregated prompt
             let aggregatedPrompt = "";
@@ -2209,32 +2186,47 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                 aggregatedPrompt += pendingAiInstructions["global_instruction"] + "\n";
             }
             
-            aggregatedPrompt += "----------------------------------\n";
-            
             // Find all channels
             const activeProfile = activeProfileId ? db.profiles.find(p => p.id === activeProfileId) : null;
-            const fixId = document.getElementById('prof-base-fixture').value;
-            const legacyFix = db.fixtures.find(f => f.id === fixId);
+            const fixId = document.getElementById('prof-base-fixture') ? document.getElementById('prof-base-fixture').value : null;
+            const legacyFix = (db.fixtures && fixId) ? db.fixtures.find(f => f.id === fixId) : null;
             const channelsList = (activeProfile && activeProfile.channels) ? activeProfile.channels : (legacyFix ? legacyFix.channels : []);
             
             let hasChannelPrompts = false;
             channelsList.forEach((ch, idx) => {
                 if (pendingAiInstructions[idx]) {
+                    aggregatedPrompt += `----------------------------------\n`;
                     aggregatedPrompt += `ch${idx + 1}: ${pendingAiInstructions[idx]}\n`;
-                    aggregatedPrompt += "----------------------------------\n";
                     hasChannelPrompts = true;
                 }
             });
             
-            if (!aggregatedPrompt.trim() || aggregatedPrompt.includes("----------------------------------\n----------------------------------")) {
-                // If empty or just global empty, start fresh
-                if (!hasChannelPrompts && !pendingAiInstructions["global_instruction"]) {
-                    aggregatedPrompt = "make everything faster\n----------------------------------\n";
-                }
+            if (!aggregatedPrompt.trim()) {
+                aggregatedPrompt = "----------------------------------\n";
+            } else if (!aggregatedPrompt.includes("----------------------------------")) {
+                 aggregatedPrompt += "\n----------------------------------\n";
             }
             
             textarea.value = aggregatedPrompt;
             modal.classList.add('active');
+            textarea.focus();
+        }
+
+        function appendAiSuggestion(type) {
+            const textarea = document.getElementById('ai-master-textarea');
+            let text = "";
+            if (type === 'bside') {
+                text = "\n[GLOBAL REFINEMENT]: Create a 'B-Side' variant of this profile. Apply the B-Side playbook rules to invert polarities, shift EQ bins, and pick new static patterns within the existing boundaries.";
+            } else if (type === 'rhythm') {
+                text = "\n[GLOBAL REFINEMENT]: Make this profile highly Rhythmic and punchy. Apply the Rhythmic playbook rules to snap waveforms to the beat and attacks, removing smooth sweeps. Greatly reduce position functions to stay near center of their first sub range, and keep rotations near min.";
+            } else if (type === 'liquid') {
+                text = "\n[GLOBAL REFINEMENT]: Make this profile Liquid and ambient. Apply the Liquid playbook rules to slow down LFOs, use sine waves, and heavily smooth the audio reactions.";
+            }
+            
+            if (textarea.value.trim() && !textarea.value.endsWith("\n")) {
+                textarea.value += "\n";
+            }
+            textarea.value += text;
             textarea.focus();
         }
 
@@ -2283,296 +2275,306 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
         }
         function loadProfileChannels() {
             const activeProfile = activeProfileId ? db.profiles.find(p => p.id === activeProfileId) : null;
-            const fixId = document.getElementById('prof-base-fixture').value;
-            const legacyFix = db.fixtures.find(f => f.id === fixId);
+            if (currentProfileChannels.length === 0 || !activeProfileId) {
+                currentProfileChannels = (activeProfile && activeProfile.channels) ? activeProfile.channels : [];
+                if (currentProfileChannels.length === 0) {
+                     // Start with a default channel if brand new
+                     currentProfileChannels = [{ name: 'Master Dimmer', role: 'dimmer', default: 0 }];
+                }
+            }
 
-            const channels = (activeProfile && activeProfile.channels) ? activeProfile.channels : (legacyFix ? legacyFix.channels : []);
+            const channels = currentProfileChannels;
             const container = document.getElementById('prof-mappings');
 
             if (channels.length === 0) { container.innerHTML = ''; return; }
 
             // Initialize mappings if empty or length mismatch
             if (currentProfileMappings.length === 0 || currentProfileMappings.length !== channels.length) {
-                // Check if old format (object instead of array of rules)
                 const isOldFormat = currentProfileMappings.length > 0 && !Array.isArray(currentProfileMappings[0]);
 
                 if (isOldFormat) {
                     currentProfileMappings = currentProfileMappings.map(m => ([{
                         vibe: 'any',
+                        mechanical_class: 'unverified',
                         behavior: m.behavior || m.mod || 'direct',
                         cal: m.cal || { min: 0, center: 127, max: 255 },
-                        lfo: m.lfo || { shape: 'sine', speed: 0.1, react: 0.5 },
-                        audio: m.audio || { smoothing: 0.5, threshold: 0.5, react: 1.0 },
-                        value: m.value || 0
+                        lfo: { shape: 'sine', bin: 0, speed: 0.1, react: 0.5 },
+                        audio: { smoothing: 0.5, threshold: 0.5, react: 1.0 },
+                        value: 0
                     }]));
                 } else {
                     currentProfileMappings = channels.map((ch) => {
-                        let defaultBehavior = 'static';
-                        let prepPremadeId = undefined;
-                        
-                        // 1. Check exact match with Smart Behaviors from the dropdown
-                        const matchingPre = BEHAVIORS.find(b => b.label === ch.role);
-                        if (matchingPre) {
-                            defaultBehavior = matchingPre.id;
-                            prepPremadeId = matchingPre.id;
-                        } else {
-                            // 2. Fallback fuzzy matching for known legacy labels
-                            const r = (ch.role || "").toLowerCase();
-                            if (r === 'x_pos' || r.includes('x pos') || r === 'x') { defaultBehavior = 'pre_x_mel'; prepPremadeId = 'pre_x_mel'; }
-                            else if (r === 'y_pos' || r.includes('y pos') || r === 'y') { defaultBehavior = 'pre_y_mel'; prepPremadeId = 'pre_y_mel'; }
-                            else if (r === 'pattern' || r === 'gobo') { defaultBehavior = 'pre_pat_mel'; prepPremadeId = 'pre_pat_mel'; }
-                            else if (r === 'intensity' || r === 'dimmer') { defaultBehavior = 'pre_move_rhy'; prepPremadeId = 'pre_move_rhy'; }
-                            else if (r === 'zoom') { defaultBehavior = 'pre_zoom_mel'; prepPremadeId = 'pre_zoom_mel'; }
-                        }
-
-                        let baseRule = {
+                        return [{
                             vibe: 'any',
-                            behavior: defaultBehavior,
-                            premadeId: prepPremadeId,
+                            mechanical_class: 'unverified',
+                            behavior: 'static',
                             source: 'raw',
                             cal: { min: 0, center: 127, max: 255 },
                             lfo: { shape: 'sine', bin: 0, speed: 0.5, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 },
                             audio: { smoothing: 0.5, threshold: 0.5, react: 1.0 },
                             value: 0
-                        };
-
-                        if (prepPremadeId) applyPremadeLogic(baseRule, prepPremadeId);
-                        
-                        return [baseRule];
+                        }];
                     });
                 }
             }
             
-            // Final Size Check & Padding (Prevents "Blank" Profiles due to AI length issues)
-            if (currentProfileMappings.length < channels.length) {
-                console.warn(`Profile channel mismatch: expected ${channels.length}, got ${currentProfileMappings.length}. Padding...`);
-                while (currentProfileMappings.length < channels.length) {
-                    currentProfileMappings.push([{ vibe: 'any', behavior: 'static', source: 'raw', cal: { min: 0, center: 127, max: 255 }, lfo: { shape: 'sine', bin: 0, speed: 0.25, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 }, audio: { smoothing: 0.5, threshold: 0.5, react: 1.0 }, value: 0 }]);
+            // Final Size Check & Padding / Migration
+            currentProfileMappings = currentProfileMappings.map(rules => {
+                if (!Array.isArray(rules)) rules = [rules];
+                if (rules.length === 0) {
+                    rules = [{ vibe: 'any', mechanical_class: 'unverified', aesthetic_id: 'custom', behavior: 'static', source: 'raw', cal: { min: 0, center: 127, max: 255 }, lfo: { shape: 'sine', bin: 0, speed: 0.25, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 }, audio: { smoothing: 0.5, threshold: 0.5, react: 1.0 }, value: 0 }];
                 }
-            } else {
-                // Migration check during active interaction
-                currentProfileMappings = currentProfileMappings.map(rules => {
-                    if (!Array.isArray(rules)) rules = [rules];
-                    if (rules.length === 0) {
-                        rules = [{ vibe: 'any', behavior: 'static', source: 'raw', cal: { min: 0, center: 127, max: 255 }, lfo: { shape: 'sine', bin: 0, speed: 0.25, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 }, audio: { smoothing: 0.5, threshold: 0.5, react: 1.0 }, value: 0 }];
+                return rules.map(rule => {
+                    if (!rule.behavior) {
+                        const mod = rule.mod || 'static';
+                        rule.behavior = (mod === 'lfo') ? 'lfo' : 'direct';
                     }
-                    return rules.map(rule => {
-                        if (!rule.behavior) {
-                            const mod = rule.mod || 'static';
-                            if (mod === 'lfo') rule.behavior = 'lfo';
-                            else if (mod === 'beat' || mod === '4th beat' || mod === 'cycle') rule.behavior = 'direct';
-                            else if (mod === 'static' || mod === 'state_machine') rule.behavior = 'static';
-                            else rule.behavior = 'direct';
-                        }
-                        if (!rule.source) {
-                            const mod = rule.mod || 'static';
-                            if (mod === 'flux') rule.source = 'flux';
-                            else if (mod === 'frequency') rule.source = 'ratio';
-                            else if (mod === 'beat' || mod === 'cycle') rule.source = 'beat';
-                            else if (mod === '4th beat') rule.source = 'bar';
-                            else rule.source = 'raw';
-                        }
-                        
-                        // Robust Data Initialization: Ensure nested objects exist for the editor UI
-                        if (!rule.cal) rule.cal = { min: 0, center: 127, max: 255 };
-                        if (!rule.audio) rule.audio = { smoothing: 0.5, threshold: 0.1, react: 1.0 };
-                        if (!rule.lfo) rule.lfo = { shape: 'sine', bin: 0, speed: 0.1, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 };
-                        
-                        if (rule.bin_idx === undefined) {
-                             rule.bin_idx = (rule.lfo && rule.lfo.bin !== undefined) ? rule.lfo.bin : 0;
-                        }
-                        return rule;
-                    });
+                    if (!rule.source) rule.source = 'raw';
+                    if (!rule.cal) rule.cal = { min: 0, center: 127, max: 255 };
+                    if (!rule.audio) rule.audio = { smoothing: 0.5, threshold: 0.1, react: 1.0 };
+                    if (!rule.lfo) rule.lfo = { shape: 'sine', bin: 0, speed: 0.1, react: 0.5, return_to_min: false, threshold: 0.1, hold: 0, invert: false, smoothing: 0 };
+                    if (rule.mechanical_class === undefined) rule.mechanical_class = 'unverified';
+                    if (rule.aesthetic_id === undefined) rule.aesthetic_id = 'custom';
+                    return rule;
                 });
-            }
+            });
 
             container.innerHTML = channels.map((ch, chIdx) => {
                 const rules = currentProfileMappings[chIdx] || [];
                 const isCollapsed = collapsedChannels.has(chIdx);
 
                 return `
-                <div class="card channel-card ${isCollapsed ? 'collapsed' : ''}" style="margin-bottom: 10px; padding: 10px 12px; border-left: 4px solid var(--accent); background:rgba(255,255,255,0.01);">
-                    <div class="channel-card-header" onclick="toggleChannelCollapse(${chIdx})" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: ${isCollapsed ? '0' : '8px'};">
-                        <div style="font-weight:bold; color:var(--accent); font-size:14px; display:flex; align-items:center; gap:8px;">
-                            <span class="collapse-icon">▼</span>
-                            ${ch.name} (${ch.role || 'Unassigned'})
-                            <span style="font-size:10px; color:#666; font-weight:normal;">(Offset +${chIdx})</span>
-                            <button class="ai-sparkle-btn" onclick="event.stopPropagation(); toggleChannelAiInput(${chIdx})" title="Toggle AI instructions for this channel">✨</button>
+                <div class="card channel-card ${isCollapsed ? 'collapsed' : ''}" style="margin-bottom: 8px; padding: 10px; border-left: 5px solid var(--accent); background:rgba(255,255,255,0.015); border-radius:10px;">
+                    <div class="channel-card-header" onclick="toggleChannelCollapse(${chIdx})" style="display:flex; flex-direction:column; cursor:pointer;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:8px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span class="collapse-icon" style="transition: transform 0.2s; transform: rotate(${isCollapsed ? '-90deg' : '0deg'})">▼</span>
+                                <input type="text" value="${ch.name}" 
+                                       oninput="currentProfileChannels[${chIdx}].name=this.value; event.stopPropagation()" 
+                                       class="glass-input" style="font-weight:900; color:var(--text); font-size:15px; border:none; background:transparent; width:130px;"
+                                       onclick="event.stopPropagation()">
+                            </div>
+                             <div style="display:flex; align-items:center; gap:8px;">
+                                 <button class="btn btn-sm btn-danger-soft" onclick="event.stopPropagation(); removeProfileChannel(${chIdx})" style="background:rgba(255,85,85,0.1); border:1px solid rgba(255,85,85,0.2); color:#ff5555; padding:3px 6px; border-radius:4px; font-size:10px;">Remove</button>
+                             </div>
                         </div>
-                        <div style="flex:1; margin: 0 20px; opacity:1.0; min-width:150px; position:relative;">
-                           <canvas id="live-canvas-${chIdx}" style="width:100%; height:32px; background:rgba(0,0,0,0.7); border-radius:4px; border:1px solid #444; display:block;"></canvas>
-                           <div id="sim-status-${chIdx}" style="position:absolute; top:2px; right:5px; font-size:7px; color:rgba(255,100,100,0.5); pointer-events:none;">SIMULATOR READY</div>
+                        <div class="mobile-role-row" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px; flex:1;">
+                                <span style="font-size:9px; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">ROLE:</span>
+                                <select onchange="currentProfileChannels[${chIdx}].role=this.value; event.stopPropagation()" 
+                                        onclick="event.stopPropagation()"
+                                        class="glass-select" style="font-size:12px; border:none; background:transparent; color:var(--accent); font-weight:bold; padding:0; flex:1;">
+                                    <option value="none">UNMAPPED</option>
+                                    ${KNOWN_ROLES.map(r => `<option value="${r}" ${ch.role === r ? 'selected' : ''}>${r.toUpperCase()}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addVibeRule(${chIdx})" title="Add Vibe Rule" style="width:36px; height:32px; padding:0; font-size:18px; font-weight:bold; display:flex; align-items:center; justify-content:center;">+</button>
+                            </div>
                         </div>
-                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addVibeRule(${chIdx})">➕ Add Vibe Rule</button>
                     </div>
 
                     <div class="channel-card-body">
-                        <div id="ai-comment-${chIdx}" class="ai-comment-box ${pendingAiInstructions[chIdx] ? 'active' : ''}" style="margin-bottom: 15px;">
-                            <textarea class="ai-comment-input" placeholder="Channel-wide tweaks (e.g. 'Make all movements smoother' or 'Focus on bass hits')..." oninput="updateAiInstruction('${chIdx}', this.value)">${pendingAiInstructions[chIdx] || ''}</textarea>
-                        </div>
-
                         <div id="rules-container-${chIdx}">
-                            ${rules.map((rule, ruleIdx) => {
-
-                    let modSettingsHtml = '';
-                    if (rule.behavior === 'lfo') {
-                        modSettingsHtml = `
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:4px;">
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">SHAPE</label>
-                                        <select style="width:100%; font-size:10px;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.shape', this.value)">
-                                            <option value="sine" ${rule.lfo.shape === 'sine' ? 'selected' : ''}>Sine</option>
-                                            <option value="triangle" ${rule.lfo.shape === 'triangle' ? 'selected' : ''}>Triangle</option>
-                                            <option value="sawtooth" ${rule.lfo.shape === 'sawtooth' ? 'selected' : ''}>Sawtooth</option>
-                                            <option value="square" ${rule.lfo.shape === 'square' ? 'selected' : ''}>Square (Select & Hold)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">SPEED: ${rule.lfo.speed}</label>
-                                        <input type="range" min="0" max="1.5" step="0.01" value="${rule.lfo.speed}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.speed', parseFloat(this.value)); this.previousElementSibling.innerText='SPEED: '+this.value">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">REACT: ${rule.lfo.react}</label>
-                                        <input type="range" min="0" max="2" step="0.05" value="${rule.lfo.react}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.react', parseFloat(this.value)); this.previousElementSibling.innerText='REACT: '+this.value">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">SMOOTH: ${rule.lfo.smoothing || 0}</label>
-                                        <input type="range" min="0" max="0.99" step="0.01" value="${rule.lfo.smoothing || 0}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.smoothing', parseFloat(this.value)); this.previousElementSibling.innerText='SMOOTH: '+this.value">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">THRESH: ${rule.lfo.threshold || 0.1}</label>
-                                        <input type="range" min="0" max="1" step="0.01" value="${rule.lfo.threshold || 0.1}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.threshold', parseFloat(this.value)); this.previousElementSibling.innerText='THRESH: '+this.value">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">HOLD: ${rule.lfo.hold || 0}s</label>
-                                        <input type="range" min="0" max="1" step="0.01" value="${rule.lfo.hold || 0}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.hold', parseFloat(this.value)); this.previousElementSibling.innerText='HOLD: '+this.value">
-                                    </div>
-                                    <div style="grid-column: span 2; display:flex; gap:15px; align-items:center; margin-top:5px;">
-                                        <label style="font-size:9px; color:#aaa; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                                            <input type="checkbox" ${rule.lfo.return_to_min ? 'checked' : ''} onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.return_to_min', this.checked)"> Return to Min
-                                        </label>
-                                        <label style="font-size:9px; color:#aaa; display:flex; align-items:center; gap:4px; cursor:pointer;">
-                                            <input type="checkbox" ${rule.lfo.invert ? 'checked' : ''} onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.invert', this.checked)"> Invert Wave
-                                        </label>
-                                    </div>
-                                </div>`;
-                    } else if (rule.behavior === 'direct') {
-                        modSettingsHtml = `
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:4px;">
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">SMOOTH: ${rule.audio.smoothing}</label>
-                                        <input type="range" min="0" max="0.99" step="0.01" value="${rule.audio.smoothing}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'audio.smoothing', parseFloat(this.value)); this.previousElementSibling.innerText='SMOOTH: '+this.value">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">THRESH: ${rule.audio.threshold}</label>
-                                        <input type="range" min="0" max="1" step="0.01" value="${rule.audio.threshold}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'audio.threshold', parseFloat(this.value)); this.previousElementSibling.innerText='THRESH: '+this.value">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#aaa;">REACT: ${rule.audio.react || 1.0}</label>
-                                        <input type="range" min="0" max="4" step="0.05" value="${rule.audio.react || 1.0}" style="width:100%;" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'audio.react', parseFloat(this.value)); this.previousElementSibling.innerText='REACT: '+this.value">
-                                    </div>
-                                </div>`;
-                    }
-
-                    let calFieldsHtml = '';
-                    if (rule.behavior === 'static') {
-                        calFieldsHtml = `
-                                <div style="margin-top:10px;">
-                                    <label style="font-size:8px; color:#555;">FIXED VALUE (0-255)</label>
-                                    <input type="number" value="${rule.value || 0}" min="0" max="255" style="width:100%; text-align:center;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'value', parseInt(this.value))">
-                                </div>`;
-                    } else if (rule.behavior === 'cycle') {
-                        // Cycle/Rhythm - Min/Max only
-                        calFieldsHtml = `
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                                    <div>
-                                        <label style="font-size:8px; color:#555;">MIN</label>
-                                        <input type="number" value="${rule.cal.min}" min="0" max="255" style="width:100%; text-align:center;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.min', parseInt(this.value))">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#555;">MAX</label>
-                                        <input type="number" value="${rule.cal.max}" min="0" max="255" style="width:100%; text-align:center;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.max', parseInt(this.value))">
-                                    </div>
-                                </div>`;
-                    } else {
-                        // Default (LFO, Direct) - Min/Center/Max
-                        calFieldsHtml = `
-                                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:10px;">
-                                    <div>
-                                        <label style="font-size:8px; color:#555;">MIN</label>
-                                        <input type="number" value="${rule.cal.min}" min="0" max="255" style="width:100%; text-align:center;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.min', parseInt(this.value))">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#555;">CENTER</label>
-                                        <input type="number" value="${rule.cal.center}" min="0" max="255" style="width:100%; text-align:center;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.center', parseInt(this.value))">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px; color:#555;">MAX</label>
-                                        <input type="number" value="${rule.cal.max}" min="0" max="255" style="width:100%; text-align:center;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.max', parseInt(this.value))">
-                                    </div>
-                                </div>`;
-                    }
-
-                    const vibeDisabled = (rules.length <= 1);
-                    if (vibeDisabled && rule.vibe !== 'any') {
-                        rule.vibe = 'any'; // Force data reset if only one rule exists
-                    }
-
-                    return `
-                            <div style="background:rgba(255,255,255,0.03); border:1px solid #333; padding:12px; border-radius:4px; margin-bottom:10px; position:relative;">
-                                <div style="display:grid; grid-template-columns: 1fr 1.2fr 1.2fr auto; gap:10px; align-items:flex-end;">
-                                    <div>
-                                        <label style="font-size:9px; color:#666; ${vibeDisabled ? 'opacity:0.3;' : ''}">VIBE STATE</label>
-                                        <select style="width:100%; font-size:12px;" ${vibeDisabled ? 'disabled' : ''} onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'vibe', this.value)">
-                                            <option value="any" ${(rule.vibe === 'any' || rule.vibe === 'any/fallback') ? 'selected' : ''}>Any / Fallback</option>
-                                            <option value="chill" ${rule.vibe === 'chill' ? 'selected' : ''}>Chill</option>
-                                            <option value="mid" ${rule.vibe === 'mid' ? 'selected' : ''}>Mid</option>
-                                            <option value="high" ${rule.vibe === 'high' ? 'selected' : ''}>High</option>
-                                            <option value="build" ${rule.vibe === 'build' ? 'selected' : ''} style="color:var(--accent-alt); font-weight:bold;">⚡ BUILD (Priority)</option>
-                                            <option value="drop" ${rule.vibe === 'drop' ? 'selected' : ''} style="color:var(--danger); font-weight:bold;">💥 DROP (Priority)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style="font-size:9px; color:#666;">BEHAVIOR</label>
-                                        <select style="width:100%; font-size:12px;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'behavior', this.value)">
-                                            ${BEHAVIORS.map(b => `<option value="${b.id}" ${(rule.premadeId === b.id || rule.behavior === b.id) ? 'selected' : ''}>${b.label}</option>`).join('')}
-                                        </select>
-                                    </div>
-                                    <div style="${rule.premadeId ? 'display:none;' : ''}">
-                                        <label style="font-size:9px; color:#666;">DRIVEN BY</label>
-                                        <select style="width:100%; font-size:12px;" ${rule.behavior === 'static' ? 'disabled' : ''} onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'source', this.value)">
-                                            ${SOURCES.map(s => `<option value="${s.id}" ${rule.source === s.id ? 'selected' : ''}>${s.label}</option>`).join('')}
-                                        </select>
-                                    </div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); removeVibeRule(${chIdx}, ${ruleIdx})">×</button>
-                                    </div>
-                                </div>
-
-                                <div id="ai-comment-${chIdx}_${ruleIdx}" class="ai-comment-box ${pendingAiInstructions[chIdx + '_' + ruleIdx] ? 'active' : ''}">
-                                    <textarea class="ai-comment-input" placeholder="Specify behavior (e.g. 'Hold values longer' or 'Pulse more aggressively')..." oninput="updateAiInstruction('${chIdx}_${ruleIdx}', this.value)">${pendingAiInstructions[chIdx + '_' + ruleIdx] || ''}</textarea>
-                                </div>
-
-                                ${(!rule.premadeId && (rule.behavior === 'lfo' || rule.source === 'ratio' || rule.source === 'raw' || rule.source === 'attack')) ? `
-                                <div style="margin-top:10px; padding:8px; background:rgba(255,255,255,0.05); border-radius:4px;">
-                                    <label style="font-size:9px; color:#aaa;">FREQUENCY BIN</label>
-                                    <select style="width:100%; font-size:11px;" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'bin_idx', parseInt(this.value))">
-                                        ${TARGET_BINS.map(b => `<option value="${b.val}" ${rule.bin_idx === b.val ? 'selected' : ''}>${b.label}</option>`).join('')}
-                                    </select>
-                                </div>
-                                ` : ''}
-
-                                ${rule.premadeId ? '' : modSettingsHtml}
-                                ${calFieldsHtml}
-                            </div>`;
-                }).join('')}
+                            ${rules.map((rule, ruleIdx) => renderVibeRuleHtml(chIdx, ruleIdx, rule, rules.length)).join('')}
                         </div>
                     </div>
                 </div>`;
             }).join('');
         }
+        
+        function toggleManualMode(chIdx, ruleIdx) {
+            if (currentProfileMappings[chIdx] && currentProfileMappings[chIdx][ruleIdx]) {
+                const rule = currentProfileMappings[chIdx][ruleIdx];
+                rule.manual_mode = !rule.manual_mode;
+                loadProfileChannels(); // Re-render to show/hide the manual block
+            }
+        }
 
-        let activeProfileId = null;
+        function applyEasyBehavior(chIdx, ruleIdx, easyId) {
+            if (easyId === 'custom') {
+                updateProfileMapping(chIdx, ruleIdx, 'manual_mode', true);
+                return;
+            }
+            if (!easyId || easyId === 'easy') {
+                updateProfileMapping(chIdx, ruleIdx, 'manual_mode', false);
+                return;
+            }
+            const desc = EASY_DESCRIPTORS.find(d => d.id === easyId);
+            if (!desc) return;
+            
+            const rule = currentProfileMappings[chIdx][ruleIdx];
+            rule.easy_id = easyId;
+            rule.manual_mode = false;
+            rule.behavior = desc.behavior || 'static';
+            rule.source = desc.source || 'raw';
+            if (desc.shape) rule.lfo.shape = desc.shape;
+            if (desc.speed !== undefined) rule.lfo.speed = desc.speed;
+            if (desc.smoothing !== undefined) rule.audio.smoothing = desc.smoothing;
+            if (desc.bin !== undefined) rule.lfo.bin = desc.bin;
+            
+            loadProfileChannels();
+        }
+
+        function renderVibeRuleHtml(chIdx, ruleIdx, rule, rulesCount) {
+            const vibeDisabled = (rulesCount <= 1);
+            const isManual = rule.manual_mode;
+            
+            let modSettingsHtml = '';
+            if (rule.behavior === 'lfo') {
+                modSettingsHtml = `
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                        <div style="grid-column: span 2;">
+                            <label style="font-size:9px; color:var(--text-dim);">LFO WAVEFORM</label>
+                            <select onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.shape', this.value)" class="glass-select" style="width:100%;">
+                                <option value="sine" ${rule.lfo.shape === 'sine' ? 'selected' : ''}>SINE WAVE</option>
+                                <option value="triangle" ${rule.lfo.shape === 'triangle' ? 'selected' : ''}>TRIANGLE</option>
+                                <option value="sawtooth" ${rule.lfo.shape === 'sawtooth' ? 'selected' : ''}>SAWTOOTH</option>
+                                <option value="square" ${rule.lfo.shape === 'square' ? 'selected' : ''}>SQUARE</option>
+                            </select>
+                        </div>
+                        <div><label style="font-size:9px;">SPEED: ${rule.lfo.speed}</label><input type="range" min="0" max="1.5" step="0.01" value="${rule.lfo.speed}" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.speed', parseFloat(this.value))"></div>
+                        <div><label style="font-size:9px;">REACT: ${rule.lfo.react}</label><input type="range" min="0" max="1.0" step="0.01" value="${rule.lfo.react}" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.react', parseFloat(this.value))"></div>
+                        <div style="grid-column: span 2;"><label style="font-size:9px;">ACT. THRESHOLD: ${rule.lfo.threshold || 0.1}</label><input type="range" min="0" max="1.0" step="0.01" value="${rule.lfo.threshold || 0.1}" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'lfo.threshold', parseFloat(this.value))"></div>
+                    </div>`;
+            } else if (rule.behavior === 'direct') {
+                modSettingsHtml = `
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                        <div><label style="font-size:9px;">SMOOTH: ${rule.audio.smoothing}</label><input type="range" min="0" max="0.99" step="0.01" value="${rule.audio.smoothing}" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'audio.smoothing', parseFloat(this.value))"></div>
+                        <div><label style="font-size:9px;">REACT: ${rule.audio.react}</label><input type="range" min="0" max="2.0" step="0.01" value="${rule.audio.react}" oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'audio.react', parseFloat(this.value))"></div>
+                    </div>`;
+            }
+
+            let calFieldsHtml = '';
+            if (rule.behavior === 'static') {
+                calFieldsHtml = `<div style="margin-top:10px; display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.1); padding:10px; border-radius:8px;">
+                    <label style="font-size:10px; font-weight:bold; color:var(--accent);">FIXED VALUE</label>
+                    <input type="number" min="0" max="255" value="${rule.value || 0}" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'value', parseInt(this.value))" class="glass-input" style="width:80px;">
+                </div>`;
+            } else {
+                calFieldsHtml = `<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:10px; background:rgba(0,0,0,0.1); padding:10px; border-radius:8px;">
+                    <div><label style="font-size:9px; font-weight:bold; color:var(--text-dim);">MIN RANGE</label><input type="number" value="${rule.cal.min}" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.min', parseInt(this.value))" class="glass-input"></div>
+                    <div><label style="font-size:9px; font-weight:bold; color:var(--text-dim);">CENTER / IDLE</label><input type="number" value="${rule.cal.center}" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.center', parseInt(this.value))" class="glass-input"></div>
+                    <div><label style="font-size:9px; font-weight:bold; color:var(--text-dim);">MAX RANGE</label><input type="number" value="${rule.cal.max}" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.max', parseInt(this.value))" class="glass-input"></div>
+                </div>`;
+            }
+
+            return `
+                <div class="rule-card" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:6px; border-radius:8px; margin-bottom:4px; position:relative;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:5px; flex:1; overflow:hidden;">
+                            <div style="background:rgba(255,255,255,0.03); border-radius:6px; min-width:65px; text-align:center; padding:2px 0;">
+                                <select onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'vibe', this.value)" ${vibeDisabled ? 'disabled' : ''} class="glass-select" style="font-size:10px; font-weight:bold; padding:2px 4px; border:none; background:transparent; width:100%; text-transform:uppercase; color:var(--accent-alt);">
+                                    <option value="any" ${rule.vibe === 'any' ? 'selected' : ''}>Any</option>
+                                    <option value="chill" ${rule.vibe === 'chill' ? 'selected' : ''}>Chill</option>
+                                    <option value="mid" ${rule.vibe === 'mid' ? 'selected' : ''}>Mid</option>
+                                    <option value="high" ${rule.vibe === 'high' ? 'selected' : ''}>High</option>
+                                    <option value="build" ${rule.vibe === 'build' ? 'selected' : ''}>Build</option>
+                                    <option value="drop" ${rule.vibe === 'drop' ? 'selected' : ''}>Drop</option>
+                                </select>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:8px; flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
+                                <input type="text" placeholder="${rule.mechanical_class || 'Description...'}" value="${rule.description || ''}" 
+                                       oninput="updateProfileMapping(${chIdx}, ${ruleIdx}, 'description', this.value)"
+                                       style="font-size:9px; font-weight:900; color:var(--accent-glow); text-transform:uppercase; letter-spacing:0.5px; background:transparent; border:none; width:100%; outline:none; padding:0; margin:0;"
+                                       onclick="event.stopPropagation()">
+                                ${isManual ? `
+                                    <div style="display:flex; gap:4px; width:100%;">
+                                       <select onchange="if(this.value==='easy'){applyEasyBehavior(${chIdx}, ${ruleIdx}, '');} else {updateProfileMapping(${chIdx}, ${ruleIdx}, 'behavior', this.value); loadProfileChannels();}" class="glass-select" style="font-size:11px; flex:1; min-width:0;">
+                                           <option value="easy">← BACK</option>
+                                           ${BEHAVIORS.map(b => `<option value="${b.id}" ${rule.behavior === b.id ? 'selected' : ''}>${b.label.toUpperCase()}</option>`).join('')}
+                                       </select>
+                                       <select onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'source', this.value); loadProfileChannels();" class="glass-select" style="font-size:11px; flex:1; min-width:0;">
+                                           ${SOURCES.map(s => `<option value="${s.id}" ${rule.source === s.id ? 'selected' : ''}>${s.label.toUpperCase()}</option>`).join('')}
+                                       </select>
+                                    </div>
+                                ` : `
+                                    <select onchange="applyEasyBehavior(${chIdx}, ${ruleIdx}, this.value)" class="glass-select" style="font-size:12px; font-weight:bold; color:var(--accent); width:100%; border:none; background:transparent; padding:0;">
+                                        <option value="">-- BEHAVIOR --</option>
+                                        ${EASY_DESCRIPTORS.map(d => `<option value="${d.id}" ${rule.easy_id === d.id ? 'selected' : ''}>${d.label.toUpperCase()}</option>`).join('')}
+                                        <option value="custom">CUSTOM</option>
+                                    </select>
+                                `}
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <button class="btn btn-sm" onclick="removeVibeRule(${chIdx}, ${ruleIdx})" style="padding:4px 6px; color:#ff5555; background:none; border:none; font-size:16px; font-weight:bold;">×</button>
+                        </div>
+                    </div>
+
+                    ${calFieldsHtml}
+
+                    <div style="display:${isManual ? 'block' : 'none'}; border:1px dashed rgba(255,255,255,0.1); padding:12px; background:rgba(255,255,255,0.02); border-radius:12px; margin-top:12px;">
+                         ${modSettingsHtml}
+                    </div>
+                </div>`;
+        }
+
+        function applyVariety() {
+            if (!confirm("Automatically de-synchronize duplicate role channels? This will shift audio bins and phase on secondary heads.")) return;
+            
+            const roleCounts = {};
+            currentProfileChannels.forEach((ch, chIdx) => {
+                const role = ch.role || "none";
+                if (role === "none" || role === "dimmer") return; // Ignore universal/dimmer
+                
+                roleCounts[role] = (roleCounts[role] || 0) + 1;
+                const count = roleCounts[role];
+                
+                if (count > 1) {
+                    // This is a secondary channel for this role
+                    const rules = currentProfileMappings[chIdx];
+                    rules.forEach(rule => {
+                        // 1. Shift Audio Bin
+                        if (rule.lfo) rule.lfo.bin = (rule.lfo.bin + (count - 1)) % 6;
+                        // 2. Invert Scale? (Optional Flip)
+                        if (count % 2 === 0) rule.invert = !rule.invert;
+                        // 3. Phase Shift
+                        if (rule.lfo) rule.lfo.react = Math.max(0, Math.min(1.0, rule.lfo.react + 0.2));
+                    });
+                }
+            });
+            loadProfileChannels();
+            alert("Variety Applied Successfully.");
+        }
+        
+        function addProfileChannel() {
+            const newCh = { name: "New Function", role: "none", default: 0 };
+            currentProfileChannels.push(newCh);
+            
+            // Add matching empty mapping rule
+            currentProfileMappings.push([{
+                vibe: 'any',
+                mechanical_class: 'linear',
+                aesthetic_id: 'custom',
+                behavior: 'static',
+                source: 'raw',
+                cal: { min: 0, center: 127, max: 255 },
+                lfo: { shape: 'sine', bin: 0, speed: 0.1, react: 0.5 },
+                audio: { smoothing: 0.5, threshold: 0.1, react: 1.0 },
+                value: 0
+            }]);
+            
+            loadProfileChannels(); // Re-render
+        }
+
+        function removeProfileChannel(chIdx) {
+            if (!confirm(`Are you sure you want to remove channel ${chIdx + 1}?`)) return;
+            currentProfileChannels.splice(chIdx, 1);
+            currentProfileMappings.splice(chIdx, 1);
+            loadProfileChannels();
+        }
+
+        let currentProfileChannels = [];
+
+        function duplicateProfile() {
+            activeProfileId = null;
+            const nameField = document.getElementById('prof-name');
+            if (nameField) {
+                nameField.value = '';
+                nameField.focus();
+            }
+        }
 
         async function saveProfile(silent = false) {
             const name = document.getElementById('prof-name').value.trim();
@@ -2582,16 +2584,10 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                 if (!silent) alert("Please enter a Profile Label.");
                 return;
             }
-            const fixture = db.fixtures.find(f => f.id === fixId);
-            if (!fixture) {
-                if (!silent) alert("Reference fixture not found in library.");
-                return;
-            }
-
             const profileData = {
                 id: activeProfileId || ('prof_' + Date.now()),
                 name: name,
-                channels: (activeProfile && activeProfile.channels) ? activeProfile.channels : [],
+                channels: JSON.parse(JSON.stringify(currentProfileChannels)),
                 mappings: JSON.parse(JSON.stringify(currentProfileMappings))
             };
 
@@ -2618,9 +2614,6 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             }
 
             if (silent) {
-                if (document.getElementById('prof-base-fixture')) {
-                    document.getElementById('prof-base-fixture').disabled = true;
-                }
                 refreshUI();
                 return;
             }
@@ -2701,9 +2694,20 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             refreshUI();
         }
 
+        function getUniqueProfiles() {
+            const seen = new Set();
+            return (db.profiles || []).filter(p => {
+                if (!p.id || seen.has(p.id)) return false;
+                seen.add(p.id);
+                return true;
+            });
+        }
+
         function updateStageProfileList() {
             const profDrop = document.getElementById('stage-profile');
-            profDrop.innerHTML = db.profiles.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            if (profDrop) {
+                profDrop.innerHTML = getUniqueProfiles().map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            }
         }
 
         function updateInstanceProfile(instId, newProfId) {
@@ -2844,7 +2848,6 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                     const restartRes = await fetch(`${API_BASE}/../restart`, { method: 'POST' });
                     if (!restartRes.ok) console.warn("Restart failed or unauthorized, but files saved.");
                     else {
-                        dirtyChannels.clear();
                     }
                 } catch (e) {
                     console.warn("Could not reach restart port 8001. Changes saved to disk.");
@@ -2906,63 +2909,34 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
 
         function editProfile(id) {
             activeProfileId = id;
-            dirtyChannels.clear();
             const prof = db.profiles.find(p => p.id === id);
             if (!prof) return;
 
             document.getElementById('prof-name').value = prof.name;
-            document.getElementById('prof-base-fixture').value = prof.fixtureId;
+            const fixEl = document.getElementById('prof-base-fixture');
+            if (fixEl) fixEl.value = prof.fixtureId || prof.fixtureConfig?.id || '';
             currentProfileMappings = JSON.parse(JSON.stringify(prof.mappings));
 
-            // Clear histories to prevent old fixture data from bleeding into the new view
-            Object.keys(liveCanvasHistory).forEach(k => delete liveCanvasHistory[k]);
-            Object.keys(simulatedCanvasHistory).forEach(k => delete simulatedCanvasHistory[k]);
+            // History cleanup removed
 
             document.getElementById('profile-list-view').style.display = 'none';
             document.getElementById('profile-editor-view').style.display = 'block';
-            
-            // Lock reference fixture after creation
-            document.getElementById('prof-base-fixture').disabled = (prof.fixtureId ? true : false);
             
             loadProfileChannels();
         }
 
         function createNewProfile() {
             activeProfileId = null;
-            dirtyChannels.clear();
             document.getElementById('prof-name').value = '';
-            document.getElementById('prof-base-fixture').value = '';
             currentProfileMappings = [];
+            currentProfileChannels = [{ name: 'Master Dimmer', role: 'dimmer', default: 0 }];
 
             document.getElementById('profile-list-view').style.display = 'none';
             document.getElementById('profile-editor-view').style.display = 'block';
-            document.getElementById('prof-base-fixture').disabled = false;
             document.getElementById('prof-mappings').innerHTML = '';
         }
 
-        async function deleteFixture(id) {
-            if (!confirm("Delete this fixture and all its profiles?")) return;
-            
-            const fix = db.fixtures.find(f => f.id === id);
-            if (fix && fix._fileName) {
-                await fetch(`${API_BASE_ROOT}/api/fixtures/${fix._fileName}`, { method: 'DELETE' });
-            }
 
-            // Cleanup cascade
-            const profilesToDelete = db.profiles.filter(p => p.fixtureId === id);
-            for (const p of profilesToDelete) {
-                if (p._fileName) {
-                    await fetch(`${API_BASE_ROOT}/api/fixtures/${p._fileName}`, { method: 'DELETE' });
-                }
-            }
-
-            const pIdsToDelete = profilesToDelete.map(p => p.id);
-            db.profiles = db.profiles.filter(p => !pIdsToDelete.includes(p.id));
-            db.stage = db.stage.filter(s => !pIdsToDelete.includes(s.profileId));
-            db.fixtures = db.fixtures.filter(f => f.id !== id);
-            saveDB();
-            refreshUI();
-        }
 
         async function deleteProfile(id) {
             if (!confirm("Delete this profile?")) return;
@@ -2993,18 +2967,20 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             // No longer needed for single select, we use addTrigger instead
         }
 
-        function addTriggerToCurrentPreset() {
-            const type = document.getElementById('pres-new-trigger-cat').value;
+        function addEmptyTrigger() {
+            currentPresetTriggers.push({ type: '' });
+            renderPresetTriggers();
+        }
+        
+        function changeTriggerType(idx, type) {
             let trigger = { type: type };
-
             if (type === 'vibe') trigger = { ...trigger, value: 'chill' };
             else if (type === 'state') trigger = { ...trigger, value: 'building' };
             else if (type === 'volume') trigger = { ...trigger, less_than: 100, greater_than: 0 };
             else if (type === 'bin') trigger = { ...trigger, target: 'BASS', less_than: '', greater_than: '' };
             else if (type === 'channel') trigger = { ...trigger, target: 1, less_than: '', greater_than: '' };
-            else if (type === 'function') trigger = { ...trigger, target: '', less_than: '', greater_than: '' };
-
-            currentPresetTriggers.push(trigger);
+            
+            currentPresetTriggers[idx] = trigger;
             renderPresetTriggers();
         }
 
@@ -3064,48 +3040,54 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                         <span>&le;</span>
                         <input type="number" value="${t.less_than}" style="width:60px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
                     `;
-                } else if (t.type === 'function') {
-                    inputs = `
-                        <input type="number" value="${t.greater_than}" style="width:60px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
-                        <span>&le;</span>
-                        <input type="text" list="function-suggestions" value="${t.target}" style="width:120px;" placeholder="Function" onchange="updateTriggerVal(${idx}, 'target', this.value)">
-                        <span>&le;</span>
-                        <input type="number" value="${t.less_than}" style="width:60px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
-                    `;
-                } else {
+                } else if (t.type === 'manual') {
                     inputs = 'Manual Activation Only';
                 }
+                
+                const label = idx === 0 ? "IF:" : "AND:";
 
                 return `
-                    <div class="item-row" style="background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; margin-bottom:5px;">
-                        <span style="font-weight:bold; color:var(--accent); min-width:80px; text-transform:uppercase; font-size:0.7rem;">${t.type}</span>
-                        <div style="flex:1; display:flex; gap:10px; align-items:center;">${inputs}</div>
-                        <button class="btn btn-danger btn-sm" onclick="removePresetTrigger(${idx})">X</button>
+                    <div class="item-row" style="background:rgba(255,255,255,0.05); padding:8px; border-radius:4px; margin-bottom:5px; display:flex; flex-direction:column; align-items:flex-start; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                            <span style="font-weight:bold; color:var(--accent); min-width:40px; text-transform:uppercase; font-size:0.8rem;">${label}</span>
+                            <select style="flex:1; margin-left:10px; margin-right:10px;" onchange="changeTriggerType(${idx}, this.value)">
+                                <option value="" ${t.type === '' ? 'selected' : ''}>-- Select Trigger --</option>
+                                <option value="manual" ${t.type === 'manual' ? 'selected' : ''}>Manual Activation</option>
+                                <option value="vibe" ${t.type === 'vibe' ? 'selected' : ''}>Vibe Change</option>
+                                <option value="state" ${t.type === 'state' ? 'selected' : ''}>Performance State</option>
+                                <option value="volume" ${t.type === 'volume' ? 'selected' : ''}>Overall Volume</option>
+                                <option value="bin" ${t.type === 'bin' ? 'selected' : ''}>Frequency Bin</option>
+                                <option value="channel" ${t.type === 'channel' ? 'selected' : ''}>Channel DMX Value</option>
+                            </select>
+                            <button class="btn btn-danger btn-sm" onclick="removePresetTrigger(${idx})">X</button>
+                        </div>
+                        ${t.type && t.type !== 'manual' ? `<div style="display:flex; gap:10px; align-items:center; margin-left:50px; width:calc(100% - 50px);">${inputs}</div>` : ''}
                     </div>
                 `;
-            }).join('') || '<div style="color:#666; font-size:0.8rem;">No triggers set. Local/Manual only.</div>';
+            }).join('') || '<div style="color:#666; font-size:0.8rem;">No conditionals set.</div>';
         }
 
         function addOverrideToCurrentPreset() {
             const stageId = document.getElementById('pres-add-stage-fix').value;
-            const globalFunc = document.getElementById('pres-add-global-func').value;
+            const funcName = document.getElementById('pres-add-global-func').value;
 
-            if (stageId) {
+            if (!funcName) return alert("Select a Target Function");
+
+            if (stageId && stageId !== 'global') {
                 const instance = db.stage.find(s => s.id === stageId);
-                const fixture = db.fixtures.find(f => f.id === instance.fixtureId);
-                if (instance && fixture) {
+                if (instance) {
                     currentPresetOverrides.push({
                         type: 'instance',
                         id: stageId,
                         name: instance.profileName + ' [' + instance.address + ']',
-                        channels: fixture.channels.map(ch => ({ name: ch.role || ch.name, value: 0, ranges: [] }))
+                        channels: [{ name: funcName, value: 0, ranges: [] }]
                     });
                 }
-            } else if (globalFunc) {
+            } else {
                 currentPresetOverrides.push({
                     type: 'global',
-                    name: globalFunc,
-                    channels: [{ name: globalFunc, value: 0, ranges: [] }]
+                    name: "Global: " + funcName,
+                    channels: [{ name: funcName, value: 0, ranges: [] }]
                 });
             }
             renderPresetOverrides();
@@ -3189,7 +3171,7 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             current_editing_preset_id = null;
             document.getElementById('pres-name').value = '';
             currentPresetOverrides = [];
-            currentPresetTriggers = [];
+            currentPresetTriggers = [{type: ''}];
             document.getElementById('pres-overrides-container').innerHTML = '';
             renderPresetTriggers();
             renderPresetOverrides();
@@ -3273,13 +3255,13 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                             <b>${p.name}</b>
                             <div style="font-size:10px; color:var(--accent);">In Use on Stage | ${p.channels?.length || 0} Channels</div>
                         </div>
-                        <button class="btn btn-sm" onclick="event.stopPropagation(); switchTab('tab-stage')">View on Stage</button>
                     </div>`;
                 }).join('') || '<div style="padding:10px; color:#666;">No behaviors currently active on stage.</div>';
                 activeProfList.innerHTML = activeProfHtml;
             }
 
-            document.getElementById('saved-profiles-list').innerHTML = (db.profiles || []).map(p => {
+            const uniqueAllProfs = getUniqueProfiles();
+            document.getElementById('saved-profiles-list').innerHTML = uniqueAllProfs.map(p => {
                 return `<div class="item-row" onclick="editProfile('${p.id}')" style="cursor:pointer">
                     <span>${p.name}</span>
                     <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
@@ -3290,10 +3272,9 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             updateStageProfileList();
 
             document.getElementById('stage-list').innerHTML = (db.stage || []).map(s => {
-                const profile = (db.profiles || []).find(p => p.id === s.profileId);
+                const profile = uniqueAllProfs.find(p => p.id === s.profileId);
                 const profName = profile ? profile.name : 'Unknown Profile';
-                const availableProfiles = db.profiles || [];
-                const profOptions = availableProfiles.map(p => `<option value="${p.id}" ${p.id === s.profileId ? 'selected' : ''}>${p.name}</option>`).join('');
+                const profOptions = uniqueAllProfs.map(p => `<option value="${p.id}" ${p.id === s.profileId ? 'selected' : ''}>${p.name}</option>`).join('');
 
                 return `<div class="item-row" onclick="goToProfile('${s.profileId}')" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
                     <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.1); height:32px; flex-shrink:0;" onclick="event.stopPropagation()">
@@ -3325,7 +3306,7 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             // Populate Presets Add Overrides dropdowns
             const presStageSel = document.getElementById('pres-add-stage-fix');
             if (presStageSel) {
-                presStageSel.innerHTML = '<option value="">-- Select Instance --</option>' +
+                presStageSel.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' +
                     (db.stage || []).map(inst => `<option value="${inst.id}">${inst.id} (${inst.profileName})</option>`).join('');
             }
             const presGlobalSel = document.getElementById('pres-add-global-func');
@@ -3343,7 +3324,6 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                         if (t.type === 'volume') return `${t.greater_than}≤Vol≤${t.less_than}`;
                         if (t.type === 'bin') return `${t.greater_than}≤${t.target}≤${t.less_than}`;
                         if (t.type === 'channel') return `${t.greater_than}≤Ch[${t.target}]≤${t.less_than}`;
-                        if (t.type === 'function') return `${t.greater_than}≤Fn[${t.target}]≤${t.less_than}`;
                         return t.type;
                     }).join(', ') || 'Manual';
 
@@ -3405,23 +3385,278 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             } else {
                 activeTestFixtures.push(id);
             }
+            if (typeof isBreederActive !== 'undefined' && isBreederActive && activeTestFixtures.length !== 1) {
+                cancelVibeBreeder();
+            }
             renderEnsemblePicker();
             renderTestTab();
+        }
+
+        // --- VIBE BREEDER LOGIC ---
+        let isBreederActive = false;
+        let breederGeneration = 1;
+        let breederOriginalProfileId = null;
+        let breederOriginalProfileData = null;
+        let breederInstanceId = null;
+        let breederTempIds = [];
+        let breederSelectedIds = [];
+        let breederAuditionId = null;
+
+        function startVibeBreeder() {
+            if (activeTestFixtures.length !== 1) return alert("Select exactly one fixture in the Ensemble Hub to use the Breeder.");
+            isBreederActive = true;
+            breederGeneration = 1;
+            breederInstanceId = activeTestFixtures[0];
+            breederSelectedIds = [];
+            breederAuditionId = null;
+            
+            const inst = db.stage.find(s => s.id === breederInstanceId);
+            breederOriginalProfileId = inst.profileId;
+            const sourceP = db.profiles.find(p => p.id === breederOriginalProfileId);
+            if (!sourceP) return alert("Profile not found.");
+            breederOriginalProfileData = JSON.parse(JSON.stringify(sourceP));
+            
+            document.getElementById('btn-breeder-start').style.display = 'none';
+            document.getElementById('breeder-active-controls').style.display = 'flex';
+            document.getElementById('breeder-options-container').style.display = 'block';
+            
+            generateMutations([breederOriginalProfileData]);
+        }
+
+        function cancelVibeBreeder() {
+            if (!isBreederActive) return;
+            isBreederActive = false;
+            
+            // Restore original profile if it was changed
+            const inst = db.stage.find(s => s.id === breederInstanceId);
+            if (inst) inst.profileId = breederOriginalProfileId;
+            
+            cleanupBreederTemps();
+            saveDB();
+            
+            document.getElementById('btn-breeder-start').style.display = 'block';
+            document.getElementById('breeder-active-controls').style.display = 'none';
+            document.getElementById('breeder-options-container').style.display = 'none';
+        }
+
+        function cleanupBreederTemps() {
+            db.profiles = db.profiles.filter(p => !breederTempIds.includes(p.id));
+            breederTempIds = [];
+            breederSelectedIds = [];
+        }
+
+        function generateMutations(parentProfiles) {
+            cleanupBreederTemps();
+            const varianceRate = Math.max(0.02, 0.20 - ((breederGeneration - 1) * 0.04)); 
+            
+            for (let i = 0; i < 4; i++) {
+                let sourceParent = parentProfiles[Math.floor(Math.random() * parentProfiles.length)];
+                let mutant = JSON.parse(JSON.stringify(sourceParent));
+                
+                mutant.id = `temp_mut_${Date.now()}_${i}`;
+                mutant.name = `Mutant Gen ${breederGeneration} - ${String.fromCharCode(64+i+1)}`;
+                mutant._mutationNotes = []; // Track changes
+                
+                // --- MULTI-PARENT CROSSBREEDING ---
+                if (parentProfiles.length > 1 && Math.random() < 0.4) {
+                    const otherParent = parentProfiles[Math.floor(Math.random() * parentProfiles.length)];
+                    if (otherParent.id !== sourceParent.id && mutant.mappings && otherParent.mappings) {
+                        let crossCount = 0;
+                        mutant.mappings = mutant.mappings.map((ch, idx) => {
+                            if (Math.random() < 0.3) {
+                                crossCount++;
+                                return (otherParent.mappings[idx] || ch);
+                            }
+                            return ch;
+                        });
+                        if (crossCount > 0) mutant._mutationNotes.push(`🧬 Crossbred ${crossCount} channels`);
+                    }
+                }
+
+                if (mutant.mappings) {
+                    const profileChannels = mutant.channels || (db.profiles.find(p => p.id === breederOriginalProfileId) || {}).channels || [];
+                    mutant._mutatedChannels = []; // Track specifically which indices changed for highlighting
+
+                    // Pick exactly 2-3 random channels to mess with
+                    const numToMutate = Math.floor(Math.random() * 2) + 2; // 2 or 3
+                    const availableIndices = Array.from({length: mutant.mappings.length}, (_, i) => i);
+                    const shuffle = availableIndices.sort(() => 0.5 - Math.random());
+                    const targets = shuffle.slice(0, numToMutate);
+
+                    mutant.mappings.forEach((channelRules, chIdx) => {
+                        if (!targets.includes(chIdx)) return; // Surgical mutation only
+                        
+                        const chName = profileChannels[chIdx]?.role || profileChannels[chIdx]?.name || `Ch${chIdx+1}`;
+                        let chMutated = false;
+
+                        channelRules.forEach(rule => {
+                            // High chance to mutate once a channel is targeted
+                            if (Math.random() < 0.2) return; 
+                            
+                            if (rule.lfo && rule.lfo.speed !== undefined) {
+                                const oldSpeed = rule.lfo.speed;
+                                const shift = 1.0 + ((Math.random() * 2 - 1) * varianceRate * 2.0);
+                                rule.lfo.speed = Math.max(0, parseFloat((rule.lfo.speed * shift).toFixed(3)));
+                                if (oldSpeed !== rule.lfo.speed) { mutant._mutationNotes.push(`${chName}: Speed ${oldSpeed}→${rule.lfo.speed}`); chMutated = true; }
+                            }
+                            if (rule.lfo && rule.lfo.react !== undefined) {
+                                const oldReact = rule.lfo.react;
+                                const shift = 1.0 + ((Math.random() * 2 - 1) * varianceRate);
+                                rule.lfo.react = Math.max(0, Math.min(1.0, parseFloat((rule.lfo.react * shift).toFixed(2))));
+                                if (oldReact !== rule.lfo.react) { mutant._mutationNotes.push(`${chName}: React ${oldReact}→${rule.lfo.react}`); chMutated = true; }
+                            }
+                            if (rule.lfo && breederGeneration < 3 && Math.random() < 0.15) {
+                                const oldShape = rule.lfo.shape;
+                                const shapes = ['sine', 'triangle', 'square', 'sawtooth'];
+                                rule.lfo.shape = shapes[Math.floor(Math.random() * shapes.length)];
+                                if (oldShape !== rule.lfo.shape) { mutant._mutationNotes.push(`${chName}: Shape ${oldShape}→${rule.lfo.shape}`); chMutated = true; }
+                            }
+                            if (rule.behavior === 'static' && rule.value !== undefined) {
+                                const oldVal = rule.value;
+                                const shift = (Math.random() * 2 - 1) * 255 * varianceRate;
+                                rule.value = Math.max(0, Math.min(255, Math.floor(rule.value + shift)));
+                                if (oldVal !== rule.value) { mutant._mutationNotes.push(`${chName}: Val ${oldVal}→${rule.value}`); chMutated = true; }
+                            }
+                            if (rule.cal) {
+                                let calMoved = false;
+                                if (rule.cal.min !== undefined && Math.random() < 0.4) { rule.cal.min = Math.max(0, Math.min(255, Math.floor(rule.cal.min + ((Math.random()*2-1)*255*varianceRate)))); calMoved = true; }
+                                if (rule.cal.max !== undefined && Math.random() < 0.4) { rule.cal.max = Math.max(0, Math.min(255, Math.floor(rule.cal.max + ((Math.random()*2-1)*255*varianceRate)))); calMoved = true; }
+                                if (rule.cal.center !== undefined && Math.random() < 0.4) { rule.cal.center = Math.max(0, Math.min(255, Math.floor(rule.cal.center + ((Math.random()*2-1)*255*varianceRate)))); calMoved = true; }
+                                if (calMoved) { mutant._mutationNotes.push(`${chName}: Range Adjusted`); chMutated = true; }
+                            }
+                        });
+                        if (chMutated) mutant._mutatedChannels.push(chIdx);
+                    });
+                }
+                
+                db.profiles.push(mutant);
+                breederTempIds.push(mutant.id);
+            }
+            document.getElementById('breeder-gen-text').innerText = breederGeneration;
+            renderBreederCards();
+        }
+
+        function renderBreederCards() {
+            const grid = document.getElementById('breeder-cards-grid');
+            grid.innerHTML = breederTempIds.map((id, idx) => {
+                const profile = db.profiles.find(p => p.id === id);
+                const letter = String.fromCharCode(65+idx);
+                const isSelected = breederSelectedIds.includes(id);
+                const notes = profile?._mutationNotes || [];
+
+                return `
+                    <div id="breeder-card-${id}" style="background:rgba(0,0,0,0.3); border:1px solid ${isSelected ? 'var(--success)' : '#333'}; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:8px; transition:all 0.2s;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold; color:#fff; font-size:0.9rem;">Variation ${letter}</span>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn btn-sm" style="padding:4px 8px; background:${isSelected?'var(--success)':'#444'};" onclick="toggleBreederSelect('${id}', true)" title="Thumbs Up: Evolve from this">👍</button>
+                                <button class="btn btn-sm" style="padding:4px 8px; background:#444;" onclick="toggleBreederSelect('${id}', false)" title="Thumbs Down: Remove it">👎</button>
+                            </div>
+                        </div>
+                        
+                        <div style="max-height:60px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:5px; border-radius:4px; font-size:9px; color:#aaa; font-family:monospace;">
+                            ${notes.length > 0 ? notes.map(n => `<div>${n}</div>`).join('') : '<div>No major changes</div>'}
+                        </div>
+
+                        <button id="btn-audition-${id}" class="btn btn-sm" style="background:#444;" onclick="auditionMutant('${id}')">▶ Audition Live</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleBreederSelect(id, liked) {
+            if (liked) {
+                if (!breederSelectedIds.includes(id)) breederSelectedIds.push(id);
+            } else {
+                breederSelectedIds = breederSelectedIds.filter(bid => bid !== id);
+                // Force-remove from the pool
+                db.profiles = db.profiles.filter(p => p.id !== id);
+                breederTempIds = breederTempIds.filter(bid => bid !== id);
+            }
+            renderBreederCards();
+        }
+
+        function keepAndBreedSelected() {
+            if (breederSelectedIds.length === 0) return alert("Thumbs up at least one variation to evolve it!");
+            const parents = db.profiles.filter(p => breederSelectedIds.includes(p.id));
+            breederGeneration++;
+            generateMutations(parents);
+        }
+
+        function auditionMutant(mutantId) {
+            breederAuditionId = mutantId;
+            const inst = db.stage.find(s => s.id === breederInstanceId);
+            if (inst) {
+                inst.profileId = mutantId;
+                saveDB(); 
+                
+                breederTempIds.forEach(id => {
+                    const card = document.getElementById(`breeder-card-${id}`);
+                    const btn = document.getElementById(`btn-audition-${id}`);
+                    if (!card || !btn) return;
+                    
+                    if (id === mutantId) {
+                        card.style.borderColor = 'var(--accent)';
+                        card.style.background = 'rgba(var(--accent-rgb), 0.1)';
+                        btn.style.background = 'var(--accent)';
+                        btn.innerText = '● Synced';
+                    } else {
+                        card.style.borderColor = breederSelectedIds.includes(id) ? 'var(--success)' : '#333';
+                        card.style.background = 'rgba(0,0,0,0.3)';
+                        btn.style.background = '#444';
+                        btn.innerText = '▶ Audition Live';
+                    }
+                });
+            }
+        }
+
+        function saveFinalMutant() {
+            if (!breederAuditionId) return alert("Select (Audition) a variation first to finalize it.");
+            const mutantProfile = db.profiles.find(p => p.id === breederAuditionId);
+            if (!mutantProfile) return;
+            
+            // Create a NEW profile permanent
+            const newId = mutantProfile.id.replace('temp_mut_', 'breeder_');
+            const newProfile = JSON.parse(JSON.stringify(mutantProfile));
+            newProfile.id = newId;
+            newProfile.name = prompt("Enter Name for Final Profile:", breederOriginalProfileData.name + " (Tuned V1)");
+            if (!newProfile.name) return;
+
+            db.profiles.push(newProfile);
+            
+            // Assign instance permanently to this new profile
+            const inst = db.stage.find(s => s.id === breederInstanceId);
+            if (inst) inst.profileId = newId;
+            
+            // Original stays original in the library, we just added a new child
+            saveDB().then(() => {
+                alert("Saved as new profile: " + newProfile.name);
+                cancelVibeBreeder();
+            });
         }
 
         function renderTestTab() {
             const stripsContainer = document.getElementById('test-ensemble-strips');
             const emptyState = document.getElementById('test-empty-state');
             
+            const breederHub = document.getElementById('vibe-breeder-hub');
             renderEnsemblePicker();
             
             if (activeTestFixtures.length === 0) {
+                if (breederHub) breederHub.style.display = 'none';
                 if (emptyState) emptyState.style.display = 'block';
                 stripsContainer.querySelectorAll('.test-strip-card').forEach(s => s.remove());
                 return;
             }
             
             if (emptyState) emptyState.style.display = 'none';
+            if (breederHub) {
+                if (activeTestFixtures.length === 1) {
+                    breederHub.style.display = 'block';
+                } else {
+                    breederHub.style.display = 'none';
+                }
+            }
 
             // Clean up old strips that aren't active anymore
             stripsContainer.querySelectorAll('.test-strip-card').forEach(strip => {
@@ -3446,6 +3681,9 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
 
                 const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
 
+                const fixtureHidden = hiddenTestChannels[id] || [];
+                const hasHidden = fixtureHidden.length > 0;
+
                 strip.innerHTML = `
                     <div class="test-strip-header">
                         <div style="display:flex; align-items:center; gap:10px;">
@@ -3453,12 +3691,14 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                             <div style="font-size:10px; color:var(--text-dim); opacity:0.6;">${profile.name} (Base: ${baseAddr})</div>
                         </div>
                         <div style="display:flex; gap:6px;">
+                            ${hasHidden ? `<button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:rgba(var(--accent-rgb), 0.1); border-color:var(--accent); color:var(--accent);" onclick="unhideAllTestChannels('${id}')">SHOW ALL</button>` : ''}
                             <button class="btn btn-danger btn-sm" style="font-size:9px; padding:2px 8px;" onclick="clearFixtureOverrides('${id}')">RELEASE</button>
                             <button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:transparent; border-color:#444;" onclick="toggleFixtureInTest('${id}')">REMOVE</button>
                         </div>
                     </div>
                     <div class="compact-slider-list">
                         ${profile.channels.map((ch, idx) => {
+                            if (fixtureHidden.includes(idx)) return '';
                             const addr = baseAddr + (parseInt(ch.addrOffset) || idx);
                             const val = latestDmxUniverse[addr] || 0;
                             const isBusy = latestOverrides.has(addr);
@@ -3469,7 +3709,10 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                                     <input type="range" min="0" max="255" value="${val}" class="compact-slider-input"
                                            oninput="sendCompactTestOverride('${id}', ${idx}, this.value)">
                                     <div class="compact-val-display">${val}</div>
-                                    <button class="compact-release-btn" onclick="clearOverride(${addr})">✖</button>
+                                    <div style="display:flex; gap:4px; align-items:center;">
+                                        <button class="compact-release-btn" onclick="clearOverride(${addr})">✖</button>
+                                        <button class="compact-hide-btn" onclick="toggleHideTestChannel('${id}', ${idx})" title="Hide Channel">✖</button>
+                                    </div>
                                 </div>
                             `;
                         }).join('')}
@@ -3478,12 +3721,29 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             });
         }
 
+        function toggleHideTestChannel(fixtureId, channelIdx) {
+            if (!hiddenTestChannels[fixtureId]) hiddenTestChannels[fixtureId] = [];
+            if (!hiddenTestChannels[fixtureId].includes(channelIdx)) {
+                hiddenTestChannels[fixtureId].push(channelIdx);
+            }
+            localStorage.setItem('vj_hidden_test_channels', JSON.stringify(hiddenTestChannels));
+            renderTestTab();
+        }
+
+        function unhideAllTestChannels(fixtureId) {
+            if (hiddenTestChannels[fixtureId]) {
+                delete hiddenTestChannels[fixtureId];
+                localStorage.setItem('vj_hidden_test_channels', JSON.stringify(hiddenTestChannels));
+                renderTestTab();
+            }
+        }
+
         function updateTestNumericalValues() {
             // Traverse all active strips and update their small displays
             const strips = document.querySelectorAll('.test-strip-card');
             strips.forEach(strip => {
                 const rows = strip.querySelectorAll('.compact-slider-row');
-                rows.forEach(row => {
+                rows.forEach((row, rowIdx) => {
                     const addr = parseInt(row.dataset.addr);
                     const val = latestDmxUniverse[addr] || 0;
                     const isBusy = latestOverrides.has(addr);
@@ -3496,6 +3756,57 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                     
                     if (isBusy) row.classList.add('busy');
                     else row.classList.remove('busy');
+
+                    // BREEDER HIGHLIGHTING (Surgical)
+                    let isMutated = false;
+                    const activeMutant = isBreederActive && breederAuditionId ? db.profiles.find(p => p.id === breederAuditionId) : null;
+                    
+                    if (isBreederActive && breederAuditionId && breederInstanceId === strip.dataset.fixtureId) {
+                        if (activeMutant && activeMutant._mutatedChannels) {
+                            if (activeMutant._mutatedChannels.includes(rowIdx)) {
+                                isMutated = true;
+                            }
+                        }
+                    } 
+                    
+                    if (isBreederActive && breederAuditionId && breederInstanceId === strip.dataset.fixtureId) {
+                        if (isMutated) {
+                            row.classList.add('breeder-active');
+                            row.classList.remove('breeder-hidden');
+                            
+                            // Inject Comparison Tray if not exists
+                            let tray = row.querySelector('.breeder-comparison-tray');
+                            if (!tray) {
+                                tray = document.createElement('div');
+                                tray.className = 'breeder-comparison-tray';
+                                row.appendChild(tray);
+                            }
+                            
+                            // Get info from original profile for comparison
+                            const origMapping = breederOriginalProfileData.mappings[rowIdx] || [];
+                            const newMapping = activeMutant.mappings[rowIdx] || [];
+                            
+                            const getRuleDesc = (rules) => {
+                                if (!rules || rules.length === 0) return 'None';
+                                const r = rules[0];
+                                if (r.behavior === 'static') return `Val: ${r.value}`;
+                                if (r.lfo) return `LFO: ${r.lfo.shape} @ speed ${r.lfo.speed}`;
+                                return r.behavior;
+                            };
+                            
+                            tray.innerHTML = `
+                                <span><b>ORIGINAL:</b> ${getRuleDesc(origMapping)}</span>
+                                <span style="color:var(--success)"><b>NEW:</b> ${getRuleDesc(newMapping)}</span>
+                            `;
+                        } else {
+                            row.classList.add('breeder-hidden');
+                            row.classList.remove('breeder-active');
+                        }
+                    } else {
+                        row.classList.remove('breeder-active', 'breeder-hidden');
+                        const tray = row.querySelector('.breeder-comparison-tray');
+                        if (tray) tray.remove();
+                    }
                 });
             });
         }
@@ -3586,7 +3897,6 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
         let latestDmxUniverse = new Uint8Array(513);
         let latestAudioState = { vol: 0.1, bins: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], vibe: 'mid', transient: 'steady', beat: false };
         let ws = null;
-        let latestOverrides = new Set();
         let testWaveformChannel = -1; 
         let activePresets = [];
         let simulationPhases = {}; 
@@ -3600,6 +3910,7 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
             
+            // For custom tunnels, we connect to ws- prefix on standard HTTPS ports (443)
             let wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
             const newWs = new WebSocket(wsUrl);
 
@@ -3727,8 +4038,7 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             return bestP ? bestP.file : null;
         }
 
-        const liveCanvasHistory = {}; // { chIdx: [val1, val2... 60 frames] }
-        const simulatedCanvasHistory = {}; // { chIdx: [val1, val2... 60 frames] }
+        // Simulated/Live History removed
 
         function calculateRuleSimulation(chIdx, ruleIdx, dt, instId = null) {
             const rules = currentProfileMappings[chIdx];
@@ -4092,100 +4402,8 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             if (activeTestFixtures.length > 0 && document.getElementById('tab-test').classList.contains('active')) {
                 updateTestNumericalValues();
             }
-
-            // 2. Profile Editor Waveforms
-            if (document.getElementById('profile-editor-view').style.display !== 'none') {
-                const heart = document.getElementById('editor-heartbeat');
-                if (heart) heart.innerText = (latestAudioState.vibe || 'mid').toUpperCase();
-
-                const profileId = activeProfileId;
-                const profile = db.profiles.find(p => p.id === profileId);
-                const currentVibe = latestAudioState.vibe || 'mid';
-
-                let activeInst = null;
-                if (profileId) {
-                    activeInst = db.stage.find(s => s.profileId === profileId);
-                }
-                
-                if (profile) {
-                    const instBaseAddr = activeInst ? (parseInt(activeInst.address) || 0) : -1;
-                    const instOffset = activeInst ? (parseInt(activeInst.offset || 0)) : 0;
-                    const baseAddr = instBaseAddr !== -1 ? instBaseAddr + instOffset : -1;
-
-                    profile.channels.forEach((ch, chIdx) => {
-                        const canvas = document.getElementById(`live-canvas-${chIdx}`);
-                        if (!canvas) return;
-
-                        let simVal = 127;
-                        if (currentProfileMappings[chIdx]) {
-                            const rules = currentProfileMappings[chIdx];
-                            const currentTransient = latestAudioState.transient || 'steady';
-                            
-                            let activeRuleIdx = -1;
-                            // 1. Check for transient overrides first
-                            if (currentTransient === 'building' || currentTransient === 'dropping') {
-                                const searchVibe = currentTransient === 'building' ? 'build' : 'drop';
-                                activeRuleIdx = rules.findIndex(r => r.vibe === searchVibe);
-                            }
-                            
-                            // 2. Check for exact vibe match
-                            if (activeRuleIdx === -1) {
-                                activeRuleIdx = rules.findIndex(r => r.vibe === currentVibe);
-                            }
-                            
-                            // 3. Fallback to 'any' or 'any/fallback'
-                            if (activeRuleIdx === -1) {
-                                activeRuleIdx = rules.findIndex(r => r.vibe === 'any' || r.vibe === 'any/fallback');
-                            }
-                            
-                            if (activeRuleIdx === -1) activeRuleIdx = 0;
-                            simVal = calculateRuleSimulation(chIdx, activeRuleIdx, dt);
-                        }
-
-                        const addr = baseAddr !== -1 ? baseAddr + (parseInt(ch.addrOffset) || chIdx) : -1;
-                        const realVal = (addr > 0 && addr <= 512) ? latestDmxUniverse[addr] : null;
-
-                        if (!liveCanvasHistory[chIdx]) liveCanvasHistory[chIdx] = [];
-                        if (!simulatedCanvasHistory[chIdx]) simulatedCanvasHistory[chIdx] = [];
-
-                        if (realVal !== null) liveCanvasHistory[chIdx].push(realVal);
-                        simulatedCanvasHistory[chIdx].push(simVal);
-
-                        if (liveCanvasHistory[chIdx].length > 120) liveCanvasHistory[chIdx].shift();
-                        if (simulatedCanvasHistory[chIdx].length > 120) simulatedCanvasHistory[chIdx].shift();
-
-                        if (canvas.width !== canvas.clientWidth) canvas.width = canvas.clientWidth;
-                        if (canvas.height !== canvas.clientHeight) canvas.height = canvas.clientHeight;
-                        const ctx = canvas.getContext('2d');
-                        const w = canvas.width, h = canvas.height;
-                        ctx.clearRect(0, 0, w, h);
-                        const step = w / 120;
-
-                        // Only draw live waveform if we have a real mapping on stage
-                        if (activeInst && realVal !== null) {
-                            ctx.strokeStyle = '#7c4dff';
-                            ctx.lineWidth = 2;
-                            ctx.beginPath();
-                            liveCanvasHistory[chIdx].forEach((v, i) => {
-                                const y = h - ((v / 255) * h);
-                                if (i === 0) ctx.moveTo(i * step, y); else ctx.lineTo(i * step, y);
-                            });
-                            ctx.stroke();
-                        }
-
-                        if (dirtyChannels.has(chIdx) || true) {
-                            ctx.strokeStyle = '#ff4d4d';
-                            ctx.lineWidth = 1.5;
-                            ctx.beginPath();
-                            simulatedCanvasHistory[chIdx].forEach((v, i) => {
-                                const y = h - ((v / 255) * h);
-                                if (i === 0) ctx.moveTo(i * step, y); else ctx.lineTo(i * step, y);
-                            });
-                            ctx.stroke();
-                        }
-                    });
-                }
-            } else {
+            // 2. Clear simulation if no recent updates
+            if (Date.now() - lastDmxUpdate > 2000) {
                 simulationLastTime = 0;
             }
             requestAnimationFrame(drawCanvasLoop);
@@ -4199,7 +4417,6 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                     const fileList = await resList.json();
                     
                     // Reset local memory for fresh load (as requested: start fresh)
-                    db.fixtures = [];
                     db.profiles = [];
                     db.stage = [];
                     db.presets = [];
@@ -4210,10 +4427,7 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                             if (!resFile.ok) continue;
                             const data = await resFile.json();
 
-                            if (fileName.startsWith('configs/')) {
-                                data._fileName = fileName;
-                                db.fixtures.push(data);
-                            } else if (fileName.startsWith('profiles/')) {
+                            if (fileName.startsWith('profiles/')) {
                                 data._fileName = fileName;
                                 db.profiles.push(data);
                             } else if (fileName === 'stage_config.json') {
@@ -4267,11 +4481,11 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
     </script>
 
     <!-- AI REFINEMENT MODAL (GLOBAL) -->
-    <div id="ai-refine-modal" class="ai-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center; padding:20px;" onclick="closeAiModal()">
+    <div id="ai-refine-modal" class="ai-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center; padding:20px;" onclick="closeAiModal()">
         <div class="ai-modal-content" onclick="event.stopPropagation()">
             <div class="ai-modal-header">
                 <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
-                    ✨ AI Refinement 
+                    📝 AI Refinement 
                     <div class="btn-settings" onclick="openAiSettings()" title="AI Settings" style="width:24px; height:24px; padding:0; border:none; background:transparent;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                     </div>
@@ -4279,15 +4493,23 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
                 <button class="btn btn-sm" onclick="closeAiModal()">×</button>
             </div>
             <div class="ai-modal-body">
-                <div style="margin-bottom: 12px; font-size: 0.8rem; color: var(--text-dim);">The AI will process all pending Sparkle instructions. You can edit the master prompt below before sending.</div>
+                <div style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 0.8rem; color: var(--text-dim);">Suggestions & Presets:</div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn-suggestion" onclick="appendAiSuggestion('bside')">B-Side</button>
+                        <button class="btn-suggestion" onclick="appendAiSuggestion('rhythm')">Rhythm</button>
+                        <button class="btn-suggestion" onclick="appendAiSuggestion('liquid')">Liquid</button>
+                    </div>
+                </div>
                 <textarea id="ai-master-textarea" class="ai-master-textarea" placeholder="Master instructions..."></textarea>
+                <div id="ai-response-log" class="ai-response-log" style="display:none; margin-top:15px; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--accent-glow); border-radius:8px; font-family:var(--font-mono); font-size:0.75rem; color:var(--success); max-height:150px; overflow-y:auto; white-space:pre-wrap;"></div>
             </div>
             <div class="ai-modal-footer">
                 <div style="flex:1; display:flex; align-items:center; gap:10px;">
                     <span style="font-size:0.7rem; color:var(--text-dim);">Using <span class="active-model-name">...</span></span>
                 </div>
                 <button class="btn btn-secondary" onclick="closeAiModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="window.sendAiRefinement()">Apply All Updates ✨</button>
+                <button class="btn btn-primary" onclick="window.sendAiRefinement()">Apply All Updates 📝</button>
             </div>
         </div>
     </div>
@@ -4328,7 +4550,7 @@ Output: Valid raw JSON only for the updated "mappings" array. Update ONLY what i
             <div class="btn-settings" onclick="openAiSettings()" title="AI Settings" style="width:32px; height:32px; background:rgba(255,255,255,0.05);">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </div>
-            <span style="font-size: 1.2rem;">✨</span>
+            <span style="font-size: 1.2rem;">📝</span>
             <div>
                 <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">AI Profile Tuning</div>
                 <div style="font-size: 0.75rem; color: var(--accent-alt);"><span id="ai-pending-count">...</span> pending instruction(s)</div>

@@ -29,17 +29,19 @@ else
     pkill -f "backend/main.py" 2>/dev/null
     pkill -f "launcher.py" 2>/dev/null
     pkill -f "server.py" 2>/dev/null
+    pkill -f "calibration_server.py" 2>/dev/null
     
     fuser -k -9 8765/tcp > /dev/null 2>&1
     fuser -k -9 8001/tcp > /dev/null 2>&1
     fuser -k -9 8000/tcp > /dev/null 2>&1
+    fuser -k -9 8004/tcp > /dev/null 2>&1
 fi
 
 # Wait for ports to actually free up
 echo "⏳ Waiting for ports to clear..."
 for i in {1..10}; do
-    # Check 8000 (Server), 8765 (Backend), and 8001 (Launcher)
-    if ! fuser 8000/tcp >/dev/null 2>&1 && ! fuser 8765/tcp >/dev/null 2>&1 && ! fuser 8001/tcp >/dev/null 2>&1; then
+    # Check 8000 (Server), 8765 (Backend), 8001 (Launcher), and 8004 (Camera)
+    if ! fuser 8000/tcp >/dev/null 2>&1 && ! fuser 8765/tcp >/dev/null 2>&1 && ! fuser 8001/tcp >/dev/null 2>&1 && ! fuser 8004/tcp >/dev/null 2>&1; then
         break
     fi
     sleep 0.5
@@ -100,6 +102,11 @@ fi
 echo "🚀 Starting Launcher..."
 $PYTHON_CMD -u launcher.py &
 LAUNCHER_PID=$!
+
+# 4. Start Camera Service (Port 8004)
+echo "📸 Starting Camera Service..."
+$PYTHON_CMD -u scripts/calibration_server.py &
+CAMERA_PID=$!
 
 
 echo "✅ LFG!"

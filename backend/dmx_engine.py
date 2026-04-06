@@ -19,26 +19,51 @@ class ChannelConfig:
         self.threshold = threshold
         self.mod_name = mod_name
 
-    def get_active_rule(self, current_vibe, current_transient=None):
-        """Returns the specific vibe rule if it exists, otherwise falls back to 'any'."""
-        # 1. Check for transient overrides first
+    def get_active_rule(self, current_vibe, current_transient=None, instance_key=None):
+        """Returns the specific vibe rule if it exists, cycling through multiple matches when the vibe re-activates."""
+        if not self.rules: return None
+        
+        # 1. Initialize/Retrieve persistence for this instance
+        if instance_key not in self.states:
+            self.states[instance_key] = {'last_vibe': None, 'indices': {}}
+        state = self.states[instance_key]
+
+        # 2. Determine the requested vibe category
+        search_vibe = current_vibe
+        is_transient = False
         if current_transient in ['building', 'dropping']:
             search_vibe = 'build' if current_transient == 'building' else 'drop'
-            for r in self.rules:
-                v = r.get('vibe', '')
-                if v == search_vibe:
-                    return r
+            is_transient = True
+
+        # 3. Find matching rules
+        matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == search_vibe]
         
-        # 2. Check for exact vibe match or fallback
-        fallback = None
-        for r in self.rules:
-            v = r.get('vibe', '')
-            if v == current_vibe:
-                return r
-            # Support 'any' or 'any/fallback' (as requested)
-            if (v == 'any' or v == 'any/fallback') and fallback is None:
-                fallback = r
-        return fallback if fallback else (self.rules[0] if self.rules else None)
+        # Handle fallback to 'any' for non-transient vibes
+        is_fallback = False
+        if not matching_indices and not is_transient:
+            is_fallback = True
+            search_vibe = 'any_fallback' # Unique key for state tracking
+            matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') in ['any', 'any/fallback']]
+
+        # 4. Absolute Fallback: If still nothing, use the very first rule (index 0)
+        if not matching_indices:
+            return self.rules[0]
+
+        # 5. Random Logic: If vibe category changed, pick a random rule from the matching set
+        if state['last_vibe'] != search_vibe:
+            state['last_vibe'] = search_vibe
+            if len(matching_indices) > 1:
+                # Try to pick a new random index that isn't the current one if possible
+                prev_idx = state['indices'].get(search_vibe, 0)
+                new_idx = random.randrange(len(matching_indices))
+                if new_idx == prev_idx:
+                    new_idx = (new_idx + 1) % len(matching_indices)
+                state['indices'][search_vibe] = new_idx
+            else:
+                state['indices'][search_vibe] = 0
+            
+        final_idx = matching_indices[state['indices'].get(search_vibe, 0)]
+        return self.rules[final_idx]
 
 class LogicMatrix:
     # Same as before
@@ -83,6 +108,8 @@ class LogicMatrix:
                     mods = audio.get('mods', {})
                     s_flux = float(mods.get('flux', float(audio.get('flux', 0.0)) * 0.5))
                     bin_energy = min(1.0, max(0.0, s_flux))
+                elif source in ['beat', 'bar', 'phrase']:
+                    bin_energy = 1.0 # Transient LFOs rely on phase resets for envelope, maintain full amplitude
                 else:
                     bin_energy = 0.0
                 
@@ -107,6 +134,18 @@ class LogicMatrix:
                         elif shape == 'square' and p_current < 0.5: should_complete = True
                         if should_complete: freq = 10.0
                         else: freq = 0.0
+                    # Phase resetting logic for transient envelopes
+                    if source in ['beat', 'bar', 'phrase']:
+                        triggered = False
+                        if source == 'beat' and audio.get('beat', False):
+                            triggered = True
+                        elif source == 'bar' and audio.get('beat', False) and (self.beat_count % 4 == 0):
+                            triggered = True
+                        elif source == 'phrase' and self.state.get('scene_trigger') == 1.0:
+                            triggered = True
+                            
+                        if triggered:
+                            self.phases[lfo_id] = 0.0
 
                     # Update phase with 0.3x baseline multiplier
                     p_old = (self.phases[lfo_id] / (2 * math.pi)) % 1.0
@@ -126,7 +165,12 @@ class LogicMatrix:
                         amp_scale = (1.0 - reactivity) + (s_energy * reactivity * 1.0)
                         val = (1.0 if p_new < 0.5 else -1.0) * max(0.0, min(1.0, amp_scale))
                         # Skip normal amp_scale applied below
-                    else: 
+                    elif shape == 'random':
+                        if (p_new < p_old) or lfo_id not in self.lfo_samples:
+                            import random
+                            self.lfo_samples[lfo_id] = random.uniform(-1.0, 1.0)
+                        val = self.lfo_samples[lfo_id]
+                    else:
                         val = math.sin(self.phases[lfo_id])
 
                     if invert: val = -val
@@ -322,10 +366,22 @@ class DMXEngine:
                 rules = mappings[ch_idx] if ch_idx < len(mappings) else []
                     
                 for rule_idx, rule in enumerate(rules):
+                    # Hot-patch legacy configurations
+                    if rule.get('easy_id') in ['cycle_random', 'cycle_slow']:
+                        rule['behavior'] = 'random'
+                        rule['source'] = 'beat' if rule.get('easy_id') == 'cycle_random' else 'bar'
+                        
                     behavior = rule.get('behavior', rule.get('mod', 'static'))
+                    m_class = rule.get('mechanical_class', 'linear')
+                    
                     if behavior == 'lfo':
                         lfo_id = f"{p_id}_{ch_idx}_{rule_idx}"
                         lfo_cfg = rule.get('lfo', {}).copy()
+                        
+                        # PHYSICAL GUARDRAIL: If class is INDEX, force all waveforms to SQUARE (Step)
+                        if m_class == 'index':
+                            lfo_cfg['shape'] = 'square'
+                            
                         # Unify bin selection: prefer rule.bin_idx (new UI) over lfo.bin (legacy)
                         lfo_cfg['bin'] = rule.get('bin_idx', lfo_cfg.get('bin', 0))
                         # Inject source so LogicMatrix knows what drives this LFO
@@ -470,8 +526,17 @@ class DMXEngine:
 
     def _process_instance(self, inst, zone_idx, audio):
         profile = self.profiles.get(inst.get('profileId'))
-        fixture = self.fixtures.get(inst.get('fixtureId'))
-        if not profile or not fixture: return
+        if not profile: return
+
+        # Unified Architecture: Channels are now part of the profile!
+        # Fallback to legacy fixtureId if channels key is missing (for transition support)
+        channels = profile.get('channels', [])
+        if not channels:
+            fixture = self.fixtures.get(inst.get('fixtureId'))
+            if fixture:
+                channels = fixture.get('channels', [])
+        
+        if not channels: return
 
         try:
             base_addr = int(inst.get('address', 1)) + int(inst.get('offset', 0))
@@ -481,7 +546,8 @@ class DMXEngine:
         current_vibe = audio.get('vibe', 'mid')
         active_triggers.append(f"vibe:{current_vibe}")
         
-        for ch_idx, ch_def in enumerate(fixture.get('channels', [])):
+        for ch_idx, ch_def in enumerate(channels):
+
             # Use addrOffset if provided explicitly, otherwise fallback to index relative to base_addr
             offset = ch_def.get('addrOffset')
             if offset is None: offset = ch_idx
@@ -521,7 +587,8 @@ class DMXEngine:
     def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id):
         current_vibe = audio.get('vibe', 'mid')
         current_transient = audio.get('transient', 'steady')
-        rule = cache.get_active_rule(current_vibe, current_transient)
+        instance_key = f"{profile_id}_{ch_idx}_{zone_idx}"
+        rule = cache.get_active_rule(current_vibe, current_transient, instance_key)
         if not rule: return cache.default_val
             
         mod_name = rule.get('mod', 'static')
@@ -567,6 +634,11 @@ class DMXEngine:
         s_smoothing = float(mod_settings.get('smoothing', cache.smoothing))
         s_react = float(mod_settings.get('react', 1.0))
 
+        # PHYSICAL GUARDRAIL: Force smoothing to 0.0 for Macro or Index classes
+        m_class = rule.get('mechanical_class', 'linear')
+        if m_class in ['macro', 'index']:
+            s_smoothing = 0.0
+
         # Pull Driver Magnitude from Source
         val_norm = 0.0
         if source == 'raw':
@@ -604,10 +676,19 @@ class DMXEngine:
             divisor = 4 if source == 'bar' else 1
             step = (logic_matrix.beat_count // divisor) % 128 # Support up to 16 steps/patterns
             val_norm = (step / 64.0) - 1.0 # Map 0-16 to -1.0 to 1.0
+            
+        elif behavior == 'random':
+            # Pick a new random stable value on every beat or bar
+            divisor = 4 if source == 'bar' else 1
+            step = (logic_matrix.beat_count // divisor)
+            # Use pseudo-random value between -1.0 and 1.0
+            # To ensure it stays stable across frames for the same step, we use hash
+            h = hash(f"{instance_key}_{step}") % 1000
+            val_norm = (h / 500.0) - 1.0
 
 
         # Apply Soft-Knee Threshold (Re-range to prevent target snapping)
-        if val_norm > -1.0: # Skip if already forced off by upstream logic
+        if behavior == 'direct' and val_norm > -1.0: # Skip if already forced off by upstream logic
             if abs(val_norm) <= s_threshold:
                 val_norm = -1.0
             else:

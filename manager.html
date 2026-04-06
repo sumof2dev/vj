@@ -703,9 +703,10 @@
 
         let savedHost = localStorage.getItem('vj_backend_host');
         const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
+        const isCustomSubdomain = window.location.hostname.endsWith('.ravebox.love') && !onHostedDomain;
 
         // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
-        if (!savedHost && onHostedDomain) {
+        if (!savedHost && onHostedDomain && !isCustomSubdomain) {
             savedHost = prompt("Enter your Ravebox secret code below. This saves to your device's storage for reentry. Save code to connect with other devices!");
             if (savedHost) {
                 savedHost = savedHost.trim();
@@ -724,7 +725,9 @@
         const apiHost = isCustomTunnel ? 'api-' + baseHost : host;
         const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
 
-        const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : (isCustomTunnel ? apiHost : apiHost + ':8001'))) : null;
+        // LAUNCHER API: Use prefixed host if custom tunnel, otherwise same-origin if custom subdomain
+        const launcherHost = isCustomTunnel ? apiHost : (isCustomSubdomain ? window.location.host : host + ':8001');
+        const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : launcherHost)) : null;
 
         function changeHost() {
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
@@ -836,7 +839,7 @@
             const originalText = btn.innerText;
 
             btn.classList.add('loading');
-            btn.innerText = action === 'start' ? "43262226" : "Until next time";
+            btn.innerText = action === 'start' ? "46260808" : "Until next time";
 
             try {
                 const res = await fetch(`${LAUNCHER_API}/${action}`);

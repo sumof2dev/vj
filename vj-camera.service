@@ -1,0 +1,14 @@
+[Unit]
+Description=VJ Camera/Calibration Service (Port 8004)
+After=network.target
+
+[Service]
+Type=simple
+User=sumof2
+WorkingDirectory=/home/sumof2/vj
+ExecStart=/home/sumof2/vj/venv/bin/python3 scripts/calibration_server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

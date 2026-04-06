@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!-- RaveBox Fixture AI Engine V2.0.2 -->
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>AI Fixture Extractor | RaveBox</title>
@@ -27,7 +28,7 @@
 
         body {
             background: var(--bg);
-            background-image: 
+            background-image:
                 radial-gradient(at 0% 0%, rgba(var(--accent-rgb), 0.15) 0, transparent 40%),
                 radial-gradient(at 100% 100%, rgba(0, 255, 204, 0.1) 0, transparent 40%);
             color: var(--text);
@@ -111,33 +112,34 @@
             background: var(--panel);
             backdrop-filter: var(--glass);
             border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
         }
 
         .card-title {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             font-weight: 800;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .card-subtitle {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: var(--text-dim);
-            margin-bottom: 25px;
+            margin-bottom: 12px;
         }
 
         /* --- UPLOAD ZONE --- */
         .upload-zone {
-            border: 2px dashed var(--border);
-            border-radius: var(--radius-md);
-            padding: 40px;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            padding: 20px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             position: relative;
             overflow: hidden;
             background: rgba(255, 255, 255, 0.02);
@@ -191,7 +193,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* --- RESULTS SECTION --- */
@@ -203,8 +207,8 @@
 
         .fixture-header-row {
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 12px;
             align-items: flex-end;
         }
 
@@ -215,8 +219,8 @@
         .channel-card {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: 20px;
+            border-radius: 8px;
+            padding: 10px;
             transition: all 0.2s;
             position: relative;
         }
@@ -235,7 +239,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
         }
 
         .channel-num {
@@ -262,8 +266,8 @@
             margin-bottom: 6px;
         }
 
-        input[type="text"], 
-        input[type="number"], 
+        input[type="text"],
+        input[type="number"],
         select {
             width: 100%;
             background: rgba(0, 0, 0, 0.4);
@@ -276,7 +280,8 @@
             transition: all 0.2s;
         }
 
-        input:focus, select:focus {
+        input:focus,
+        select:focus {
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 2px var(--accent-glow);
@@ -471,34 +476,102 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* --- MOBILE REFINEMENTS --- */
         @media (max-width: 600px) {
+            main {
+                padding: 20px 0;
+                gap: 15px;
+            }
+
+            .card {
+                padding: 15px;
+                border-radius: var(--radius-md);
+            }
+
+            .channel-card {
+                padding: 12px;
+            }
+
             .channel-inputs {
                 grid-template-columns: 1fr;
+                gap: 10px;
             }
+
             .fixture-header-row {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 10px;
             }
+
+            .btn {
+                padding: 10px 16px;
+                font-size: 0.9rem;
+            }
+
+            .logo {
+                font-size: 1rem;
+            }
+
+            .status-bar {
+                bottom: 15px;
+                right: 15px;
+                padding: 6px 12px;
+            }
+        }
+
+        /* --- UI CONSISTENCY (Setup Match) --- */
+        .rule-item {
+            font-size: 10px;
+            color: var(--accent-alt);
+            background: rgba(var(--accent-rgb), 0.1);
+            border: 1px solid rgba(var(--accent-rgb), 0.2);
+            padding: 5px 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .rule-desc {
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #fff;
+            display: block;
+            margin-bottom: 2px;
         }
     </style>
     <!-- PDF.js for manual text extraction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
+
 <body>
 
     <header>
         <div class="header-content">
             <div class="logo">RAVE<span>BOX</span> AI PROFILER</div>
             <div style="display: flex; gap: 10px; align-items: center;">
-                <button class="btn btn-secondary btn-sm" onclick="window.location.href='setup.html?tab=fixture'" style="padding: 6px 12px; font-size: 0.8rem;">← Back to Setup</button>
+                <button class="btn btn-secondary btn-sm" onclick="window.location.href='setup.html?tab=fixture'"
+                    style="padding: 6px 12px; font-size: 0.8rem;">← Back to Setup</button>
                 <div class="btn-settings" onclick="openSettings()" title="Settings">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
                 </div>
             </div>
         </div>
@@ -507,62 +580,62 @@
     <main>
         <!-- STEP 1: UPLOAD -->
         <section id="step-upload" class="card fade-in">
-            <div class="card-title" id="mode-title">Create AI Profile</div>
-            <div class="card-subtitle" id="mode-subtitle">Pick a method to generate your DMX profile.</div>
-            
-            <!-- MODE SELECTOR -->
-            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-                <button id="btn-mode-new" class="btn btn-sm" style="flex: 1; background: var(--accent); color: white;" onclick="setSubMode('new')">New Fixture (Manual)</button>
-                <button id="btn-mode-existing" class="btn btn-sm btn-secondary" style="flex: 1;" onclick="setSubMode('existing')">Existing Fixture (Library)</button>
-            </div>
+            <div class="card-title" id="mode-title">Extract DMX Chart</div>
+            <div class="card-subtitle" id="mode-subtitle">Upload your DMX table photo below to generate a behavioral
+                profile.</div>
 
             <div id="mode-new-content">
-                <div style="display: grid; grid-template-columns: 1fr 1fr 0.8fr; gap: 15px; margin-bottom: 25px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                <div
+                    style="display: grid; grid-template-columns: 1fr 1fr 0.8fr; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
                     <div>
-                        <label>Fixture Brand</label>
-                        <input type="text" id="ai-brand" placeholder="e.g. Ehaho">
+                        <label style="font-size:7px; font-weight:900;">Fixture Brand</label>
+                        <input type="text" id="ai-brand" placeholder="BRAND" class="glass-input"
+                            style="padding:4px 8px; font-size:11px;">
                     </div>
                     <div>
-                        <label>Model Name</label>
-                        <input type="text" id="ai-model" placeholder="e.g. L2600">
+                        <label style="font-size:7px; font-weight:900;">Model Name</label>
+                        <input type="text" id="ai-model" placeholder="MODEL" class="glass-input"
+                            style="padding:4px 8px; font-size:11px;">
                     </div>
                     <div>
-                        <label>Target Channels</label>
-                        <input type="number" id="ai-ch-count" placeholder="e.g. 12" min="1" max="512">
+                        <label style="font-size:7px; font-weight:900;">Channels</label>
+                        <input type="number" id="ai-ch-count" placeholder="0" min="1" max="512" class="glass-input"
+                            style="padding:4px 8px; font-size:11px;">
                     </div>
                 </div>
-                
-                <div class="upload-zone" id="drop-zone">
-                    <button id="btn-clear" onclick="event.stopPropagation(); clearFiles();" style="display: none; position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--text-dim); border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 16px; font-weight: bold; z-index: 10; transition: all 0.2s; align-items: center; justify-content: center;" title="Clear Selection">×</button>
+
+                <div class="upload-zone" id="drop-zone"
+                    style="min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
                     <i class="upload-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path><line x1="16" y1="5" x2="22" y2="5"></line><line x1="19" y1="2" x2="19" y2="8"></line><circle cx="9" cy="11" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
+                            <line x1="16" y1="5" x2="22" y2="5"></line>
+                            <line x1="19" y1="2" x2="19" y2="8"></line>
+                            <circle cx="9" cy="11" r="2"></circle>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                        </svg>
                     </i>
-                    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px;">Upload Manual Image/PDF</div>
-                    <div style="font-size: 0.8rem; color: var(--text-dim);" id="file-label">DMX table image or PDF manual</div>
-                    <input type="file" id="file-input" accept="image/*,application/pdf" multiple>
+                    <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;">Upload Manual Image</div>
+                    <div style="font-size: 0.7rem; color: var(--text-dim);" id="file-label">DMX photo (Images Only)
+                    </div>
+                    <input type="file" id="file-input" accept="image/*" multiple
+                        style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
                 </div>
             </div>
 
-            <div id="mode-existing-content" style="display: none;">
-                <div style="margin-bottom: 20px;">
-                    <label>Select Hardware Fixture</label>
-                    <select id="existing-fixture-select">
-                        <option value="">-- Choose Fixture --</option>
-                    </select>
-                </div>
-                <div>
-                    <label>Behavior Inspiration (Optional)</label>
-                    <textarea id="ai-inspiration" placeholder="e.g. 'Chill blue waves', 'Fast red strobe patterns', 'Aggressive club vibe'..." style="min-height: 100px; resize: vertical;"></textarea>
-                </div>
-            </div>
-
-            <button id="btn-analyze" class="btn" style="width: 100%; margin-top: 15px; display: none; background: var(--accent); color: white;" onclick="analyzeFiles()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-                Start AI Extraction
+            <button id="btn-analyze" class="btn"
+                style="width: 100%; margin-top: 12px; display: none; background: var(--accent); color: white; padding: 10px; font-size: 1rem; font-weight: 800; border-radius: 8px; box-shadow: 0 4px 15px var(--accent-glow);"
+                onclick="analyzeFiles()">
+                🚀 EXTRACT
             </button>
 
-            <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px; color: var(--success); font-weight: 700; font-size: 0.9rem;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <div
+                style="margin-top: 20px; display: flex; align-items: center; gap: 10px; color: var(--success); font-weight: 700; font-size: 0.9rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
                 Powered by <span id="model-label">Gemini 3 Flash</span>
             </div>
         </section>
@@ -571,14 +644,16 @@
         <section id="step-loading" class="card loading-overlay">
             <div class="spinner"></div>
             <div style="font-weight: 800; font-size: 1.2rem; color: #fff;">Analyzing Channel Table...</div>
-            <div style="color: var(--text-dim); text-align: center; max-width: 300px;">Our Stage Lighting AI is extracting your DMX functions. This usually takes 5-10 seconds.</div>
+            <div style="color: var(--text-dim); text-align: center; max-width: 300px;">Our Stage Lighting AI is
+                extracting your DMX functions. This usually takes 5-10 seconds.</div>
         </section>
 
         <!-- STEP 3: HAND-HOLDING RESULTS -->
         <section id="step-results" class="results-container">
             <div class="card fade-in">
                 <div class="card-title">Confirm Fixture Details</div>
-                <div class="card-subtitle">AI extracted the following. Use the sliders to test each channel live and verify the roles.</div>
+                <div class="card-subtitle">AI extracted the following. Use the sliders to test each channel live and
+                    verify the roles.</div>
 
                 <div class="fixture-header-row">
                     <div>
@@ -597,7 +672,12 @@
 
                 <div style="margin-top: 30px; display: flex; gap: 15px;">
                     <button class="btn" style="flex: 1;" onclick="saveAndFinish()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
                         Save Fixture to Setup
                     </button>
                     <button class="btn btn-secondary" onclick="resetUI()">
@@ -609,18 +689,25 @@
         <!-- STEP 4: CHAT REFINEMENT -->
         <section id="step-chat" class="card fade-in" style="display: none;">
             <div class="card-title">AI Needs Clarification</div>
-            <div class="card-subtitle" id="chat-subtitle">The AI found a discrepancy or multiple modes. Please clarify its confusion below.</div>
-            
+            <div class="card-subtitle" id="chat-subtitle">The AI found a discrepancy or multiple modes. Please clarify
+                its confusion below.</div>
+
             <div id="chat-history" class="chat-container"></div>
 
             <div class="chat-input-row" style="margin-top:20px; display:flex; gap:10px;">
-                <input type="text" id="chat-reply-input" placeholder="e.g. 'Use 1-17 only' or 'Version 2 mode'..." onkeydown="if(event.key==='Enter') window.sendChatReply()">
+                <input type="text" id="chat-reply-input" placeholder="e.g. 'Use 1-17 only' or 'Version 2 mode'..."
+                    onkeydown="if(event.key==='Enter') window.sendChatReply()">
                 <button class="btn" onclick="window.sendChatReply()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
                     Send
                 </button>
             </div>
-            <button class="btn btn-secondary" onclick="resetUI()" style="margin-top:15px; width:100%; opacity:0.6;">Cancel & Reset</button>
+            <button class="btn btn-secondary" onclick="resetUI()"
+                style="margin-top:15px; width:100%; opacity:0.6;">Cancel & Reset</button>
         </section>
     </main>
 
@@ -634,7 +721,8 @@
             <div>
                 <label>Gemini API Key</label>
                 <input type="text" id="gemini-key" placeholder="AI_Studio_Key_Here">
-                <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 8px;">Key is stored safely in your browser's LocalStorage.</div>
+                <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 8px;">Key is stored safely in your
+                    browser's LocalStorage.</div>
             </div>
             <div>
                 <label>AI Model Selection</label>
@@ -665,13 +753,13 @@
     <script type="importmap">
         {
           "imports": {
-            "google-genai-sdk": "https://cdn.jsdelivr.net/npm/@google/generative-ai/dist/index.mjs"
+            "google-genai-sdk": "https://esm.run/@google/generative-ai"
           }
         }
     </script>
 
     <script type="module">
-        const APP_VERSION = "43262226"; // Stamped by deploy.sh
+        const APP_VERSION = "46260808"; // Stamped by deploy.sh
         import { GoogleGenerativeAI } from "google-genai-sdk";
 
         // Global State
@@ -681,37 +769,64 @@
         } catch (e) {
             db = { fixtures: [], profiles: [], stage: [], presets: [] };
         }
-        
+
         // Ensure standard structure
         if (!db.fixtures) db.fixtures = [];
         if (!db.profiles) db.profiles = [];
         if (!db.stage) db.stage = [];
         if (!db.presets) db.presets = [];
 
-        let currentFixture = null;
+        window.currentFixture = null;
         let ws = null;
         let dmxConnected = false;
-        let pendingFiles = [];
+        window.pendingFiles = [];
         let chatHistory = [];
         let currentSubMode = 'new';
-        
+
         // STANDARD ROLES & BEHAVIOR TEMPLATES
         const WORKFLOW_ROLES = {
-            "dimmer": { name: "Dimmer", keywords: ["dim", "dimmer", "intensity", "brightness"], behavior: "direct", source: "flux" },
-            "switch": { name: "Switch (On/Off)", keywords: ["switch", "on/off", "laser", "enable"], behavior: "static", value: 255 },
-            "clip": { name: "Clip / Boundary", keywords: ["clip", "boundry", "out of bounds", "blanking"], behavior: "static", value: 0 },
-            "group": { name: "Pattern Group", keywords: ["group", "category", "library"], behavior: "static" },
-            "patterns": { name: "Patterns / Gobos", keywords: ["pattern", "gobo", "shape", "listing"], behavior: "lfo", shape: "square", source: "beat" },
+            "pos_x": { name: "Pan / X-Position", keywords: ["pan", "x pos", "x move", "horizontal"], behavior: "direct", source: "flux" },
+            "pos_y": { name: "Tilt / Y-Position", keywords: ["tilt", "y pos", "y move", "vertical"], behavior: "direct", source: "flux" },
             "zoom": { name: "Zoom / Size", keywords: ["zoom", "zooming", "scale", "size"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.05 },
-            "rotation": { name: "Rotation / Spin", keywords: ["rotation", "spin", "z-rot", "roll"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.04 },
-            "x_pos": { name: "X Position (Pan)", keywords: ["x pos", "pan", "x move", "x moving"], behavior: "direct", source: "flux" },
-            "y_pos": { name: "Y Position (Tilt)", keywords: ["y pos", "tilt", "y move", "y moving"], behavior: "direct", source: "flux" },
-            "color": { name: "Color (Flipping)", keywords: ["color", "color section", "color1", "color2", "red", "blue", "rgb", "yellow"], behavior: "lfo", shape: "square", source: "beat" },
-            "strobe": { name: "Strobe / Dots", keywords: ["strobe", "flash", "dots", "shutter"], behavior: "direct", source: "flux" },
-            "draw": { name: "Draw / Speed", keywords: ["draw", "drawing", "writing"], behavior: "static" },
-            "twist": { name: "Twist / Distort", keywords: ["twist", "twisting", "distort", "warp"], behavior: "lfo", shape: "sine", speed: 0.8, source: "ratio" },
+            "rot_z": { name: "Z-Rotation / Roll", keywords: ["rotation", "spin", "z-rot", "roll", "z rot"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.04 },
+            "rot_x": { name: "X-Rotation (Tilt)", keywords: ["rot x", "tilt roll"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.04 },
+            "rot_y": { name: "Y-Rotation (Pan)", keywords: ["rot y", "pan roll"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.04 },
+            "color_solid": { name: "Color (Solid/Static)", keywords: ["red", "blue", "green", "white", "rgb", "color wheel", "color1"], behavior: "static" },
+            "color_multi": { name: "Color (Multi/Chase)", keywords: ["rainbow", "chase", "multi color", "color chase"], behavior: "lfo", shape: "square", source: "beat" },
+            "pattern": { name: "Pattern / Gobo", keywords: ["pattern", "gobo", "shape", "listing"], behavior: "lfo", shape: "square", source: "beat" },
+            "beam_fx": { name: "Beam Effect", keywords: ["beam", "fx", "sparkle", "shimmer"], behavior: "static" },
             "grating": { name: "Grating / Split", keywords: ["grating", "grate", "split"], behavior: "static" },
-            "other": { name: "Other / Effect", keywords: ["custom", "effect", "generic", "unknown", "reset"], behavior: "static" }
+            "drawing": { name: "Drawing / Path", keywords: ["draw", "drawing", "writing"], behavior: "static" },
+            "drawing_delay": { name: "Drawing Delay", keywords: ["delay", "draw delay"], behavior: "static" },
+            "strobe": { name: "Strobe / Flash", keywords: ["strobe", "flash", "dots", "shutter"], behavior: "direct", source: "flux" },
+            "dimmer": { name: "Master Dimmer", keywords: ["dim", "dimmer", "intensity", "brightness"], behavior: "direct", source: "flux" },
+            "mode": { name: "Functional Mode", keywords: ["mode", "function", "control"], behavior: "static" },
+            "clip": { name: "Clip / Boundary", keywords: ["clip", "boundry", "out of bounds", "blanking"], behavior: "static" },
+            "group": { name: "Pattern Group", keywords: ["group", "category", "library"], behavior: "static" },
+            "generic": { name: "Generic Offset", keywords: ["custom", "effect", "reset", "unknown"], behavior: "static" }
+        };
+
+        // NEW: Aesthetic Descriptor Registry (Expanded)
+        const AESTHETIC_REGISTRY = {
+            linear: [
+                { id: 'smooth_wave', label: 'Smooth Wave', behavior: 'lfo', lfo: { shape: 'sine', smoothing: 0.8, speed: 0.1, react: 0.5 }, source: 'raw' },
+                { id: 'breathe', label: 'Breathe (Pulse)', behavior: 'lfo', lfo: { shape: 'triangle', smoothing: 0.9, speed: 0.05, react: 0.3 }, source: 'raw' },
+                { id: 'rhythmic_snap', label: 'Rhythmic Snap', behavior: 'lfo', lfo: { shape: 'square', smoothing: 0.0, speed: 0.5, react: 1.0 }, source: 'beat' },
+                { id: 'jitter_center', label: 'Jitter Around Center', behavior: 'lfo', lfo: { shape: 'random', speed: 0.8, react: 0.8, smoothing: 0.1 }, source: 'flux' },
+                { id: 'static_pos', label: 'Static Position', behavior: 'static' }
+            ],
+            index: [
+                { id: 'static_hold', label: 'Static Hold', behavior: 'static' },
+                { id: 'cycle_random', label: 'Cycle Random', behavior: 'lfo', lfo: { shape: 'square', speed: 0.2, react: 1.0, smoothing: 0.0 }, source: 'beat' },
+                { id: 'cycle_slow', label: 'Cycle Slow', behavior: 'lfo', lfo: { shape: 'square', speed: 0.05, react: 0.2, smoothing: 0.0 }, source: 'bar' }
+            ],
+            macro: [
+                { id: 'macro_hold', label: 'Hold Macro (Steady)', behavior: 'static' },
+                { id: 'dynamic_hold', label: 'Dynamic Hold Pulse', behavior: 'lfo', lfo: { shape: 'square', hold: 0.5, speed: 0.1, smoothing: 0.0 }, source: 'bar' },
+                { id: 'speed_ramp', label: 'Speed Ramp', behavior: 'lfo', lfo: { shape: 'sawtooth', speed: 0.5, smoothing: 0.0 }, source: 'phrase' },
+                { id: 'macro_slow', label: 'Hold Macro (Slow)', behavior: 'static' },
+                { id: 'macro_fast', label: 'Hold Macro (Fast)', behavior: 'static' }
+            ]
         };
 
         // Initialize UI
@@ -741,46 +856,22 @@
         window.onload = init;
 
         window.setSubMode = (mode) => {
-            currentSubMode = mode;
-            const isNew = mode === 'new';
-            document.getElementById('mode-new-content').style.display = isNew ? 'block' : 'none';
-            document.getElementById('mode-existing-content').style.display = isNew ? 'none' : 'block';
-            
-            const btnNew = document.getElementById('btn-mode-new');
-            const btnExt = document.getElementById('btn-mode-existing');
-            
-            if (isNew) {
-                btnNew.classList.remove('btn-secondary');
-                btnNew.style.background = 'var(--accent)';
-                btnNew.style.color = 'white';
-                btnExt.classList.add('btn-secondary');
-                btnExt.style.background = '';
-                btnExt.style.color = '';
-                document.getElementById('btn-analyze').style.display = pendingFiles.length > 0 ? 'flex' : 'none';
-            } else {
-                btnExt.classList.remove('btn-secondary');
-                btnExt.style.background = 'var(--accent)';
-                btnExt.style.color = 'white';
-                btnNew.classList.add('btn-secondary');
-                btnNew.style.background = '';
-                btnNew.style.color = '';
-                document.getElementById('btn-analyze').style.display = 'flex';
-                document.getElementById('btn-analyze').innerText = "Start AI Generation";
-            }
+            // Deprecated - Only 'new' mode remains.
         };
 
-        function updateModelLabel() {
+        window.updateModelLabel = () => {
             const select = document.getElementById('ai-model-select');
+            if (!select) return;
             const label = select.options[select.selectedIndex].text;
             document.getElementById('model-label').innerText = label;
         }
 
         let isConnecting = false;
         // --- WEBSOCKET LOGIC ---
-        function connectWS() {
+        window.connectWS = () => {
             if (isConnecting) return;
             isConnecting = true;
-            
+
             const host = document.getElementById('backend-host').value || window.location.hostname;
             const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
             const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
@@ -788,19 +879,19 @@
             // Smart Tunnel: Resolve secret codes to *.ravebox.love
             const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
             const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
-            
+
             const baseHost = (isCustomTunnel ? boxName.replace(/^(api-|ws-)/, '') : boxName);
             const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
-            
+
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const port = localStorage.getItem('vj_ws_port') || '8765';
             const url = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${port}`);
-            
+
             if (ws) {
                 ws.onclose = null; // Prevent reconnection loop when we manually close
                 ws.close();
             }
-            
+
             try {
                 ws = new WebSocket(url);
                 ws.onopen = () => {
@@ -819,7 +910,7 @@
                     isConnecting = false;
                     console.error("WS Error", err);
                 };
-                ws.onmessage = (e) => {};
+                ws.onmessage = (e) => { };
             } catch (e) {
                 isConnecting = false;
                 console.error("WS Connect Error", e);
@@ -846,18 +937,19 @@
 
         // --- FILE SELECTION ---
         window.handleFiles = (files) => {
+            console.log("📂 Files selected:", files.length);
             if (!files || files.length === 0) return;
-            pendingFiles = Array.from(files);
-            
+            window.pendingFiles = Array.from(files);
+
             const label = document.getElementById('file-label');
             const dropZone = document.getElementById('drop-zone');
             const btn = document.getElementById('btn-analyze');
             const btnClear = document.getElementById('btn-clear');
-            
-            label.innerHTML = `<span style="color:var(--accent); font-weight:bold;">${pendingFiles.length} File(s) Ready</span> - Click below to start`;
+
+            label.innerHTML = `<span style="color:var(--accent); font-weight:bold;">${window.pendingFiles.length} File(s) Ready</span> - Click below to start`;
             dropZone.style.borderColor = "var(--accent)";
             dropZone.style.background = "rgba(var(--accent-rgb), 0.05)";
-            
+
             btn.style.display = 'flex';
             btn.style.justifyContent = 'center';
             btn.style.alignItems = 'center';
@@ -865,13 +957,13 @@
         }
 
         window.clearFiles = () => {
-            pendingFiles = [];
+            window.pendingFiles = [];
             const label = document.getElementById('file-label');
             const dropZone = document.getElementById('drop-zone');
             const btn = document.getElementById('btn-analyze');
             const btnClear = document.getElementById('btn-clear');
             const input = document.getElementById('file-input');
-            
+
             label.innerText = "DMX table image or PDF manual";
             dropZone.style.borderColor = "";
             dropZone.style.background = "";
@@ -881,172 +973,136 @@
         }
 
         const REFERENCE_GUIDELINE = `
-RaveBox DMX ROLE STANDARD:
-- role: "dimmer", "pattern", "color", "x_pos", "y_pos", "zoom", "z_rot", "strobe", "clip", "group"
+        RaveBox DMX ROLE STANDARD (Must match THESE exact strings in the 'role' property):
+        - Directional: 'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y'
+        - Visuals: 'color_solid', 'color_multi', 'pattern', 'beam_fx', 'grating', 'drawing', 'drawing_delay'
+        - Utility: 'strobe', 'generic', 'unassigned', 'dimmer', 'mode', 'clip', 'group'
 
-BEHAVIOR SCHEMAS:
-- behavior: "static" -> Single FIXED constant value (non-changing). Field: "value" (0-255). Ignores 'cal' range.
-- behavior: "direct" -> Signal intensity (flux/bins) maps directly into 'cal' range.
-- behavior: "lfo" -> Oscillator-driven. FOR STEPPED/HELD VALUES within a range (e.g. 10-100), use shape="square".
-- behavior: "cycle" -> Sequencing steps (0-128 map).
+        # BEHAVIOR-TO-RANGE MAPPING (Phase 1 Semantic matrix)
+        For every sub-range (vibe_rule), identify the natural behavior (easy_id):
+        - 'pan', 'tilt', 'pos', 'move': use 'pulse_beat' or 'smooth_drift'
+        - 'zoom', 'iris', 'focus': use 'bass_pump' or 'wavy_shimmer'
+        - 'rotation', 'spin', 'speed': use 'bass_pump' or 'flux_jitter'
+        - 'gobo', 'color_wheel', 'patterns': use 'random_bin' or 'static' (if fixed)
+        - 'strobe', 'shutter', 'dimmer': use 'intensity_pulse' or 'static'
 
-LOGIC MATRIX & RANGES:
-- All sources map to [-1.0, 1.0]. 
-- -1.0 maps to cal.min, 0.0 to cal.center, 1.0 to cal.max.
-- Source options: "raw", "ratio", "attack", "flux", "volume", "beat", "bar".
-- bin_idx: (0-5). 0BASS, 5AIR.
-`;
+        # VARIETY LOGIC (Phase 3)
+        For multi-head fixtures, de-synchronize heads:
+        - Head 1: default lfo.bin/react.
+        - Head 2: lfo.bin + 1, lfo.react + 0.2, invert = true.
+        - Continue pattern for all heads.
+        `;
 
-        // --- MULTI-SOURCE ANALYSIS ---
+        // --- IMAGE EXTRACTION ENGINE ---
         window.analyzeFiles = async () => {
-            const isExisting = currentSubMode === 'existing';
-            const files = pendingFiles;
-            
-            if (!isExisting && (files.length === 0)) {
-                alert("Please upload at least one image or PDF of the DMX table.");
-                return;
-            }
-            
-            if (isExisting && !document.getElementById('existing-fixture-select').value) {
-                alert("Please select a fixture from your library.");
+            console.log("🚀 Starting AI Analysis...");
+            const files = window.pendingFiles;
+
+            if (files.length === 0) {
+                alert("Please upload at least one image of the DMX table.");
                 return;
             }
 
             let apiKey = localStorage.getItem('vj_gemini_api_key') || document.getElementById('gemini-key').value;
             apiKey = apiKey ? apiKey.trim() : "";
             if (!apiKey || apiKey.length < 10) {
-                openSettings();
+                window.openSettings();
                 alert("Please enter a valid Gemini API Key in Settings.");
                 return;
             }
 
             const brand = document.getElementById('ai-brand').value || "Generic";
             const fixModel = document.getElementById('ai-model').value || "Unknown";
-            const targetChCount = document.getElementById('ai-ch-count').value || "";
-            const inspiration = document.getElementById('ai-inspiration').value || "Standard audio-reactive behavior";
+            const targetChCountVal = document.getElementById('ai-ch-count').value || "";
 
             setStep('loading');
+            console.log(`📦 Mode: Extraction. Images: ${files.length}`);
 
-            // Construct Prompt
-            let targetChCountVal = document.getElementById('ai-ch-count').value || "";
             let limitText = targetChCountVal ? `STRICT EXTRACTION LIMIT: Only extract precisely ${targetChCountVal} channels. Ignore any data beyond this channel count.` : "Extract the full DMX table found in the images.";
-            let systemPrompt = "";
-            let contextParts = [];
 
-            if (isExisting) {
-                const fixId = document.getElementById('existing-fixture-select').value;
-                const fixture = db.fixtures.find(f => f.id === fixId);
-                
-                systemPrompt = `You are the RaveBox Lighting AI. You are generating a behavioral profile for an EXISTING hardware fixture.
-                
-FIXTURE DATA:
-${JSON.stringify(fixture)}
-
-USER REQUEST / INSPIRATION:
-"${inspiration}"
-
-MASTER GUIDELINE (Roles):
-${REFERENCE_GUIDELINE}
-
-VIBE CATEGORIES:
-- 'chill': Minimal activity, low intensity.
-- 'mid': Standard rhythm, moderate pulsing.
-- 'high': Peak energy, fast strobes, aggressive.
-- 'build': Energy rising.
-- 'drop': Sudden peak or breakdown shift.
-- 'any': All-purpose/fallback (Every channel MUST have at least one 'any' rule).
-
-### ROLE TAXONOMY:
-You MUST categorize every channel into one of these roles: ${Object.keys(WORKFLOW_ROLES).join(', ')}.
-- AI Logic Mapping: sources are [-1.0, 1.0]. -1.0 maps to cal.min, 0.0 to cal.center, 1.0 to cal.max.
-- If multiple DMX layouts exist, pick the mode with the HIGHEST channel count.
-
-OUTPUT FORMAT: Return a valid RAW JSON object with "fixture" and "profile" keys.
-NOTE: Do NOT use custom role names. Stick strictly to the taxonomy provided.
-`;
-                contextParts.push({ text: systemPrompt });
-            } else {
-                systemPrompt = `You are the RaveBox Lighting AI. Your task is to extract DMX channel tables from MULTIPLE IMAGES and create a unified "Behavior Profile".
+            let systemPrompt = `You are the RaveBox Lighting AI. Your task is to extract DMX channel tables from MULTIPLE IMAGES and create a unified "Behavior Profile".
 
 ${limitText}
 
-### SCANNING LOGIC:
-1. STITCHING: Stitch images together (CH1-6, CH7-11, etc) to create a single 2D array of rules.
-2. SUB-RANGE EXTRACTION (CRITICAL): Scan the manual for DMX sub-ranges (e.g. 0-10: Mode A, 11-20: Mode B). You MUST create a separate object in the mappings array for each functional range.
-3. ROLE MAPPING: Use standard roles: ${Object.keys(WORKFLOW_ROLES).join(', ')}.
-4. CALIBRATION: For each sub-range rule, 'cal.min' is the start of the range, 'cal.max' is the end, 'cal.center' is the middle.
-5. VIBE RULES: Distribute the sub-ranges into 'chill', 'mid', 'high', 'build', 'drop', 'any'. NEVER return a single 0-255 rule if the manual lists sub-functions.
-6. COUNT CHECK: Mappings array must match total channels found.
+3. MECHANICAL CLASS & BEHAVIOR MAPPING (CRITICAL): Categorize every sub-range rule by hardware physics:
+
+   - "LINEAR" (Software Drives Motion): Use for "Fixed Angles", "Static Positions", "Fixed Color", "Degree/Angle Selection", "Dimmer 0-100%", "Static Patterns". 
+     * Logic: If the hardware stands still by default (is manual/static), RaveBox must provide the motion.
+     * Aesthetic IDs: "smooth_wave", "breathe", "rhythmic_snap", "jitter_center".
+
+   - "INDEX" (Discrete Steps): Use for "Select Gobo", "Select Color Wheeler", "Step Colors".
+     * Aesthetic IDs: "static_hold", "cycle_random", "cycle_slow".
+
+   - "MACRO" (Software Holds Still): Use for "Auto Programs", "Hardware Macros", "Dynamic Programs", "Moving Patterns", "Hardware Auto".
+     * Logic: If the hardware moves on its own (Dynamic/Auto), RaveBox MUST assign a STATIC (Hold) behavior to let the macro play through without glitching or resetting.
+     * Aesthetic IDs: "macro_hold", "macro_slow", "macro_fast".
+
+4. CALIBRATION: EVERY sub-range rule MUST have a complete 'cal' object:
+   - 'cal.min': Start value of range.
+   - 'cal.max': End value of range.
+   - 'cal.center': The mathematical middle (Center Point/Idle State).
+   - This calibration is required regardless of behavior.
+
+5. ROLE MAPPING: Use standard roles: ${Object.keys(WORKFLOW_ROLES).join(', ')}.
+
+6. VIBE RULES: Set "vibe" to "any" for ALL extracted rules. NEVER combine sub-ranges.
 
 OUTPUT JSON SCHEMA:
 {
   "id": "prof_generated", 
   "name": "${brand} ${fixModel}", 
-  "channels": [ { "name": "Function Name", "role": "dimmer", "originalText": "Raw manual text here", "default": 0 } ],
+  "channels": [ 
+    { "name": "Function Name", "role": "dimmer", "originalText": "Raw manual text here", "default": 0 } 
+  ],
   "mappings": [ 
      [ 
-       { "vibe": "any", "behavior": "direct", "source": "flux", "cal": { "min": 0, "center": 127, "max": 255 } }
+       { 
+         "vibe": "any", 
+         "description": "Short summary of what this range does",
+         "mechanical_class": "linear", 
+         "aesthetic_id": "smooth_wave", 
+         "cal": { "min": 0, "center": 64, "max": 127 } 
+       }
      ] 
   ]
 }
 `;
-                contextParts.push({ text: systemPrompt });
-                
-                for(let file of files) {
-                    if (file.type === 'application/pdf') {
-                        const fullText = await extractPdfText(file);
-                        contextParts.push({ text: `\n\nUPLOADED PDF TEXT (${file.name}):\n` + fullText });
-                    } else {
-                        const base64Data = await fileToBase64(file);
-                        contextParts.push({ inlineData: { data: base64Data, mimeType: file.type } });
-                    }
+            let contextParts = [{ text: systemPrompt }];
+
+            console.log("📄 Processing pre-generation images...");
+            try {
+                for (let file of files) {
+                    console.log(` - Encoding Image: ${file.name}`);
+                    const base64Data = await fileToBase64(file);
+                    contextParts.push({ inlineData: { data: base64Data, mimeType: file.type } });
                 }
+            } catch (pe) {
+                console.error("File processing error:", pe);
+                alert("Error processing files: " + pe.message);
+                setStep('upload');
+                return;
             }
 
             try {
+                console.log("📡 Initializing Gemini SDK...");
                 const genAI = new GoogleGenerativeAI(apiKey);
-                const selectedModel = document.getElementById('ai-model-select').value || "gemini-3-flash";
+                const selectedModel = document.getElementById('ai-model-select').value || "gemini-1.5-flash";
                 const model = genAI.getGenerativeModel({ model: selectedModel });
-                
-                let contents = [];
-                if (chatHistory.length === 0) {
-                    contents = [{ role: 'user', parts: contextParts }];
-                } else {
-                    contents = [
-                        { role: 'user', parts: contextParts },
-                        ...chatHistory
-                    ];
-                }
 
+                let contents = [{ role: 'user', parts: contextParts }];
+
+                console.log("📡 Calling Gemini API...");
                 const result = await model.generateContent({ contents });
                 const responseText = result.response.text();
-                console.log("🤖 AI RAW RESPONSE:", responseText);
-                
+                console.log("🤖 AI RAW RESPONSE RECEIVED.");
+
                 processAIResponse(responseText);
-                
+
             } catch (err) {
                 console.error("AI Error:", err);
                 alert("AI Error: " + err.message);
                 setStep('upload');
             }
-        }
-
-        async function extractPdfText(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = async () => {
-                    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(reader.result) });
-                    const pdf = await loadingTask.promise;
-                    let text = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        text += textContent.items.map(item => item.str).join(" ") + "\n";
-                    }
-                    resolve(text);
-                };
-                reader.readAsArrayBuffer(file);
-            });
         }
 
         async function fileToBase64(file) {
@@ -1063,7 +1119,7 @@ OUTPUT JSON SCHEMA:
 
             const firstBrace = text.indexOf('{');
             const lastBrace = text.lastIndexOf('}');
-            
+
             if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
                 jsonString = text.substring(firstBrace, lastBrace + 1);
                 explanation = text.substring(0, firstBrace).trim();
@@ -1071,9 +1127,9 @@ OUTPUT JSON SCHEMA:
                 // No JSON found
                 explanation = text.trim();
             }
-            
+
             const trimmed = jsonString.replace(/^```json|```$/g, "").trim();
-            
+
             // IF THERE IS SIGNIFICANT EXPLANATION TEXT (> 100 chars), IT'S LIKELY GUIDANCE
             // OR IF JSON PARSING FAILS
             if (explanation.length > 80 && !chatHistory.some(m => m.role === 'model')) {
@@ -1088,7 +1144,7 @@ OUTPUT JSON SCHEMA:
                 if (!trimmed) throw new Error("No JSON found");
                 const data = JSON.parse(trimmed);
                 currentFixture = data; // Now a Profile object
-                
+
                 // Final verification
                 const ts = Date.now();
                 if (!currentFixture.mappings || !currentFixture.channels) throw new Error("Invalid schema");
@@ -1097,10 +1153,33 @@ OUTPUT JSON SCHEMA:
                     currentFixture.id = "prof_" + ts;
                 }
 
-                currentFixture.mappings = currentFixture.mappings.map(rules => {
-                    return Array.isArray(rules) ? rules : [rules];
+                currentFixture.mappings = currentFixture.mappings.map((rules, chIdx) => {
+                    const chRules = Array.isArray(rules) ? rules : [rules];
+
+                    // HYDRATION: Fill in Math from the Aesthetic Registry
+                    return chRules.map(rule => {
+                        const mClass = rule.mechanical_class || 'linear';
+                        const aId = rule.aesthetic_id || 'smooth_wave';
+                        const aesthetic = (AESTHETIC_REGISTRY[mClass] || []).find(a => a.id === aId) || AESTHETIC_REGISTRY.linear[0];
+
+                        const hydratedRule = {
+                            ...rule,
+                            behavior: aesthetic.behavior || 'static',
+                            source: aesthetic.source || 'raw',
+                            lfo: aesthetic.lfo ? { ...aesthetic.lfo } : undefined,
+                            audio: aesthetic.audio ? { ...aesthetic.audio } : undefined
+                        };
+
+                        // Procedural Variety Logic
+                        if (hydratedRule.lfo) {
+                            hydratedRule.lfo.phase = (chIdx * 0.15) % (Math.PI * 2);
+                            hydratedRule.lfo.speed *= (0.95 + (Math.random() * 0.1));
+                        }
+
+                        return hydratedRule;
+                    });
                 });
-                
+
                 renderResults();
                 setStep('results');
             } catch (e) {
@@ -1114,7 +1193,7 @@ OUTPUT JSON SCHEMA:
         window.sendChatReply = () => {
             const input = document.getElementById('chat-reply-input');
             const val = input.value.trim();
-            if(!val) return;
+            if (!val) return;
 
             chatHistory.push({ role: 'user', parts: [{ text: val }] });
             input.value = "";
@@ -1136,15 +1215,18 @@ OUTPUT JSON SCHEMA:
         function renderResults() {
             const list = document.getElementById('channels-list');
             const prof = currentFixture;
-            
+
             document.getElementById('final-fix-name').value = prof.name;
 
             list.innerHTML = prof.channels.map((ch, idx) => {
                 const rules = prof.mappings[idx] || [];
                 const ruleSummary = rules.map(r => `
-                    <div style="font-size:9px; color:var(--accent-alt); opacity:0.9; background:rgba(0,0,0,0.2); padding:2px 4px; border-radius:2px; margin-bottom:1px; display:flex; justify-content:space-between;">
-                        <span>${r.vibe.toUpperCase().slice(0,3)}: ${r.behavior}</span>
-                        <span style="font-weight:bold; color:white;">[${r.cal.min}-${r.cal.max}]</span>
+                    <div class="rule-item">
+                        <span class="rule-desc">${r.description || r.mechanical_class}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center; opacity:0.8;">
+                             <span style="font-weight:bold; color:var(--accent-alt);">${r.aesthetic_id}</span>
+                             <span style="font-weight:bold; color:white; background:rgba(0,0,0,0.3); padding:1px 4px; border-radius:3px;">[${r.cal.min}-${r.cal.max}]</span>
+                        </div>
                     </div>
                 `).join('');
 
@@ -1165,7 +1247,7 @@ OUTPUT JSON SCHEMA:
                     <div class="channel-inputs">
                         <div>
                             <label>DMX Function Name</label>
-                            <input type="text" value="${ch.name}" oninput="currentFixture.fixture.channels[${idx}].name=this.value">
+                            <input type="text" value="${ch.name}" oninput="window.currentFixture.channels[${idx}].name=this.value">
                         </div>
                         <div>
                             <label>Assign Logical Role</label>
@@ -1188,36 +1270,64 @@ OUTPUT JSON SCHEMA:
         }
 
         window.deleteChannel = (idx) => {
-            if(!confirm("Delete this channel?")) return;
+            if (!confirm("Delete this channel?")) return;
+            window.currentFixture.channels.splice(idx, 1);
+            window.currentFixture.mappings.splice(idx, 1);
+            renderResults();
+        };
+
         window.updateRole = (idx, newRole) => {
-            currentFixture.channels[idx].role = newRole;
+            window.currentFixture.channels[idx].role = newRole;
             const template = WORKFLOW_ROLES[newRole];
-            if (template && template.behavior) {
-                }
+            if (!template) {
+                renderResults();
+                return;
+            }
+
+            const existingMappings = window.currentFixture.mappings[idx];
+            if (existingMappings && existingMappings.length > 0) {
+                // DATA PERSISTENCE: Update the behavior/source but PRESERVE the cal (ranges)
+                window.currentFixture.mappings[idx] = existingMappings.map(rule => ({
+                    ...rule,
+                    behavior: template.behavior || 'direct',
+                    source: template.source || 'raw',
+                    // Preserve value if static, otherwise default the template values
+                    ...(template.value !== undefined ? { behavior: 'static', value: template.value } : {})
+                }));
+            } else {
+                // No existing mapping, apply full template
+                const newRule = {
+                    vibe: 'any',
+                    mechanical_class: 'linear',
+                    aesthetic_id: 'custom',
+                    behavior: template.behavior || 'direct',
+                    source: template.source || 'raw',
+                    cal: { min: 0, center: 127, max: 255 },
+                    lfo: { shape: 'sine', bin: 0, speed: 0.1, react: 0.5 },
+                    audio: { smoothing: 0.5, threshold: 0.1, react: 1.0 }
+                };
                 if (template.value !== undefined) {
+                    newRule.behavior = 'static';
                     newRule.value = template.value;
                 }
-                
-                // For now, we replace any rules with our single template rule if it's a major change
-                if (confirm(`Apply default behavior template for ${template.name}? (This replaces current rules for this channel)`)) {
-                    currentFixture.profile.mappings[idx] = [newRule];
-                }
+                window.currentFixture.mappings[idx] = [newRule];
             }
             renderResults();
         };
 
         window.handleSlider = (idx, val) => {
-            currentFixture.fixture.channels[idx].currentValue = parseInt(val);
+            // No need to store currentValue in Profile schema, just use it for local override
             document.getElementById(`val-${idx}`).innerText = val;
-            
             const baseAddr = parseInt(document.getElementById('test-addr').value) || 1;
             sendOverride(baseAddr + idx, val);
         };
 
         window.highlightCard = (idx, active) => {
             const card = document.getElementById(`card-${idx}`);
-            if (active) card.classList.add('active');
-            else card.classList.remove('active');
+            if (card) {
+                if (active) card.classList.add('active');
+                else card.classList.remove('active');
+            }
         };
 
         function setStep(step) {
@@ -1230,7 +1340,7 @@ OUTPUT JSON SCHEMA:
         // --- SETTINGS & PERSISTENCE ---
         window.openSettings = () => { document.getElementById('settings-modal').style.display = 'flex'; };
         window.closeSettings = () => { document.getElementById('settings-modal').style.display = 'none'; };
-        
+
         window.saveSettings = () => {
             const key = document.getElementById('gemini-key').value;
             const host = document.getElementById('backend-host').value;
@@ -1238,85 +1348,95 @@ OUTPUT JSON SCHEMA:
             localStorage.setItem('vj_gemini_api_key', key);
             localStorage.setItem('vj_backend_host', host);
             localStorage.setItem('vj_gemini_model', model);
-            closeSettings();
+            window.closeSettings();
             connectWS();
-            updateModelLabel();
+            window.updateModelLabel();
         };
 
         window.saveAndFinish = async () => {
-            const name = document.getElementById('final-fix-name').value || (document.getElementById('ai-brand').value + " " + document.getElementById('ai-model').value);
-            
-            // Ensure final sync of metadata before save
-            currentFixture.name = name;
-            const profId = currentFixture.id;
-            
-            // 1. Save Locally (Handle conflicts by overwriting)
-            db.profiles = db.profiles.filter(p => p.id !== profId && p.name !== name);
-            db.profiles.push(currentFixture);
+            const nameInput = document.getElementById('final-fix-name');
+            const name = nameInput.value.trim() || 'Generated Fixture';
 
+            window.currentFixture.name = name;
+            const profId = window.currentFixture.id;
+
+            // 1. Save Locally
+            db.profiles = db.profiles.filter(p => p.id !== profId);
+            db.profiles.push(window.currentFixture);
             localStorage.setItem('ravebox_v2_db', JSON.stringify(db));
-            
+
             // 2. Save to Server
             try {
                 const protocol = window.location.protocol;
-                const host = localStorage.getItem('vj_backend_host') || window.location.hostname;
+                const host = localStorage.getItem('vj_backend_host') || window.location.hostname || 'localhost';
+
+                // Helper to build API URL
                 const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
                 const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
                 const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
                 const apiHost = isCustomTunnel ? 'api-' + boxName : (host === 'ravebox.love' ? 'api.ravebox.love' : host);
                 const port = (isOriginalCloud || isCustomTunnel) ? '' : ':8000';
-                
+
                 const apiBase = `${protocol}//${apiHost}${port}/api/fixtures/`;
                 const safeName = name.replace(/\s+/g, '_');
 
-                // ONLY SAVE PROFILE
                 const profUrl = apiBase + `profiles/${safeName}.json`;
                 const profResp = await fetch(profUrl, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(currentFixture)
+                    body: JSON.stringify(window.currentFixture)
                 });
 
                 if (profResp.ok) {
-                    console.log("✅ Profile Saved (Unified)");
-                    alert("✅ Created: " + name + "\nRedirecting to Profile Editor...");
                     window.location.href = 'setup.html?tab=profile&id=' + profId;
                 } else {
                     throw new Error(`Server error (${profResp.status})`);
                 }
             } catch (e) {
                 console.warn("⚠️ Server save failed:", e);
-                alert("Saved locally, but server sync failed: " + e.message);
                 window.location.href = 'setup.html?tab=profile&id=' + profId;
             }
         };
 
         window.resetUI = () => {
-            currentFixture = null;
+            window.currentFixture = null;
             chatHistory = [];
             document.getElementById('chat-history').innerHTML = "";
-            clearFiles();
+            window.clearFiles();
             setStep('upload');
         };
 
-        document.getElementById('file-input').onchange = (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                handleFiles(e.target.files);
-            }
-        };
-
+        // --- FILE EVENT LISTENERS ---
+        const fileInput = document.getElementById('file-input');
         const dropZone = document.getElementById('drop-zone');
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
-        dropZone.ondragleave = () => { dropZone.classList.remove('dragover'); };
-        dropZone.ondrop = (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                handleFiles(e.dataTransfer.files);
-            }
-        };
+
+        if (fileInput) {
+            fileInput.onchange = (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    window.handleFiles(e.target.files);
+                }
+            };
+        }
+
+        if (dropZone) {
+            // Since file-input already covers the dropZone (absolute 100%), 
+            // a zone click handler would cause a double-trigger.
+            // We just ensure the value is cleared so onchange fires every time.
+            fileInput.onclick = () => { fileInput.value = ""; };
+
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+            dropZone.ondragleave = () => { dropZone.classList.remove('dragover'); };
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    window.handleFiles(e.dataTransfer.files);
+                }
+            };
+        }
 
         init();
     </script>
 </body>
+
 </html>
