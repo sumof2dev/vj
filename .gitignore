@@ -47,3 +47,13 @@ Thumbs.db
 setup.html.bak
 setup.html.old
 ravebox_frontend.zip
+*.pdf
+
+# Node.js
+node_modules/
+visualizer_src/node_modules/
+dist/
+assets/
+
+# Logs
+*.log
