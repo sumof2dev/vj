@@ -6,14 +6,15 @@ import websockets
 import asyncio
 
 # Configuration
-SAVE_DIR = "/home/sumof2/vj/tmp/calibration_results"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SAVE_DIR = os.path.join(BASE_DIR, "tmp", "calibration_results")
 os.makedirs(SAVE_DIR, exist_ok=True)
-os.makedirs(f"{SAVE_DIR}/frames", exist_ok=True)
+os.makedirs(os.path.join(SAVE_DIR, "frames"), exist_ok=True)
 
 # Global State
 class CalibrationContext:
     def __init__(self):
-        self.cap = cv2.VideoCapture(0)
+        self.cap = None
         self.frame = None
         self.running = True
         self.lock = threading.Lock()
@@ -24,6 +25,27 @@ class CalibrationContext:
         self.loop = asyncio.new_event_loop()
         self.dmx_queue = queue.Queue()
         self.ws = None 
+
+        # Auto-probe for camera
+        print("📸 Probing for camera...")
+        found = False
+        for idx in [0, 1, 2, 3, 4, 20, 21]: # Try common indices including RPi5 offsets
+            try:
+                cap = cv2.VideoCapture(idx)
+                if cap.isOpened():
+                    ret, frame = cap.read()
+                    if ret:
+                        print(f"✅ Camera found and delivering frames at index {idx}")
+                        self.cap = cap
+                        found = True
+                        break
+                    cap.release()
+            except Exception as e:
+                print(f"⚠️ Index {idx} probe error: {e}")
+        
+        if not found:
+            print("❌ No working camera found during probe. Defaulting to index 0.")
+            self.cap = cv2.VideoCapture(0)
 
     def start_camera(self):
         def loop():
@@ -109,7 +131,7 @@ class CalibrationHandler(BaseHTTPRequestHandler):
             self.send_cors_headers(200)
             self.wfile.write(json.dumps({"phase": ctx.current_phase, "progress": ctx.progress}).encode())
         elif self.path == '/load_config':
-            path = "/home/sumof2/vj/fixtures/ravebox_config.json"
+            path = os.path.join(BASE_DIR, "fixtures", "ravebox_config.json")
             if os.path.exists(path):
                 with open(path) as f: ctx.config = json.load(f)
                 self.send_cors_headers(200)
@@ -119,7 +141,8 @@ class CalibrationHandler(BaseHTTPRequestHandler):
         ctx.current_phase = name
         ctx.progress = 0
         if not ctx.config:
-            with open("/home/sumof2/vj/fixtures/ravebox_config.json") as f: ctx.config = json.load(f)
+            config_path = os.path.join(BASE_DIR, "fixtures", "ravebox_config.json")
+            with open(config_path) as f: ctx.config = json.load(f)
 
         def get_addr(role):
             target = next((s for s in ctx.config['stage'] if s['id'].lower() == ctx.active_fixture.lower()), None)

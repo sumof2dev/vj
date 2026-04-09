@@ -423,12 +423,13 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
     def _proxy_to_camera(self, subpath):
         """Proxy a request to the camera service on 8004"""
         import urllib.request
+        from urllib.error import HTTPError, URLError
         try:
              # Camera service on 8004 is usually internal HTTP (no SSL)
              url = f"http://127.0.0.1:8004{subpath}"
              
              req = urllib.request.Request(url)
-             with urllib.request.urlopen(req, timeout=5) as response:
+             with urllib.request.urlopen(req, timeout=3) as response:
                  self.send_response(200)
                  # MJPEG/JPEG content type 
                  for header, value in response.getheaders():
@@ -436,15 +437,28 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                          self.send_header(header, value)
                  self.end_headers()
                  self.wfile.write(response.read())
+        except HTTPError as e:
+             print(f"⚠️ Camera HTTP Error: {e.code}")
+             self._send_placeholder_img(e.code)
+        except URLError as e:
+             print(f"❌ Camera Connection Error: {e.reason}")
+             self._send_placeholder_img(503)
         except Exception as e:
-             # Fallback: if camera server is down, return a blank black image or error
-             print(f"❌ Camera Proxy Error: {e}")
-             self._send_placeholder_img()
+             print(f"❌ Camera Proxy Exception: {e}")
+             self._send_placeholder_img(500)
 
-    def _send_placeholder_img(self):
-        """Sends a 1x1 black pixel or 404 if camera is dead"""
-        self.send_response(404)
-        self.end_headers()
+    def _send_placeholder_img(self, code=404):
+        """Sends a 1x1 gray pixel or the specified error code"""
+        if code == 503 or code == 500:
+             # Return a 1x1 gray GIF to prevent broken image icons if it's a transient error
+             self.send_response(200)
+             self.send_header('Content-Type', 'image/gif')
+             self.end_headers()
+             # 1x1 gray GIF
+             self.wfile.write(b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x80\x80\x80\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x01D\x00;')
+        else:
+             self.send_response(code)
+             self.end_headers()
 
     def _proxy_to_launcher(self, subpath):
         """Proxy a request to the launcher service on 8001"""

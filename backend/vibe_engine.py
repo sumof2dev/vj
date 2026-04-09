@@ -21,7 +21,9 @@ class VibeEngine:
         self.transient = "steady"  # "building", "dropping", "tension", "steady"
         self._transient_hold_until = 0  # Hold timer to prevent single-frame flickers
         self._steady_since = 0 # Prevent re-triggering building too fast
-        self.vibe_hysteresis = 1.0 # Faster response for test/calibration
+        self.vibe_hysteresis = 5.0 # "Sticky Vibe" (prevent flickering)
+        self.impact_history = collections.deque(maxlen=15)
+        self._history_frame = 0  # Frame counter; transient logic is suppressed until history is warm
 
     def update(self, audio_state, now=None):
         """
@@ -43,6 +45,7 @@ class VibeEngine:
         vol = float(audio_state.get('vol', 0.0))
         high = float(audio_state.get('high', 0.0))
         flux = float(audio_state.get('flux', 0.0))
+        spectral = float(audio_state.get('spectral_complexity', 0.5))
 
         if audio_state.get('beat', False):
             self.beat_history.append(now)
@@ -52,53 +55,75 @@ class VibeEngine:
         density = len(self.beat_history)
 
         # 2. SELECT VIBE (The "Bucket")
-        if now - self.last_vibe_change > self.vibe_hysteresis:
-            target = self.current_vibe
-            
-            # Use original bias-driven thresholds but with more inclusive floors
-            chill_vol_floor = 0.15 * (1.0 - self.mid_vibe_bias)
-            mid_vol_floor = 0.3 * (1.0 - self.mid_vibe_bias)
-            
-            if vol < 0.2:
+        # Hysteresis: We allow instant upgrades to HIGH, but downgrades are blocked
+        # for vibe_hysteresis (5s) to prevent lighting "indecision" in complex tracks.
+        target = self.current_vibe
+        
+        # HIGH Thresholds: Enhanced to distinguish "Groove" from "Peak"
+        # 1. Extreme Beat Density (BPM > 180 or very active rhythm)
+        # 2. Combination of Volume AND Spectral Complexity (The Shimmer)
+        high_vol = 0.55 + (0.35 * self.mid_vibe_bias)
+        high_density = 6.5 + (6.0 * self.mid_vibe_bias)
+        # Spectral threshold is biased to protect the Mid core
+        high_spectral = 0.38 + (0.15 * (1.0 - self.mid_vibe_bias)) 
+        
+        chill_vol = 0.20 * (1.0 - self.mid_vibe_bias)
+        chill_density = 2.0 * (1.0 - self.mid_vibe_bias)
+        
+        # Vibe Logic
+        is_high = (density >= high_density) or (vol > high_vol and spectral > high_spectral)
+        is_chill = (vol < chill_vol and density < chill_density)
+        
+        if is_high:
+            target = "high"
+        elif is_chill:
+            # Downgrade protection check
+            if self.current_vibe != "high" or (now - self.last_vibe_change > self.vibe_hysteresis):
                 target = "chill"
-            elif (density > 1 or vol > 0.08) and density < 8:
+        else:
+            # Mid Drive (The Default Groove)
+            if self.current_vibe != "high" or (now - self.last_vibe_change > self.vibe_hysteresis):
                 target = "mid"
-            elif density >= 8 or vol > 0.4:
-                target = "high"
-                
-            if target != self.current_vibe:
-                self.current_vibe = target
-                self.last_vibe_change = now
+            
+        if target != self.current_vibe:
+            self.current_vibe = target
+            self.last_vibe_change = now
 
-        # Liquid Smoothing: Slower coefficients for modulators to prevent sub-pixel jitter in raymarchers
+        # Restored "Snappier" Smoothing (Reverted from Liquid Smoothing)
         # Explicitly cast to float to prevent numpy type leakage
-        self.smooth_bass = float(self.smooth_bass + (bass - self.smooth_bass) * 0.15)
-        self.smooth_high = float(self.smooth_high + (high - self.smooth_high) * 0.1)
-        self.smooth_flux = float(self.smooth_flux + (flux - self.smooth_flux) * 0.05)
-        self.smooth_vol  = float(self.smooth_vol  + (vol  - self.smooth_vol)  * 0.15)
+        self.smooth_bass = float(self.smooth_bass + (bass - self.smooth_bass) * 0.35)
+        self.smooth_high = float(self.smooth_high + (high - self.smooth_high) * 0.25)
+        self.smooth_flux = float(self.smooth_flux + (flux - self.smooth_flux) * 0.30)
+        self.smooth_vol  = float(self.smooth_vol  + (vol  - self.smooth_vol)  * 0.35)
 
         # 3.5 ENERGY TREND TRACKING (Build/Drop Detection)
         # Calculate an instantaneous "impact" score (Bass is weighted heavily)
         impact = float(bass * 0.6 + vol * 0.4)
-        
-        # Keep a short history for instant snap detection (approx 0.5 seconds at 30fps)
-        if not hasattr(self, 'impact_history'):
-            self.impact_history = collections.deque(maxlen=15)
-        self.impact_history.append(impact)
 
-        # Legacy energy for density (slower moving trend)
-        energy = float(density * 0.4 + vol * 0.6)
+        self.impact_history.append(impact)
+        self._history_frame += 1
+
+        # Slow-moving energy trend for build/drop detection (volume-only)
+        # We store the smoothed volume to prevent single-beat spikes from triggering trends.
+        energy = float(self.smooth_vol)
         self.energy_history.append(energy)
         
-        if len(self.energy_history) >= 60 and len(self.impact_history) >= 15:
-            old_energy = self.energy_history[-60]
-            trend_long = energy - old_energy
+        # Suppress transient detection until we have a half-window of real data (~2s).
+        # 60 frames balances startup false-positives vs. calibration test responsiveness.
+        # Transient logic requires at least 70 frames of history for its windowed comparison
+        if self._history_frame >= 70 and len(self.energy_history) >= 70 and len(self.impact_history) >= 15:
+            # Windowed Trend: Compare recent 10-frame average to a 10-frame block from 2s ago
+            # This is MUCH more stable than single-frame comparisons.
+            recent_energy = sum(list(self.energy_history)[-10:]) / 10.0
+            past_energy = sum(list(self.energy_history)[-70:-60]) / 10.0
+            trend_long = recent_energy - past_energy
             
             old_impact = self.impact_history[0]
             impact_spike = impact - old_impact
 
-            # Minimum hold durations per state (seconds)
-            HOLD_TIMES = {"building": 1.5, "tension": 1.5, "dropping": 3.0}
+            # Minimum hold durations per state (seconds) - Re-aligned with Cinematic rules
+            # Building hold is reduced to ensure we can catch the breakdown (tension) immediately.
+            HOLD_TIMES = {"building": 0.5, "tension": 1.5, "dropping": 4.0}
             
             # Use a slightly wider window (8 frames) for smoother transient decisions
             # This ignores percussive gaps that might look like silence (tension)
@@ -113,32 +138,46 @@ class VibeEngine:
                 # STATE MACHINE: steady → building → tension → dropping → steady
                 
                 if self.transient == "steady":
-                    # Building: Energy is rising, and we're actually loud enough (prevents triggering on noise)
-                    if trend_long > 0.05 and recent_avg > 0.1 and now - self._steady_since > 1.0:
+                    # SUSTAINED IMPACT BYPASS (Immediate Drop):
+                    # If music snaps from quiet to extreme energy instantly.
+                    if (impact > 0.45 or sustained_spike > 0.3) and recent_avg > 0.4 and now - self._steady_since > 2.0:
+                        self.transient = "dropping"
+                        self._transient_hold_until = now + HOLD_TIMES["dropping"]
+                    
+                    # Standard sequence: Building (Slow Build)
+                    elif trend_long > 0.3 and recent_avg > 0.35 and now - self._steady_since > 2.0:
                         self.transient = "building"
                         self._transient_hold_until = now + HOLD_TIMES["building"]
                 
                 elif self.transient == "building":
-                    # Advance to TENSION: Sustained drop in energy during a building phase (the breakdown)
-                    if recent_avg < 0.4 and old_energy > 0.05:
+                    # Advance to TENSION: Relative drop in energy (The Breakdown)
+                    # We compare current avg to the energy from ~1.5s ago
+                    if recent_avg < old_avg * 0.8 and past_energy > 0.05:
                         self.transient = "tension"
                         self._transient_hold_until = now + HOLD_TIMES["tension"]
-                    elif trend_long > 0.4:
-                        pass # Energy still rising, hold building
+                    elif impact > 0.35: # EMERGENCY BYPASS: even faster
+                        self.transient = "dropping"
+                        self._transient_hold_until = now + HOLD_TIMES["dropping"]
+                    elif trend_long > -0.02 or recent_avg > 0.2:
+                        # Energy still rising or high, DO NOT revert to steady
+                        self._transient_hold_until = now + 1.0 # Extend
                     else:
-                        self.transient = "steady" # Energy flattened out without tension, return to normal
+                        # Energy definitely flattened out without tension, return to normal and START LOCKOUT
+                        self.transient = "steady" 
+                        self._steady_since = now
                 
                 elif self.transient == "tension":
                     # Advance to DROPPING: Massive recovery (The Drop!)
-                    if bass > 0.005 or sustained_spike > 0.005 or recent_avg > 0.01:
+                    # More aggressive sustained_spike detection to catch the "Big Drop" at 1:23
+                    if impact > 0.45 or sustained_spike > 0.20:
                         self.transient = "dropping"
                         self._transient_hold_until = now + HOLD_TIMES["dropping"]
-                    elif recent_avg < 0.1:
+                    elif recent_avg < 0.15:
                         pass # Still in the break
                     else:
                         # Logic: If energy recovers slightly WITHOUT a spike, it wasn't a drop, it's just steady again
-                        if recent_avg > 0.1:
-                            self.transient = "steady"
+                        self.transient = "steady"
+                        self._steady_since = now
                 
                 elif self.transient == "dropping":
                     # Drop hold finished, return to steady and start the post-drop lockout

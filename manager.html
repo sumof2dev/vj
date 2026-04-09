@@ -663,18 +663,26 @@
                     <input type="range" id="masterBias" min="0.0" max="1.0" step="0.05" value="0.5">
                 </div>
 
-                <div class="slider-group">
-                    <div class="slider-label">
-                        <span>Phrasing</span>
+                <div class="slider-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <div class="slider-label"><span>Source</span></div>
+                        <select id="masterAudioSource" class="dash-panel" style="margin-bottom:0;">
+                            <option value="auto">Auto (Default)</option>
+                            <option value="system">All System</option>
+                            <option value="spotify">Spotify Only</option>
+                        </select>
                     </div>
-                    <select id="masterSceneFreq" class="dash-panel">
-                        <option value="-1">Manual (OFF)</option>
-                        <option value="0">Every Beat</option>
-                        <option value="1">4th Beat (1 Bar)</option>
-                        <option value="2">2 Bars</option>
-                        <option value="3">4 Bars</option>
-                        <option value="4">On Vibe Change</option>
-                    </select>
+                    <div>
+                        <div class="slider-label"><span>Visual Change</span></div>
+                        <select id="masterSceneFreq" class="dash-panel" style="margin-bottom:0;">
+                            <option value="-1">Manual (OFF)</option>
+                            <option value="0">Every Beat</option>
+                            <option value="1">1 Bar</option>
+                            <option value="2">2 Bars</option>
+                            <option value="3">4 Bars</option>
+                            <option value="4">Vibe Change</option>
+                        </select>
+                    </div>
                 </div>
 
                 <button id="saveDefaultsBtn" class="btn"
@@ -839,7 +847,7 @@
             const originalText = btn.innerText;
 
             btn.classList.add('loading');
-            btn.innerText = action === 'start' ? "46260808" : "Until next time";
+            btn.innerText = action === 'start' ? "48261946" : "Until next time";
 
             try {
                 const res = await fetch(`${LAUNCHER_API}/${action}`);
@@ -968,6 +976,11 @@
                     sendParams();
                 };
 
+                document.getElementById('masterAudioSource').onchange = (e) => {
+                    state.audio_source = e.target.value;
+                    sendParams();
+                };
+
                 // Save Defaults Button
                 const saveBtn = document.getElementById('saveDefaultsBtn');
                 if (saveBtn) {
@@ -989,6 +1002,7 @@
                     speed: state.speed,
                     sensitivity: state.gain,
                     flux_sensitivity: state.sensitivity,
+                    audio_source: state.audio_source || 'auto',
                     vibe_bias: state.vibe_bias,
                     sceneFreq: state.sceneFreq
                 }));
@@ -1023,12 +1037,15 @@
                     state.sensitivity = m.flux_sensitivity || 0.7;
                     state.vibe_bias = m.vibe_bias || 0.5;
                     state.sceneFreq = m.sceneFreq !== undefined ? m.sceneFreq : 1;
+                    state.audio_source = m.audio_source || 'auto';
 
                     updateSliderUI('masterSpeed', state.speed, 'x');
                     updateSliderUI('masterSens', state.gain);
                     updateSliderUI('masterFlux', state.sensitivity);
                     updateSliderUI('masterBias', state.vibe_bias);
                     document.getElementById('masterSceneFreq').value = state.sceneFreq;
+                    const audioEl = document.getElementById('masterAudioSource');
+                    if (audioEl) audioEl.value = state.audio_source;
                 }
             }
 

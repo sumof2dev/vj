@@ -45,9 +45,12 @@ class ChannelConfig:
             search_vibe = 'any_fallback' # Unique key for state tracking
             matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') in ['any', 'any/fallback']]
 
-        # 4. Absolute Fallback: If still nothing, use the very first rule (index 0)
+        # 4. Absolute Fallback: If still nothing, use the first non-disabled rule
         if not matching_indices:
-            return self.rules[0]
+            for r in self.rules:
+                if r.get('vibe') != 'never':
+                    return r
+            return None # Revert to default channel value
 
         # 5. Random Logic: If vibe category changed, pick a random rule from the matching set
         if state['last_vibe'] != search_vibe:
@@ -421,17 +424,6 @@ class DMXEngine:
         self.transient = audio.get('transient', 'steady')
         current_vibe = audio.get('vibe', 'mid')
 
-        # Global Silence Tracking
-        vol = audio.get('vol', 0.0)
-        if vol < 0.03:
-            if not hasattr(self, '_silence_timer'): self._silence_timer = 0
-            self._silence_timer += dt
-            if self._silence_timer > 2.0: self._global_silence = True
-            else: self._global_silence = False
-        else:
-            self._silence_timer = 0
-            self._global_silence = False
-
         self.logic.update(dt, audio, self.transient, self.speed, self.intensity, self.active_lfos)
         
         # Pre-calculate active presets (Global check once per frame)
@@ -446,30 +438,59 @@ class DMXEngine:
             is_active = False
             for trig in triggers:
                 t_cat = trig.get('category') or trig.get('type')
-                if t_cat == 'vibe' and trig.get('vibe') == current_vibe:
+                
+                # Numeric range helper
+                def check_range(val, t):
+                    lt = t.get('less_than')
+                    gt = t.get('greater_than')
+                    if lt is not None and val > float(lt): return False
+                    if gt is not None and val < float(gt): return False
+                    return True
+
+                if t_cat == 'vibe' and trig.get('vibe', trig.get('value')) == current_vibe:
                     is_active = True
                 elif t_cat == 'state' and (trig.get('state') == self.transient or trig.get('value') == self.transient):
                     is_active = True
                 elif t_cat == 'volume':
-                    target_v = trig.get('value', 'mid')
-                    v = audio.get('vol', 0.0)
-                    r = float(trig.get('range', 5)) / 100.0 # Convert UI percentage to 0.0-1.0
-                    
-                    if target_v == 'silence':
-                        # Active from 0% to r%
-                        if v <= r: is_active = True
-                    elif target_v == 'loud':
-                        # Active from (1.0 - r) to 1.0
-                        if v >= (1.0 - r): is_active = True
-                    elif target_v == 'mid':
-                        # Active within +/- r/2 around 0.5
-                        if abs(v - 0.5) <= (r / 2.0): is_active = True
+                    v_pct = audio.get('vol', 0.0) * 100.0
+                    if 'less_than' in trig or 'greater_than' in trig:
+                        if check_range(v_pct, trig): is_active = True
+                    else:
+                        # Legacy keyword support
+                        target_v = trig.get('value', 'mid')
+                        v = audio.get('vol', 0.0)
+                        r = float(trig.get('range', 5)) / 100.0 
+                        if target_v == 'silence' and v <= r: is_active = True
+                        elif target_v == 'loud' and v >= (1.0 - r): is_active = True
+                        elif target_v == 'mid' and abs(v - 0.5) <= (r / 2.0): is_active = True
+
                 elif t_cat == 'bin':
-                    bin_idx = int(trig.get('bin', 0))
-                    threshold = float(trig.get('threshold', 0.8))
                     bins = audio.get('bins', [0.0]*6)
-                    if bin_idx < len(bins) and bins[bin_idx] >= threshold:
-                        is_active = True
+                    target = trig.get('target', 'BASS')
+                    bin_map = {'SUB':0, 'BASS':1, 'KICK':2, 'LOW_MID':3, 'MID':4, 'HIGH_MID':5}
+                    b_idx = bin_map.get(target, int(trig.get('bin', 1)))
+                    
+                    if b_idx < len(bins):
+                        val = bins[b_idx] * 100.0
+                        if check_range(val, trig): is_active = True
+
+                elif t_cat == 'channel':
+                    addr = int(trig.get('target', 0))
+                    if 0 < addr < len(self.universe):
+                        val = self.universe[addr]
+                        if check_range(val, trig): is_active = True
+
+                elif t_cat == 'function':
+                    # Search logic matrix state for matching keys
+                    target = trig.get('target', '').lower()
+                    val = None
+                    for k, v in self.logic.state.items():
+                        if k.lower() == target:
+                            val = v * 100.0 if isinstance(v, (int, float)) else None
+                            break
+                    
+                    if val is not None:
+                        if check_range(val, trig): is_active = True
                 
                 if is_active: break
                 
@@ -572,12 +593,26 @@ class DMXEngine:
             for p_data in self.active_presets:
                 overrides = p_data.get('overrides', [])
                 for ov in overrides:
-                    if ov.get('type') == 'instance' and ov.get('id') == inst['id']:
+                    ov_type = ov.get('type')
+                    ov_name = ov.get('name', '')
+                    target_role = ch_def.get('role', ch_def.get('name'))
+                    
+                    if ov_type == 'instance' and ov.get('id') == inst['id']:
                         for ov_ch in ov.get('channels', []):
-                            if ov_ch.get('name') == ch_def.get('role', ch_def.get('name')):
+                            if ov_ch.get('name') == target_role:
                                 preset_override_val = int(ov_ch.get('value', 0))
-                    elif ov.get('type') == 'global' and ov.get('name') == ch_def.get('role', ch_def.get('name')):
-                        preset_override_val = int(ov.get('value', 0))
+                    elif ov_type == 'global':
+                        # Match if name matches exactly or has "Global: " prefix
+                        if ov_name == target_role or ov_name == f"Global: {target_role}":
+                            # Check channels list for the specific function value
+                            for ov_ch in ov.get('channels', []):
+                                if ov_ch.get('name') == target_role:
+                                    preset_override_val = int(ov_ch.get('value', 0))
+                                    break
+                            
+                            # Fallback to direct 'value' for legacy global presets if channels is missing
+                            if preset_override_val is None and 'value' in ov:
+                                preset_override_val = int(ov.get('value', 0))
             
             if preset_override_val is not None:
                 val = preset_override_val
@@ -593,7 +628,7 @@ class DMXEngine:
             
         mod_name = rule.get('mod', 'static')
         
-        # Robust 3-point calibration parsing
+        # 3-point calibration parsing
         cal = rule.get('cal') or {}
         def get_int(d, k, default):
             try:
@@ -604,10 +639,6 @@ class DMXEngine:
         c_min = get_int(cal, 'min', 0)
         c_max = get_int(cal, 'max', 255)
         c_center = get_int(cal, 'center', (c_min + c_max) // 2)
-        
-        # Global Silence Blackout (definitively prevents "crazy" behavior during pauses)
-        if getattr(self, '_global_silence', False):
-            return c_min
             
         # --- 2D Control Paradigm (Behavior vs Source) ---
         # Backwards compatibility migration

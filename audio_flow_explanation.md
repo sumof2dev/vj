@@ -90,16 +90,22 @@ Accurate DMX timing is critical on the Pi 5. The engine uses two methods based o
 
 ### 1. Hardware Config (`/boot/firmware/config.txt`)
 Essential for unlocking WaveShare RS485 HATS and HifiBerry DACs.
+
 ```ini
-# Unlocks UART0 pins on Pi 5 GPIO
+[all]
+# Unlocks UART0 for DMX (RS485)
 dtparam=uart0=on
 dtoverlay=disable-bt
 enable_uart=1
-dtoverlay=uart0-pi5
 
-# Configures I2S for HifiBerry
-dtparam=audio=off
-dtoverlay=hifiberry-dacplus
+# NOTE: Avoid 'dtoverlay=uart0-pi5' on Pi 5. It conflicts with I2S (Pin 18).
+
+# Audio for HifiBerry
+# NOTE for Pi 5: Modern HATs are often auto-detected. 
+# Only add these if 'aplay -l' doesn't show the card.
+# dtoverlay=hifiberry-dacplus
+# dtparam=audio=off
+dtoverlay=vc4-kms-v3d,noaudio
 ```
 
 ### 2. OS Dependencies
@@ -151,4 +157,40 @@ The tunnel configuration (`setup_tunnel.sh`) maps three logical entry points to 
 
 ---
 *Technical Ref: INFRA v1.2 / Cloudflare Tunnel / GCS Integrated*
+
+## 7. Reoccurring Bugs & Mitigation
+
+### Transient Ghost Cycling
+- **Issue:** The system enters a constant 6-8 second loop: `steady` -> `building` -> `tension` -> `dropping` -> `steady`, even with non-EDM or consistent-energy music.
+- **Cause:** Regression of state machine thresholds. If `steady` -> `building` sensitivity is too high (< 0.1), normal musical fluctuation triggers a "build." If `building` -> `tension` is too high (> 0.2), any slight volume dip triggers "tension." If `tension` -> `dropping` is too low (< 0.1), any background noise triggers a "drop."
+- **Mitigation/Standard:**
+  - **Steady Lockout:** Must be **3.0s** minimum after a drop or failed build to prevent immediate re-triggering.
+  - **Build Threshold:** `trend_long` must exceed **0.5** and `recent_avg` must exceed **0.4** (The "Gold Standard"). This ensures only sustained, intentional musical builds trigger transitions.
+  - **Drop Threshold:** `impact` (Bass*0.6 + Vol*0.4) must exceed **0.4** OR `sustained_spike` must exceed **0.25**.
+  - **Hold Times:** Re-enforce Cinematic Hold Times (1.0s / 1.5s / 4.0s) to keep visual transitions deliberate.
+  - **Energy Formula:** `energy` used for `trend_long` tracks `vol` only.
+  - **Warmup Guard:** Transient detection suppressed for first 60 frames (~2s).
+
+### Bass Bin Domination (Bin 0 Maxing Out)
+- **Issue:** The first EQ meter bar in the manager constantly pegs at maximum, and `bass`/`impact` values entering the vibe engine are chronically inflated, which makes the transient ghost cycling harder to suppress even with raised thresholds.
+- **Cause:** Bin 0/1 noise gate and downscale (`0.5x` / `0.7x`) were removed from `audio_analyzer.py` during a refactor (commit `4c4cc51`). Without them, raw sub-bass FFT energy (which is naturally very high) passes through at full amplitude.
+- **Mitigation/Standard (under trial):**
+  - Bin 0: apply noise floor gate of `0.08` then scale by `0.5x` before normalization.
+  - Bin 1: apply noise floor gate of `0.03` then scale by `0.7x` before normalization.
+  - Applied to `out_bins` only — does not affect the broadband `bass`/`mid`/`high` values used by the DMX engine directly.
+
+### Sanity Check All-Fail (Except Volume)
+- **Issue:** The in-app sanity check in `help.html` reports all transient and vibe checks as failed.
+- **Cause:** The calibration task (`run_calibration_task`) creates a fresh `VibeEngine()` instance with `_history_frame = 0`. With the warmup guard set to 120 frames (~4s), transient detection was fully suppressed for the first 4 seconds of the calibration audio — which covers several early test sections entirely.
+- **Mitigation:** Warmup guard reduced to 60 frames (~2s), which is sufficient to avoid startup false-positives while still allowing calibration sections to be evaluated correctly.
+
+## 8. Pi 5 Hardware Peculiarities
+
+### I2S / UART Conflict (Pin 18)
+- **Problem:** Audio (HifiBerry) stops working, and `dmesg` reports `pin gpio18 already requested by 1f000a0000.i2s`.
+- **Cause:** The `dtoverlay=uart0-pi5` overlay (intended to move the primary UART to the 40-pin header) claims GPIO 18/19 for the I2S0 controller, which blocks the HAT's I2S1 controller from accessing those same pins.
+- **Resolution:** 
+  1. Remove `dtoverlay=uart0-pi5`.
+  2. Use standard `dtparam=uart0=on` and `dtoverlay=disable-bt` instead.
+  3. Note that modern Pi 5 firmware often auto-detects HifiBerry HATs; adding `dtoverlay=hifiberry-dacplus` manually can sometimes cause redundant driver loading.
 

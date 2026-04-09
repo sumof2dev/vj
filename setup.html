@@ -13,6 +13,73 @@
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
     <style>
+        .rec-dot {
+            width: 8px;
+            height: 8px;
+            background: #ff0000;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            box-shadow: 0 0 5px #ff0000;
+            animation: rec-blink 1s infinite;
+        }
+
+        @keyframes rec-blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .rec-status {
+            display: none;
+            align-items: center;
+            background: rgba(255, 0, 0, 0.15);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #ff4757;
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            white-space: nowrap;
+        }
+
+        .rec-status.active {
+            display: flex;
+        }
+
+        .function-picker {
+            background: #222;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 0 8px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            height: 32px;
+            min-width: 120px;
+            outline: none;
+        }
+        
+        .function-picker:focus {
+            border-color: var(--accent);
+        }
+
+        .test-hub-header-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 1001;
+            background: #0f0f13;
+            backdrop-filter: blur(10px);
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .test-hub-header-sticky {
+                top: 0;
+                padding: 10px 0;
+            }
+        }
         html {
             height: 100%;
         }
@@ -61,8 +128,17 @@
             color: #666;
         }
 
-        .channel-card.collapsed .collapse-icon {
+        .channel-card.collapsed .collapse-icon,
+        .collapsed .collapse-icon {
             transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            display: block;
+        }
+
+        .collapsed .collapsible-content {
+            display: none;
         }
 
         body {
@@ -177,18 +253,20 @@
             overflow: hidden;
             position: relative;
             border: 2px solid #222;
-            box-shadow: inset 0 0 50px rgba(0,0,0,1);
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 1);
         }
+
         #sim-canvas {
             display: block;
             width: 100%;
             height: 100%;
         }
+
         .sim-info {
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             padding: 5px 10px;
             border-radius: 4px;
             font-size: 10px;
@@ -270,22 +348,26 @@
         #saved-profiles-list,
         #saved-presets-list,
         #test-ensemble-strips {
-            max-height: 60vh;
-            overflow-y: auto;
-            padding-right: 5px; /* Space for scrollbar */
+            max-height: none;
+            overflow: visible;
+            padding-right: 5px;
+            /* Space for scrollbar */
         }
 
         /* Custom scrollbar for item-list */
         .item-list::-webkit-scrollbar {
             width: 4px;
         }
+
         .item-list::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.1);
+            background: rgba(0, 0, 0, 0.1);
         }
+
         .item-list::-webkit-scrollbar-thumb {
             background: var(--border);
             border-radius: 2px;
         }
+
         .item-list::-webkit-scrollbar-thumb:hover {
             background: var(--accent);
         }
@@ -479,7 +561,7 @@
             left: 10px;
             font-size: 10px;
             color: var(--accent);
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             padding: 4px 8px;
             border-radius: 4px;
             pointer-events: none;
@@ -635,7 +717,7 @@
             padding: 12px;
             margin-bottom: 15px;
             position: relative;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .test-strip-header {
@@ -644,7 +726,7 @@
             align-items: center;
             margin-bottom: 10px;
             padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .compact-slider-list {
@@ -660,12 +742,12 @@
             padding: 0 8px;
             border-radius: var(--radius-sm);
             transition: background 0.1s;
-            border-bottom: 1px solid rgba(255,255,255,0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
             position: relative;
         }
 
         .compact-slider-row:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .compact-slider-row.busy {
@@ -673,30 +755,23 @@
             border-left: 2px solid orange;
         }
 
-        .compact-slider-row.breeder-active {
-            background: rgba(var(--success-rgb, 46, 213, 115), 0.1) !important;
-            border-left: 2px solid var(--success) !important;
-            height: auto !important;
-            padding: 8px !important;
-            flex-direction: column !important;
-            align-items: flex-start !important;
+        .compact-slider-row.litmus-active {
+            background: rgba(var(--accent-rgb), 0.2) !important;
+            border-left: 2px solid var(--accent);
         }
 
-        .compact-slider-row.breeder-hidden {
-            display: none !important;
+        .compact-slider-row.litmus-hidden {
+            opacity: 0.3;
+            filter: grayscale(1);
         }
 
-        .breeder-comparison-tray {
-            width: 100%;
-            margin-top: 4px;
-            font-size: 9px;
-            color: var(--text-dim);
-            background: rgba(0,0,0,0.2);
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            border-top: 1px solid rgba(255,255,255,0.05);
+        .litmus-comparison-tray {
+            position: absolute;
+            top: 2px;
+            right: 80px;
+            font-size: 8px;
+            color: var(--accent);
+            pointer-events: none;
         }
 
         .compact-role-label {
@@ -770,7 +845,7 @@
 
         .fixture-picker-pill {
             padding: 6px 12px;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border);
             border-radius: 20px;
             font-size: 12px;
@@ -795,7 +870,7 @@
         /* --- MOBILE REFINEMENTS --- */
         @media (max-width: 768px) {
             body {
-                flex-direction: column-reverse;
+                flex-direction: column;
                 font-size: 16px;
             }
 
@@ -915,7 +990,13 @@
                 width: calc(100% - 30px);
                 padding: 10px;
             }
+
+            /* Extra padding for tabs except profile so they aren't cut off */
+            .tab-content:not(#tab-profile) {
+                padding-top: 30px;
+            }
         }
+
         /* --- AI TUNING --- */
         .ai-comment-box {
             background: rgba(var(--accent-rgb), 0.05);
@@ -926,10 +1007,12 @@
             display: none;
             position: relative;
         }
+
         .ai-comment-box.active {
             display: block;
             animation: slideDown 0.2s ease-out;
         }
+
         .ai-comment-input {
             width: 100%;
             background: transparent;
@@ -940,10 +1023,12 @@
             resize: none;
             min-height: 40px;
         }
+
         .ai-comment-input::placeholder {
             color: rgba(255, 255, 255, 0.3);
             font-style: italic;
         }
+
         .ai-sparkle-btn {
             background: transparent;
             border: none;
@@ -1062,6 +1147,7 @@
             gap: 12px;
             border-top: 1px solid var(--border);
         }
+
         .btn-suggestion {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1097,38 +1183,225 @@
             display: none;
             align-items: center;
             gap: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(var(--accent-rgb), 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(var(--accent-rgb), 0.2);
             z-index: 2000;
             animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+
         .ai-batch-review-bar.active {
             display: flex;
         }
 
         @keyframes slideUp {
-            from { transform: translate(-50%, 100px); opacity: 0; }
-            to { transform: translate(-50%, 0); opacity: 1; }
+            from {
+                transform: translate(-50%, 100px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
         }
+
         @keyframes slideDown {
-            from { transform: translateY(-10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
+
         /* --- PROFILE EDITOR DENSITY --- */
-        .glass-select, .glass-input { height: 26px !important; padding: 2px 8px !important; font-size: 11px !important; line-height: 1 !important; }
-        .rule-card .glass-select { height: 22px !important; }
+        .glass-select,
+        .glass-input {
+            height: 26px !important;
+            padding: 2px 8px !important;
+            font-size: 11px !important;
+            line-height: 1 !important;
+        }
+
+        .rule-card .glass-select {
+            height: 22px !important;
+        }
 
         @media (max-width: 600px) {
-            #profile-editor-container { padding: 4px !important; }
-            .channel-card { padding: 6px !important; margin-bottom: 6px !important; border-left-width: 3px !important; }
-            .channel-card-header { padding-bottom: 4px !important; gap: 4px !important; }
-            .channel-card-header .btn { padding: 2px 6px !important; font-size: 10px !important; }
-            .rule-card { padding: 6px !important; margin-bottom: 4px !important; border-radius: 6px !important; }
-            .glass-select, .glass-input { font-size: 11px !important; padding: 4px 6px !important; }
-            label { font-size: 7px !important; margin-bottom: 1px !important; }
-            .vibe-icon-select { width: 30px !important; text-align: center; font-size: 13px !important; }
-            .mobile-role-row { width: 100%; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 4px; margin-top: 4px; }
-            .channel-card-body { padding: 0 !important; }
-            .channel-card:nth-child(even) { background: rgba(255, 255, 255, 0.04) !important; }
+            #profile-editor-container {
+                padding: 4px !important;
+            }
+
+            .channel-card {
+                padding: 6px !important;
+                margin-bottom: 6px !important;
+                border-left-width: 3px !important;
+            }
+
+            .channel-card-header {
+                padding-bottom: 4px !important;
+                gap: 4px !important;
+            }
+
+            .channel-card-header .btn {
+                padding: 2px 6px !important;
+                font-size: 10px !important;
+            }
+
+            .rule-card {
+                padding: 6px !important;
+                margin-bottom: 4px !important;
+                border-radius: 6px !important;
+            }
+
+            .glass-select,
+            .glass-input {
+                font-size: 11px !important;
+                padding: 4px 6px !important;
+            }
+
+            label {
+                font-size: 7px !important;
+                margin-bottom: 1px !important;
+            }
+
+            .vibe-icon-select {
+                width: 30px !important;
+                text-align: center;
+                font-size: 13px !important;
+            }
+
+            .mobile-role-row {
+                width: 100%;
+                border-top: 1px solid rgba(255, 255, 255, 0.03);
+                padding-top: 4px;
+                margin-top: 4px;
+            }
+
+            .channel-card-body {
+                padding: 0 !important;
+            }
+
+            .channel-card:nth-child(even) {
+                background: rgba(255, 255, 255, 0.04) !important;
+            }
+        }
+
+        /* --- AI REFINEMENT & SETTINGS UI --- */
+        .btn-settings {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-settings:hover {
+            border-color: var(--accent);
+            transform: rotate(45deg);
+            background: rgba(var(--accent-rgb), 0.1);
+        }
+
+        .ai-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px) saturate(180%);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-modal-overlay.active {
+            display: flex;
+        }
+
+        .ai-modal-content {
+            background: rgba(24, 24, 30, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 20px !important;
+            width: 90% !important;
+            max-width: 450px !important;
+            padding: 30px !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+            animation: modalIn 0.3s ease-out;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* --- DIFF VIEWER --- */
+        .diff-modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .diff-row {
+            display: flex;
+            gap: 15px;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: flex-start;
+        }
+
+        .diff-ch-label {
+            width: 80px;
+            font-weight: 900;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        .diff-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .diff-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .diff-old {
+            color: #ff5e5e;
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .diff-new {
+            color: #5effa8;
+            font-weight: bold;
+        }
+
+        .diff-unchanged {
+            color: var(--text-dim);
         }
     </style>
 </head>
@@ -1150,7 +1423,7 @@
 
 
 
-        <div class="nav-btn active" onclick="switchTab('tab-profile')" title="Profiles">
+        <div class="nav-btn active" id="nav-btn-profile" onclick="switchTab('tab-profile')" title="Profiles">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path
@@ -1162,7 +1435,7 @@
             <span class="nav-text">Profile</span>
         </div>
 
-        <div class="nav-btn" onclick="switchTab('tab-stage')" title="Stage">
+        <div class="nav-btn" id="nav-btn-stage" onclick="switchTab('tab-stage')" title="Stage">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4"></path>
@@ -1174,11 +1447,15 @@
         </div>
 
         <div class="nav-btn" onclick="switchTab('tab-sim')" title="Sim">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
             <span class="nav-text">Sim</span>
         </div>
 
-        <div class="nav-btn" onclick="switchTab('tab-presets')" title="Presets">
+        <div class="nav-btn" id="nav-btn-presets" onclick="switchTab('tab-presets')" title="Presets">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -1188,8 +1465,8 @@
             <span class="nav-text">Presets</span>
         </div>
 
-        <div class="desktop-only"
-            style="border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 15px; opacity: 0.5;"></div>
+        <div class="desktop-only" style="border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 15px; opacity: 0.5;">
+        </div>
 
         <div class="nav-btn" onclick="switchTab('tab-test')" title="Test">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -1202,8 +1479,11 @@
         <div class="nav-btn desktop-only" onclick="sendIt(event)" title="Send It">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path>
-                <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path>
+                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z">
+                </path>
+                <path
+                    d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z">
+                </path>
                 <path d="M9 12H4s.55-3.03 2-4.5c1.11-1.12 2.65-2.01 4-2.5"></path>
                 <path d="M12 15v5s3.03-.55 4.5-2c1.12-1.11 2.01-2.65 2.5-4"></path>
             </svg>
@@ -1231,22 +1511,37 @@
                     <h2 style="margin:0; border:none; padding:0;">Behavior Profiles</h2>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-primary" onclick="createNewProfile()">+ New Profile</button>
-                        <button class="btn btn-primary" onclick="window.location.href='fixture_ai.html?mode=existing&v=' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : Date.now())">Auto Add</button>
-                        <button class="btn" onclick="document.getElementById('load-behavior-input').click()">Load Profile</button>
+                        <button class="btn btn-primary"
+                            onclick="window.location.href='fixture_ai.html?mode=existing&v=' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : Date.now())">Auto
+                            Add</button>
+                        <button class="btn" onclick="document.getElementById('load-behavior-input').click()">Load
+                            Profile</button>
                     </div>
                 </div>
-                <p style="color:var(--text-dim); margin-top: -10px; margin-bottom: 20px;">Behavior Set Up: Ranges and Reactivity - Assign DMX value ranges and reactivity profile. This will determine how each channel reacts to the music.</p>
-                
+                <p style="color:var(--text-dim); margin-top: -10px; margin-bottom: 20px;">Behavior Set Up: Ranges and
+                    Reactivity - Assign DMX value ranges and reactivity profile. This will determine how each channel
+                    reacts to the music.</p>
+
                 <div class="card">
-                    <div class="card-title" style="color: var(--text-dim); border: none; padding: 0; margin-bottom: 20px;">Saved Behaviors</div>
-                    
+                    <div class="card-title"
+                        style="color: var(--text-dim); border: none; padding: 0; margin-bottom: 20px;">Saved Behaviors
+                    </div>
+
                     <hr style="border:0; border-top:1px solid #333; margin: 15px 0;">
-                    <div class="card-title" style="font-size: 0.9rem; color: var(--accent); border:none; margin-bottom: 10px;">Active Behaviors (Used on Stage)</div>
+                    <div class="card-title"
+                        style="font-size: 0.9rem; color: var(--accent); border:none; margin-bottom: 10px;">Active
+                        Behaviors (Used on Stage)</div>
                     <div id="active-profiles-list" class="item-list"></div>
-                    
+
                     <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
-                    <div class="card-title" style="font-size: 0.9rem; color: var(--text-dim); border:none; margin-bottom: 10px;">All Profiles:</div>
-                    <div id="saved-profiles-list" class="item-list"></div>
+                    <div id="all-profiles-section" class="collapsed">
+                        <div class="card-title" onclick="toggleAllProfiles()"
+                            style="font-size: 0.9rem; color: var(--text-dim); border:none; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none;">
+                            <span class="collapse-icon" style="font-size: 10px;">▼</span>
+                            All Profiles:
+                        </div>
+                        <div id="saved-profiles-list" class="item-list collapsible-content"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1259,237 +1554,304 @@
                             style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">
                             IDLE</div>
                     </div>
-                    <button class="btn btn-primary" onclick="saveProfile()" title="Sync changes to the server backend">Save Profile</button>
+                    <button class="btn btn-primary" onclick="saveProfile()"
+                        title="Sync changes to the server backend">Save Profile</button>
                     <button class="btn" style="margin-left: 5px;" onclick="duplicateProfile()">Duplicate</button>
-                    <button class="btn btn-primary" style="margin-left: 5px;" onclick="refineProfileGlobal()">Refine Profile</button>
+                    <button class="btn btn-primary" style="margin-left: 5px;" onclick="refineProfileGlobal()">Refine
+                        Profile</button>
                     <button class="btn" style="margin-left: 5px;" onclick="addProfileChannel()">➕ Add Channel</button>
-                    <button class="btn" style="margin-left: 5px;" onclick="downloadBehaviorProfile()">Export JSON</button>
-                    <input type="file" id="load-behavior-input" style="display:none" onchange="loadBehaviorProfile(event)">
+                    <button class="btn" style="margin-left: 5px;" onclick="downloadBehaviorProfile()">Export
+                        JSON</button>
+                    <input type="file" id="load-behavior-input" style="display:none"
+                        onchange="loadBehaviorProfile(event)">
                 </div>
                 <div id="ai-loading-container" style="display:none; margin-bottom: 20px;">
-                     <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; position: relative;">
-                          <div id="ai-loading-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; position: absolute; top:0; left:0;"></div>
-                     </div>
-                     <div id="ai-loading-text" style="font-size: 10px; color: var(--accent); text-align: right; margin-top: 4px; font-weight: bold; text-transform: uppercase;">Processing...</div>
-                </div>
-
-                    <div class="form-row">
-                        <div style="flex:1">
-                            <label>Profile Label</label>
-                            <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
-                            <input type="hidden" id="prof-base-fixture">
-                        </div>
-                    </div>
-                    <div id="prof-mappings" style="margin-top: 10px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-stage" class="tab-content">
-            <h2>Stage Patching</h2>
-            <p style="color:var(--text-dim)">Deploy profiles to the physical rig.</p>
-
-            <div class="card">
-                <div class="card-title">Patch to Stage</div>
-                <div class="form-row" style="grid-template-columns: 1fr 1fr 0.8fr 0.8fr 1fr;">
-                    <div style="display:none">
-                        <label>Hardware Type</label>
-                        <select id="stage-fixture" onchange="updateStageProfileList()"></select>
-                    </div>
-                    <div>
-                        <label>Profile</label>
-                        <select id="stage-profile"></select>
-                    </div>
-                    <div>
-                        <label>Address (1-512)</label>
-                        <input type="number" id="stage-addr" value="1" min="1" max="512">
-                    </div>
-                    <div>
-                        <label>Offset</label>
-                        <input type="number" id="stage-offset" value="0" min="0" max="512">
-                    </div>
-                    <div>
-                        <label>Zone</label>
-                        <input type="text" id="stage-zone" value="center" list="zone-options">
-                        <datalist id="zone-options">
-                            <option value="left">
-                            <option value="right">
-                            <option value="center">
-                            <option value="top">
-                            <option value="bottom">
-                        </datalist>
-                    </div>
-                </div>
-                <button class="btn btn-primary" onclick="patchToStage()">➕ Add to Stage</button>
-            </div>
-
-            <div class="card">
-                <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div class="card-title" style="margin:0;">On Stage</div>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn btn-sm" id="btn-toggle-json" onclick="toggleStageJson()">JSON</button>
-                        <button class="btn btn-primary btn-sm" onclick="sendIt(event)">Save Stage</button>
-                    </div>
-                </div>
-                <div id="stage-list" class="item-list"></div>
-                <div id="stage-json-container" style="display:none; margin-top: 10px;">
-                    <textarea id="stage-json-editor" style="width:100%; height:300px; background:#1a1a1f; color:#0f0; font-family:monospace; border:1px solid #333; padding:10px; border-radius:4px;"></textarea>
-                    <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="saveStageJson()">💾 Save JSON Changes</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-presets" class="tab-content">
-            <h2>Presets</h2>
-            <p style="color:var(--text-dim)">Define structural overrides and automated triggers (e.g., The Drop).</p>
-
-            <div class="card">
-                <div class="card-title">Create New Preset</div>
-                <div class="form-row">
-                    <div>
-                        <label>Preset Name</label>
-                        <input type="text" id="pres-name" placeholder="e.g., Massive Drop Lock">
-                    </div>
                     <div
-                        style="margin-top:15px; background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid #333;">
-                        <label>Active Triggers</label>
-                        <div id="pres-active-triggers" style="margin-bottom:10px;"></div>
-                        
-                        <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; text-align:right;">
-                            <button class="btn btn-primary" onclick="addEmptyTrigger()">+ AND (Add Condition)</button>
+                        style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; position: relative;">
+                        <div id="ai-loading-bar"
+                            style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; position: absolute; top:0; left:0;">
                         </div>
-                    </div> <!-- Closes line 637 Trigger Box -->
-                </div> <!-- Closes line 632 form-row -->
-
-                <!-- Hidden templates for inputs, managed by JS -->
-                <div id="trigger-input-temp" style="display:none"></div>
-
-                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #444;">
-                    <label style="font-size:1.1rem; font-weight:bold; color:var(--accent);">THEN:</label>
-                    <div class="form-row" style="grid-template-columns: 1.5fr 1.5fr auto; align-items: end;">
-                        <div>
-                            <label>Target Fixture</label>
-                            <select id="pres-add-stage-fix">
-                                <option value="global">ALL FIXTURES (Global)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Target Function</label>
-                            <select id="pres-add-global-func">
-                                <option value="">-- Select Function --</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" onclick="addOverrideToCurrentPreset()">ADD ACTION</button>
+                    </div>
+                    <div style="display:flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                        <button id="ai-view-diff-btn" class="btn btn-sm"
+                            style="display:none; padding:2px 8px; font-size:9px; background:var(--accent); border:none; height:18px;"
+                            onclick="showAiDiff()">🔍 View Changes</button>
+                        <div id="ai-loading-text"
+                            style="font-size: 10px; color: var(--accent); text-align: right; font-weight: bold; text-transform: uppercase;">
+                            Processing...</div>
                     </div>
                 </div>
 
-                <div id="pres-overrides-container" style="margin-top:20px;">
-                    <!-- Active overrides will be rendered here -->
+                <div class="form-row">
+                    <div style="flex:1">
+                        <label>Profile Label</label>
+                        <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
+                        <input type="hidden" id="prof-base-fixture">
+                    </div>
                 </div>
-
-                <div style="margin-top: 20px; padding-top:15px; border-top:1px solid #333;">
-                    <button class="btn btn-primary" onclick="savePreset()">💾 Save Preset</button>
-                    <button class="btn btn-sm" style="margin-left:10px;" onclick="resetPresetForm()">Clear</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Saved Presets</div>
-                <div id="saved-presets-list" class="item-list"></div>
+                <div id="prof-mappings" style="margin-top: 10px;"></div>
             </div>
         </div>
 
-        <!-- --- SIM TAB --- -->
-        <div id="tab-sim" class="tab-content">
-            <div class="card">
-                <div class="card-title">Stage Simulation (Audience View)</div>
-                <div id="sim-stage-container">
-                    <div class="sim-info">Virtual DMX Engine Running</div>
-                    <canvas id="sim-canvas"></canvas>
+    <div id="tab-stage" class="tab-content">
+        <h2>Stage Patching</h2>
+        <p style="color:var(--text-dim)">Deploy profiles to the physical rig.</p>
+
+        <div class="card">
+            <div class="card-title">Patch to Stage</div>
+            <div class="form-row" style="grid-template-columns: 1fr 1fr 0.8fr 0.8fr 1fr;">
+                <div style="display:none">
+                    <label>Hardware Type</label>
+                    <select id="stage-fixture" onchange="updateStageProfileList()"></select>
                 </div>
-                <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                    <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:8px; border:1px solid #333;">
-                        <h4 style="margin:0 0 10px 0; font-size:12px; color:var(--accent-alt);">HOW TO USE</h4>
-                        <p style="font-size:11px; color:#888;">This simulator shows real-time projections for all <b>Stage Instances</b>. Position is derived from the assigned <b>Zone</b> (Left/Right/Top/Bottom/Center) and mapped to the audience perspective. Shape changes indicate <b>Pattern</b> DMX updates.</p>
-                        <select id="ai-model-select" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px; border-radius:8px; margin-top:10px;" onchange="localStorage.setItem('vj_gemini_model', this.value); document.querySelector('.active-model-name').innerText = this.options[this.selectedIndex].text;">
-                            <option value="gemini-3-flash" selected>Gemini 3 Flash</option>
-                            <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
-                            <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                            <option value="deep-research-pro-preview">Deep Research Pro Preview</option>
+                <div>
+                    <label>Profile</label>
+                    <select id="stage-profile"></select>
+                </div>
+                <div>
+                    <label>Address (1-512)</label>
+                    <input type="number" id="stage-addr" value="1" min="1" max="512">
+                </div>
+                <div>
+                    <label>Offset</label>
+                    <input type="number" id="stage-offset" value="0" min="0" max="512">
+                </div>
+                <div>
+                    <label>Zone</label>
+                    <input type="text" id="stage-zone" value="center" list="zone-options">
+                    <datalist id="zone-options">
+                        <option value="left">
+                        <option value="right">
+                        <option value="center">
+                        <option value="top">
+                        <option value="bottom">
+                    </datalist>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="patchToStage()">➕ Add to Stage</button>
+        </div>
+
+        <div class="card">
+            <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div class="card-title" style="margin:0;">On Stage</div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-sm" id="btn-toggle-json" onclick="toggleStageJson()">JSON</button>
+                    <button class="btn btn-primary btn-sm" onclick="sendIt(event)">Save Stage</button>
+                </div>
+            </div>
+            <div id="stage-list" class="item-list"></div>
+            <div id="stage-json-container" style="display:none; margin-top: 10px;">
+                <textarea id="stage-json-editor"
+                    style="width:100%; height:300px; background:#1a1a1f; color:#0f0; font-family:monospace; border:1px solid #333; padding:10px; border-radius:4px;"></textarea>
+                <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="saveStageJson()">💾 Save JSON
+                    Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-presets" class="tab-content">
+        <h2>Presets</h2>
+        <p style="color:var(--text-dim)">Define structural overrides and automated triggers (e.g., The Drop).</p>
+
+        <div class="card">
+            <div class="card-title">Create New Preset</div>
+            <div class="form-row">
+                <div>
+                    <label>Preset Name</label>
+                    <input type="text" id="pres-name" placeholder="e.g., Massive Drop Lock">
+                </div>
+                <div
+                    style="margin-top:15px; background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid #333;">
+                    <label>Active Triggers</label>
+                    <div id="pres-active-triggers" style="margin-bottom:10px;"></div>
+
+                    <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; text-align:right;">
+                        <button class="btn btn-primary" onclick="addEmptyTrigger()">+ AND (Add Condition)</button>
+                    </div>
+                </div> <!-- Closes line 637 Trigger Box -->
+            </div> <!-- Closes line 632 form-row -->
+
+            <!-- Hidden templates for inputs, managed by JS -->
+            <div id="trigger-input-temp" style="display:none"></div>
+
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #444;">
+                <label style="font-size:1.1rem; font-weight:bold; color:var(--accent);">THEN:</label>
+                <div class="form-row" style="grid-template-columns: 1.5fr 1.5fr auto; align-items: end;">
+                    <div>
+                        <label>Target Fixture</label>
+                        <select id="pres-add-stage-fix">
+                            <option value="global">ALL FIXTURES (Global)</option>
                         </select>
                     </div>
-                    <div id="sim-active-list" style="background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; border:1px solid #111; max-height:120px; overflow-y:auto; font-family:monospace; font-size:11px; color:#aaa;">
-                        <!-- Populate with active fixtures -->
+                    <div>
+                        <label>Target Function</label>
+                        <select id="pres-add-global-func">
+                            <option value="">-- Select Function --</option>
+                        </select>
                     </div>
+                    <button class="btn btn-primary" onclick="addOverrideToCurrentPreset()">ADD ACTION</button>
                 </div>
+            </div>
+
+            <div id="pres-overrides-container" style="margin-top:20px;">
+                <!-- Active overrides will be rendered here -->
+            </div>
+
+            <div style="margin-top: 20px; padding-top:15px; border-top:1px solid #333;">
+                <button class="btn btn-primary" onclick="savePreset()">💾 Save Preset</button>
+                <button class="btn btn-sm" style="margin-left:10px;" onclick="resetPresetForm()">Clear</button>
             </div>
         </div>
 
-        <div id="tab-test" class="tab-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h2 style="margin:0;">Live Test Hub</h2>
+        <div class="card">
+            <div class="card-title">Saved Presets</div>
+            <div id="saved-presets-list" class="item-list"></div>
+        </div>
+    </div>
+
+    <!-- --- SIM TAB --- -->
+    <div id="tab-sim" class="tab-content">
+        <div class="card">
+            <div class="card-title">Stage Simulation (Audience View)</div>
+            <div id="sim-stage-container">
+                <div class="sim-info">Virtual DMX Engine Running</div>
+                <canvas id="sim-canvas"></canvas>
+            </div>
+            <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:8px; border:1px solid #333;">
+                    <h4 style="margin:0 0 10px 0; font-size:12px; color:var(--accent-alt);">HOW TO USE</h4>
+                    <p style="font-size:11px; color:#888;">This simulator shows real-time projections for all <b>Stage
+                            Instances</b>. Position is derived from the assigned <b>Zone</b>
+                        (Left/Right/Top/Bottom/Center) and mapped to the audience perspective. Shape changes indicate
+                        <b>Pattern</b> DMX updates.</p>
+                    <select id="ai-model-select"
+                        style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px; border-radius:8px; margin-top:10px;"
+                        onchange="localStorage.setItem('vj_gemini_model', this.value); document.querySelector('.active-model-name').innerText = this.options[this.selectedIndex].text;">
+                        <option value="gemini-3-flash" selected>Gemini 3 Flash</option>
+                        <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                        <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                        <option value="deep-research-pro-preview">Deep Research Pro Preview</option>
+                    </select>
+                </div>
+                <div id="sim-active-list"
+                    style="background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; border:1px solid #111; max-height:120px; overflow-y:auto; font-family:monospace; font-size:11px; color:#aaa;">
+                    <!-- Populate with active fixtures -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-test" class="tab-content">
+        <div class="test-hub-header-sticky">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <h2 style="margin:0;">Live Test Hub</h2>
+                    <div id="rec-status" class="rec-status">
+                        <span class="rec-dot"></span> REC <span id="rec-timer" style="margin-left:8px; font-family:monospace;">00:00</span>
+                    </div>
+                </div>
                 <div style="display:flex; gap:8px;">
+                    <button id="btn-litmus-toggle" class="btn btn-sm" onclick="toggleLitmusTest()" 
+                            style="background:#222; border-color:#444; transition: all 0.2s;">🧬 Profile Litmus</button>
+                    <button id="btn-mute-others" class="btn btn-sm" onclick="toggleMuteOthers()" 
+                            style="background:#222; border-color:#444; transition: all 0.2s;">🔕 Mute Others</button>
+                    <button id="btn-record" class="btn btn-sm" onclick="toggleRecording()" style="background:#222; border-color:#444;">🔴 Record</button>
                     <button id="btn-toggle-feed" class="btn btn-sm" onclick="toggleTestFeed()">📷 Live Feed: OFF</button>
                     <button class="btn btn-danger btn-sm" onclick="clearAllGlobalOverrides()">Release All</button>
                 </div>
             </div>
-            
-            <p style="color:var(--text-dim); margin-bottom:20px;">Real-time DMX tactile control with visual verification.</p>
+            <!-- Active Presets Bar -->
+            <div id="active-presets-bar" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px; min-height: 25px; align-items: center;"></div>
+        </div>
 
-            <!-- CAMERA VIEW (PORTED FROM CALIBRATION) -->
-            <div id="test-live-feed-container">
-                <div style="position:absolute; top:25px; left:25px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:4px; font-size:10px; color:var(--accent); z-index:10; border:1px solid var(--accent); backdrop-filter:blur(10px);">● LIVE FEED</div>
-                <img id="test-live-feed-img" src="" alt="Camera Stream Disconnected">
-            </div>
+        <p style="color:var(--text-dim); margin-bottom:20px;">Real-time DMX tactile control with visual verification.
+        </p>
 
-            <!-- ENSEMBLE PICKER -->
-            <div class="test-controls-bar">
-                <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; width:100%; margin-bottom:8px;">Ensemble Hub: Add Fixtures</div>
-                <div id="test-fixture-picker" style="display:flex; flex-wrap:wrap; gap:8px;">
-                    <!-- Picks will be rendered here -->
+        <!-- CAMERA VIEW (PORTED FROM CALIBRATION) -->
+        <div id="test-live-feed-container">
+            <div
+                style="position:absolute; top:25px; left:25px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:4px; font-size:10px; color:var(--accent); z-index:10; border:1px solid var(--accent); backdrop-filter:blur(10px);">
+                ● LIVE FEED</div>
+            <img id="test-live-feed-img" src="" alt="Camera Stream Disconnected">
+        </div>
+
+        <!-- ENSEMBLE PICKER -->
+        <div class="test-controls-bar">
+                Available fixtures
+                <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:10px; color:#666;">ADD BY FUNCTION:</span>
+                    <select id="test-function-picker" class="function-picker" onchange="updateTestFunctions(this.value)">
+                        <option value="">-- Add Role --</option>
+                    </select>
+                    <button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:#333;" onclick="clearTestFunctions()">Clear</button>
                 </div>
             </div>
+            <div id="test-fixture-picker" style="display:flex; flex-wrap:wrap; gap:8px;">
+                <!-- Picks will be rendered here -->
+            </div>
 
-            <!-- VIBE BREEDER HUB (RENAMED TO SPEED DATE) -->
-            <div id="vibe-breeder-hub" style="margin-top: 20px; display: none;">
-                <div class="card" style="border-color: var(--accent); background: rgba(var(--accent-rgb), 0.05); padding: 15px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin:0; color:var(--accent);">🧬 Profile Litmus Test (Gen <span id="breeder-gen-text">1</span>)</h3>
-                        <div style="display:flex; gap:10px;">
-                            <button id="btn-breeder-start" class="btn btn-sm btn-primary" onclick="startVibeBreeder()">Start AI Litmus Test</button>
-                            <div id="breeder-active-controls" style="display:none; display:flex; gap:8px;">
-                                <button class="btn btn-sm btn-primary" onclick="keepAndBreedSelected()" title="Breed new variations from selected (Thumbs Up) items">Next Generation</button>
-                                <button class="btn btn-sm btn-success" onclick="saveFinalMutant()" title="Save currently auditioned variation as a NEW permanent profile">💾 Finalize As New</button>
-                                <button id="btn-breeder-cancel" class="btn btn-sm" style="background:transparent; border:1px solid #666;" onclick="cancelVibeBreeder()">Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="breeder-options-container" style="display:none; margin-top:15px;">
-                        <p style="font-size:0.8rem; color:var(--text-dim);">Audition a variation, then use 👍/👎. Use <b>Next Generation</b> to evolve your favorites or <b>Finalize</b> to save the current sync as a new profile.</p>
-                        <div id="breeder-cards-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-                            <!-- Populated by JS -->
+        <!-- PROFILE LITMUS TEST HUB -->
+        <div id="vibe-litmus-hub" style="margin-top: 20px; display: none;">
+            <div class="card"
+                style="border-color: var(--accent); background: rgba(var(--accent-rgb), 0.05); padding: 15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; color:var(--accent);">🧬 Profile Litmus Test (Gen <span
+                            id="litmus-gen-text">1</span>)</h3>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-litmus-start" class="btn btn-sm btn-primary" onclick="startLitmusTest()">Start
+                            AI Litmus Test</button>
+                        <div id="litmus-active-controls" style="display:none; display:flex; gap:8px;">
+                            <button class="btn btn-sm btn-primary" onclick="evolveSelected()"
+                                title="Breed new variations from selected (Thumbs Up) items">Next Generation</button>
+                            <button class="btn btn-sm btn-success" onclick="saveFinalMutant()"
+                                title="Save currently auditioned variation as a NEW permanent profile">💾 Finalize As
+                                New</button>
+                            <button id="btn-litmus-cancel" class="btn btn-sm"
+                                style="background:transparent; border:1px solid #666;"
+                                onclick="cancelLitmusTest()">Cancel</button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ENSEMBLE STRIPS -->
-            <div id="test-ensemble-strips" style="margin-top: 10px;">
-                <div id="test-empty-state" style="padding:40px; text-align:center; color:#444; border:2px dashed #222; border-radius:12px;">
-                    Select fixtures above to build your test ensemble.
+                <div id="litmus-options-container" style="display:none; margin-top:15px;">
+                    <p style="font-size:0.8rem; color:var(--text-dim);">Audition a variation, then use 👍/👎. Use
+                        <b>Next Generation</b> to evolve your favorites or <b>Finalize</b> to save the current sync as a
+                        new profile.</p>
+                    <div id="litmus-cards-grid"
+                        style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                        <!-- Populated by JS -->
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- ENSEMBLE STRIPS -->
+        <div id="test-ensemble-strips" style="margin-top: 10px;">
+            <div id="test-empty-state"
+                style="padding:40px; text-align:center; color:#444; border:2px dashed #222; border-radius:12px;">
+                Select fixtures above to watch and live adjust.
+            </div>
         </div>
+    </div>
 
     </div>
 
     <script>
         // --- 1. DATABASE & PERSISTENCE ---
+        const KNOWN_ROLES = [
+            'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y',
+            'color_solid', 'color_multi', 'pattern',
+            'beam_fx', 'grating', 'drawing', 'drawing_delay',
+            'strobe', 'generic', 'unassigned', 'dimmer',
+            'mode', 'clip', 'group'
+        ];
+        
+        let muteOthersActive = false;
+        let mutedTestAddresses = new Set();
+        
         let savedHost = localStorage.getItem('vj_backend_host');
         const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
         // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
@@ -1500,7 +1862,7 @@
                 localStorage.setItem('vj_backend_host', savedHost);
             }
         }
-        
+
         const urlParams = new URLSearchParams(window.location.search);
         const queryHost = urlParams.get('host');
         if (queryHost) {
@@ -1525,7 +1887,7 @@
         const API_BASE_ROOT = isCustomTunnel ? (window.location.protocol + "//" + apiHost) : (isCustomSubdomain ? (window.location.protocol + "//" + window.location.host) : (host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : apiHost + ':8000')) : (window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : ""))));
         const BACKEND_ROOT = isCustomTunnel ? (window.location.protocol + "//" + baseHost) : (isCustomSubdomain ? (window.location.protocol + "//" + window.location.host) : (host ? (window.location.protocol + "//" + (isOriginalCloud ? 'ravebox.love' : baseHost + ':8000')) : (window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : ""))));
         const API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-        const APP_VERSION = "46260808"; // Updated by deploy.sh
+        const APP_VERSION = "48261946"; // Updated by deploy.sh
 
         let db;
         try {
@@ -1540,7 +1902,7 @@
         }
 
         // --- AI Profile Tuning State ---
-        let pendingAiInstructions = {}; 
+        let pendingAiInstructions = {};
         let isProcessingAi = false;
         let tempChannels = [];
         let latestOverrides = new Set();
@@ -1561,60 +1923,93 @@
             document.getElementById('sidebar').classList.toggle('collapsed');
         }
 
+        function toggleAllProfiles() {
+            document.getElementById('all-profiles-section').classList.toggle('collapsed');
+        }
+
+        let currentTab = 'tab-profile';
         function switchTab(tabId, skipReset = false) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            const tabs = document.querySelectorAll('.tab-content');
+            const btns = document.querySelectorAll('.nav-btn');
 
-            const targetTab = document.getElementById(tabId);
-            if (targetTab) targetTab.classList.add('active');
+            // --- RE-CLICK TO SAVE LOGIC ---
+            if (currentTab === tabId) {
+                if (tabId === 'tab-profile') saveProfile();
+                else if (tabId === 'tab-stage') saveDB();
+                else if (tabId === 'tab-presets') savePreset();
+                return;
+            }
+            currentTab = tabId;
 
-            const navBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
-            if (navBtn) navBtn.classList.add('active');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.id === tabId) tab.classList.add('active');
+            });
+
+            btns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Reset all nav labels
+            if (document.getElementById('nav-btn-profile')) document.querySelector('#nav-btn-profile .nav-text').innerText = 'Profile';
+            if (document.getElementById('nav-btn-stage')) document.querySelector('#nav-btn-stage .nav-text').innerText = 'Stage';
+            if (document.getElementById('nav-btn-presets')) document.querySelector('#nav-btn-presets .nav-text').innerText = 'Presets';
+
+            // Change active tab's label to SAVE
+            if (tabId === 'tab-profile') document.querySelector('#nav-btn-profile .nav-text').innerText = '💾 SAVE';
+            else if (tabId === 'tab-stage') document.querySelector('#nav-btn-stage .nav-text').innerText = '💾 SAVE';
+            else if (tabId === 'tab-presets') document.querySelector('#nav-btn-presets .nav-text').innerText = '💾 SAVE';
 
             if (tabId === 'tab-profile' && !skipReset) {
-                showProfileList();
+                activeProfileId = null;
+                renderProfileList();
+                document.getElementById('profile-editor-view').style.display = 'none';
             }
-
-            refreshUI();
-
             if (tabId === 'tab-test') {
+                renderEnsemblePicker();
                 renderTestTab();
             }
-        }
-        
-        // --- 3. UNIFIED PROFILE LOGIC ---
-        function updateUniqueFunctions() {
-            globalFunctions.clear();
-
-            const activeProfileIds = new Set(db.stage.map(s => s.profileId));
-            const activeProfiles = db.profiles.filter(p => activeProfileIds.has(p.id));
-            activeProfiles.forEach(p => {
-                const channels = p.channels || [];
-                channels.forEach(ch => { if (ch.role) globalFunctions.add(ch.role); });
-            });
-            const list = document.getElementById('function-suggestions');
-            if (list) list.innerHTML = Array.from(globalFunctions).sort().map(f => `<option value="${f}">`).join('');
-            
-            const funcSelect = document.getElementById('pres-add-global-func');
-            if (funcSelect) {
-                const currentVal = funcSelect.value;
-                funcSelect.innerHTML = '<option value="">-- Select Function --</option>' + 
-                    Array.from(globalFunctions).sort().map(f => `<option value="${f}">${f}</option>`).join('');
-                if (currentVal && Array.from(globalFunctions).includes(currentVal)) {
-                    funcSelect.value = currentVal;
-                }
+            if (tabId === 'tab-sim') {
+                renderStageMap();
             }
         }
 
-        function addChannel() {}
-        function renderTempChannels() {}
-        function selectOffset() {}
-        function updateValue() {}
-        function adjustValue() {}
-        function applyLaserOverride() {}
-        function saveFixture() {}
-        function downloadFixtureProfile() {}
-        function loadFixtureProfile() {}
+        // --- 3. UNIFIED PROFILE LOGIC ---
+        function updateUniqueFunctions() {
+            // Use the hardcoded list from the profile editor as the single source of truth
+            globalFunctions = new Set(KNOWN_ROLES);
+
+            // Update Presets Function Dropdown
+            const presFuncSel = document.getElementById('pres-add-global-func');
+            if (presFuncSel) {
+                const current = presFuncSel.value;
+                presFuncSel.innerHTML = '<option value="">-- Select Function --</option>' +
+                    Array.from(globalFunctions).sort().map(f => `<option value="${f}">${f}</option>`).join('');
+                if (current) presFuncSel.value = current;
+            }
+
+            // Update Test Function Dropdown
+            const testFuncSel = document.getElementById('test-function-picker');
+            if (testFuncSel) {
+                const current = testFuncSel.value;
+                testFuncSel.innerHTML = '<option value="">-- All Channels --</option>' +
+                    Array.from(globalFunctions).sort().map(f => `<option value="${f}">${f}</option>`).join('');
+                if (current) testFuncSel.value = current;
+            }
+        }
+
+        function addChannel() { }
+        function renderTempChannels() { }
+        function selectOffset() { }
+        function updateValue() { }
+        function adjustValue() { }
+        function applyLaserOverride() { }
+        function saveFixture() { }
+        function downloadFixtureProfile() { }
+        function loadFixtureProfile() { }
 
 
         function addChannel() {
@@ -1780,12 +2175,12 @@
         function downloadFixtureProfile() {
             const name = document.getElementById('fix-name').value;
             if (!name) return alert("Enter a fixture name first");
-            
+
             const profile = {
                 name: name,
                 channels: [...tempChannels]
             };
-            
+
             const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1800,9 +2195,9 @@
         function loadFixtureProfile(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 try {
                     const profile = JSON.parse(e.target.result);
                     if (profile.name) document.getElementById('fix-name').value = profile.name;
@@ -1835,14 +2230,6 @@
             { val: 0, label: "Bass" },
             { val: 2, label: "Mids" },
             { val: 5, label: "Treble" }
-        ];
-
-        const KNOWN_ROLES = [
-            'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y',
-            'color_solid', 'color_multi', 'pattern',
-            'beam_fx', 'grating', 'drawing', 'drawing_delay',
-            'strobe', 'generic', 'unassigned', 'dimmer',
-            'mode', 'clip', 'group'
         ];
 
         const BEHAVIORS = [
@@ -1878,7 +2265,7 @@
 
 
 
-         function updateFreqBinRange(chIdx, ruleIdx, binIdx, key, val) {
+        function updateFreqBinRange(chIdx, ruleIdx, binIdx, key, val) {
             if (!currentProfileMappings[chIdx][ruleIdx].freq_bins) {
                 currentProfileMappings[chIdx][ruleIdx].freq_bins = Array(6).fill(0).map(() => ({ min: 0, max: 255 }));
             }
@@ -1892,7 +2279,7 @@
         function updateProfileMapping(chIdx, ruleIdx, path, val) {
             const rules = currentProfileMappings[chIdx];
             const rule = rules[ruleIdx];
-            
+
             // Core Logic: If they touch a granular slider, the aesthetic is "Custom"
             if (path.startsWith('lfo.') || path.startsWith('audio.') || path === 'source' || path === 'behavior') {
                 rule.aesthetic_id = 'custom';
@@ -1904,7 +2291,7 @@
             } else {
                 rule[path] = val;
             }
-            
+
             // Special handling for Premade/Aesthetic overrides
             if (path === 'behavior') {
                 rule.premadeId = undefined;
@@ -1964,7 +2351,7 @@
             const count = Object.keys(pendingAiInstructions).length;
             const bar = document.getElementById('ai-review-bar');
             const countLabel = document.getElementById('ai-pending-count');
-            
+
             if (count > 0) {
                 bar.classList.add('active');
                 countLabel.innerText = `${count} pending instruction${count > 1 ? 's' : ''}`;
@@ -1981,6 +2368,24 @@
         }
 
         async function processBatchAiInstructions() {
+            // CHECK FOR LOCAL B-SIDE OVERRIDE (No API required)
+            const globalInstr = (pendingAiInstructions["global_instruction"] || "").toUpperCase();
+            if (globalInstr.includes("LOCAL_BSIDE") || globalInstr.includes("[LOCAL_BSIDE]")) {
+                applyInstantTransformation('bside');
+                isProcessingAi = false;
+                const btn = document.getElementById('ai-process-btn');
+                if (btn) {
+                    btn.innerText = "📝 Process AI";
+                    btn.disabled = false;
+                }
+                const loadingContainer = document.getElementById('ai-loading-container');
+                if (loadingContainer) loadingContainer.style.display = 'none';
+                if (window.aiProgressInterval) clearInterval(window.aiProgressInterval);
+                pendingAiInstructions = {};
+                updateAiReviewBar();
+                return;
+            }
+
             const apiKey = localStorage.getItem('vj_gemini_api_key');
             if (!apiKey) {
                 alert("Gemini API Key missing! Set it in AI settings.");
@@ -1994,6 +2399,7 @@
             const btn = document.getElementById('ai-process-btn');
 
             if (isProcessingAi) return;
+
             isProcessingAi = true;
             if (btn) {
                 btn.innerText = "📝 Processing...";
@@ -2003,8 +2409,14 @@
             const loadingContainer = document.getElementById('ai-loading-container');
             const loadingBar = document.getElementById('ai-loading-bar');
             const loadingText = document.getElementById('ai-loading-text');
+            const diffBtn = document.getElementById('ai-view-diff-btn');
+
+            // SNAPSHOT FOR DIFF
+            window.preAiMappings = JSON.parse(JSON.stringify(currentProfileMappings));
+
             if (loadingContainer) {
                 loadingContainer.style.display = 'block';
+                if (diffBtn) diffBtn.style.display = 'none';
                 loadingBar.style.width = '10%';
                 loadingBar.style.background = 'var(--accent)';
                 loadingText.innerText = 'Processing...';
@@ -2057,12 +2469,12 @@ Output: Valid raw JSON object only.
 
                 const data = await response.json();
                 if (data.error) throw new Error(data.error.message);
-                
+
                 const responseText = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/^```json|```$/g, "").trim();
                 let aiResult = null;
                 try {
                     aiResult = JSON.parse(responseText);
-                } catch(e) {
+                } catch (e) {
                     // Try stripping any wrapping text
                     const match = responseText.match(/\{.*\}/s);
                     if (match) aiResult = JSON.parse(match[0]);
@@ -2104,8 +2516,10 @@ Output: Valid raw JSON object only.
                 if (loadingContainer) {
                     clearInterval(window.aiProgressInterval);
                     loadingBar.style.width = '100%';
+                    loadingBar.style.background = 'var(--success)';
                     loadingText.innerText = 'Done!';
                     loadingText.style.color = 'var(--success)';
+                    if (diffBtn) diffBtn.style.display = 'block';
                 }
             } catch (err) {
                 console.error(err);
@@ -2124,11 +2538,83 @@ Output: Valid raw JSON object only.
                 }
                 setTimeout(() => {
                     if (loadingContainer) {
-                        loadingContainer.style.display = 'none';
-                        loadingBar.style.width = '0%';
+                        // If diff button is NOT visible, hide container. 
+                        // If it IS visible, keep it so user can click it.
+                        if (loadingText.innerText !== 'Done!') {
+                            loadingContainer.style.display = 'none';
+                            loadingBar.style.width = '0%';
+                        }
                     }
-                }, 3000);
+                }, 5000);
             }
+        }
+
+        function showAiDiff() {
+            const oldMap = window.preAiMappings;
+            const newMap = currentProfileMappings;
+            const modal = document.getElementById('ai-diff-modal');
+            const body = document.getElementById('ai-diff-body');
+            body.innerHTML = "";
+
+            const fixtureChannels = currentProfileChannels || [];
+
+            newMap.forEach((newRules, chIdx) => {
+                const oldRules = oldMap[chIdx] || [];
+                const chName = fixtureChannels[chIdx]?.role || `CH ${chIdx + 1}`;
+
+                let chChanges = [];
+                newRules.forEach((nr, rIdx) => {
+                    const or = oldRules[rIdx];
+                    if (!or) {
+                        chChanges.push(`<div class="diff-item"><span class="diff-new">[NEW RULE]</span> ${nr.behavior} - ${nr.source}</div>`);
+                        return;
+                    }
+
+                    // Compare keys
+                    const keys = ['source', 'behavior', 'value', 'bin_idx'];
+                    keys.forEach(k => {
+                        if (nr[k] !== or[k]) {
+                            chChanges.push(`<div class="diff-item"><b>${k}:</b> <span class="diff-old">${or[k]}</span> → <span class="diff-new">${nr[k]}</span></div>`);
+                        }
+                    });
+
+                    // Compare LFO
+                    if (JSON.stringify(nr.lfo) !== JSON.stringify(or.lfo)) {
+                        const nl = nr.lfo || {};
+                        const ol = or.lfo || {};
+                        if (nl.speed !== ol.speed) chChanges.push(`<div class="diff-item"><b>speed:</b> <span class="diff-old">${ol.speed}</span> → <span class="diff-new">${nl.speed}</span></div>`);
+                        if (nl.shape !== ol.shape) chChanges.push(`<div class="diff-item"><b>shape:</b> <span class="diff-old">${ol.shape}</span> → <span class="diff-new">${nl.shape}</span></div>`);
+                        if (nl.invert !== ol.invert) {
+                            const oldVal = ol.invert === undefined ? "off" : (ol.invert ? "on" : "off");
+                            const newVal = nl.invert ? "on" : "off";
+                            chChanges.push(`<div class="diff-item"><b>invert:</b> <span class="diff-old">${oldVal}</span> → <span class="diff-new">${newVal}</span></div>`);
+                        }
+                    }
+                });
+
+                if (chChanges.length > 0) {
+                    const row = document.createElement('div');
+                    row.className = 'diff-row';
+                    row.innerHTML = `
+                        <div class="diff-ch-label">${chName}</div>
+                        <div class="diff-content">
+                            ${chChanges.join('')}
+                        </div>
+                    `;
+                    body.appendChild(row);
+                }
+            });
+
+            if (body.innerHTML === "") {
+                body.innerHTML = `<div style="padding:40px; text-align:center; color:var(--text-dim);">No significant changes detected in the behavior structure.</div>`;
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeAiDiff() {
+            document.getElementById('ai-diff-modal').style.display = 'none';
+            document.getElementById('ai-loading-container').style.display = 'none';
         }
 
         function toggleChannelAiInput(chIdx) {
@@ -2149,7 +2635,22 @@ Output: Valid raw JSON object only.
             const modal = document.getElementById('ai-settings-modal');
             document.getElementById('gemini-key-input').value = localStorage.getItem('vj_gemini_api_key') || "";
             document.getElementById('ai-model-select-settings').value = localStorage.getItem('vj_gemini_model') || "gemini-3-flash";
+
+            // Sync with backend host if input exists
+            const hostInput = document.getElementById('backend-host-input');
+            if (hostInput) hostInput.value = localStorage.getItem('vj_backend_host') || "";
+
             modal.classList.add('active');
+            updateModelLabelDisplay();
+        }
+
+        function updateModelLabelDisplay() {
+            const sel = document.getElementById('ai-model-select-settings');
+            const nameEls = document.querySelectorAll('.active-model-name');
+            if (sel) {
+                const modelName = sel.options[sel.selectedIndex]?.text || "Gemini 3 Flash";
+                nameEls.forEach(el => el.innerText = modelName);
+            }
         }
 
         function closeAiSettings() {
@@ -2161,7 +2662,7 @@ Output: Valid raw JSON object only.
             const model = document.getElementById('ai-model-select-settings').value;
             localStorage.setItem('vj_gemini_api_key', key);
             localStorage.setItem('vj_gemini_model', model);
-            
+
             // Sync any global model labels
             document.querySelectorAll('.active-model-name').forEach(el => {
                 const select = document.getElementById('ai-model-select-settings');
@@ -2177,21 +2678,21 @@ Output: Valid raw JSON object only.
             const textarea = document.getElementById('ai-master-textarea');
             const logEl = document.getElementById('ai-response-log');
             if (logEl) logEl.style.display = 'none';
-            
+
             // Build the aggregated prompt
             let aggregatedPrompt = "";
-            
+
             // Global instruction at top
             if (pendingAiInstructions["global_instruction"]) {
                 aggregatedPrompt += pendingAiInstructions["global_instruction"] + "\n";
             }
-            
+
             // Find all channels
             const activeProfile = activeProfileId ? db.profiles.find(p => p.id === activeProfileId) : null;
             const fixId = document.getElementById('prof-base-fixture') ? document.getElementById('prof-base-fixture').value : null;
             const legacyFix = (db.fixtures && fixId) ? db.fixtures.find(f => f.id === fixId) : null;
             const channelsList = (activeProfile && activeProfile.channels) ? activeProfile.channels : (legacyFix ? legacyFix.channels : []);
-            
+
             let hasChannelPrompts = false;
             channelsList.forEach((ch, idx) => {
                 if (pendingAiInstructions[idx]) {
@@ -2200,29 +2701,291 @@ Output: Valid raw JSON object only.
                     hasChannelPrompts = true;
                 }
             });
-            
+
             if (!aggregatedPrompt.trim()) {
                 aggregatedPrompt = "----------------------------------\n";
             } else if (!aggregatedPrompt.includes("----------------------------------")) {
-                 aggregatedPrompt += "\n----------------------------------\n";
+                aggregatedPrompt += "\n----------------------------------\n";
             }
-            
+
             textarea.value = aggregatedPrompt;
             modal.classList.add('active');
             textarea.focus();
+        }
+
+        function applyLocalMutation(type) {
+            // SNAPSHOT FOR UNDO
+            window.preAiMappings = JSON.parse(JSON.stringify(currentProfileMappings));
+
+            closeAiModal();
+
+            const loadingContainer = document.getElementById('ai-loading-container');
+            const loadingBar = document.getElementById('ai-loading-bar');
+            const loadingText = document.getElementById('ai-loading-text');
+            const diffBtn = document.getElementById('ai-view-diff-btn');
+
+            if (loadingContainer) {
+                loadingContainer.style.display = 'block';
+                if (diffBtn) diffBtn.style.display = 'none';
+                loadingBar.style.width = '10%';
+                loadingBar.style.background = 'var(--accent)';
+                loadingText.innerText = 'Applying Mutation...';
+                loadingText.style.color = 'var(--accent)';
+
+                let progress = 10;
+                const interval = setInterval(() => {
+                    progress += (95 - progress) * 0.2;
+                    loadingBar.style.width = progress + '%';
+                }, 200);
+
+                // Run mutation after a short delay for visual effect
+                setTimeout(() => {
+                    applyInstantTransformation(type);
+
+                    clearInterval(interval);
+                    loadingBar.style.width = '100%';
+                    loadingBar.style.background = 'var(--success)';
+                    loadingText.innerText = 'Mutation Applied!';
+                    loadingText.style.color = 'var(--success)';
+                    if (diffBtn) diffBtn.style.display = 'block';
+
+                    // Clear review bar instructions
+                    pendingAiInstructions = {};
+                    updateAiReviewBar();
+                }, 1000);
+            }
+        }
+
+        function applyInstantTransformation(type) {
+            const channels = currentProfileChannels || [];
+            const mappings = currentProfileMappings || [];
+
+            // Track X/Y for bside speed swap
+            let lfoXIdxs = [];
+            let lfoYIdxs = [];
+
+            mappings.forEach((rules, idx) => {
+                if (!rules) return;
+                const ch = channels[idx] || {};
+                const role = (ch.role || "").toLowerCase();
+
+                rules.forEach(rule => {
+                    if (type === 'bside') {
+                        // 1. Zoom/Rotation/Roll: Invert LFOs and slight shifts
+                        if (['zoom', 'rot_z', 'rot_x', 'rot_y', 'roll'].includes(role)) {
+                            if (rule.lfo) {
+                                // Default to false if undefined, then invert
+                                const currentInvert = rule.lfo.invert === true;
+                                rule.lfo.invert = !currentInvert;
+                            }
+                            if (rule.behavior === 'static') {
+                                const min = rule.cal?.min ?? 0;
+                                const max = rule.cal?.max ?? 255;
+                                const range = max - min;
+                                const shift = (Math.random() * 0.3 - 0.15) * range;
+                                rule.value = Math.max(min, Math.min(max, Math.floor(rule.value + shift)));
+                            }
+                        }
+
+                        // 2. Position Tracking
+                        if (role === 'pos_x' || role === 'pan') lfoXIdxs.push(idx);
+                        if (role === 'pos_y' || role === 'tilt') lfoYIdxs.push(idx);
+
+                        // 3. Patterns: Randomize within category range
+                        if (role === 'pattern' || role === 'gobo') {
+                            if (rule.behavior === 'static' || rule.behavior === 'cycle' || rule.behavior === 'random') {
+                                const min = rule.cal?.min ?? 0;
+                                const max = rule.cal?.max ?? 255;
+                                rule.value = Math.floor(Math.random() * (max - min + 1)) + min;
+                            }
+                        }
+                    }
+
+                    if (type === 'rhythm') {
+                        // 1. GLOBAL SNAP RULES
+                        if (rule.audio) {
+                            rule.audio.smoothing = 0.1; // Brutal snap
+                            rule.audio.react = Math.max(1.2, rule.audio.react || 1.0); // Punchier
+                        }
+                        if (rule.lfo) {
+                            rule.lfo.shape = 'square';
+                            rule.lfo.react = 1.0; // Dynamic snap
+                        }
+
+                        // 2. ROLE-SPECIFIC SURGERY
+                        // Zoom -> Pumping Bass
+                        if (role === 'zoom' || role === 'beam_fx') {
+                            rule.behavior = 'direct';
+                            rule.source = 'bass';
+                            if (rule.cal) {
+                                // Force a visible range for the punch
+                                if (rule.cal.max - rule.cal.min < 30) {
+                                    const center = rule.cal.center || 127;
+                                    rule.cal.min = Math.max(0, center - 20);
+                                    rule.cal.max = Math.min(255, center + 20);
+                                }
+                            }
+                        }
+                        
+                        // Patterns -> Phrase Cycles
+                        if (role === 'pattern' || role === 'gobo') {
+                            rule.behavior = 'cycle';
+                            rule.source = (Math.random() > 0.7) ? 'beat' : 'bar';
+                        }
+
+                        // Positions -> Tight Beat Jumps
+                        if (role.startsWith('pos_') || role.includes('pan') || role.includes('tilt')) {
+                            rule.source = 'beat';
+                            // Tighten range towards center for rhythm
+                            if (rule.cal) {
+                                const range = rule.cal.max - rule.cal.min;
+                                if (range > 80) {
+                                    const center = rule.cal.center || 127;
+                                    rule.cal.min = Math.max(0, center - 40);
+                                    rule.cal.max = Math.min(255, center + 40);
+                                }
+                            }
+                        }
+                        
+                        // FX / Strobe -> Attack Jitters
+                        if (role.includes('color') || role === 'shutter' || role === 'rot_z') {
+                            rule.source = 'attack';
+                            if (rule.audio) rule.audio.smoothing = 0.05; 
+                        }
+                    }
+
+                    if (type === 'liquid') {
+                        // 1. GLOBAL FLOW RULES
+                        if (rule.audio) {
+                            rule.audio.smoothing = 0.92; // Gliding feel
+                            rule.audio.react = Math.min(0.6, rule.audio.react || 0.5); // Minimal jitter
+                        }
+                        if (rule.lfo) {
+                            rule.lfo.shape = 'sine';
+                            rule.lfo.speed = Math.max(0.01, (rule.lfo.speed || 0.05) * 0.4);
+                            rule.lfo.react = 0.4; // Subtle breath
+                        }
+
+                        // 2. ROLE-SPECIFIC SURGERY
+                        // Zoom -> Breathing Atmosphere
+                        if (role === 'zoom' || role === 'beam_fx') {
+                            rule.behavior = 'lfo';
+                            rule.source = 'ratio'; // Momentum-based
+                            if (rule.lfo) {
+                                rule.lfo.shape = 'sine';
+                                rule.lfo.speed = 0.02;
+                                rule.lfo.react = 1.0; 
+                            }
+                        }
+                        
+                        // Patterns -> Slow Morphing
+                        if (role === 'pattern' || role === 'gobo') {
+                            rule.behavior = 'cycle';
+                            rule.source = 'bar'; // Phrase evolve only
+                        }
+
+                        // Positions -> Smooth Drifting
+                        if (role.startsWith('pos_') || role.includes('pan') || role.includes('tilt')) {
+                            rule.behavior = 'lfo';
+                            rule.source = (Math.random() > 0.5) ? 'flux' : 'ratio';
+                            if (rule.lfo) {
+                                rule.lfo.shape = 'sine';
+                                rule.lfo.speed = 0.03;
+                            }
+                            // Ensure wide ambient sweeps
+                            if (rule.cal) {
+                                rule.cal.min = 0;
+                                rule.cal.max = 255;
+                                rule.cal.center = 127;
+                            }
+                        }
+                        
+                        // Color -> Crossfade Glides
+                        if (role.includes('color')) {
+                            rule.source = 'flux';
+                            if (rule.audio) rule.audio.smoothing = 0.95; 
+                        }
+                    }
+                });
+            });
+
+            if (type === 'bside') {
+                // 4. SWAP POSITION LFO SPEEDS & INVERT
+                lfoXIdxs.forEach(xIdx => {
+                    lfoYIdxs.forEach(yIdx => {
+                        const rulesX = mappings[xIdx] || [];
+                        const rulesY = mappings[yIdx] || [];
+                        rulesX.forEach(rx => {
+                            rulesY.forEach(ry => {
+                                if (rx.lfo && ry.lfo) {
+                                    const temp = rx.lfo.speed;
+                                    rx.lfo.speed = ry.lfo.speed;
+                                    ry.lfo.speed = temp;
+
+                                    const invX = rx.lfo.invert === true;
+                                    const invY = ry.lfo.invert === true;
+                                    rx.lfo.invert = !invX;
+                                    ry.lfo.invert = !invY;
+                                }
+                            });
+                        });
+                    });
+                });
+            }
+
+            // Finalize and Sync
+            loadProfileChannels();
+            // Update the profile in the DB
+            if (activeProfileId) {
+                const existing = db.profiles.find(p => p.id === activeProfileId);
+                if (existing) {
+                    existing.mappings = JSON.parse(JSON.stringify(currentProfileMappings));
+                    saveDB();
+                }
+            }
+        }
+
+        function undoAiTransformation() {
+            if (window.preAiMappings) {
+                currentProfileMappings = JSON.parse(JSON.stringify(window.preAiMappings));
+                if (activeProfileId) {
+                    const existing = db.profiles.find(p => p.id === activeProfileId);
+                    if (existing) {
+                        existing.mappings = JSON.parse(JSON.stringify(currentProfileMappings));
+                        saveDB();
+                    }
+                }
+                loadProfileChannels();
+                closeAiDiff();
+
+                // Hide loading bar if it's there
+                const loadingContainer = document.getElementById('ai-loading-container');
+                if (loadingContainer) loadingContainer.style.display = 'none';
+            }
+        }
+
+        function acceptAiTransformation() {
+            closeAiDiff();
+            // Clear review bar instructions just in case
+            pendingAiInstructions = {};
+            updateAiReviewBar();
+
+            // Optional: Hide loading bar immediately on accept
+            const loadingContainer = document.getElementById('ai-loading-container');
+            if (loadingContainer) loadingContainer.style.display = 'none';
         }
 
         function appendAiSuggestion(type) {
             const textarea = document.getElementById('ai-master-textarea');
             let text = "";
             if (type === 'bside') {
-                text = "\n[GLOBAL REFINEMENT]: Create a 'B-Side' variant of this profile. Apply the B-Side playbook rules to invert polarities, shift EQ bins, and pick new static patterns within the existing boundaries.";
+                text = "\n[LOCAL_BSIDE]: Create a 'B-Side' variant of this profile using local surgical mutations on Zoom, Position, Rotation, and Patterns.";
             } else if (type === 'rhythm') {
                 text = "\n[GLOBAL REFINEMENT]: Make this profile highly Rhythmic and punchy. Apply the Rhythmic playbook rules to snap waveforms to the beat and attacks, removing smooth sweeps. Greatly reduce position functions to stay near center of their first sub range, and keep rotations near min.";
             } else if (type === 'liquid') {
                 text = "\n[GLOBAL REFINEMENT]: Make this profile Liquid and ambient. Apply the Liquid playbook rules to slow down LFOs, use sine waves, and heavily smooth the audio reactions.";
             }
-            
+
             if (textarea.value.trim() && !textarea.value.endsWith("\n")) {
                 textarea.value += "\n";
             }
@@ -2230,17 +2993,18 @@ Output: Valid raw JSON object only.
             textarea.focus();
         }
 
+
         async function sendAiRefinement() {
             const textarea = document.getElementById('ai-master-textarea');
             const fullText = textarea.value;
-            
+
             // Re-parse the aggregated text back into pendingAiInstructions
             // This allows the user to edit directly in the large text box
             const lines = fullText.split('\n');
             const newInstructions = {};
             let globalBuffer = "";
             let inGlobal = true;
-            
+
             lines.forEach(line => {
                 if (line.startsWith('---')) {
                     inGlobal = false;
@@ -2254,13 +3018,13 @@ Output: Valid raw JSON object only.
                     }
                 }
             });
-            
+
             if (globalBuffer.trim()) {
                 newInstructions["global_instruction"] = globalBuffer.trim();
             }
-            
+
             pendingAiInstructions = newInstructions;
-            
+
             closeAiModal();
             await processBatchAiInstructions();
         }
@@ -2278,8 +3042,8 @@ Output: Valid raw JSON object only.
             if (currentProfileChannels.length === 0 || !activeProfileId) {
                 currentProfileChannels = (activeProfile && activeProfile.channels) ? activeProfile.channels : [];
                 if (currentProfileChannels.length === 0) {
-                     // Start with a default channel if brand new
-                     currentProfileChannels = [{ name: 'Master Dimmer', role: 'dimmer', default: 0 }];
+                    // Start with a default channel if brand new
+                    currentProfileChannels = [{ name: 'Master Dimmer', role: 'dimmer', default: 0 }];
                 }
             }
 
@@ -2317,7 +3081,7 @@ Output: Valid raw JSON object only.
                     });
                 }
             }
-            
+
             // Final Size Check & Padding / Migration
             currentProfileMappings = currentProfileMappings.map(rules => {
                 if (!Array.isArray(rules)) rules = [rules];
@@ -2382,7 +3146,7 @@ Output: Valid raw JSON object only.
                 </div>`;
             }).join('');
         }
-        
+
         function toggleManualMode(chIdx, ruleIdx) {
             if (currentProfileMappings[chIdx] && currentProfileMappings[chIdx][ruleIdx]) {
                 const rule = currentProfileMappings[chIdx][ruleIdx];
@@ -2402,7 +3166,7 @@ Output: Valid raw JSON object only.
             }
             const desc = EASY_DESCRIPTORS.find(d => d.id === easyId);
             if (!desc) return;
-            
+
             const rule = currentProfileMappings[chIdx][ruleIdx];
             rule.easy_id = easyId;
             rule.manual_mode = false;
@@ -2412,14 +3176,15 @@ Output: Valid raw JSON object only.
             if (desc.speed !== undefined) rule.lfo.speed = desc.speed;
             if (desc.smoothing !== undefined) rule.audio.smoothing = desc.smoothing;
             if (desc.bin !== undefined) rule.lfo.bin = desc.bin;
-            
+
             loadProfileChannels();
         }
 
         function renderVibeRuleHtml(chIdx, ruleIdx, rule, rulesCount) {
             const vibeDisabled = (rulesCount <= 1);
             const isManual = rule.manual_mode;
-            
+            const isNever = rule.vibe === 'never';
+
             let modSettingsHtml = '';
             if (rule.behavior === 'lfo') {
                 modSettingsHtml = `
@@ -2460,7 +3225,7 @@ Output: Valid raw JSON object only.
             }
 
             return `
-                <div class="rule-card" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:6px; border-radius:8px; margin-bottom:4px; position:relative;">
+                <div class="rule-card" style="background:${isNever ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.02)'}; border:1px solid ${isNever ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.04)'}; opacity:${isNever ? 0.35 : 1}; padding:6px; border-radius:8px; margin-bottom:4px; position:relative; ${(isNever) ? 'filter: grayscale(1);' : ''}">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                         <div style="display:flex; align-items:center; gap:5px; flex:1; overflow:hidden;">
                             <div style="background:rgba(255,255,255,0.03); border-radius:6px; min-width:65px; text-align:center; padding:2px 0;">
@@ -2471,6 +3236,7 @@ Output: Valid raw JSON object only.
                                     <option value="high" ${rule.vibe === 'high' ? 'selected' : ''}>High</option>
                                     <option value="build" ${rule.vibe === 'build' ? 'selected' : ''}>Build</option>
                                     <option value="drop" ${rule.vibe === 'drop' ? 'selected' : ''}>Drop</option>
+                                    <option value="never" ${rule.vibe === 'never' ? 'selected' : ''}>Never (Disabled)</option>
                                 </select>
                             </div>
                             <div style="background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:8px; flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">
@@ -2512,15 +3278,15 @@ Output: Valid raw JSON object only.
 
         function applyVariety() {
             if (!confirm("Automatically de-synchronize duplicate role channels? This will shift audio bins and phase on secondary heads.")) return;
-            
+
             const roleCounts = {};
             currentProfileChannels.forEach((ch, chIdx) => {
                 const role = ch.role || "none";
                 if (role === "none" || role === "dimmer") return; // Ignore universal/dimmer
-                
+
                 roleCounts[role] = (roleCounts[role] || 0) + 1;
                 const count = roleCounts[role];
-                
+
                 if (count > 1) {
                     // This is a secondary channel for this role
                     const rules = currentProfileMappings[chIdx];
@@ -2537,11 +3303,11 @@ Output: Valid raw JSON object only.
             loadProfileChannels();
             alert("Variety Applied Successfully.");
         }
-        
+
         function addProfileChannel() {
             const newCh = { name: "New Function", role: "none", default: 0 };
             currentProfileChannels.push(newCh);
-            
+
             // Add matching empty mapping rule
             currentProfileMappings.push([{
                 vibe: 'any',
@@ -2554,7 +3320,7 @@ Output: Valid raw JSON object only.
                 audio: { smoothing: 0.5, threshold: 0.1, react: 1.0 },
                 value: 0
             }]);
-            
+
             loadProfileChannels(); // Re-render
         }
 
@@ -2602,7 +3368,7 @@ Output: Valid raw JSON object only.
                 if (!res.ok) throw new Error("Failed to save profile");
 
                 // Update local memory
-                profileData._fileName = fileName; 
+                profileData._fileName = fileName;
                 const idx = db.profiles.findIndex(p => p.id === profileData.id);
                 if (idx !== -1) db.profiles[idx] = profileData;
                 else db.profiles.push(profileData);
@@ -2625,14 +3391,14 @@ Output: Valid raw JSON object only.
             const name = document.getElementById('prof-name').value;
             const activeProfile = db.profiles.find(p => p.id === activeProfileId);
             if (!name) return alert("Enter a behavior label first");
-            
+
             const profile = {
                 id: activeProfileId,
                 name: name,
                 channels: (activeProfile && activeProfile.channels) ? activeProfile.channels : [],
                 mappings: JSON.parse(JSON.stringify(currentProfileMappings))
             };
-            
+
             const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -2646,12 +3412,12 @@ Output: Valid raw JSON object only.
         function loadBehaviorProfile(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 try {
                     const profileData = JSON.parse(e.target.result);
-                    
+
                     if (profileData.name) document.getElementById('prof-name').value = profileData.name;
                     if (profileData.id) activeProfileId = profileData.id;
                     if (profileData.mappings) {
@@ -2752,14 +3518,14 @@ Output: Valid raw JSON object only.
 
         function updateInstanceId(oldId, newId) {
             newId = newId.trim();
-            if(!newId || newId === oldId) return;
-            if(db.stage.find(s => s.id === newId)) {
+            if (!newId || newId === oldId) return;
+            if (db.stage.find(s => s.id === newId)) {
                 alert("ID already exists!");
                 refreshUI(); // revert
                 return;
             }
             const inst = db.stage.find(s => s.id === oldId);
-            if(inst) {
+            if (inst) {
                 inst.id = newId;
                 if (db.presets) {
                     db.presets.forEach(p => {
@@ -2921,7 +3687,7 @@ Output: Valid raw JSON object only.
 
             document.getElementById('profile-list-view').style.display = 'none';
             document.getElementById('profile-editor-view').style.display = 'block';
-            
+
             loadProfileChannels();
         }
 
@@ -2940,7 +3706,7 @@ Output: Valid raw JSON object only.
 
         async function deleteProfile(id) {
             if (!confirm("Delete this profile?")) return;
-            
+
             const prof = db.profiles.find(p => p.id === id);
             if (prof && prof._fileName) {
                 console.log(`🗑️ Deleting server file: ${prof._fileName}`);
@@ -2971,7 +3737,7 @@ Output: Valid raw JSON object only.
             currentPresetTriggers.push({ type: '' });
             renderPresetTriggers();
         }
-        
+
         function changeTriggerType(idx, type) {
             let trigger = { type: type };
             if (type === 'vibe') trigger = { ...trigger, value: 'chill' };
@@ -2979,7 +3745,7 @@ Output: Valid raw JSON object only.
             else if (type === 'volume') trigger = { ...trigger, less_than: 100, greater_than: 0 };
             else if (type === 'bin') trigger = { ...trigger, target: 'BASS', less_than: '', greater_than: '' };
             else if (type === 'channel') trigger = { ...trigger, target: 1, less_than: '', greater_than: '' };
-            
+
             currentPresetTriggers[idx] = trigger;
             renderPresetTriggers();
         }
@@ -3043,7 +3809,7 @@ Output: Valid raw JSON object only.
                 } else if (t.type === 'manual') {
                     inputs = 'Manual Activation Only';
                 }
-                
+
                 const label = idx === 0 ? "IF:" : "AND:";
 
                 return `
@@ -3171,7 +3937,7 @@ Output: Valid raw JSON object only.
             current_editing_preset_id = null;
             document.getElementById('pres-name').value = '';
             currentPresetOverrides = [];
-            currentPresetTriggers = [{type: ''}];
+            currentPresetTriggers = [{ type: '' }];
             document.getElementById('pres-overrides-container').innerHTML = '';
             renderPresetTriggers();
             renderPresetOverrides();
@@ -3212,7 +3978,16 @@ Output: Valid raw JSON object only.
 
             renderPresetTriggers();
             renderPresetOverrides();
-            switchTab('tab-presets');
+            
+            if (currentTab !== 'tab-presets') {
+                switchTab('tab-presets');
+            }
+            
+            // Scroll main container to top to reveal the editing form
+            const mainContainer = document.querySelector('.main');
+            if (mainContainer) {
+                mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         }
 
         function deletePreset(id) {
@@ -3228,7 +4003,7 @@ Output: Valid raw JSON object only.
             // Fixture Library and Active Fixtures sections removed in favor of Unified Profiles
             const activeFixList = document.getElementById('active-fixtures-list');
             if (activeFixList) activeFixList.innerHTML = '';
-            
+
             const saveFixList = document.getElementById('saved-fixtures-list');
             if (saveFixList) saveFixList.innerHTML = '';
 
@@ -3238,7 +4013,7 @@ Output: Valid raw JSON object only.
                 const stageInstances = db.stage || [];
                 const uniqueProfs = [];
                 const seenIds = new Set();
-                
+
                 stageInstances.forEach(inst => {
                     if (inst.profileId && !seenIds.has(inst.profileId)) {
                         const prof = (db.profiles || []).find(p => p.id === inst.profileId);
@@ -3343,14 +4118,18 @@ Output: Valid raw JSON object only.
         }
 
         /* --- 4. COMMAND HUB: LIVE TEST ENSEMBLE ENGINE --- */
-        let activeTestFixtures = [];
+        let activeTestFixtures = []; // Pointers to stage id
+        let activeTestFunctions = new Set();
         let testFeedInterval = null;
+        let isRecording = false;
+        let recordingStartTime = 0;
+        let recordingTimerInterval = null;
 
         function toggleTestFeed() {
             const container = document.getElementById('test-live-feed-container');
             const btn = document.getElementById('btn-toggle-feed');
             const img = document.getElementById('test-live-feed-img');
-            
+
             if (testFeedInterval) {
                 clearInterval(testFeedInterval);
                 testFeedInterval = null;
@@ -3385,78 +4164,93 @@ Output: Valid raw JSON object only.
             } else {
                 activeTestFixtures.push(id);
             }
-            if (typeof isBreederActive !== 'undefined' && isBreederActive && activeTestFixtures.length !== 1) {
-                cancelVibeBreeder();
+            if (typeof isLitmusActive !== 'undefined' && isLitmusActive && activeTestFixtures.length !== 1) {
+                cancelLitmusTest();
             }
             renderEnsemblePicker();
             renderTestTab();
         }
 
-        // --- VIBE BREEDER LOGIC ---
-        let isBreederActive = false;
-        let breederGeneration = 1;
-        let breederOriginalProfileId = null;
-        let breederOriginalProfileData = null;
-        let breederInstanceId = null;
-        let breederTempIds = [];
-        let breederSelectedIds = [];
-        let breederAuditionId = null;
+        // --- PROFILE LITMUS LOGIC ---
+        let isLitmusActive = false;
+        let litmusGeneration = 1;
+        let litmusOriginalProfileId = null;
+        let litmusOriginalProfileData = null;
+        let litmusInstanceId = null;
+        let litmusTempIds = [];
+        let litmusSelectedIds = [];
+        let litmusAuditionId = null;
 
-        function startVibeBreeder() {
-            if (activeTestFixtures.length !== 1) return alert("Select exactly one fixture in the Ensemble Hub to use the Breeder.");
-            isBreederActive = true;
-            breederGeneration = 1;
-            breederInstanceId = activeTestFixtures[0];
-            breederSelectedIds = [];
-            breederAuditionId = null;
-            
-            const inst = db.stage.find(s => s.id === breederInstanceId);
-            breederOriginalProfileId = inst.profileId;
-            const sourceP = db.profiles.find(p => p.id === breederOriginalProfileId);
+        function toggleLitmusTest() {
+            const hub = document.getElementById('vibe-litmus-hub');
+            const btn = document.getElementById('btn-litmus-toggle');
+            if (hub.style.display === 'none') {
+                hub.style.display = 'block';
+                btn.style.background = 'var(--accent)';
+                btn.style.color = '#000';
+            } else {
+                hub.style.display = 'none';
+                btn.style.background = '#222';
+                btn.style.color = '#fff';
+                if (isLitmusActive) cancelLitmusTest();
+            }
+        }
+
+        function startLitmusTest() {
+            if (activeTestFixtures.length !== 1) return alert("Select exactly one fixture in the Ensemble Hub to use the Litmus Test.");
+            isLitmusActive = true;
+            litmusGeneration = 1;
+            litmusInstanceId = activeTestFixtures[0];
+            litmusSelectedIds = [];
+            litmusAuditionId = null;
+
+            const inst = db.stage.find(s => s.id === litmusInstanceId);
+            litmusOriginalProfileId = inst.profileId;
+            const sourceP = db.profiles.find(p => p.id === litmusOriginalProfileId);
             if (!sourceP) return alert("Profile not found.");
-            breederOriginalProfileData = JSON.parse(JSON.stringify(sourceP));
-            
-            document.getElementById('btn-breeder-start').style.display = 'none';
-            document.getElementById('breeder-active-controls').style.display = 'flex';
-            document.getElementById('breeder-options-container').style.display = 'block';
-            
-            generateMutations([breederOriginalProfileData]);
+            litmusOriginalProfileData = JSON.parse(JSON.stringify(sourceP));
+
+            document.getElementById('btn-litmus-start').style.display = 'none';
+            document.getElementById('litmus-active-controls').style.display = 'flex';
+            document.getElementById('litmus-options-container').style.display = 'block';
+
+            generateMutations([litmusOriginalProfileData]);
         }
 
-        function cancelVibeBreeder() {
-            if (!isBreederActive) return;
-            isBreederActive = false;
-            
+        function cancelLitmusTest() {
+            if (!isLitmusActive) return;
+            isLitmusActive = false;
+
             // Restore original profile if it was changed
-            const inst = db.stage.find(s => s.id === breederInstanceId);
-            if (inst) inst.profileId = breederOriginalProfileId;
-            
-            cleanupBreederTemps();
+            const inst = db.stage.find(s => s.id === litmusInstanceId);
+            if (inst) inst.profileId = litmusOriginalProfileId;
+
+            cleanupLitmusTemps();
             saveDB();
-            
-            document.getElementById('btn-breeder-start').style.display = 'block';
-            document.getElementById('breeder-active-controls').style.display = 'none';
-            document.getElementById('breeder-options-container').style.display = 'none';
+
+            document.getElementById('btn-litmus-start').style.display = 'block';
+            document.getElementById('litmus-active-controls').style.display = 'none';
+            document.getElementById('litmus-options-container').style.display = 'none';
         }
 
-        function cleanupBreederTemps() {
-            db.profiles = db.profiles.filter(p => !breederTempIds.includes(p.id));
-            breederTempIds = [];
-            breederSelectedIds = [];
+        function cleanupLitmusTemps() {
+            db.profiles = db.profiles.filter(p => !litmusTempIds.includes(p.id));
+            litmusTempIds = [];
+            litmusSelectedIds = [];
         }
 
         function generateMutations(parentProfiles) {
-            cleanupBreederTemps();
-            const varianceRate = Math.max(0.02, 0.20 - ((breederGeneration - 1) * 0.04)); 
-            
+            cleanupLitmusTemps();
+            const varianceRate = Math.max(0.02, 0.20 - ((litmusGeneration - 1) * 0.04));
+
             for (let i = 0; i < 4; i++) {
                 let sourceParent = parentProfiles[Math.floor(Math.random() * parentProfiles.length)];
                 let mutant = JSON.parse(JSON.stringify(sourceParent));
-                
+
                 mutant.id = `temp_mut_${Date.now()}_${i}`;
-                mutant.name = `Mutant Gen ${breederGeneration} - ${String.fromCharCode(64+i+1)}`;
+                mutant.name = `Mutant Gen ${litmusGeneration} - ${String.fromCharCode(64 + i + 1)}`;
                 mutant._mutationNotes = []; // Track changes
-                
+
                 // --- MULTI-PARENT CROSSBREEDING ---
                 if (parentProfiles.length > 1 && Math.random() < 0.4) {
                     const otherParent = parentProfiles[Math.floor(Math.random() * parentProfiles.length)];
@@ -3474,25 +4268,25 @@ Output: Valid raw JSON object only.
                 }
 
                 if (mutant.mappings) {
-                    const profileChannels = mutant.channels || (db.profiles.find(p => p.id === breederOriginalProfileId) || {}).channels || [];
+                    const profileChannels = mutant.channels || (db.profiles.find(p => p.id === litmusOriginalProfileId) || {}).channels || [];
                     mutant._mutatedChannels = []; // Track specifically which indices changed for highlighting
 
                     // Pick exactly 2-3 random channels to mess with
                     const numToMutate = Math.floor(Math.random() * 2) + 2; // 2 or 3
-                    const availableIndices = Array.from({length: mutant.mappings.length}, (_, i) => i);
+                    const availableIndices = Array.from({ length: mutant.mappings.length }, (_, i) => i);
                     const shuffle = availableIndices.sort(() => 0.5 - Math.random());
                     const targets = shuffle.slice(0, numToMutate);
 
                     mutant.mappings.forEach((channelRules, chIdx) => {
                         if (!targets.includes(chIdx)) return; // Surgical mutation only
-                        
-                        const chName = profileChannels[chIdx]?.role || profileChannels[chIdx]?.name || `Ch${chIdx+1}`;
+
+                        const chName = profileChannels[chIdx]?.role || profileChannels[chIdx]?.name || `Ch${chIdx + 1}`;
                         let chMutated = false;
 
                         channelRules.forEach(rule => {
                             // High chance to mutate once a channel is targeted
-                            if (Math.random() < 0.2) return; 
-                            
+                            if (Math.random() < 0.2) return;
+
                             if (rule.lfo && rule.lfo.speed !== undefined) {
                                 const oldSpeed = rule.lfo.speed;
                                 const shift = 1.0 + ((Math.random() * 2 - 1) * varianceRate * 2.0);
@@ -3505,7 +4299,7 @@ Output: Valid raw JSON object only.
                                 rule.lfo.react = Math.max(0, Math.min(1.0, parseFloat((rule.lfo.react * shift).toFixed(2))));
                                 if (oldReact !== rule.lfo.react) { mutant._mutationNotes.push(`${chName}: React ${oldReact}→${rule.lfo.react}`); chMutated = true; }
                             }
-                            if (rule.lfo && breederGeneration < 3 && Math.random() < 0.15) {
+                            if (rule.lfo && litmusGeneration < 3 && Math.random() < 0.15) {
                                 const oldShape = rule.lfo.shape;
                                 const shapes = ['sine', 'triangle', 'square', 'sawtooth'];
                                 rule.lfo.shape = shapes[Math.floor(Math.random() * shapes.length)];
@@ -3519,38 +4313,38 @@ Output: Valid raw JSON object only.
                             }
                             if (rule.cal) {
                                 let calMoved = false;
-                                if (rule.cal.min !== undefined && Math.random() < 0.4) { rule.cal.min = Math.max(0, Math.min(255, Math.floor(rule.cal.min + ((Math.random()*2-1)*255*varianceRate)))); calMoved = true; }
-                                if (rule.cal.max !== undefined && Math.random() < 0.4) { rule.cal.max = Math.max(0, Math.min(255, Math.floor(rule.cal.max + ((Math.random()*2-1)*255*varianceRate)))); calMoved = true; }
-                                if (rule.cal.center !== undefined && Math.random() < 0.4) { rule.cal.center = Math.max(0, Math.min(255, Math.floor(rule.cal.center + ((Math.random()*2-1)*255*varianceRate)))); calMoved = true; }
+                                if (rule.cal.min !== undefined && Math.random() < 0.4) { rule.cal.min = Math.max(0, Math.min(255, Math.floor(rule.cal.min + ((Math.random() * 2 - 1) * 255 * varianceRate)))); calMoved = true; }
+                                if (rule.cal.max !== undefined && Math.random() < 0.4) { rule.cal.max = Math.max(0, Math.min(255, Math.floor(rule.cal.max + ((Math.random() * 2 - 1) * 255 * varianceRate)))); calMoved = true; }
+                                if (rule.cal.center !== undefined && Math.random() < 0.4) { rule.cal.center = Math.max(0, Math.min(255, Math.floor(rule.cal.center + ((Math.random() * 2 - 1) * 255 * varianceRate)))); calMoved = true; }
                                 if (calMoved) { mutant._mutationNotes.push(`${chName}: Range Adjusted`); chMutated = true; }
                             }
                         });
                         if (chMutated) mutant._mutatedChannels.push(chIdx);
                     });
                 }
-                
+
                 db.profiles.push(mutant);
-                breederTempIds.push(mutant.id);
+                litmusTempIds.push(mutant.id);
             }
-            document.getElementById('breeder-gen-text').innerText = breederGeneration;
-            renderBreederCards();
+            document.getElementById('litmus-gen-text').innerText = litmusGeneration;
+            renderLitmusCards();
         }
 
-        function renderBreederCards() {
-            const grid = document.getElementById('breeder-cards-grid');
-            grid.innerHTML = breederTempIds.map((id, idx) => {
+        function renderLitmusCards() {
+            const grid = document.getElementById('litmus-cards-grid');
+            grid.innerHTML = litmusTempIds.map((id, idx) => {
                 const profile = db.profiles.find(p => p.id === id);
-                const letter = String.fromCharCode(65+idx);
-                const isSelected = breederSelectedIds.includes(id);
+                const letter = String.fromCharCode(65 + idx);
+                const isSelected = litmusSelectedIds.includes(id);
                 const notes = profile?._mutationNotes || [];
 
                 return `
-                    <div id="breeder-card-${id}" style="background:rgba(0,0,0,0.3); border:1px solid ${isSelected ? 'var(--success)' : '#333'}; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:8px; transition:all 0.2s;">
+                    <div id="litmus-card-${id}" style="background:rgba(0,0,0,0.3); border:1px solid ${isSelected ? 'var(--success)' : '#333'}; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:8px; transition:all 0.2s;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span style="font-weight:bold; color:#fff; font-size:0.9rem;">Variation ${letter}</span>
                             <div style="display:flex; gap:5px;">
-                                <button class="btn btn-sm" style="padding:4px 8px; background:${isSelected?'var(--success)':'#444'};" onclick="toggleBreederSelect('${id}', true)" title="Thumbs Up: Evolve from this">👍</button>
-                                <button class="btn btn-sm" style="padding:4px 8px; background:#444;" onclick="toggleBreederSelect('${id}', false)" title="Thumbs Down: Remove it">👎</button>
+                                <button class="btn btn-sm" style="padding:4px 8px; background:${isSelected ? 'var(--success)' : '#444'};" onclick="toggleLitmusSelect('${id}', true)" title="Thumbs Up: Evolve from this">👍</button>
+                                <button class="btn btn-sm" style="padding:4px 8px; background:#444;" onclick="toggleLitmusSelect('${id}', false)" title="Thumbs Down: Remove it">👎</button>
                             </div>
                         </div>
                         
@@ -3564,44 +4358,44 @@ Output: Valid raw JSON object only.
             }).join('');
         }
 
-        function toggleBreederSelect(id, liked) {
+        function toggleLitmusSelect(id, liked) {
             if (liked) {
-                if (!breederSelectedIds.includes(id)) breederSelectedIds.push(id);
+                if (!litmusSelectedIds.includes(id)) litmusSelectedIds.push(id);
             } else {
-                breederSelectedIds = breederSelectedIds.filter(bid => bid !== id);
+                litmusSelectedIds = litmusSelectedIds.filter(bid => bid !== id);
                 // Force-remove from the pool
                 db.profiles = db.profiles.filter(p => p.id !== id);
-                breederTempIds = breederTempIds.filter(bid => bid !== id);
+                litmusTempIds = litmusTempIds.filter(bid => bid !== id);
             }
-            renderBreederCards();
+            renderLitmusCards();
         }
 
-        function keepAndBreedSelected() {
-            if (breederSelectedIds.length === 0) return alert("Thumbs up at least one variation to evolve it!");
-            const parents = db.profiles.filter(p => breederSelectedIds.includes(p.id));
-            breederGeneration++;
+        function evolveSelected() {
+            if (litmusSelectedIds.length === 0) return alert("Thumbs up at least one variation to evolve it!");
+            const parents = db.profiles.filter(p => litmusSelectedIds.includes(p.id));
+            litmusGeneration++;
             generateMutations(parents);
         }
 
         function auditionMutant(mutantId) {
-            breederAuditionId = mutantId;
-            const inst = db.stage.find(s => s.id === breederInstanceId);
+            litmusAuditionId = mutantId;
+            const inst = db.stage.find(s => s.id === litmusInstanceId);
             if (inst) {
                 inst.profileId = mutantId;
-                saveDB(); 
-                
-                breederTempIds.forEach(id => {
-                    const card = document.getElementById(`breeder-card-${id}`);
+                saveDB();
+
+                litmusTempIds.forEach(id => {
+                    const card = document.getElementById(`litmus-card-${id}`);
                     const btn = document.getElementById(`btn-audition-${id}`);
                     if (!card || !btn) return;
-                    
+
                     if (id === mutantId) {
                         card.style.borderColor = 'var(--accent)';
                         card.style.background = 'rgba(var(--accent-rgb), 0.1)';
                         btn.style.background = 'var(--accent)';
                         btn.innerText = '● Synced';
                     } else {
-                        card.style.borderColor = breederSelectedIds.includes(id) ? 'var(--success)' : '#333';
+                        card.style.borderColor = litmusSelectedIds.includes(id) ? 'var(--success)' : '#333';
                         card.style.background = 'rgba(0,0,0,0.3)';
                         btn.style.background = '#444';
                         btn.innerText = '▶ Audition Live';
@@ -3611,61 +4405,64 @@ Output: Valid raw JSON object only.
         }
 
         function saveFinalMutant() {
-            if (!breederAuditionId) return alert("Select (Audition) a variation first to finalize it.");
-            const mutantProfile = db.profiles.find(p => p.id === breederAuditionId);
+            if (!litmusAuditionId) return alert("Select (Audition) a variation first to finalize it.");
+            const mutantProfile = db.profiles.find(p => p.id === litmusAuditionId);
             if (!mutantProfile) return;
-            
+
             // Create a NEW profile permanent
-            const newId = mutantProfile.id.replace('temp_mut_', 'breeder_');
+            const newId = mutantProfile.id.replace('temp_mut_', 'litmus_');
             const newProfile = JSON.parse(JSON.stringify(mutantProfile));
             newProfile.id = newId;
-            newProfile.name = prompt("Enter Name for Final Profile:", breederOriginalProfileData.name + " (Tuned V1)");
+            newProfile.name = prompt("Enter Name for Final Profile:", litmusOriginalProfileData.name + " (Tuned V2)");
             if (!newProfile.name) return;
 
             db.profiles.push(newProfile);
-            
+
             // Assign instance permanently to this new profile
-            const inst = db.stage.find(s => s.id === breederInstanceId);
+            const inst = db.stage.find(s => s.id === litmusInstanceId);
             if (inst) inst.profileId = newId;
-            
+
             // Original stays original in the library, we just added a new child
             saveDB().then(() => {
                 alert("Saved as new profile: " + newProfile.name);
-                cancelVibeBreeder();
+                cancelLitmusTest();
             });
         }
 
         function renderTestTab() {
             const stripsContainer = document.getElementById('test-ensemble-strips');
             const emptyState = document.getElementById('test-empty-state');
-            
-            const breederHub = document.getElementById('vibe-breeder-hub');
             renderEnsemblePicker();
-            
-            if (activeTestFixtures.length === 0) {
-                if (breederHub) breederHub.style.display = 'none';
+
+            if (activeTestFixtures.length === 0 && activeTestFunctions.size === 0) {
                 if (emptyState) emptyState.style.display = 'block';
                 stripsContainer.querySelectorAll('.test-strip-card').forEach(s => s.remove());
                 return;
             }
-            
+
             if (emptyState) emptyState.style.display = 'none';
-            if (breederHub) {
-                if (activeTestFixtures.length === 1) {
-                    breederHub.style.display = 'block';
-                } else {
-                    breederHub.style.display = 'none';
-                }
+
+            // Determine which fixtures to show. 
+            // If a function is selected, we show ALL fixtures that have that function.
+            // Otherwise we show the activeTestFixtures.
+            let fixturesToShow = [...activeTestFixtures];
+            if (activeTestFunctions.size > 0) {
+                db.stage.forEach(inst => {
+                    const profile = db.profiles.find(p => p.id === inst.profileId);
+                    if (profile && (profile.channels || []).some(ch => activeTestFunctions.has(ch.role))) {
+                        if (!fixturesToShow.includes(inst.id)) fixturesToShow.push(inst.id);
+                    }
+                });
             }
 
-            // Clean up old strips that aren't active anymore
+            // Clean up old strips
             stripsContainer.querySelectorAll('.test-strip-card').forEach(strip => {
-                if (!activeTestFixtures.includes(strip.dataset.fixtureId)) {
+                if (!fixturesToShow.includes(strip.dataset.fixtureId)) {
                     strip.remove();
                 }
             });
 
-            activeTestFixtures.forEach(id => {
+            fixturesToShow.forEach(id => {
                 const inst = db.stage.find(s => s.id === id);
                 if (!inst) return;
                 const profile = db.profiles.find(p => p.id === inst.profileId);
@@ -3680,9 +4477,7 @@ Output: Valid raw JSON object only.
                 }
 
                 const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
-
                 const fixtureHidden = hiddenTestChannels[id] || [];
-                const hasHidden = fixtureHidden.length > 0;
 
                 strip.innerHTML = `
                     <div class="test-strip-header">
@@ -3691,18 +4486,21 @@ Output: Valid raw JSON object only.
                             <div style="font-size:10px; color:var(--text-dim); opacity:0.6;">${profile.name} (Base: ${baseAddr})</div>
                         </div>
                         <div style="display:flex; gap:6px;">
-                            ${hasHidden ? `<button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:rgba(var(--accent-rgb), 0.1); border-color:var(--accent); color:var(--accent);" onclick="unhideAllTestChannels('${id}')">SHOW ALL</button>` : ''}
+                            ${fixtureHidden.length > 0 ? `<button class="btn btn-sm" style="font-size:9px; padding:2px 8px;" onclick="unhideAllTestChannels('${id}')">SHOW ALL</button>` : ''}
                             <button class="btn btn-danger btn-sm" style="font-size:9px; padding:2px 8px;" onclick="clearFixtureOverrides('${id}')">RELEASE</button>
-                            <button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:transparent; border-color:#444;" onclick="toggleFixtureInTest('${id}')">REMOVE</button>
+                            ${activeTestFunctions.size === 0 ? `<button class="btn btn-sm" style="font-size:9px; padding:2px 8px;" onclick="toggleFixtureInTest('${id}')">REMOVE</button>` : ''}
                         </div>
                     </div>
                     <div class="compact-slider-list">
-                        ${profile.channels.map((ch, idx) => {
-                            if (fixtureHidden.includes(idx)) return '';
-                            const addr = baseAddr + (parseInt(ch.addrOffset) || idx);
-                            const val = latestDmxUniverse[addr] || 0;
-                            const isBusy = latestOverrides.has(addr);
-                            return `
+                        ${(profile.channels || []).map((ch, idx) => {
+                    // FILTER: If we have active functions, ONLY show matching channels
+                    if (activeTestFunctions.size > 0 && !activeTestFunctions.has(ch.role)) return '';
+                    if (fixtureHidden.includes(idx)) return '';
+                    
+                    const addr = baseAddr + (parseInt(ch.addrOffset) || idx);
+                    const val = latestDmxUniverse[addr] || 0;
+                    const isBusy = latestOverrides.has(addr);
+                    return `
                                 <div class="compact-slider-row ${isBusy ? 'busy' : ''}" data-addr="${addr}">
                                     <div class="compact-role-label">${ch.role || ch.name}</div>
                                     <div class="compact-addr-label">${addr}</div>
@@ -3715,10 +4513,135 @@ Output: Valid raw JSON object only.
                                     </div>
                                 </div>
                             `;
-                        }).join('')}
+                }).join('')}
                     </div>
                 `;
             });
+
+            syncMuteState();
+
+        }
+
+        function toggleMuteOthers() {
+            muteOthersActive = !muteOthersActive;
+            const btn = document.getElementById('btn-mute-others');
+            if (btn) {
+                if (muteOthersActive) {
+                    btn.style.background = 'var(--accent)';
+                    btn.style.color = '#000';
+                    btn.style.borderColor = 'var(--accent)';
+                    btn.innerText = '🔔 Muting Others';
+                } else {
+                    btn.style.background = '#222';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = '#444';
+                    btn.innerText = '🔕 Mute Others';
+                }
+            }
+            syncMuteState();
+            renderActivePresets();
+        }
+
+        function renderActivePresets() {
+            const bar = document.getElementById('active-presets-bar');
+            if (!bar) return;
+
+            // Get all presets in current DB
+            const allPresets = (db.presets || []);
+            if (allPresets.length === 0) {
+                bar.innerHTML = '<span style="opacity:0.3; font-size:10px;">No presets loaded</span>';
+                return;
+            }
+
+            bar.innerHTML = allPresets.map(p => {
+                const isActive = activePresets.includes(p.id) || activePresets.includes(p.name);
+                const color = isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)';
+                const textColor = isActive ? '#000' : 'rgba(255,255,255,0.4)';
+                const border = isActive ? 'none' : '1px solid rgba(255,255,255,0.1)';
+                const label = isActive ? '⚡ ' : '';
+                
+                return `<div style="background:${color}; color:${textColor}; border:${border}; font-size:9px; font-weight:800; padding:2px 8px; border-radius:100px; display:flex; align-items:center; transition: all 0.2s ease;">
+                            ${label}${p.name.toUpperCase()}
+                        </div>`;
+            }).join('');
+        }
+
+        function syncMuteState() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+            const nextMuted = new Set();
+            
+            // Calculate which channels SHOULD be muted
+            if (muteOthersActive) {
+                // Determine which addresses are VISIBLE in the UI
+                const visibleAddresses = new Set();
+                const strips = document.querySelectorAll('.test-strip-card');
+                strips.forEach(strip => {
+                    const rows = strip.querySelectorAll('.compact-slider-row');
+                    rows.forEach(row => {
+                        const addr = parseInt(row.dataset.addr);
+                        if (!isNaN(addr)) visibleAddresses.add(addr);
+                    });
+                });
+
+                // Compare against ALL possible stage addresses
+                (db.stage || []).forEach(inst => {
+                    const profile = db.profiles.find(p => p.id === inst.profileId);
+                    if (!profile) return;
+                    const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+                    (profile.channels || []).forEach((ch, idx) => {
+                        const addr = baseAddr + (parseInt(ch.addrOffset) || idx);
+                        if (!visibleAddresses.has(addr)) {
+                            nextMuted.add(addr);
+                        }
+                    });
+                });
+            }
+
+            // Addresses to UNMUTE: those in current but not in next
+            const toUnmute = Array.from(mutedTestAddresses).filter(a => !nextMuted.has(a));
+            if (toUnmute.length > 0) {
+                ws.send(JSON.stringify({
+                    type: 'clear_overrides',
+                    addresses: toUnmute
+                }));
+            }
+
+            // Addresses to MUTE: those in next but not in current
+            const toMute = Array.from(nextMuted).filter(a => !mutedTestAddresses.has(a));
+            if (toMute.length > 0) {
+                ws.send(JSON.stringify({
+                    type: 'laser_override',
+                    overrides: toMute.map(addr => ({ address: addr, value: 0 }))
+                }));
+            }
+
+            mutedTestAddresses = nextMuted;
+        }
+
+        function updateTestFunctions(val) {
+            if (!val) {
+                activeTestFunctions.clear();
+            } else {
+                activeTestFunctions.add(val);
+                // AUTO-ADD fixtures that have this function
+                db.stage.forEach(inst => {
+                    const profile = db.profiles.find(p => p.id === inst.profileId);
+                    if (profile && (profile.channels || []).some(ch => ch.role === val)) {
+                        if (!activeTestFixtures.includes(inst.id)) activeTestFixtures.push(inst.id);
+                    }
+                });
+            }
+            renderEnsemblePicker();
+            renderTestTab();
+        }
+
+        function clearTestFunctions() {
+            activeTestFunctions.clear();
+            const picker = document.getElementById('test-function-picker');
+            if (picker) picker.value = "";
+            renderEnsemblePicker();
+            renderTestTab();
         }
 
         function toggleHideTestChannel(fixtureId, channelIdx) {
@@ -3739,6 +4662,7 @@ Output: Valid raw JSON object only.
         }
 
         function updateTestNumericalValues() {
+            renderActivePresets();
             // Traverse all active strips and update their small displays
             const strips = document.querySelectorAll('.test-strip-card');
             strips.forEach(strip => {
@@ -3747,45 +4671,46 @@ Output: Valid raw JSON object only.
                     const addr = parseInt(row.dataset.addr);
                     const val = latestDmxUniverse[addr] || 0;
                     const isBusy = latestOverrides.has(addr);
-                    
+
                     const valDisplay = row.querySelector('.compact-val-display');
                     if (valDisplay) valDisplay.innerText = val;
-                    
+
                     const slider = row.querySelector('.compact-slider-input');
                     if (slider && document.activeElement !== slider) slider.value = val;
-                    
+
                     if (isBusy) row.classList.add('busy');
                     else row.classList.remove('busy');
 
-                    // BREEDER HIGHLIGHTING (Surgical)
+                    // LITMUS HIGHLIGHTING (Surgical)
                     let isMutated = false;
-                    const activeMutant = isBreederActive && breederAuditionId ? db.profiles.find(p => p.id === breederAuditionId) : null;
-                    
-                    if (isBreederActive && breederAuditionId && breederInstanceId === strip.dataset.fixtureId) {
+                    const activeMutant = isLitmusActive && litmusAuditionId ? db.profiles.find(p => p.id === litmusAuditionId) : null;
+
+                    if (isLitmusActive && litmusAuditionId && litmusInstanceId === strip.dataset.fixtureId) {
                         if (activeMutant && activeMutant._mutatedChannels) {
                             if (activeMutant._mutatedChannels.includes(rowIdx)) {
                                 isMutated = true;
                             }
                         }
-                    } 
-                    
-                    if (isBreederActive && breederAuditionId && breederInstanceId === strip.dataset.fixtureId) {
+                    }
+
+                    if (isLitmusActive && litmusAuditionId && litmusInstanceId === strip.dataset.fixtureId) {
                         if (isMutated) {
-                            row.classList.add('breeder-active');
-                            row.classList.remove('breeder-hidden');
-                            
+                            row.classList.add('litmus-active');
+                            row.classList.remove('litmus-hidden');
+
                             // Inject Comparison Tray if not exists
-                            let tray = row.querySelector('.breeder-comparison-tray');
+                            let tray = row.querySelector('.litmus-comparison-tray');
                             if (!tray) {
                                 tray = document.createElement('div');
-                                tray.className = 'breeder-comparison-tray';
+                                tray.className = 'litmus-comparison-tray';
                                 row.appendChild(tray);
                             }
-                            
+
                             // Get info from original profile for comparison
-                            const origMapping = breederOriginalProfileData.mappings[rowIdx] || [];
+                            const sourceP = db.profiles.find(p => p.id === litmusOriginalProfileId);
+                            const origMapping = sourceP.mappings[rowIdx] || [];
                             const newMapping = activeMutant.mappings[rowIdx] || [];
-                            
+
                             const getRuleDesc = (rules) => {
                                 if (!rules || rules.length === 0) return 'None';
                                 const r = rules[0];
@@ -3793,18 +4718,18 @@ Output: Valid raw JSON object only.
                                 if (r.lfo) return `LFO: ${r.lfo.shape} @ speed ${r.lfo.speed}`;
                                 return r.behavior;
                             };
-                            
+
                             tray.innerHTML = `
                                 <span><b>ORIGINAL:</b> ${getRuleDesc(origMapping)}</span>
                                 <span style="color:var(--success)"><b>NEW:</b> ${getRuleDesc(newMapping)}</span>
                             `;
                         } else {
-                            row.classList.add('breeder-hidden');
-                            row.classList.remove('breeder-active');
+                            row.classList.add('litmus-hidden');
+                            row.classList.remove('litmus-active');
                         }
                     } else {
-                        row.classList.remove('breeder-active', 'breeder-hidden');
-                        const tray = row.querySelector('.breeder-comparison-tray');
+                        row.classList.remove('litmus-active', 'litmus-hidden');
+                        const tray = row.querySelector('.litmus-comparison-tray');
                         if (tray) tray.remove();
                     }
                 });
@@ -3815,7 +4740,8 @@ Output: Valid raw JSON object only.
             const inst = db.stage.find(s => s.id === fixtureId);
             const profile = db.profiles.find(p => p.id === inst.profileId);
             const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
-            const addr = baseAddr + (parseInt(profile.channels[channelIdx].addrOffset) || channelIdx);
+            const ch = (profile.channels || [])[channelIdx] || {};
+            const addr = baseAddr + (parseInt(ch.addrOffset) || channelIdx);
 
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
@@ -3835,7 +4761,6 @@ Output: Valid raw JSON object only.
         }
 
         function clearAllGlobalOverrides() {
-            if (!confirm("Release all overrides on entire stage?")) return;
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'clear_overrides',
@@ -3859,14 +4784,66 @@ Output: Valid raw JSON object only.
 
         function adjustTestValue(fixtureId, idx, delta) {
             const inst = db.stage.find(s => s.id === fixtureId);
-            if (!inst) return;
             const profile = db.profiles.find(p => p.id === inst.profileId);
             const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
-            const addr = baseAddr + (parseInt(profile.channels[idx].addrOffset) || idx);
+            const ch = (profile.channels || [])[idx] || {};
+            const addr = baseAddr + (parseInt(ch.addrOffset) || idx);
+            const current = latestDmxUniverse[addr] || 0;
+            sendCompactTestOverride(fixtureId, idx, Math.max(0, Math.min(255, current + delta)));
+        }
 
-            const currentVal = latestDmxUniverse[addr] || 0;
-            const newVal = Math.max(0, Math.min(255, currentVal + delta));
-            sendCompactTestOverride(fixtureId, idx, newVal);
+        /* --- RECORDING LOGIC --- */
+        function toggleRecording() {
+            if (isRecording) stopRecording();
+            else startRecording();
+        }
+
+        function startRecording() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return alert("System disconnected.");
+            
+            // Gather addresses currently in the Test Hub
+            const addresses = new Set();
+            const strips = document.querySelectorAll('.test-strip-card');
+            strips.forEach(strip => {
+                const rows = strip.querySelectorAll('.compact-slider-row');
+                rows.forEach(row => {
+                    addresses.add(parseInt(row.dataset.addr));
+                });
+            });
+
+            // Start immediately (No prompt)
+            ws.send(JSON.stringify({
+                type: 'start_recording',
+                name: null,
+                addresses: Array.from(addresses)
+            }));
+        }
+
+        function stopRecording() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            
+            // Generate default name based on time
+            const now = new Date();
+            const ts = now.getFullYear() + 
+                       String(now.getMonth() + 1).padStart(2, "0") + 
+                       String(now.getDate()).padStart(2, "0") + "_" +
+                       String(now.getHours()).padStart(2, "0") + 
+                       String(now.getMinutes()).padStart(2, "0");
+            
+            const name = prompt("Recording complete! Save as (optional):", "REC_" + ts);
+            
+            ws.send(JSON.stringify({ 
+                type: 'stop_recording',
+                name: name || null 
+            }));
+        }
+
+        function updateRecordingTimer() {
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const secs = String(elapsed % 60).padStart(2, '0');
+            const timerEl = document.getElementById('rec-timer');
+            if (timerEl) timerEl.innerText = `${mins}:${secs}`;
         }
 
         function clearOverride(addr) {
@@ -3897,9 +4874,9 @@ Output: Valid raw JSON object only.
         let latestDmxUniverse = new Uint8Array(513);
         let latestAudioState = { vol: 0.1, bins: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], vibe: 'mid', transient: 'steady', beat: false };
         let ws = null;
-        let testWaveformChannel = -1; 
+        let testWaveformChannel = -1;
         let activePresets = [];
-        let simulationPhases = {}; 
+        let simulationPhases = {};
         let simulationPrevPs = {}; // { ruleId: prevP } for transition detection
         let simulationSamples = {}; // { ruleId: sampledEnergy }
         let simulationPrevVals = {}; // { ruleId: prevVal } for smoothing
@@ -3909,7 +4886,7 @@ Output: Valid raw JSON object only.
         function connectWs() {
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
-            
+
             // For custom tunnels, we connect to ws- prefix on standard HTTPS ports (443)
             let wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
             const newWs = new WebSocket(wsUrl);
@@ -3926,16 +4903,16 @@ Output: Valid raw JSON object only.
                 if (event.data instanceof ArrayBuffer) {
                     const view = new DataView(event.data);
                     // Schema: < f 6f 6f 4B 5f 3H 513s
-                    
+
                     // 1. UPDATE AUDIO STATE
                     latestAudioState.vol = view.getFloat32(20, true);
                     latestAudioState.bpm = view.getFloat32(24, true);
                     latestAudioState.beat = view.getUint8(52) === 1;
-                    
+
                     const bins = [];
-                    for(let i=0; i<6; i++) bins.push(view.getFloat32(28 + (i*4), true));
+                    for (let i = 0; i < 6; i++) bins.push(view.getFloat32(28 + (i * 4), true));
                     latestAudioState.bins = bins;
-                    
+
                     latestAudioState.mods = {
                         flux: view.getFloat32(4, true),
                         bass: view.getFloat32(8, true),
@@ -3947,14 +4924,14 @@ Output: Valid raw JSON object only.
                     for (let i = 0; i < 513; i++) {
                         latestDmxUniverse[i] = view.getUint8(82 + i);
                     }
-                    
+
                     lastDmxUpdate = Date.now();
 
                     // 3. TRIGGER THROTTLED UI UPDATES
                     if (document.getElementById('tab-test').classList.contains('active')) {
                         updateTestNumericalValues();
                     }
-                    
+
                     const heart = document.getElementById('editor-heartbeat');
                     if (heart && latestAudioState.beat) {
                         heart.style.background = 'var(--accent)';
@@ -3970,6 +4947,44 @@ Output: Valid raw JSON object only.
                         if (msg.transient) latestAudioState.transient = msg.transient;
                         if (msg.overrides) latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
                         if (msg.active_presets) activePresets = msg.active_presets;
+                        if (document.getElementById('tab-test').classList.contains('active')) {
+                            updateTestNumericalValues();
+                        }
+                    } else if (msg.type === 'audio') {
+                        // SYNC FROM BACKEND (Throttled/Batched JSON)
+                        if (msg.data) {
+                            Object.assign(latestAudioState, msg.data);
+                        }
+                        if (msg.logic) {
+                            // Sync logic states for visualizers
+                            Object.assign(latestAudioState, msg.logic);
+                        }
+                        
+                        // Periodic full UI sync if needed
+                        if (document.getElementById('tab-test').classList.contains('active')) {
+                             updateTestNumericalValues();
+                        }
+                    } else if (msg.type === 'current_params') {
+                        if (msg.master) {
+                            if ('sensitivity' in msg.master) document.getElementById('master-sensitivity-input').value = msg.master.sensitivity;
+                            if ('speed' in msg.master) document.getElementById('master-speed-input').value = msg.master.speed;
+                            if ('intensity' in msg.master) document.getElementById('master-intensity-input').value = msg.master.intensity;
+                        }
+                    } else if (msg.type === 'recording_started') {
+                        if (msg.success) {
+                            isRecording = true;
+                            recordingStartTime = Date.now();
+                            document.getElementById('rec-status').classList.add('active');
+                            document.getElementById('btn-record').innerText = "⏹ Stop Rec";
+                            document.getElementById('btn-record').style.borderColor = "var(--danger)";
+                            recordingTimerInterval = setInterval(updateRecordingTimer, 1000);
+                        }
+                    } else if (msg.type === 'recording_stopped') {
+                        isRecording = false;
+                        clearInterval(recordingTimerInterval);
+                        document.getElementById('rec-status').classList.remove('active');
+                        document.getElementById('btn-record').innerText = "🔴 Record";
+                        document.getElementById('btn-record').style.borderColor = "#444";
                     }
                 } catch (e) { }
             };
@@ -4111,7 +5126,7 @@ Output: Valid raw JSON object only.
 
                 // Square wave uses sampled energy. Others use real-time.
                 const targetEnergy = (shape === 'square') ? simulationSamples[id] : energy;
-                
+
                 // Simulation: Match backend amplitude scaling: (1.0 - reactivity) + (s_energy * reactivity * 1.0)
                 const ampScale = (1.0 - react) + (targetEnergy * react * 1.0);
                 norm *= Math.max(0, Math.min(1.0, ampScale));
@@ -4130,7 +5145,7 @@ Output: Valid raw JSON object only.
             // Apply Smoothing to Simulation
             const simId = `sim_val_${chIdx}_${ruleIdx}`;
             if (simulationPrevVals[simId] === undefined) simulationPrevVals[simId] = norm;
-            
+
             // FIX: behavior used instead of undefined 'mod'
             const smooth = (behavior === 'lfo') ? (rule.lfo.smoothing || 0) : (audioCfg.smoothing || 0);
             if (smooth > 0) {
@@ -4186,6 +5201,32 @@ Output: Valid raw JSON object only.
             simMuted[id] = !simMuted[id];
         }
 
+        function getRangeMapping(profile, chIdx, val) {
+            const mappings = profile.mappings || [];
+            const rules = mappings[chIdx] || [];
+            if (rules.length === 0) return { min: 0, max: 255, isLowest: true };
+
+            const ranges = rules.map(r => ({
+                min: parseInt(r.cal?.min || 0),
+                max: parseInt(r.cal?.max || 255),
+                vibe: r.vibe || 'any'
+            })).sort((a, b) => a.min - b.min);
+
+            const lowestMin = ranges[0].min;
+            const currentVibe = latestAudioState.vibe || 'any';
+
+            // Find active range
+            let active = ranges.find(r => (r.vibe === currentVibe || r.vibe === 'any') && val >= r.min && val <= r.max);
+            if (!active) active = ranges.find(r => val >= r.min && val <= r.max);
+            if (!active) active = ranges[0];
+
+            return {
+                min: active.min,
+                max: active.max,
+                isLowest: (active.min === lowestMin)
+            };
+        }
+
         function drawSimulation(dt) {
             const canvas = document.getElementById('sim-canvas');
             if (!canvas) return;
@@ -4197,10 +5238,7 @@ Output: Valid raw JSON object only.
             ctx.fillStyle = '#050508';
             ctx.fillRect(0, 0, w, h);
 
-            // "OFF" State: If no DMX data for 1 second, show nothing.
-            if (Date.now() - lastDmxUpdate > 1000) {
-                return;
-            }
+            if (Date.now() - lastDmxUpdate > 2000) return;
 
             // Draw Grid
             ctx.strokeStyle = '#1a1a1f';
@@ -4219,103 +5257,68 @@ Output: Valid raw JSON object only.
                 const instOffset = parseInt(inst.offset || 0);
                 const baseAddr = (instBaseAddr > 0) ? instBaseAddr + instOffset : -1;
 
-                let xNorm = 0.5, yNorm = 0.5, patVal = 0, intensity = 255;
-                let hasIntensityChannel = false;
+                let xNorm = 0.5, yNorm = 0.5, patVal = 0, intensity = 255, scale = 0.5, rotation = 0;
+                let isDimOn = true;
 
-                profile.channels.forEach((ch, chIdx) => {
-                    const role = (ch.role || ch.name || "").toLowerCase();
+                (profile.channels || []).forEach((ch, chIdx) => {
+                    const role = (ch.role || ch.name || "").toLowerCase().trim();
                     const addr = baseAddr !== -1 ? baseAddr + (parseInt(ch.addrOffset) || chIdx) : -1;
+                    const val = (addr > 0 && addr <= 512) ? latestDmxUniverse[addr] : 0;
 
-                    let val = 0;
-                    if (addr > 0 && addr <= 512 && latestDmxUniverse[addr] !== undefined) {
-                        val = latestDmxUniverse[addr];
-                    }
+                    const mapping = getRangeMapping(profile, chIdx, val);
+                    const rangeLen = Math.max(1, mapping.max - mapping.min);
+                    const normInside = Math.max(0, Math.min(1, (val - mapping.min) / rangeLen));
 
-                    if (role.includes('x position') || role.includes('x pos') || role === 'x' || role.includes('x_pos') || role.includes('x-pos') || role === 'x axis') xNorm = val / 255;
-                    else if (role.includes('y position') || role.includes('y pos') || role === 'y' || role.includes('y_pos') || role.includes('y-pos') || role === 'y axis') yNorm = val / 255;
-                    else if (role.includes('pattern') || role.includes('gobo') || role.includes('shape')) patVal = val;
-                    else if (role.includes('intensity') || role.includes('dimmer') || role === 'brightness' || role === 'shutter') {
+                    if (role === 'dimmer' || role === 'intensity' || role === 'brightness' || role === 'shutter' || role === 'dim') {
                         intensity = val;
-                        hasIntensityChannel = true;
+                        isDimOn = (val > 0);
+                    } else if (role.includes('x position') || role.includes('x pos') || role === 'x' || role.includes('x_pos') || role.includes('x axis')) {
+                        xNorm = normInside;
+                    } else if (role.includes('y position') || role.includes('y pos') || role === 'y' || role.includes('y_pos') || role.includes('y axis')) {
+                        yNorm = 1.0 - normInside; // Lowest is bottom, highest is top
+                    } else if (role.includes('rotation') || role.includes('rotate z') || role === 'rot') {
+                        rotation = normInside * Math.PI * 2; // Clockwise 0-360
+                    } else if (role.includes('zoom') || role.includes('scale')) {
+                        if (mapping.isLowest) scale = 1.0 - (normInside * 0.9); // Big to dot
+                        else scale = 0.1 + (normInside * 0.9); // Small to big
+                    } else if (role.includes('pattern') || role.includes('gobo') || role.includes('shape')) {
+                        patVal = val;
                     }
                 });
 
                 const zone = (inst.zone || "center").toLowerCase();
                 const isMuted = !!simMuted[inst.id];
-                
-                // Only draw the light if intensity > 0 and not muted
-                if (intensity > 0 && !isMuted) {
+
+                if (isDimOn && !isMuted) {
                     let zX = 0, zY = 0, zW = w, zH = h;
                     if (zone === 'left') { zX = 0; zW = w * 0.4; zY = h * 0.1; zH = h * 0.8; }
                     else if (zone === 'right') { zX = w * 0.6; zW = w * 0.4; zY = h * 0.1; zH = h * 0.8; }
                     else if (zone === 'top') { zX = w * 0.1; zW = w * 0.8; zY = 0; zH = h * 0.4; }
                     else if (zone === 'bottom') { zX = w * 0.1; zW = w * 0.8; zY = h * 0.6; zH = h * 0.4; }
-                    else if (zone === 'center') { zX = w * 0.25; zY = h * 0.25; zW = w * 0.5; zH = h * 0.5; }
+                    else { zX = w * 0.25; zY = h * 0.25; zW = w * 0.5; zH = h * 0.5; }
 
                     const posX = zX + (xNorm * zW);
                     const posY = zY + (yNorm * zH);
-
-                    // DIGITAL TWIN LOGIC: Extract all relevant modulation channels
-                    let xRot = 0, yRot = 0, rotZ = 0, drawVal = 0, drawingVal = 0, zoom = 127;
-                    profile.channels.forEach((ch, chIdx) => {
-                        const role = (ch.role || ch.name || "").toLowerCase().trim();
-                        const addr = baseAddr + (parseInt(ch.addrOffset) || chIdx);
-                        const val = latestDmxUniverse[addr] || 0;
-                        if (role === 'x rot' || role === 'x_rot')       xRot = val;
-                        else if (role === 'y rot' || role === 'y_rot')  yRot = val;
-                        else if (role.includes('rotate z'))             rotZ = val;
-                        else if (role === 'draw')                       drawVal = val;
-                        else if (role === 'drawing')                    drawingVal = val;
-                        else if (role.includes('zoom'))                 zoom = val;
-                    });
-                    // Z rotation maps to canvas rotation angle
-                    const rotation = (rotZ / 255) * Math.PI * 2;
-
-                    const frameFile = (profile.name.toLowerCase().includes("ehaho"))
-                        ? getSimFrame(patVal, xRot, yRot, drawVal, drawingVal)
-                        : null;
                     const alpha = intensity / 255;
+                    const shapeSize = Math.min(zW, zH) * 0.3 * scale;
+                    const shapeIdx = Math.floor(patVal / (256 / simulationShapes.length)) % simulationShapes.length;
 
-                    if (frameFile) {
-                        const imgPath = `${BACKEND_ROOT}/backend/static/sim_frames/${frameFile}`;
-                        if (!simImageCache[frameFile]) {
-                             simImageCache[frameFile] = new Image();
-                             simImageCache[frameFile].src = imgPath;
-                        }
-                        const img = simImageCache[frameFile];
-                        if (img.complete) {
-                             const drawSize = (Math.min(zW, zH) * 0.4) * (zoom / 127);
-                             ctx.save();
-                             ctx.translate(posX, posY);
-                             ctx.rotate(rotation);
-                             ctx.globalAlpha = alpha;
-                             // Add a subtle glow
-                             ctx.shadowBlur = 10 * alpha;
-                             ctx.shadowColor = 'cyan';
-                             ctx.drawImage(img, -drawSize/2, -drawSize/2, drawSize, drawSize);
-                             ctx.restore();
-                        }
-                    } else {
-                        // FALLBACK TO GENERIC SHAPES
-                        const shapeSize = Math.min(zW, zH) * 0.3 * (zoom / 127);
-                        const shapeIdx = Math.floor(patVal / (256 / simulationShapes.length)) % simulationShapes.length;
-                        
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-                        ctx.lineWidth = 2;
-                        ctx.shadowBlur = 15 * alpha;
-                        ctx.shadowColor = '#fff';
-                        simulationShapes[shapeIdx](ctx, posX, posY, shapeSize);
-                        ctx.shadowBlur = 0;
-                    }
+                    ctx.save();
+                    ctx.translate(posX, posY);
+                    ctx.rotate(rotation);
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = 15 * alpha;
+                    ctx.shadowColor = '#fff';
+                    simulationShapes[shapeIdx](ctx, 0, 0, shapeSize);
+                    ctx.restore();
 
                     ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-                    ctx.font = 'bold 10px Inter';
-                    const label = `${inst.id} [${zone.toUpperCase()}]`;
-                    ctx.fillText(label, posX - (ctx.measureText(label).width / 2), posY - (Math.min(zW, zH) * 0.2) - 15);
+                    ctx.font = 'bold 9px Inter';
+                    const label = `${inst.id}`;
+                    ctx.fillText(label, posX - (ctx.measureText(label).width / 2), posY - (shapeSize / 2) - 10);
                 }
 
-                const dmxX = Math.round(xNorm * 255);
-                const dmxY = Math.round(yNorm * 255);
                 const muteBtnLabel = isMuted ? "UNMUTE" : "MUTE";
                 const muteBtnColor = isMuted ? "#666" : "var(--accent)";
 
@@ -4323,23 +5326,18 @@ Output: Valid raw JSON object only.
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; padding-bottom:5px; border-bottom:1px solid #333;">
                         <div>
                             <b style="${isMuted ? 'opacity:0.5' : ''}">${inst.id}</b> <span style="font-size:10px; color:#888;">[${zone.toUpperCase()}]</span><br>
-                            <span style="font-size:11px; ${isMuted ? 'opacity:0.5' : ''}">X=${dmxX} Y=${dmxY} | PAT=${patVal} | INT=${intensity}</span>
+                            <span style="font-size:11px; ${isMuted ? 'opacity:0.5' : ''}">X=${Math.round(xNorm * 255)} Y=${Math.round(yNorm * 255)} | Scale=${scale.toFixed(2)} | INT=${intensity}</span>
                         </div>
                         <button onclick="toggleSimMute('${inst.id}')" style="background:transparent; border:1px solid ${muteBtnColor}; color:${muteBtnColor}; border-radius:4px; font-size:9px; padding:2px 6px; cursor:pointer;">
                             ${muteBtnLabel}
                         </button>
                     </div>`;
-                
+
                 listItems.push({ html, isMuted, index: originalIndex });
             });
 
-            listItems.sort((a, b) => {
-                if (a.isMuted === b.isMuted) return a.index - b.index;
-                return a.isMuted ? 1 : -1;
-            });
-
-            const listHtml = listItems.map(item => item.html).join('');
-            if (activeList) activeList.innerHTML = listHtml;
+            listItems.sort((a, b) => (a.isMuted === b.isMuted ? a.index - b.index : (a.isMuted ? 1 : -1)));
+            if (activeList) activeList.innerHTML = listItems.map(item => item.html).join('');
         }
 
         // Helper to simulate multiple instances without shared phases
@@ -4372,12 +5370,12 @@ Output: Valid raw JSON object only.
                 const freq = (parseFloat(lfo.speed || 0.5) + (energy * parseFloat(lfo.react || 0.5))) * 0.3 * 2 * Math.PI;
                 simulationPhases[id] += dt * freq;
                 const p = (simulationPhases[id] / (2 * Math.PI)) % 1.0;
-                
+
                 if (lfo.shape === 'sine') norm = Math.sin(simulationPhases[id]);
                 else if (lfo.shape === 'sawtooth') norm = (p * 2.0) - 1.0;
                 else if (lfo.shape === 'triangle') norm = 4.0 * Math.abs(p - 0.5) - 1.0;
                 else if (lfo.shape === 'square') norm = p < 0.5 ? 1.0 : -1.0;
-                
+
                 if (lfo.invert) norm = -norm;
             }
 
@@ -4415,7 +5413,7 @@ Output: Valid raw JSON object only.
                 const resList = await fetch(`${API_BASE_ROOT}/api/fixtures`);
                 if (resList.ok) {
                     const fileList = await resList.json();
-                    
+
                     // Reset local memory for fresh load (as requested: start fresh)
                     db.profiles = [];
                     db.stage = [];
@@ -4466,6 +5464,7 @@ Output: Valid raw JSON object only.
             else if (tab === 'sim') switchTab('tab-sim');
             else if (tab === 'presets') switchTab('tab-presets');
             else if (tab === 'test') switchTab('tab-test');
+            else switchTab(currentTab, true); // Force label update for default tab
         }
 
         // Swipe Gestures
@@ -4481,13 +5480,21 @@ Output: Valid raw JSON object only.
     </script>
 
     <!-- AI REFINEMENT MODAL (GLOBAL) -->
-    <div id="ai-refine-modal" class="ai-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center; padding:20px;" onclick="closeAiModal()">
+    <div id="ai-refine-modal" class="ai-modal-overlay"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center; padding:20px;"
+        onclick="closeAiModal()">
         <div class="ai-modal-content" onclick="event.stopPropagation()">
             <div class="ai-modal-header">
                 <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
-                    📝 AI Refinement 
-                    <div class="btn-settings" onclick="openAiSettings()" title="AI Settings" style="width:24px; height:24px; padding:0; border:none; background:transparent;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    📝 AI Refinement
+                    <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                            </path>
+                        </svg>
                     </div>
                 </div>
                 <button class="btn btn-sm" onclick="closeAiModal()">×</button>
@@ -4496,17 +5503,21 @@ Output: Valid raw JSON object only.
                 <div style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
                     <div style="font-size: 0.8rem; color: var(--text-dim);">Suggestions & Presets:</div>
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <button class="btn-suggestion" onclick="appendAiSuggestion('bside')">B-Side</button>
-                        <button class="btn-suggestion" onclick="appendAiSuggestion('rhythm')">Rhythm</button>
-                        <button class="btn-suggestion" onclick="appendAiSuggestion('liquid')">Liquid</button>
+                        <button class="btn-suggestion" onclick="applyLocalMutation('bside')">B-Side</button>
+                        <button class="btn-suggestion" onclick="applyLocalMutation('rhythm')">Rhythm</button>
+                        <button class="btn-suggestion" onclick="applyLocalMutation('liquid')">Liquid</button>
                     </div>
                 </div>
-                <textarea id="ai-master-textarea" class="ai-master-textarea" placeholder="Master instructions..."></textarea>
-                <div id="ai-response-log" class="ai-response-log" style="display:none; margin-top:15px; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--accent-glow); border-radius:8px; font-family:var(--font-mono); font-size:0.75rem; color:var(--success); max-height:150px; overflow-y:auto; white-space:pre-wrap;"></div>
+                <textarea id="ai-master-textarea" class="ai-master-textarea"
+                    placeholder="Master instructions..."></textarea>
+                <div id="ai-response-log" class="ai-response-log"
+                    style="display:none; margin-top:15px; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--accent-glow); border-radius:8px; font-family:var(--font-mono); font-size:0.75rem; color:var(--success); max-height:150px; overflow-y:auto; white-space:pre-wrap;">
+                </div>
             </div>
             <div class="ai-modal-footer">
                 <div style="flex:1; display:flex; align-items:center; gap:10px;">
-                    <span style="font-size:0.7rem; color:var(--text-dim);">Using <span class="active-model-name">...</span></span>
+                    <span style="font-size:0.7rem; color:var(--text-dim);">Using <span
+                            class="active-model-name">...</span></span>
                 </div>
                 <button class="btn btn-secondary" onclick="closeAiModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="window.sendAiRefinement()">Apply All Updates 📝</button>
@@ -4515,21 +5526,39 @@ Output: Valid raw JSON object only.
     </div>
 
     <!-- AI SETTINGS MODAL -->
-    <div id="ai-settings-modal" class="ai-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); z-index:10000; align-items:center; justify-content:center;" onclick="closeAiSettings()">
+    <div id="ai-settings-modal" class="ai-modal-overlay"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:10000; align-items:center; justify-content:center;"
+        onclick="closeAiSettings()">
         <div class="ai-modal-content" style="max-width:400px;" onclick="event.stopPropagation()">
             <div class="ai-modal-header">
-                <div style="font-weight: 800;">AI Configuration</div>
+                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    AI Engine Settings
+                </div>
                 <button class="btn btn-sm" onclick="closeAiSettings()">×</button>
             </div>
             <div class="ai-modal-body" style="display:flex; flex-direction:column; gap:20px;">
                 <div>
-                    <label style="font-size: 11px; color: var(--text-dim);">Gemini API Key</label>
-                    <input type="text" id="gemini-key-input" placeholder="AI_Studio_Key_Here" style="width:100%; margin-top:5px;">
-                    <div style="font-size: 10px; color: #666; margin-top:5px;">Shared with Fixture AI tool.</div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Gemini
+                        API Key</label>
+                    <input type="text" id="gemini-key-input" placeholder="AI_Studio_Key_Here"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                    <div style="font-size: 10px; color: #666; margin-top:5px;">Shared across Profiler tools.</div>
                 </div>
                 <div>
-                    <label style="font-size: 11px; color: var(--text-dim);">Model Selection</label>
-                    <select id="ai-model-select-settings" style="width:100%; margin-top:5px;">
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Model
+                        Selection</label>
+                    <select id="ai-model-select-settings"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;"
+                        onchange="updateModelLabelDisplay()">
                         <option value="gemini-3-flash">Gemini 3 Flash</option>
                         <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
                         <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
@@ -4539,7 +5568,16 @@ Output: Valid raw JSON object only.
                         <option value="deep-research-pro-preview">Deep Research Pro Preview</option>
                     </select>
                 </div>
-                <button class="btn btn-primary" onclick="saveAiSettings()" style="width:100%;">Save & Close</button>
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Backend
+                        Host / IP</label>
+                    <input type="text" id="backend-host-input" placeholder="e.g. ravebox.local"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                </div>
+                <button class="btn btn-primary" onclick="saveAiSettings()"
+                    style="width:100%; height:45px; font-weight:800; border-radius:12px; box-shadow: 0 4px 15px var(--accent-glow);">Save
+                    Configuration</button>
             </div>
         </div>
     </div>
@@ -4547,19 +5585,48 @@ Output: Valid raw JSON object only.
     <!-- AI BATCH REVIEW BAR -->
     <div id="ai-review-bar" class="ai-batch-review-bar">
         <div style="display: flex; align-items: center; gap: 8px;">
-            <div class="btn-settings" onclick="openAiSettings()" title="AI Settings" style="width:32px; height:32px; background:rgba(255,255,255,0.05);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
             </div>
             <span style="font-size: 1.2rem;">📝</span>
             <div>
                 <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">AI Profile Tuning</div>
-                <div style="font-size: 0.75rem; color: var(--accent-alt);"><span id="ai-pending-count">...</span> pending instruction(s)</div>
+                <div style="font-size: 0.75rem; color: var(--accent-alt);"><span id="ai-pending-count">...</span>
+                    pending instruction(s)</div>
             </div>
         </div>
         <div style="display: flex; gap: 10px;">
             <button class="btn btn-secondary btn-sm" onclick="clearAiInstructions()">Reset</button>
-            <button class="btn btn-primary btn-sm" id="ai-process-btn" onclick="processBatchAiInstructions()">Review & Apply</button>
+            <button class="btn btn-primary btn-sm" id="ai-process-btn" onclick="processBatchAiInstructions()">Review &
+                Apply</button>
+        </div>
+    </div>
+    <!-- AI DIFF MODAL -->
+    <div id="ai-diff-modal" class="ai-modal-overlay"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:11000; align-items:center; justify-content:center;"
+        onclick="closeAiDiff()">
+        <div class="ai-modal-content" style="max-width:600px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800;">Refinement Diff</div>
+                <button class="btn btn-sm" onclick="closeAiDiff()">×</button>
+            </div>
+            <div class="ai-modal-body diff-modal-body" id="ai-diff-body">
+                <!-- Diff rows injected here -->
+            </div>
+            <div class="ai-modal-footer" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="undoAiTransformation()">Undo &
+                    Revert</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="acceptAiTransformation()">Accept
+                    Changes</button>
+            </div>
         </div>
     </div>
 </body>
+
 </html>

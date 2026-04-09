@@ -25,8 +25,7 @@ echo ""
 echo -e "${YELLOW}[Step 1/6] Installing System Dependencies...${NC}"
 sudo apt update
 sudo apt install -y python3-venv libasound2-dev libpulse0 pulseaudio-utils \
-                     gpiod libgpiod-dev openssl fuser jq curl
-
+5
 # 2. Hardware Mapping (/boot/firmware/config.txt)
 echo ""
 echo -e "${YELLOW}[Step 2/6] Configuring Hardware Overlays (UART/I2S)...${NC}"
@@ -37,12 +36,10 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 MODS=(
+    # Pi 5 specific: We MUST avoid 'uart0-pi5' as it conflicts with I2S (pin 18)
     "dtparam=uart0=on"
     "dtoverlay=disable-bt"
     "enable_uart=1"
-    "dtoverlay=uart0-pi5"
-    "dtparam=audio=off"
-    "dtoverlay=hifiberry-dacplus"
 )
 
 for mod in "${MODS[@]}"; do
@@ -53,6 +50,18 @@ for mod in "${MODS[@]}"; do
         echo -e "   - Already set: $mod"
     fi
 done
+
+# Fix for Pi 5 GPIO conflict with HDMI audio (steals I2S pins)
+if grep -q "dtoverlay=vc4-kms-v3d" "$CONFIG_FILE" && ! grep -q "noaudio" "$CONFIG_FILE"; then
+    echo -e "   + Adding noaudio to vc4-kms-v3d for I2S stability..."
+    sudo sed -i 's/dtoverlay=vc4-kms-v3d/dtoverlay=vc4-kms-v3d,noaudio/' "$CONFIG_FILE"
+fi
+
+# Ensure conflicting audio=on is disabled (often re-enabled by OS updates)
+if grep -q "^dtparam=audio=on" "$CONFIG_FILE"; then
+    echo -e "   + Commenting out conflicting dtparam=audio=on..."
+    sudo sed -i 's/^dtparam=audio=on/#dtparam=audio=on/' "$CONFIG_FILE"
+fi
 
 # 3. Python Environment Setup
 echo ""

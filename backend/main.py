@@ -14,6 +14,7 @@ import base64
 from dmx_engine import DMXEngine
 from vibe_engine import VibeEngine
 from audio_analyzer import AudioAnalyzer
+from recorder_service import Recorder
 import wave
 
 try:
@@ -238,9 +239,11 @@ SAMPLE_RATE = 44100
 BLOCK_SIZE = 2048  # Increased to 2048 to prevent dropouts under load
 
 # --- GLOBAL STATE ---
-# --- GLOBAL STATE ---
 CONFIG_FILE = "vj_remote_settings.json"
 SPOT_CREDS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "spotify_creds.json")
+broadcast_state = {"active_grace": 0}
+synth = None
+recorder = Recorder()
 
 # Default credentials (fallback)
 SPOT_CLIENT_ID = ''
@@ -278,6 +281,7 @@ gamepad_state = {
 visual_states = { "bg": -1, "fg": -1, "ov": -1, "fx": -1 }
 audio_queue = queue.Queue(maxsize=100) 
 last_injection_time = 0.0  
+current_audio_mode = "auto" # 'auto', 'system', 'spotify'
 dmx_engine = None  
 vibe_engine = None
 connected_clients = set()
@@ -309,6 +313,7 @@ def save_live_defaults():
             "master": {
                 "sensitivity": analyzer.gain,
                 "flux_sensitivity": analyzer.flux_sensitivity_percentage,
+                "audio_source": current_audio_mode,
                 "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
                 "speed": dmx_engine.speed if dmx_engine else 1.0,
                 "intensity": dmx_engine.intensity if dmx_engine else 1.0,
@@ -339,6 +344,9 @@ def load_live_defaults():
             m_data = data.get("master", {})
             if "sensitivity" in m_data: analyzer.set_gain(m_data["sensitivity"])
             if "flux_sensitivity" in m_data: analyzer.set_flux_sensitivity(m_data["flux_sensitivity"])
+            if "audio_source" in m_data: 
+                global current_audio_mode
+                current_audio_mode = m_data["audio_source"]
             if "vibe_bias" in m_data and vibe_engine: vibe_engine.mid_vibe_bias = m_data["vibe_bias"]
             if "speed" in m_data and dmx_engine: dmx_engine.set_speed(m_data["speed"])
             if "intensity" in m_data and dmx_engine: dmx_engine.set_intensity(m_data["intensity"])
@@ -391,87 +399,51 @@ def audio_callback(indata, frames, time_info, status):
     except queue.Full:
         pass
 
-def get_monitor_source():
-    """Finds the 'Monitor' source of the default output (Spotify)"""
+def get_monitor_source(mode="auto"):
+    """Finds the 'Monitor' source based on mode ('auto', 'system', 'spotify')"""
     try:
         with pulsectl.Pulse('audio-grabber') as p:
-            # We want to record from the monitor of the default sink
-            # 1. Get default sink name
+            sinks = p.sink_list()
+            
+            if mode == "spotify":
+                # Look specifically for Raspotify/Librespot
+                target = next((s for s in sinks if "spotify" in s.name.lower() or "librespot" in s.name.lower()), None)
+                if target:
+                    print(f"🎵 Spotify Source found: {target.description}")
+                    return target.monitor_source_name
+            
+            elif mode == "system":
+                # Look for hardware-like sinks (HDMI, Analog, etc.)
+                # Usually contain 'alsa' and NOT 'spotify'
+                target = next((s for s in sinks if "alsa" in s.name.lower() and "spotify" not in s.name.lower()), None)
+                if target:
+                    print(f"🎧 Hardware Source found: {target.description}")
+                    return target.monitor_source_name
+
+            # Default / 'auto' logic: Use default sink
             server_info = p.server_info()
             default_sink_name = server_info.default_sink_name
-            
-            # 2. Find that sink object
-            sink_list = p.sink_list()
-            sink = next((s for s in sink_list if s.name == default_sink_name), None)
+            sink = next((s for s in sinks if s.name == default_sink_name), None)
             
             if sink:
-                print(f"🎧 Found default sink: {sink.description}")
+                # print(f"🎧 Monitor Source: {sink.description}")
                 return sink.monitor_source_name
-            else:
-                print("⚠️ Could not find default sink object.")
-                return None
+            return None
     except Exception as e: 
         print(f"⚠️ PulseAudio Error: {e}")
         return None
 
-def route_stream_to_monitor(target_source_name):
-    """Moves this application's recording stream to the specified monitor source."""
-    if not target_source_name: return
-    
-    print(f"🔀 Attempting to route audio to: {target_source_name}")
-    try:
-        # Give the stream a moment to register with PulseAudio
-        time.sleep(1.0) 
-        
-        with pulsectl.Pulse('audio-router') as p:
-            # Find our stream (we look for a recording stream associated with python)
-            # Note: sounddevice usually names the stream "python3" or similar
-            sources = p.source_output_list()
-            my_stream = None
-            
-            # Simple heuristic: Find the most recent stream or filter by name
-            # Since we just started it, it should be there.
-            for s in sources:
-                # print(f"Debug: Found stream {s.name}")
-                # We assume the stream we just started is the one we want to move
-                # Check proplist for application info
-                props = getattr(s, 'proplist', {})
-                app_name = props.get('application.name', '')
-                binary_name = props.get('application.process.binary', '')
-                
-                if 'python' in str(app_name).lower() or 'python' in str(binary_name).lower() or 'python' in str(s.name).lower():
-                    my_stream = s
-                    break
-            
-            if my_stream:
-                # Look up the source index by name
-                target_source = None
-                for src in p.source_list():
-                    if src.name == target_source_name:
-                        target_source = src
-                        break
-                
-                if target_source:
-                    p.source_output_move(my_stream.index, target_source.index)
-                    print(f"✅ Successfully routed stream {my_stream.index} to {target_source.name}!")
-                else:
-                    print(f"⚠️ Could not find source: {target_source_name}")
-            else:
-                print("⚠️ Could not find Python recording stream to route.")
-                
-    except Exception as e:
-        print(f"❌ Routing Error: {e}")
 
-def find_best_audio_device():
+def find_best_audio_device(mode="auto"):
     """Robustly finds the best available input device."""
     devices = sd.query_devices()
-    print("\n🎤 --- Available Audio Devices ---")
-    for i, d in enumerate(devices):
-        print(f"[{i}] {d['name']} (In: {d['max_input_channels']})")
-    print("---------------------------------\n")
+    # print("\n🎤 --- Available Audio Devices ---")
+    # for i, d in enumerate(devices):
+    #     print(f"[{i}] {d['name']} (In: {d['max_input_channels']})")
+    # print("---------------------------------\n")
 
     # 1. Try PulseAudio Monitor (Linux specific, best for loopback)
-    pa_source = get_monitor_source()
+    pa_source = get_monitor_source(mode)
     if pa_source:
         for i, d in enumerate(devices):
             if d['name'] == pa_source:
@@ -622,7 +594,7 @@ async def audio_watchdog():
         if time.time() - last_callback_time > 4.0:
             print("⚠️ WATCHDOG: Audio stream died. Restarting...")
             try:
-                restart_audio_stream(None)  # None = Auto-select best
+                restart_audio_stream(current_audio_mode) # Use saved mode
             except Exception as e:
                 print(f"Watchdog restart failed: {e}")
             
@@ -749,6 +721,11 @@ async def fast_broadcast_loop():
 
                     if dmx_port:
                         full_u = dmx_engine.get_universe()
+                        
+                        # LOG DATA TO RECORDER IF ACTIVE
+                        if recorder.is_recording:
+                            recorder.log_dmx(full_u)
+
                         max_addr = 0
                         for inst in dmx_engine.stage_instances:
                             profile = dmx_engine.profiles.get(inst.get('profileId'))
@@ -794,8 +771,15 @@ async def fast_broadcast_loop():
             if not connected_clients:
                 continue
                 
-            is_active = audio_state.get('vol', 0.0) > 0.01 or audio_state.get('beat', False)
-            broadcast_interval = 0.033 if is_active else 1.0 # 30FPS for visualizers
+            # LOWER ACTION THRESHOLD and add grace period to prevent UI flickering on borderline signal
+            raw_act = audio_state.get('vol', 0.0) > 0.002 or audio_state.get('beat', False)
+            if raw_act: 
+                broadcast_state["active_grace"] = 180 # ~3 seconds @ 60fps
+            else:
+                broadcast_state["active_grace"] = max(0, broadcast_state["active_grace"] - 1)
+            
+            is_active = broadcast_state["active_grace"] > 0
+            broadcast_interval = 0.033 if is_active else 0.5 # Jump to 2fps only if totally dead
             
             if (current_time - last_broadcast_time) >= broadcast_interval:
                 try:
@@ -810,7 +794,7 @@ async def fast_broadcast_loop():
                         "session_id": SESSION_ID,
                         "vibe": audio_state.get('vibe', 'mid'),
                         "transient": audio_state.get('transient', 'steady'),
-                        "active_presets": [p['name'] for p in dmx_engine.active_presets] if dmx_engine else [],
+                        "active_presets": [p.get('id', p['name']) for p in dmx_engine.active_presets] if dmx_engine else [],
                         "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
                         "spotify": audio_state.get('spotify')
                     }
@@ -908,7 +892,7 @@ async def spotify_poller():
 
 # --- 4. SERVER LOOP ---
 async def ws_handler(websocket):
-    global connected_clients, visual_params_cache
+    global connected_clients, visual_params_cache, synth
     print("Client Connected")
     connected_clients.add(websocket)
     last_sent_version = 0 # Track which version of broadcast this client last received
@@ -1088,6 +1072,8 @@ async def ws_handler(websocket):
                                 dmx_engine.set_speed(float(data["speed"]))
                             if "sceneFreq" in data and dmx_engine:
                                 dmx_engine.scene_freq = int(data["sceneFreq"])
+                            if "audio_source" in data:
+                                restart_audio_stream(data["audio_source"])
                         
                         elif msg_type == "force_refresh":
                             # Broadcast refresh signal to all clients
@@ -1124,6 +1110,7 @@ async def ws_handler(websocket):
                                     "speed": dmx_engine.speed if dmx_engine else 1.0,
                                     "sensitivity": analyzer.gain,
                                     "flux_sensitivity": analyzer.flux_sensitivity_percentage,
+                                    "audio_source": current_audio_mode,
                                     "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
                                     "intensity": dmx_engine.intensity if dmx_engine else 1.0,
                                     "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
@@ -1138,6 +1125,17 @@ async def ws_handler(websocket):
 
                         elif msg_type == "run_calibration":
                             asyncio.create_task(run_calibration_task(websocket))
+
+                        elif msg_type == "start_recording":
+                            name = data.get("name")
+                            addresses = data.get("addresses", [])
+                            success = recorder.start(name=name, addresses=addresses)
+                            await websocket.send(json.dumps({"type": "recording_started", "success": success}))
+
+                        elif msg_type == "stop_recording":
+                            new_name = data.get("name")
+                            path = recorder.stop(new_name=new_name)
+                            await websocket.send(json.dumps({"type": "recording_stopped", "path": path}))
 
                     except json.JSONDecodeError:
                         pass
@@ -1235,15 +1233,28 @@ async def run_calibration_task(websocket):
         wf.close()
 
         # Evaluate (Same logic as run_calibration.py)
-        # 1. Beats
+        # 1. Beats (Recall & Precision)
         all_truth_beats = []
         for s in truth["sections"]:
             if "beats" in s: all_truth_beats.extend(s["beats"])
+        
         matches = 0
         for tb in all_truth_beats:
             closest = min(results["beats"], key=lambda db: abs(db - tb)) if results["beats"] else 999
-            if abs(closest - tb) < 0.1: matches += 1
+            if abs(closest - tb) < 0.15: matches += 1
+        
+        # Ghost Beats: Beats detected in sections that should be silent (Sweep / Sparks)
+        ghost_beats = 0
+        for rb in results["beats"]:
+            in_beat_section = False
+            for s in truth["sections"]:
+                if "beats" in s and s["start"] <= rb <= s["end"]:
+                    in_beat_section = True
+                    break
+            if not in_beat_section: ghost_beats += 1
+            
         recall = matches / len(all_truth_beats) if all_truth_beats else 0
+        precision = matches / (len(results["beats"])) if results["beats"] else 0
         
         # 2. Vibe/Transient Score
         vibe_checks = []
@@ -1261,12 +1272,16 @@ async def run_calibration_task(websocket):
         mid_s1 = (truth["sections"][0]["start"] + truth["sections"][0]["end"]) / 2.0
         _, actual_bpm = min(results["bpm"], key=lambda x: abs(x[0] - mid_s1))
 
-        # 4. SIGNAL HEALTH AUDIT (The logic we just added)
-        health = analyzer.get_signal_health()
+        # 4. SIGNAL HEALTH AUDIT - uses the calibration analyzer (synthetic WAV),
+        # NOT the live mic. This tells us if the gain setting is configured well
+        # enough for the engine to process audio, independent of what's playing live.
+        health = cal_analyzer.get_signal_health()
 
         await websocket.send(json.dumps({
             "type": "calibration_report",
             "recall": recall,
+            "precision": precision,
+            "ghost_beats": ghost_beats,
             "vibe_checks": vibe_checks,
             "transient_checks": transient_checks,
             "bpm_accuracy": {
@@ -1316,7 +1331,7 @@ async def main():
 
     
     # Audio Setup
-    restart_audio_stream(None) # Auto-select best
+    restart_audio_stream(current_audio_mode) # Use persisted or default mode
 
     print(f"🚀 Engine Running on port {WS_PORT}. Connect Browser now.")
     
@@ -1349,7 +1364,7 @@ async def main():
 # Global stream variable
 audio_stream = None
 
-def restart_audio_stream(device_index):
+def restart_audio_stream(device_input):
     global audio_stream
     
     if audio_stream:
@@ -1360,31 +1375,30 @@ def restart_audio_stream(device_index):
         except: pass
         audio_stream = None
 
-    idx = device_index
+    idx = None
     name = "Auto"
     
-    if idx is None:
-         idx, name = find_best_audio_device()
-    else:
+    if isinstance(device_input, (int, float)):
+         idx = int(device_input)
          try:
              d = sd.query_devices(idx)
              name = d['name']
          except:
              name = "Unknown"
+    else:
+         # It's a mode string ('auto', 'system', 'spotify') or None
+         mode = device_input if device_input else "auto"
+         global current_audio_mode
+         current_audio_mode = mode
+         idx, name = find_best_audio_device(mode)
 
-    print(f"🎤 Starting Audio Stream on Device {idx}: {name}")
+    print(f"🎤 Starting Audio Stream ({current_audio_mode}): {name} (Index: {idx})")
     
     try:
         audio_stream = sd.InputStream(device=idx, channels=1, callback=audio_callback, blocksize=BLOCK_SIZE, samplerate=SAMPLE_RATE)
         audio_stream.start()
         audio_state["device_name"] = name
-        print("✅ Audio Stream Started")
-        
-        # EXPERIMENTAL: Auto-route to monitor if strictly needed
-        # Only try routing if we auto-selected (None) or explicitly asked
-        if idx is not None:
-             # Check if it looks like a monitor request or loopback
-             pass 
+        print(f"✅ Audio Stream Started: {name}")
 
     except Exception as e:
         print(f"❌ Audio Stream Error: {e}")

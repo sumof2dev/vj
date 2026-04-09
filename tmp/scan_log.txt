@@ -1,0 +1,223 @@
+nohup: ignoring input
+/home/sumof2/vj/scripts/multi_axis_scan_ehaho.py:96: DeprecationWarning: ssl.SSLContext() without protocol argument is deprecated.
+  ssl_ctx = ssl.SSLContext()
+/home/sumof2/vj/scripts/multi_axis_scan_ehaho.py:96: DeprecationWarning: ssl.PROTOCOL_TLS is deprecated
+  ssl_ctx = ssl.SSLContext()
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+
+[*] Resolved addresses for Left1 (base=1):
+       1  dim
+       1  1-dimmer
+       2  clip
+       2  2-boundary
+       3  group
+       3  3-pattern_group
+       4  pattern
+       4  4-pattern
+       5  zoom
+       5  5-zoom
+       6  z_rot
+       6  6-rotation_z
+       7  x_pos
+       7  7-horizontal_position
+       8  y_pos
+       8  8-vertical_position
+       9  x_rot
+       9  9-rotation_x
+      10  y_rot
+      10  10-rotation_y
+      11  color
+      11  11-colors_multi
+      12  12-colors_solid
+      13  dot
+      13  13-dots
+      14  draw
+      14  14-drawing_delay
+      15  drawing
+      15  15-drawing
+      16  twist
+      16  16-twist
+      17  grate
+      17  17-grating
+
+[*] Phase 1: X Rot × Y Rot sweep
+  [Rot] X:  0 Y:  0 -> Comp:2710
+  [Rot] X:  0 Y: 36 -> Comp:3061
+  [Rot] X:  0 Y: 72 -> Comp:2552
+  [Rot] X:  0 Y:109 -> Comp:2221
+  [Rot] X:  0 Y:145 -> Comp:2562
+  [Rot] X:  0 Y:182 -> Comp:2914
+  [Rot] X:  0 Y:218 -> Comp:2490
+  [Rot] X:  0 Y:255 -> Comp:2583
+  [Rot] X: 36 Y:  0 -> Comp:2275
+  [Rot] X: 36 Y: 36 -> Comp:2853
+  [Rot] X: 36 Y: 72 -> Comp:2962
+  [Rot] X: 36 Y:109 -> Comp:2556
+  [Rot] X: 36 Y:145 -> Comp:2594
+  [Rot] X: 36 Y:182 -> Comp:2654
+  [Rot] X: 36 Y:218 -> Comp:2624
+  [Rot] X: 36 Y:255 -> Comp:2467
+  [Rot] X: 72 Y:  0 -> Comp:2667
+  [Rot] X: 72 Y: 36 -> Comp:2903
+  [Rot] X: 72 Y: 72 -> Comp:2950
+  [Rot] X: 72 Y:109 -> Comp:2792
+  [Rot] X: 72 Y:145 -> Comp:2826
+  [Rot] X: 72 Y:182 -> Comp:2437
+  [Rot] X: 72 Y:218 -> Comp:2696
+  [Rot] X: 72 Y:255 -> Comp:2832
+  [Rot] X:109 Y:  0 -> Comp:2845
+  [Rot] X:109 Y: 36 -> Comp:2799
+  [Rot] X:109 Y: 72 -> Comp:2827
+  [Rot] X:109 Y:109 -> Comp:2495
+  [Rot] X:109 Y:145 -> Comp:2632
+  [Rot] X:109 Y:182 -> Comp:3056
+  [Rot] X:109 Y:218 -> Comp:2748
+  [Rot] X:109 Y:255 -> Comp:3059
+  [Rot] X:145 Y:  0 -> Comp:3249
+  [Rot] X:145 Y: 36 -> Comp:2520
+  [Rot] X:145 Y: 72 -> Comp:2781
+  [Rot] X:145 Y:109 -> Comp:2851
+  [Rot] X:145 Y:145 -> Comp:2615
+  [Rot] X:145 Y:182 -> Comp:3240
+  [Rot] X:145 Y:218 -> Comp:2653
+  [Rot] X:145 Y:255 -> Comp:2754
+  [Rot] X:182 Y:  0 -> Comp:2905
+  [Rot] X:182 Y: 36 -> Comp:2639
+  [Rot] X:182 Y: 72 -> Comp:2619
+  [Rot] X:182 Y:109 -> Comp:2932
+  [Rot] X:182 Y:145 -> Comp:2728
+  [Rot] X:182 Y:182 -> Comp:2842
+  [Rot] X:182 Y:218 -> Comp:2958
+  [Rot] X:182 Y:255 -> Comp:2397
+  [Rot] X:218 Y:  0 -> Comp:2893
+  [Rot] X:218 Y: 36 -> Comp:3064
+  [Rot] X:218 Y: 72 -> Comp:2748
+  [Rot] X:218 Y:109 -> Comp:2541
+  [Rot] X:218 Y:145 -> Comp:2726
+  [Rot] X:218 Y:182 -> Comp:2654
+  [Rot] X:218 Y:218 -> Comp:2793
+  [Rot] X:218 Y:255 -> Comp:2714
+  [Rot] X:255 Y:  0 -> Comp:2852
+  [Rot] X:255 Y: 36 -> Comp:2939
+  [Rot] X:255 Y: 72 -> Comp:2758
+  [Rot] X:255 Y:109 -> Comp:2977
+  [Rot] X:255 Y:145 -> Comp:2561
+  [Rot] X:255 Y:182 -> Comp:2647
+  [Rot] X:255 Y:218 -> Comp:2983
+  [Rot] X:255 Y:255 -> Comp:3082
+
+[*] Phase 2: Draw (delay) × Drawing sweep
+  [Draw] delay:  0 drawing:  0 -> Comp:3016
+  [Draw] delay:  0 drawing: 36 -> Comp:2833
+  [Draw] delay:  0 drawing: 72 -> Comp:3004
+  [Draw] delay:  0 drawing:109 -> Comp:2811
+  [Draw] delay:  0 drawing:145 -> Comp:3045
+  [Draw] delay:  0 drawing:182 -> Comp:2745
+  [Draw] delay:  0 drawing:218 -> Comp:2711
+  [Draw] delay:  0 drawing:255 -> Comp:2894
+  [Draw] delay: 36 drawing:  0 -> Comp:2353
+  [Draw] delay: 36 drawing: 36 -> Comp:2341
+  [Draw] delay: 36 drawing: 72 -> Comp:2964
+  [Draw] delay: 36 drawing:109 -> Comp:2717
+  [Draw] delay: 36 drawing:145 -> Comp:3050
+  [Draw] delay: 36 drawing:182 -> Comp:3047
+  [Draw] delay: 36 drawing:218 -> Comp:2842
+  [Draw] delay: 36 drawing:255 -> Comp:2862
+  [Draw] delay: 72 drawing:  0 -> Comp:3206
+  [Draw] delay: 72 drawing: 36 -> Comp:2678
+  [Draw] delay: 72 drawing: 72 -> Comp:2433
+  [Draw] delay: 72 drawing:109 -> Comp:2466
+  [Draw] delay: 72 drawing:145 -> Comp:2505
+  [Draw] delay: 72 drawing:182 -> Comp:2588
+  [Draw] delay: 72 drawing:218 -> Comp:3081
+  [Draw] delay: 72 drawing:255 -> Comp:3129
+  [Draw] delay:109 drawing:  0 -> Comp:2925
+  [Draw] delay:109 drawing: 36 -> Comp:2835
+  [Draw] delay:109 drawing: 72 -> Comp:3098
+  [Draw] delay:109 drawing:109 -> Comp:3096
+  [Draw] delay:109 drawing:145 -> Comp:3004
+  [Draw] delay:109 drawing:182 -> Comp:2806
+  [Draw] delay:109 drawing:218 -> Comp:2385
+  [Draw] delay:109 drawing:255 -> Comp:2371
+  [Draw] delay:145 drawing:  0 -> Comp:2634
+  [Draw] delay:145 drawing: 36 -> Comp:3023
+  [Draw] delay:145 drawing: 72 -> Comp:3150
+  [Draw] delay:145 drawing:109 -> Comp:2967
+  [Draw] delay:145 drawing:145 -> Comp:2966
+  [Draw] delay:145 drawing:182 -> Comp:3128
+  [Draw] delay:145 drawing:218 -> Comp:3184
+  [Draw] delay:145 drawing:255 -> Comp:2849
+  [Draw] delay:182 drawing:  0 -> Comp:2943
+  [Draw] delay:182 drawing: 36 -> Comp:2377
+  [Draw] delay:182 drawing: 72 -> Comp:2411
+  [Draw] delay:182 drawing:109 -> Comp:2506
+  [Draw] delay:182 drawing:145 -> Comp:3108
+  [Draw] delay:182 drawing:182 -> Comp:3054
+  [Draw] delay:182 drawing:218 -> Comp:3004
+  [Draw] delay:182 drawing:255 -> Comp:2954
+  [Draw] delay:218 drawing:  0 -> Comp:3020
+  [Draw] delay:218 drawing: 36 -> Comp:3026
+  [Draw] delay:218 drawing: 72 -> Comp:3064
+  [Draw] delay:218 drawing:109 -> Comp:2374
+  [Draw] delay:218 drawing:145 -> Comp:2689
+  [Draw] delay:218 drawing:182 -> Comp:2545
+  [Draw] delay:218 drawing:218 -> Comp:2564
+  [Draw] delay:218 drawing:255 -> Comp:3357
+  [Draw] delay:255 drawing:  0 -> Comp:3423
+  [Draw] delay:255 drawing: 36 -> Comp:3126
+  [Draw] delay:255 drawing: 72 -> Comp:2902
+  [Draw] delay:255 drawing:109 -> Comp:3192
+  [Draw] delay:255 drawing:145 -> Comp:3080
+  [Draw] delay:255 drawing:182 -> Comp:2869
+  [Draw] delay:255 drawing:218 -> Comp:3198
+  [Draw] delay:255 drawing:255 -> Comp:2499
+
+[*] Done. 128 frames captured. Report: /home/sumof2/vj/tmp/multi_axis_results/multi_axis_report.json

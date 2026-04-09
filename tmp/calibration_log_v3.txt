@@ -1,0 +1,627 @@
+nohup: ignoring input
+/home/sumof2/vj/scripts/calibration_scan_ehaho.py:48: DeprecationWarning: ssl.SSLContext() without protocol argument is deprecated.
+  ctx = ssl.SSLContext()
+/home/sumof2/vj/scripts/calibration_scan_ehaho.py:48: DeprecationWarning: ssl.PROTOCOL_TLS is deprecated
+  ctx = ssl.SSLContext()
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+[*] Left1 base=1  roles: {'dim': 1, 'clip': 2, 'group': 3, 'pattern': 4, 'zoom': 5, 'z_rot': 6, 'x_pos': 7, 'y_pos': 8, 'x_rot': 9, 'y_rot': 10, 'color': 11, 'dot': 13, 'draw': 14, 'drawing': 15, 'twist': 16, 'grate': 17}
+
+[*] Using triangle at DMX 6 for remaining phases
+
+[Phase 2] Zoom Calibration (Pattern DMX=6)
+  ZOOM 196: 6.0%  dynamic=False  [static]  motion=14.9px
+  ZOOM 200: 7.6%  dynamic=True  [wave]  motion=49.6px
+  ZOOM 204: 8.3%  dynamic=True  [spinning]  motion=78.0px
+  ZOOM 208: 9.4%  dynamic=True  [wave]  motion=49.7px
+  ZOOM 212: 7.5%  dynamic=True  [spinning]  motion=109.6px
+  ZOOM 216: 11.0%  dynamic=True  [spinning]  motion=76.5px
+  ZOOM 220: 5.8%  dynamic=False  [static]  motion=11.4px
+  ZOOM 224: 7.6%  dynamic=True  [wave]  motion=40.0px
+  ZOOM 228: 11.6%  dynamic=True  [wave]  motion=40.7px
+  ZOOM 232: 12.3%  dynamic=True  [spinning]  motion=56.9px
+  ZOOM 236: 6.1%  dynamic=True  [spinning]  motion=211.5px
+  ZOOM 240: 10.3%  dynamic=True  [spinning]  motion=120.2px
+  ZOOM 244: 7.9%  dynamic=True  [wave]  motion=36.2px
+  ZOOM 248: 12.4%  dynamic=True  [spinning]  motion=50.7px
+  ZOOM 252: 10.9%  dynamic=True  [spinning]  motion=319.4px
+
+[Phase 3] X Position Mapping
+  XPOS   0: 41.1% of frame
+  XPOS   4: 43.0% of frame
+  XPOS   8: 39.7% of frame
+  XPOS  12: 21.6% of frame
+  XPOS  16: 36.6% of frame
+  XPOS  20: 38.9% of frame
+  XPOS  24: 5.0% of frame
+  XPOS  28: 36.7% of frame
+  XPOS  32: 44.7% of frame
+  XPOS  36: 40.2% of frame
+  XPOS  40: 38.8% of frame
+  XPOS  44: 40.6% of frame
+  XPOS  48: 41.9% of frame
+  XPOS  52: 5.0% of frame
+  XPOS  56: 42.7% of frame
+  XPOS  60: 39.1% of frame
+  XPOS  64: 36.7% of frame
+  XPOS  68: 36.1% of frame
+  XPOS  72: 35.6% of frame
+  XPOS  76: 36.6% of frame
+  XPOS  80: 38.9% of frame
+  XPOS  84: 44.2% of frame
+  XPOS  88: 46.9% of frame
+  XPOS  92: 45.2% of frame
+  XPOS  96: 43.1% of frame
+  XPOS 100: 39.2% of frame
+  XPOS 104: 36.4% of frame
+  XPOS 108: 35.6% of frame
+  XPOS 112: 36.1% of frame
+  XPOS 116: 38.0% of frame
+  XPOS 120: 41.6% of frame
+  XPOS 124: 41.6% of frame
+  XPOS 128: 5.0% of frame
+  XPOS 132: 43.0% of frame
+  XPOS 136: 40.3% of frame
+  XPOS 140: 36.9% of frame
+  XPOS 144: 36.1% of frame
+  XPOS 148: 35.8% of frame
+  XPOS 152: 36.6% of frame
+  XPOS 156: 38.9% of frame
+  XPOS 160: 39.8% of frame
+  XPOS 164: 52.8% of frame
+  XPOS 168: 45.3% of frame
+  XPOS 172: 40.2% of frame
+  XPOS 176: 36.9% of frame
+  XPOS 180: 36.1% of frame
+  XPOS 184: 35.6% of frame
+  XPOS 188: 35.9% of frame
+  XPOS 192: 37.7% of frame
+  XPOS 196: 41.6% of frame
+  XPOS 200: 44.1% of frame
+  XPOS 204: 47.2% of frame
+  XPOS 208: 45.9% of frame
+  XPOS 212: 41.4% of frame
+  XPOS 216: 36.9% of frame
+  XPOS 220: 36.2% of frame
+  XPOS 224: 35.6% of frame
+  XPOS 228: 36.6% of frame
+  XPOS 232: 38.8% of frame
+  XPOS 236: 39.8% of frame
+  XPOS 240: 5.0% of frame
+  XPOS 244: 47.3% of frame
+  XPOS 248: 44.2% of frame
+  XPOS 252: 39.7% of frame
+
+[Phase 4] Y Position Mapping
+  YPOS   0: 45.4% of frame
+  YPOS   4: 46.9% of frame
+  YPOS   8: 49.6% of frame
+  YPOS  12: 51.0% of frame
+  YPOS  16: 53.8% of frame
+  YPOS  20: 51.0% of frame
+  YPOS  24: 48.3% of frame
+  YPOS  28: 45.4% of frame
+  YPOS  32: 44.2% of frame
+  YPOS  36: 44.6% of frame
+  YPOS  40: 47.3% of frame
+  YPOS  44: 47.1% of frame
+  YPOS  48: 47.5% of frame
+  YPOS  52: 70.2% of frame
+  YPOS  56: 53.1% of frame
+  YPOS  60: 49.4% of frame
+  YPOS  64: 46.9% of frame
+  YPOS  68: 44.8% of frame
+  YPOS  72: 44.2% of frame
+  YPOS  76: 45.4% of frame
+  YPOS  80: 47.1% of frame
+  YPOS  84: 48.3% of frame
+  YPOS  88: 70.0% of frame
+  YPOS  92: 53.1% of frame
+  YPOS  96: 49.4% of frame
+  YPOS 100: 46.7% of frame
+  YPOS 104: 44.8% of frame
+  YPOS 108: 44.2% of frame
+  YPOS 112: 44.4% of frame
+  YPOS 116: 46.9% of frame
+  YPOS 120: 49.2% of frame
+  YPOS 124: 50.8% of frame
+  YPOS 128: 53.5% of frame
+  YPOS 132: 51.5% of frame
+  YPOS 136: 48.1% of frame
+  YPOS 140: 45.6% of frame
+  YPOS 144: 44.2% of frame
+  YPOS 148: 44.6% of frame
+  YPOS 152: 47.1% of frame
+  YPOS 156: 48.8% of frame
+  YPOS 160: 48.1% of frame
+  YPOS 164: 74.0% of frame
+  YPOS 168: 53.5% of frame
+  YPOS 172: 49.6% of frame
+  YPOS 176: 46.5% of frame
+  YPOS 180: 44.8% of frame
+  YPOS 184: 44.2% of frame
+  YPOS 188: 45.2% of frame
+  YPOS 192: 46.7% of frame
+  YPOS 196: 49.2% of frame
+  YPOS 200: 50.6% of frame
+  YPOS 204: 53.5% of frame
+  YPOS 208: 51.7% of frame
+  YPOS 212: 49.6% of frame
+  YPOS 216: 45.8% of frame
+  YPOS 220: 44.2% of frame
+  YPOS 224: 44.4% of frame
+  YPOS 228: 46.9% of frame
+  YPOS 232: 48.8% of frame
+  YPOS 236: 50.6% of frame
+  YPOS 240: 74.6% of frame
+  YPOS 244: 54.2% of frame
+  YPOS 248: 49.4% of frame
+  YPOS 252: 46.7% of frame
+
+[Phase 5a] Z_ROT Rotation Analysis
+  Z_ROT   0: shape=pentagon     angle=-14.7°  flat=0.82
+  Z_ROT   8: shape=pentagon     angle=-43.6°  flat=0.67
+  Z_ROT  16: shape=hexagon      angle=-38.1°  flat=0.80
+  Z_ROT  24: shape=complex_polygon angle=-36.2°  flat=0.79
+  Z_ROT  32: shape=rectangle    angle=-70.1°  flat=0.60
+  Z_ROT  40: shape=triangle     angle=-45.7°  flat=0.73
+  Z_ROT  48: shape=pentagon     angle=-33.7°  flat=0.83
+  Z_ROT  56: shape=pentagon     angle=-54.6°  flat=0.65
+  Z_ROT  64: shape=pentagon     angle=-52.6°  flat=0.57
+  Z_ROT  72: shape=pentagon     angle=-43.4°  flat=0.59
+  Z_ROT  80: shape=square       angle=-46.4°  flat=0.81
+  Z_ROT  88: shape=pentagon     angle=-44.9°  flat=0.81
+  Z_ROT  96: shape=hexagon      angle=-65.8°  flat=0.63
+  Z_ROT 104: shape=rectangle    angle=-59.6°  flat=0.72
+  Z_ROT 112: shape=rectangle    angle=-67.8°  flat=0.80
+  Z_ROT 120: shape=hexagon      angle=-49.6°  flat=0.73
+  Z_ROT 128: shape=pentagon     angle=-22.0°  flat=0.76
+  Z_ROT 136: shape=triangle     angle=-31.5°  flat=0.72
+  Z_ROT 144: shape=pentagon     angle=-30.4°  flat=0.64
+  Z_ROT 152: shape=hexagon      angle=-33.8°  flat=0.84
+  Z_ROT 160: shape=square       angle=-65.1°  flat=0.60
+  Z_ROT 168: shape=pentagon     angle=-27.9°  flat=0.76
+  Z_ROT 176: shape=pentagon     angle=-65.9°  flat=0.74
+  Z_ROT 184: shape=pentagon     angle=-53.3°  flat=0.73
+  Z_ROT 192: shape=hexagon      angle=-40.3°  flat=0.78
+  Z_ROT 200: shape=square       angle=-48.4°  flat=0.61
+  Z_ROT 208: shape=pentagon     angle=-38.6°  flat=0.69
+  Z_ROT 216: shape=pentagon     angle=-33.0°  flat=0.73
+  Z_ROT 224: shape=hexagon      angle=-48.4°  flat=0.51
+  Z_ROT 232: shape=pentagon     angle=-21.4°  flat=0.73
+  Z_ROT 240: shape=hexagon      angle=-41.9°  flat=0.66
+  Z_ROT 248: shape=complex_polygon angle=-47.2°  flat=0.81
+
+[Phase 5b] X_ROT Rotation Analysis
+  X_ROT   0: shape=pentagon     angle=-43.8°  flat=0.56
+  X_ROT   8: shape=hexagon      angle=-48.1°  flat=0.74
+  X_ROT  16: shape=rectangle    angle=-48.9°  flat=0.62
+  X_ROT  24: shape=hexagon      angle=-60.6°  flat=0.68
+  X_ROT  32: shape=pentagon     angle=-52.5°  flat=0.79
+  X_ROT  40: shape=pentagon     angle=-29.7°  flat=0.70
+  X_ROT  48: shape=rectangle    angle=-68.5°  flat=0.77
+  X_ROT  56: shape=pentagon     angle=-26.2°  flat=0.87
+  X_ROT  64: shape=hexagon      angle=-42.1°  flat=0.70
+  X_ROT  72: shape=pentagon     angle=-26.9°  flat=0.82
+  X_ROT  80: shape=hexagon      angle=-46.8°  flat=0.67
+  X_ROT  88: shape=complex_polygon angle=-68.4°  flat=0.74
+  X_ROT  96: shape=pentagon     angle=-20.1°  flat=0.83
+  X_ROT 104: shape=pentagon     angle=-59.9°  flat=0.68
+  X_ROT 112: shape=hexagon      angle=-49.3°  flat=0.75
+  X_ROT 120: shape=pentagon     angle=-25.1°  flat=0.85
+  X_ROT 128: shape=pentagon     angle=-35.7°  flat=0.85
+  X_ROT 136: shape=pentagon     angle=-33.7°  flat=0.84
+  X_ROT 144: shape=pentagon     angle=-51.8°  flat=0.62
+  X_ROT 152: shape=pentagon     angle=-46.6°  flat=0.53
+  X_ROT 160: shape=pentagon     angle=-67.3°  flat=0.56
+  X_ROT 168: shape=complex_polygon angle=-52.1°  flat=0.56
+  X_ROT 176: shape=pentagon     angle=-45.4°  flat=0.67
+  X_ROT 184: shape=pentagon     angle=-46.9°  flat=0.90
+  X_ROT 192: shape=pentagon     angle=-38.7°  flat=0.79
+  X_ROT 200: shape=pentagon     angle=-47.0°  flat=0.70
+  X_ROT 208: shape=hexagon      angle=-25.9°  flat=0.89
+  X_ROT 216: shape=hexagon      angle=-36.0°  flat=0.77
+  X_ROT 224: shape=hexagon      angle=-32.2°  flat=0.81SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+SSL connection is closed
+
+  X_ROT 232: shape=rectangle    angle=-55.0°  flat=0.49
+  X_ROT 240: shape=complex_polygon angle=-33.7°  flat=0.62
+  X_ROT 248: shape=rectangle    angle=-13.0°  flat=0.86
+
+[Phase 5c] Y_ROT Rotation Analysis
+  Y_ROT   0: shape=square       angle=-33.5°  flat=0.87
+  Y_ROT   8: shape=rectangle    angle=-52.4°  flat=0.63
+  Y_ROT  16: shape=pentagon     angle=-40.1°  flat=0.70
+  Y_ROT  24: shape=triangle     angle=-42.3°  flat=0.69
+  Y_ROT  32: shape=triangle     angle=-61.0°  flat=0.64
+  Y_ROT  40: shape=hexagon      angle=-23.7°  flat=0.79
+  Y_ROT  48: shape=pentagon     angle=-60.6°  flat=0.77
+  Y_ROT  56: shape=pentagon     angle=-52.1°  flat=0.61
+  Y_ROT  64: shape=complex_polygon angle=-67.3°  flat=0.73
+  Y_ROT  72: shape=hexagon      angle=-58.5°  flat=0.71
+  Y_ROT  80: shape=hexagon      angle=-22.5°  flat=0.86
+  Y_ROT  88: shape=complex_polygon angle=-33.0°  flat=0.90
+  Y_ROT  96: shape=rectangle    angle=-42.0°  flat=0.61
+  Y_ROT 104: shape=pentagon     angle=-46.4°  flat=0.53
+  Y_ROT 112: shape=complex_polygon angle=-62.0°  flat=0.69
+  Y_ROT 120: shape=square       angle=-47.6°  flat=0.83
+  Y_ROT 128: shape=rectangle    angle=-28.7°  flat=0.83
+  Y_ROT 136: shape=hexagon      angle=-41.3°  flat=0.82
+  Y_ROT 144: shape=rectangle    angle=-75.8°  flat=0.75
+  Y_ROT 152: shape=complex_polygon angle=-67.5°  flat=0.81
+  Y_ROT 160: shape=pentagon     angle=-59.3°  flat=0.69
+  Y_ROT 168: shape=hexagon      angle=-25.6°  flat=0.69
+  Y_ROT 176: shape=hexagon      angle=-19.8°  flat=0.78
+  Y_ROT 184: shape=triangle     angle=-17.4°  flat=0.79
+  Y_ROT 192: shape=pentagon     angle=-48.9°  flat=0.58
+  Y_ROT 200: shape=square       angle=-29.5°  flat=0.85
+  Y_ROT 208: shape=hexagon      angle=-61.5°  flat=0.82
+  Y_ROT 216: shape=pentagon     angle=-60.4°  flat=0.68
+  Y_ROT 224: shape=rectangle    angle=-47.9°  flat=0.67
+  Y_ROT 232: shape=complex_polygon angle=-45.9°  flat=0.80
+  Y_ROT 240: shape=hexagon      angle=-76.7°  flat=0.72
+  Y_ROT 248: shape=hexagon      angle=-55.1°  flat=0.85
+
+============================================================
+EHAHO CALIBRATION SUMMARY
+============================================================
+
+PATTERN SHAPES (CH4, DMX 0–96):
+  DMX   0–0  : pentagon
+  DMX   1–1  : rectangle
+  DMX   2–5  : pentagon
+  DMX   6–6  : triangle
+  DMX   7–7  : pentagon
+  DMX   8–8  : hexagon
+  DMX   9–9  : rectangle
+  DMX  10–11 : triangle
+  DMX  12–14 : hexagon
+  DMX  15–15 : complex_polygon
+  DMX  16–16 : square
+  DMX  17–17 : hexagon
+  DMX  18–18 : rectangle
+  DMX  19–20 : hexagon
+  DMX  21–21 : complex_polygon
+  DMX  22–22 : triangle
+  DMX  23–24 : pentagon
+  DMX  25–25 : rectangle
+  DMX  26–26 : triangle
+  DMX  27–28 : rectangle
+  DMX  29–29 : complex_polygon
+  DMX  30–30 : hexagon
+  DMX  31–31 : pentagon
+  DMX  32–32 : complex_polygon
+  DMX  33–33 : hexagon
+  DMX  34–35 : complex_polygon
+  DMX  36–36 : hexagon
+  DMX  37–37 : complex_polygon
+  DMX  38–40 : pentagon
+  DMX  41–41 : hexagon
+  DMX  42–42 : pentagon
+  DMX  43–43 : hexagon
+  DMX  44–45 : pentagon
+  DMX  46–48 : hexagon
+  DMX  49–51 : pentagon
+  DMX  52–52 : hexagon
+  DMX  53–55 : pentagon
+  DMX  56–57 : hexagon
+  DMX  58–60 : pentagon
+  DMX  61–65 : hexagon
+  DMX  66–66 : rectangle
+  DMX  67–67 : circle
+  DMX  68–68 : hexagon
+  DMX  69–78 : pentagon
+  DMX  79–79 : hexagon
+  DMX  80–80 : pentagon
+  DMX  81–81 : circle
+  DMX  82–83 : pentagon
+  DMX  84–84 : circle
+  DMX  85–96 : pentagon
+
+ZOOM CALIBRATION (CH5):
+  Static range : DMX 0–220
+  Dynamic range: DMX 221–255
+    DMX   0: 5.6% size
+    DMX  16: 5.6% size
+    DMX  32: 5.6% size
+    DMX  48: 5.6% size
+    DMX  64: 4.4% size
+    DMX  80: 5.6% size
+    DMX  96: 5.6% size
+    DMX 112: 5.6% size
+    DMX 128: 5.6% size
+    DMX 144: 13.1% size
+    DMX 160: 11.2% size
+    DMX 176: 9.1% size
+    DMX 192: 15.2% size
+    DMX 208: 9.4% size
+    DMX 224: 7.6% size
+    DMX 240: 10.3% size
+
+X POSITION (CH7):
+  DMX   0: 41.1% of frame
+  DMX  64: 36.7% of frame
+  DMX 127: ?% of frame
+  DMX 191: ?% of frame
+  DMX 255: ?% of frame
+
+Y POSITION (CH8):
+  DMX   0: 45.4% of frame
+  DMX  64: 46.9% of frame
+  DMX 127: ?% of frame
+  DMX 191: ?% of frame
+  DMX 255: ?% of frame
+
+ROTATION Z (in-plane) (DMX 0–255):
+  Starts flattening at : DMX ~None
+  Near-line at         : DMX ~None
+    DMX   0: angle=-14.7°  flatness=0.825
+    DMX  32: angle=-70.1°  flatness=0.603
+    DMX  64: angle=-52.6°  flatness=0.57
+    DMX  96: angle=-65.8°  flatness=0.629
+    DMX 128: angle=-22.0°  flatness=0.762
+    DMX 160: angle=-65.1°  flatness=0.596
+    DMX 192: angle=-40.3°  flatness=0.784
+    DMX 224: angle=-48.4°  flatness=0.515
+
+ROTATION X (sideways) (DMX 0–255):
+  Starts flattening at : DMX ~None
+  Near-line at         : DMX ~None
+    DMX   0: angle=-43.8°  flatness=0.556
+    DMX  32: angle=-52.5°  flatness=0.795
+    DMX  64: angle=-42.1°  flatness=0.703
+    DMX  96: angle=-20.1°  flatness=0.826
+    DMX 128: angle=-35.7°  flatness=0.849
+    DMX 160: angle=-67.3°  flatness=0.562
+    DMX 192: angle=-38.7°  flatness=0.788
+    DMX 224: angle=-32.2°  flatness=0.81
+
+ROTATION Y (vertical) (DMX 0–255):
+  Starts flattening at : DMX ~None
+  Near-line at         : DMX ~None
+    DMX   0: angle=-33.5°  flatness=0.869
+    DMX  32: angle=-61.0°  flatness=0.644
+    DMX  64: angle=-67.3°  flatness=0.732
+    DMX  96: angle=-42.0°  flatness=0.606
+    DMX 128: angle=-28.7°  flatness=0.831
+    DMX 160: angle=-59.3°  flatness=0.69
+    DMX 192: angle=-48.9°  flatness=0.578
+    DMX 224: angle=-47.9°  flatness=0.671
+
+
+[*] Report : /home/sumof2/vj/tmp/calibration_results/calibration_report.json
+[*] Summary: /home/sumof2/vj/tmp/calibration_results/calibration_summary.txt
