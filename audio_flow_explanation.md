@@ -26,20 +26,20 @@ This document serves as the technical source-of-truth for the VJ Engine's archit
 
 ---
 
-## 2. Vibe & Transient States (`vibe_engine.py`)
+### 2. Vibe & Transient States (`vibe_engine.py`)
 
-The engine categorizes the musical "emotional state" using a hybrid state machine:
-- **Vibe (Bucket):** `chill`, `mid`, or `high`. Determined by beat density (beats per 3 seconds) and volume, modified by a user-controlled `vibe_bias`. 
-- **Transient (The EDM Intelligence):**
-  - `steady`: Consistent energy.
-  - `building`: Energy is rising over a ~2s trend.
-  - `tension`: Sudden drop in "impact" (heavy bass) while energy was previously high. Used for the "pre-drop" silence.
-  - `dropping`: Massive spike in impact following a tension state or sudden bass onset.
+The engine categorizes the musical "emotional state" using a rhythm-aware hybrid state machine:
+- **Vibe (Bucket):** `chill`, `mid`, or `high`. Determined by beat density and spectral complexity (ratio of high-frequency energy to sub-bass). 
+- **Transient (Rhythm-Aware Intelligence):**
+  - **Windowing:** The engine uses **30-frame (~0.5s) rolling windows** for `recent_avg` and `old_avg`. This is calibrated to "absorb" the kick drum of 120-130BPM tracks, preventing the engine from reacting to individual beats.
+  - `steady`: Consistent energy / the default groove.
+  - `building`: Sustained energy rise over a ~3s trend. **Suppressed if current Vibe is "HIGH"** (cannot build if already at peak).
+  - `tension`: Pronounced drop in energy relative to a prior building state. Used for breakdowns.
+  - `dropping`: High-impact energy recovery (The Drop).
 - **Stability Mechanisms:**
-  - **Hysteresis:** Vibe states are locked for 2.0s minimum to prevent rapid flip-flopping.
-  - **Post-Drop Lockout:** After a `dropping` state, the engine enforces a **3.0s lockout** where it cannot re-enter `building`. This prevents the "fake build" effect common during high-intensity track intros or busy bridges.
-  - **Cinematic Holds:** Each transient state has a minimum hold time (Building: 1.5s, Tension: 2.0s, Dropping: 4.0s) to ensure visual transitions feel intentional and dramatic.
-  - **Liquid Smoothing:** All audio modulators (Bass, Flux, High, Intensity) are processed through high-order smoothers in the backend (vj_engine) before broadcast. This eliminates sub-pixel jitter in raymarching shaders and prevents hardware DMX flickering during complex transients.
+  - **Hysteresis:** Vibe states are locked for **5.0s** minimum.
+  - **Post-Drop Lockout:** After `dropping`, the engine enforces a **5.0s steady lockout**. It will not detect new builds or tension during this recovery period.
+  - **Cinematic Holds:** Strict hold times (Building: 0.5s, Tension: 1.5s, Dropping: 6.0s) ensure visual transitions feel intentional.
 
 ---
 
@@ -161,15 +161,17 @@ The tunnel configuration (`setup_tunnel.sh`) maps three logical entry points to 
 ## 7. Reoccurring Bugs & Mitigation
 
 ### Transient Ghost Cycling
-- **Issue:** The system enters a constant 6-8 second loop: `steady` -> `building` -> `tension` -> `dropping` -> `steady`, even with non-EDM or consistent-energy music.
-- **Cause:** Regression of state machine thresholds. If `steady` -> `building` sensitivity is too high (< 0.1), normal musical fluctuation triggers a "build." If `building` -> `tension` is too high (> 0.2), any slight volume dip triggers "tension." If `tension` -> `dropping` is too low (< 0.1), any background noise triggers a "drop."
-- **Mitigation/Standard:**
-  - **Steady Lockout:** Must be **3.0s** minimum after a drop or failed build to prevent immediate re-triggering.
-  - **Build Threshold:** `trend_long` must exceed **0.5** and `recent_avg` must exceed **0.4** (The "Gold Standard"). This ensures only sustained, intentional musical builds trigger transitions.
-  - **Drop Threshold:** `impact` (Bass*0.6 + Vol*0.4) must exceed **0.4** OR `sustained_spike` must exceed **0.25**.
-  - **Hold Times:** Re-enforce Cinematic Hold Times (1.0s / 1.5s / 4.0s) to keep visual transitions deliberate.
-  - **Energy Formula:** `energy` used for `trend_long` tracks `vol` only.
-  - **Warmup Guard:** Transient detection suppressed for first 60 frames (~2s).
+- **Issue:** The system enters a constant loop: `steady` -> `building` -> `tension` -> `dropping` -> `steady`, even with consistent-energy music.
+- **Cause:** Beat-sensitivity. Small analysis windows (8-10 frames) misinterpret the space between kick drums as "tension."
+- **Mitigation/Standard (The Rhythm-Aware Gold Standard):**
+  - **Window Size:** Analysis windows MUST be **30 frames (~0.5s)** to smooth out percussive peaks.
+  - **Steady Lockout:** Must be **5.0s** minimum after a drop to allow the track to settle.
+  - **Peak Suppression:** Building detection MUST be disabled if `vibe == "high"`.
+  - **Trend Threshold:** `trend_long` must exceed **0.25** and `recent_avg` must exceed **0.35**.
+  - **Warmup Guard:** Transient detection suppressed for first **180 frames (~3s)** to ensure history is statistically valid.
+
+> [!IMPORTANT]
+> **Core Logic Protection**: The transient detection configuration above (30-frame windows, 5s lockout, and High-Vibe suppression) is the system's "Stability Baseline." Any future requests to modify these specific parameters must trigger a system warning and require an explicit "ignore and proceed" command.
 
 ### Bass Bin Domination (Bin 0 Maxing Out)
 - **Issue:** The first EQ meter bar in the manager constantly pegs at maximum, and `bass`/`impact` values entering the vibe engine are chronically inflated, which makes the transient ghost cycling harder to suppress even with raised thresholds.

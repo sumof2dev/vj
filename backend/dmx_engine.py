@@ -77,8 +77,10 @@ class LogicMatrix:
         self.hold_timers = collections.defaultdict(float)
         self.hold_values = collections.defaultdict(float)
         self.lfo_samples = collections.defaultdict(float)
+        self.grid_x = 0.0
+        self.grid_y = 0.0
 
-    def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, active_lfos=None):
+    def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, active_lfos=None, active_pattern="Figure-8"):
         if audio.get('beat', False):
             self.beat_env = 1.0
             self.beat_count += 1
@@ -195,6 +197,28 @@ class LogicMatrix:
 
                 self.state[lfo_id] = val
 
+        # --- GLOBAL BEAT-SYNCED MOVEMENT GENERATOR (4 Bar / 16 Beat Circuit) ---
+        # Calculate smooth continuous phase [0, 2PI] across 16 beats
+        # self.beat_count is integer, beat_env is 1.0->0.0 decay.
+        # effective_beat = (self.beat_count - 1) + (1.0 - self.beat_env)
+        eff_beat = float(self.beat_count % 16) + (1.0 - self.beat_env)
+        t = (eff_beat / 16.0) * 2.0 * math.pi
+        
+        # Pattern Library
+        p = active_pattern.lower() if active_pattern else "figure-8"
+        if "circle" in p:
+            self.grid_x = math.cos(t)
+            self.grid_y = math.sin(t)
+        elif "lissajous a" in p:
+            self.grid_x = math.sin(3 * t + math.pi/2)
+            self.grid_y = math.sin(2 * t)
+        elif "lissajous b" in p:
+            self.grid_x = math.sin(5 * t)
+            self.grid_y = math.sin(4 * t)
+        else: # Default: Figure-8 (Lemniscate style)
+            self.grid_x = math.cos(t)
+            self.grid_y = math.sin(2 * t)
+
         intensity_val = (master_intensity * 2.0) - 1.0
         # Pull Smoothed Mods from Vibe Engine if available, fallback to raw
         mods = audio.get('mods', {})
@@ -220,7 +244,10 @@ class LogicMatrix:
             'static': 1.0,
             'zero': -1.0,
             'dimmer': 1.0,
-            'mode': -1.0
+            'mode': -1.0,
+            'grid_x': float(self.grid_x),
+            'grid_y': float(self.grid_y),
+            'lissajous_active': 0.0 # Will be elevated by engine if used
         })
 
 class DMXEngine:
@@ -238,7 +265,9 @@ class DMXEngine:
         self.speed = 0.6 
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
-        self.transient = "steady" 
+        self.active_presets = []
+        self.calibrated_preset_active = False
+        self.active_lissajous_pattern = "Figure-8"
         
         self._one_shot_active = False
         self._last_drop_time = 0.0
@@ -428,6 +457,8 @@ class DMXEngine:
         
         # Pre-calculate active presets (Global check once per frame)
         self.active_presets = []
+        self.calibrated_preset_active = False
+        
         active_triggers = [f"vibe:{current_vibe}"]
         if self.transient: active_triggers.append(f"state:{self.transient}") # Support state triggers correctly
 
@@ -496,13 +527,21 @@ class DMXEngine:
                 
             if is_active:
                 self.active_presets.append(p_data)
+                # Check for "Calibrated" virtual fixture in overrides
+                for ov in p_data.get('overrides', []):
+                    if ov.get('type') == 'calibrated' or ov.get('id') == 'calibrated':
+                        self.calibrated_preset_active = True
+                        # The "Target Function" (ch.name) becomes the pattern
+                        for ch in ov.get('channels', []):
+                            self.active_lissajous_pattern = ch.get('name', 'Figure-8')
 
         if 'left' in audio and 'right' in audio:
-            self.logic_l.update(dt, audio['left'], self.transient, self.speed, self.intensity, self.active_lfos)
-            self.logic_r.update(dt, audio['right'], self.transient, self.speed, self.intensity, self.active_lfos)
+            self.logic_l.update(dt, audio['left'], self.transient, self.speed, self.intensity, self.active_lfos, self.active_lissajous_pattern)
+            self.logic_r.update(dt, audio['right'], self.transient, self.speed, self.intensity, self.active_lfos, self.active_lissajous_pattern)
         else:
             self.logic_l = self.logic
             self.logic_r = self.logic
+            self.logic.update(dt, audio, self.transient, self.speed, self.intensity, self.active_lfos, self.active_lissajous_pattern)
         
         # Removed legacy rhythm triggers
         
@@ -567,6 +606,29 @@ class DMXEngine:
         current_vibe = audio.get('vibe', 'mid')
         active_triggers.append(f"vibe:{current_vibe}")
         
+        # Simple global routing - Left/Right/Center usually inferred from zone name for now
+        zone_str = str(inst.get('zone', '')).lower()
+        if 'left' in zone_str: active_logic = self.logic_l; active_audio = audio.get('left', audio)
+        elif 'right' in zone_str: active_logic = self.logic_r; active_audio = audio.get('right', audio)
+        else: active_logic = self.logic; active_audio = audio
+        
+        # X/Y LINKING PRE-PASS: If either X or Y is calibrated, both follow grid
+        force_calibrated = False
+        if self.calibrated_preset_active:
+             force_calibrated = True
+             active_logic.state['lissajous_active'] = 1.0
+
+        for ch_idx, ch_def in enumerate(channels):
+            role = ch_def.get('role', '').lower()
+            if role in ['pos_x', 'pos_y']:
+                cache = self._fast_cache.get(profile['id'], {}).get(ch_idx)
+                if cache:
+                    rule = cache.get_active_rule(current_vibe, self.transient, f"{profile['id']}_{ch_idx}_{zone_idx}")
+                    if rule and rule.get('behavior') == 'calibrated':
+                        force_calibrated = True
+                        active_logic.state['lissajous_active'] = 1.0
+                        break
+
         for ch_idx, ch_def in enumerate(channels):
 
             # Use addrOffset if provided explicitly, otherwise fallback to index relative to base_addr
@@ -576,16 +638,11 @@ class DMXEngine:
             final_addr = base_addr + int(offset)
             if not (0 < final_addr < len(self.universe)): continue
             
-            # Simple global routing - Left/Right/Center usually inferred from zone name for now
-            zone_str = str(inst.get('zone', '')).lower()
-            if 'left' in zone_str: active_logic = self.logic_l; active_audio = audio.get('left', audio)
-            elif 'right' in zone_str: active_logic = self.logic_r; active_audio = audio.get('right', audio)
-            else: active_logic = self.logic; active_audio = audio
             
             cache = self._fast_cache.get(profile['id'], {}).get(ch_idx)
             if not cache: continue
             
-            val = self._calculate_channel(ch_idx, active_audio, active_logic, zone_idx, cache, profile['id'])
+            val = self._calculate_channel(ch_idx, active_audio, active_logic, zone_idx, cache, profile['id'], force_calibrated, ch_def)
 
             # Preset Overrides (Optimized)
             preset_override_val = None
@@ -619,7 +676,7 @@ class DMXEngine:
                 
             self.universe[final_addr] = max(0, min(255, int(val)))
 
-    def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id):
+    def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id, force_calibrated=False, ch_def=None):
         current_vibe = audio.get('vibe', 'mid')
         current_transient = audio.get('transient', 'steady')
         instance_key = f"{profile_id}_{ch_idx}_{zone_idx}"
@@ -628,21 +685,34 @@ class DMXEngine:
             
         mod_name = rule.get('mod', 'static')
         
-        # 3-point calibration parsing
-        cal = rule.get('cal') or {}
-        def get_int(d, k, default):
-            try:
-                v = d.get(k)
-                return int(v) if v is not None else default
-            except: return default
-
-        c_min = get_int(cal, 'min', 0)
-        c_max = get_int(cal, 'max', 255)
-        c_center = get_int(cal, 'center', (c_min + c_max) // 2)
-            
         # --- 2D Control Paradigm (Behavior vs Source) ---
         # Backwards compatibility migration
         behavior = rule.get('behavior')
+        if force_calibrated and ch_def and ch_def.get('role', '').lower() in ['pos_x', 'pos_y']:
+            # Search for a calibrated rule in this vibe, or fallback to ANY vibe
+            cal_rule = next((r for r in cache.rules if r.get('behavior') == 'calibrated' and r.get('vibe') == current_vibe), None)
+            if not cal_rule:
+                cal_rule = next((r for r in cache.rules if r.get('behavior') == 'calibrated' and r.get('vibe') in ['any', 'any/fallback']), None)
+            
+            if cal_rule:
+                rule = cal_rule
+                behavior = 'calibrated'
+
+        # 3-point calibration parsing (Move AFTER potential rule swap)
+        cal = rule.get('cal') or {}
+        fixture_cal = ch_def.get('calibration') or {} if ch_def else {}
+
+        def get_int(d, k, default):
+            try:
+                v = d.get(k)
+                if v is None: return default
+                return int(v)
+            except: return default
+
+        c_min = get_int(cal, 'min', get_int(fixture_cal, 'min', 0))
+        c_max = get_int(cal, 'max', get_int(fixture_cal, 'max', 0))
+        c_center = get_int(cal, 'center', get_int(fixture_cal, 'center', (c_min + c_max) // 2))
+
         source = rule.get('source')
         bin_idx = int(rule.get('bin_idx', rule.get('lfo', {}).get('bin', 0)))
         
@@ -716,6 +786,17 @@ class DMXEngine:
             # To ensure it stays stable across frames for the same step, we use hash
             h = hash(f"{instance_key}_{step}") % 1000
             val_norm = (h / 500.0) - 1.0
+            
+        elif behavior == 'calibrated':
+            role = ch_def.get('role', '').lower() if ch_def else ''
+            if role == 'pos_x':
+                # Map Standard COORDINATE Grid (-1 Left, 1 Right) directly to val_norm
+                val_norm = logic_matrix.state.get('grid_x', 0.0)
+            elif role == 'pos_y':
+                # Map Standard COORDINATE Grid (-1 Bottom, 1 Top) directly to val_norm
+                val_norm = logic_matrix.state.get('grid_y', 0.0)
+            else:
+                val_norm = 0.0
 
 
         # Apply Soft-Knee Threshold (Re-range to prevent target snapping)
@@ -740,8 +821,16 @@ class DMXEngine:
         self.prev_vals[prev_id] = val_norm
 
         val_norm = max(-1.0, min(1.0, val_norm))
-        if val_norm < 0: out = c_center + val_norm * (c_center - c_min)
-        else: out = c_center + val_norm * (c_max - c_center)
+        # --- 3. FINAL DMX SCALING (Mapping -1.0..1.0 to Calibrated Range) ---
+        # Map: -1.0 (Left/Bottom) -> c_max, 0.0 (Center) -> c_center, 1.0 (Right/Top) -> c_min
+        if val_norm < 0: 
+            # Scale [-1.0, 0.0] to [c_max, c_center]
+            p = abs(val_norm) # 1.0 at -1, 0.0 at 0
+            out = c_center + (p * (c_max - c_center))
+        else: 
+            # Scale [0.0, 1.0] to [c_center, c_min]
+            p = val_norm # 0.0 at 0, 1.0 at 1
+            out = c_center + (p * (c_min - c_center))
             
         out_int = int(out)
         if c_min > c_max:

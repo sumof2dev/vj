@@ -795,6 +795,8 @@ async def fast_broadcast_loop():
                         "vibe": audio_state.get('vibe', 'mid'),
                         "transient": audio_state.get('transient', 'steady'),
                         "active_presets": [p.get('id', p['name']) for p in dmx_engine.active_presets] if dmx_engine else [],
+                        "lissajous_active": dmx_engine.logic.state.get('lissajous_active', 0.0) if dmx_engine and dmx_engine.logic else 0.0,
+                        "calibrated_preset_active": dmx_engine.calibrated_preset_active if dmx_engine else False,
                         "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
                         "spotify": audio_state.get('spotify')
                     }

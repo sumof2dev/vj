@@ -17,12 +17,12 @@ class VibeEngine:
         self.smooth_vol = 0.0
 
         # Energy Trend Tracking (Build/Drop Detection)
-        self.energy_history = collections.deque(maxlen=120)  # ~4s at 30fps
+        self.energy_history = collections.deque(maxlen=300)  # ~5s at 60Hz
         self.transient = "steady"  # "building", "dropping", "tension", "steady"
         self._transient_hold_until = 0  # Hold timer to prevent single-frame flickers
         self._steady_since = 0 # Prevent re-triggering building too fast
         self.vibe_hysteresis = 5.0 # "Sticky Vibe" (prevent flickering)
-        self.impact_history = collections.deque(maxlen=15)
+        self.impact_history = collections.deque(maxlen=180) # ~3s at 60Hz
         self._history_frame = 0  # Frame counter; transient logic is suppressed until history is warm
 
     def update(self, audio_state, now=None):
@@ -108,27 +108,20 @@ class VibeEngine:
         energy = float(self.smooth_vol)
         self.energy_history.append(energy)
         
-        # Suppress transient detection until we have a half-window of real data (~2s).
-        # 60 frames balances startup false-positives vs. calibration test responsiveness.
-        # Transient logic requires at least 70 frames of history for its windowed comparison
-        if self._history_frame >= 70 and len(self.energy_history) >= 70 and len(self.impact_history) >= 15:
-            # Windowed Trend: Compare recent 10-frame average to a 10-frame block from 2s ago
+        # Suppress transient detection until history is warm (~3s).
+        if self._history_frame >= 180 and len(self.energy_history) >= 180 and len(self.impact_history) >= 90:
+            # Windowed Trend: Compare recent 30-frame average to a 30-frame block from ~2s ago
             # This is MUCH more stable than single-frame comparisons.
-            recent_energy = sum(list(self.energy_history)[-10:]) / 10.0
-            past_energy = sum(list(self.energy_history)[-70:-60]) / 10.0
+            recent_energy = float(sum(list(self.energy_history)[-30:]) / 30.0)
+            past_energy = float(sum(list(self.energy_history)[-180:-150]) / 30.0)
             trend_long = recent_energy - past_energy
             
-            old_impact = self.impact_history[0]
-            impact_spike = impact - old_impact
-
             # Minimum hold durations per state (seconds) - Re-aligned with Cinematic rules
-            # Building hold is reduced to ensure we can catch the breakdown (tension) immediately.
-            HOLD_TIMES = {"building": 0.5, "tension": 1.5, "dropping": 4.0}
+            HOLD_TIMES = {"building": 0.5, "tension": 1.5, "dropping": 6.0}
             
-            # Use a slightly wider window (8 frames) for smoother transient decisions
-            # This ignores percussive gaps that might look like silence (tension)
-            recent_avg = sum(self.impact_history[i] for i in range(-8, 0)) / 8.0 
-            old_avg = sum(self.impact_history[i] for i in range(0, 8)) / 8.0
+            # Use a wide window (30 frames / ~0.5s) for rhythmic stability
+            recent_avg = float(sum(self.impact_history[i] for i in range(-30, 0)) / 30.0)
+            old_avg = float(sum(self.impact_history[i] for i in range(-90, -60)) / 30.0)
             sustained_spike = recent_avg - old_avg
             
             # If we're still in a hold period, don't enter state transition logic
@@ -138,24 +131,22 @@ class VibeEngine:
                 # STATE MACHINE: steady → building → tension → dropping → steady
                 
                 if self.transient == "steady":
-                    # SUSTAINED IMPACT BYPASS (Immediate Drop):
-                    # If music snaps from quiet to extreme energy instantly.
-                    if (impact > 0.45 or sustained_spike > 0.3) and recent_avg > 0.4 and now - self._steady_since > 2.0:
+                    # IMPACT BYPASS: Sudden energy explosion
+                    if (impact > 0.6 or sustained_spike > 0.4) and recent_avg > 0.45 and now - self._steady_since > 5.0:
                         self.transient = "dropping"
                         self._transient_hold_until = now + HOLD_TIMES["dropping"]
                     
-                    # Standard sequence: Building (Slow Build)
-                    elif trend_long > 0.3 and recent_avg > 0.35 and now - self._steady_since > 2.0:
+                    # BUILDING: Sustained rise over ~2s
+                    elif trend_long > 0.25 and recent_avg > 0.35 and now - self._steady_since > 5.0 and self.current_vibe != "high":
                         self.transient = "building"
                         self._transient_hold_until = now + HOLD_TIMES["building"]
                 
                 elif self.transient == "building":
-                    # Advance to TENSION: Relative drop in energy (The Breakdown)
-                    # We compare current avg to the energy from ~1.5s ago
-                    if recent_avg < old_avg * 0.8 and past_energy > 0.05:
+                    # Advance to TENSION: Energy drops significantly relative to the build
+                    if recent_avg < old_avg * 0.70 and past_energy > 0.05:
                         self.transient = "tension"
                         self._transient_hold_until = now + HOLD_TIMES["tension"]
-                    elif impact > 0.35: # EMERGENCY BYPASS: even faster
+                    elif impact > 0.5: # DROP BYPASS: building directly into a drop
                         self.transient = "dropping"
                         self._transient_hold_until = now + HOLD_TIMES["dropping"]
                     elif trend_long > -0.02 or recent_avg > 0.2:
@@ -168,8 +159,8 @@ class VibeEngine:
                 
                 elif self.transient == "tension":
                     # Advance to DROPPING: Massive recovery (The Drop!)
-                    # More aggressive sustained_spike detection to catch the "Big Drop" at 1:23
-                    if impact > 0.45 or sustained_spike > 0.20:
+                    # More aggressive sustained_spike detection to catch the "Big Drop"
+                    if impact > 0.5 or sustained_spike > 0.30:
                         self.transient = "dropping"
                         self._transient_hold_until = now + HOLD_TIMES["dropping"]
                     elif recent_avg < 0.15:

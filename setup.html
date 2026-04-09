@@ -1887,7 +1887,7 @@
         const API_BASE_ROOT = isCustomTunnel ? (window.location.protocol + "//" + apiHost) : (isCustomSubdomain ? (window.location.protocol + "//" + window.location.host) : (host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : apiHost + ':8000')) : (window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : ""))));
         const BACKEND_ROOT = isCustomTunnel ? (window.location.protocol + "//" + baseHost) : (isCustomSubdomain ? (window.location.protocol + "//" + window.location.host) : (host ? (window.location.protocol + "//" + (isOriginalCloud ? 'ravebox.love' : baseHost + ':8000')) : (window.location.protocol + "//" + window.location.hostname + (window.location.port ? ":" + window.location.port : ""))));
         const API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-        const APP_VERSION = "48261946"; // Updated by deploy.sh
+        const APP_VERSION = "49260014"; // Updated by deploy.sh
 
         let db;
         try {
@@ -2237,7 +2237,8 @@
             { id: 'direct', label: 'Direct' },
             { id: 'lfo', label: 'LFO' },
             { id: 'cycle', label: 'Rhythm' },
-            { id: 'random', label: 'Random' }
+            { id: 'random', label: 'Random' },
+            { id: 'calibrated', label: 'Calibrated' }
         ];
 
         const EASY_DESCRIPTORS = [
@@ -3839,7 +3840,14 @@ Output: Valid raw JSON object only.
 
             if (!funcName) return alert("Select a Target Function");
 
-            if (stageId && stageId !== 'global') {
+            if (stageId === 'calibrated') {
+                currentPresetOverrides.push({
+                    type: 'calibrated',
+                    id: 'calibrated',
+                    name: "MOVEMENT: " + funcName,
+                    channels: [{ name: funcName, value: 255, ranges: [] }]
+                });
+            } else if (stageId && stageId !== 'global') {
                 const instance = db.stage.find(s => s.id === stageId);
                 if (instance) {
                     currentPresetOverrides.push({
@@ -4082,13 +4090,16 @@ Output: Valid raw JSON object only.
             const presStageSel = document.getElementById('pres-add-stage-fix');
             if (presStageSel) {
                 presStageSel.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' +
+                    '<option value="calibrated">CALIBRATED (Movement)</option>' +
                     (db.stage || []).map(inst => `<option value="${inst.id}">${inst.id} (${inst.profileName})</option>`).join('');
+                
+                // Add listener to update functions based on selection
+                if (!presStageSel.hasAttribute('data-hooked')) {
+                    presStageSel.setAttribute('data-hooked', 'true');
+                    presStageSel.addEventListener('change', () => updatePresetFunctionDropdown());
+                }
             }
-            const presGlobalSel = document.getElementById('pres-add-global-func');
-            if (presGlobalSel) {
-                presGlobalSel.innerHTML = '<option value="">-- Select Function --</option>' +
-                    Array.from(globalFunctions).map(f => `<option value="${f}">${f}</option>`).join('');
-            }
+            updatePresetFunctionDropdown();
 
             const presList = document.getElementById('saved-presets-list');
             if (presList) {
@@ -4241,7 +4252,8 @@ Output: Valid raw JSON object only.
 
         function generateMutations(parentProfiles) {
             cleanupLitmusTemps();
-            const varianceRate = Math.max(0.02, 0.20 - ((litmusGeneration - 1) * 0.04));
+            // Start with a more aggressive variance that narrows down
+            const varianceRate = Math.max(0.04, 0.35 - ((litmusGeneration - 1) * 0.07));
 
             for (let i = 0; i < 4; i++) {
                 let sourceParent = parentProfiles[Math.floor(Math.random() * parentProfiles.length)];
@@ -4263,7 +4275,7 @@ Output: Valid raw JSON object only.
                             }
                             return ch;
                         });
-                        if (crossCount > 0) mutant._mutationNotes.push(`🧬 Crossbred ${crossCount} channels`);
+                        if (crossCount > 0) mutant._mutationNotes.push(`🧬 Path Hybrid (${crossCount} channels)`);
                     }
                 }
 
@@ -4271,52 +4283,77 @@ Output: Valid raw JSON object only.
                     const profileChannels = mutant.channels || (db.profiles.find(p => p.id === litmusOriginalProfileId) || {}).channels || [];
                     mutant._mutatedChannels = []; // Track specifically which indices changed for highlighting
 
-                    // Pick exactly 2-3 random channels to mess with
-                    const numToMutate = Math.floor(Math.random() * 2) + 2; // 2 or 3
+                    // Pick exactly 2-4 random channels to mess with for dramatic but focused change
+                    const numToMutate = Math.floor(Math.random() * 3) + 2; 
                     const availableIndices = Array.from({ length: mutant.mappings.length }, (_, i) => i);
                     const shuffle = availableIndices.sort(() => 0.5 - Math.random());
                     const targets = shuffle.slice(0, numToMutate);
 
                     mutant.mappings.forEach((channelRules, chIdx) => {
-                        if (!targets.includes(chIdx)) return; // Surgical mutation only
+                        if (!targets.includes(chIdx)) return; 
 
                         const chName = profileChannels[chIdx]?.role || profileChannels[chIdx]?.name || `Ch${chIdx + 1}`;
                         let chMutated = false;
 
                         channelRules.forEach(rule => {
-                            // High chance to mutate once a channel is targeted
-                            if (Math.random() < 0.2) return;
+                            // Focus ONLY on how it reacts (LFO/Path)
+                            if (!rule.lfo) return;
 
-                            if (rule.lfo && rule.lfo.speed !== undefined) {
+                            // High chance to mutate once a channel is targeted
+                            if (Math.random() < 0.15) return;
+
+                            // Mutate Speed (More dramatic)
+                            if (rule.lfo.speed !== undefined) {
                                 const oldSpeed = rule.lfo.speed;
-                                const shift = 1.0 + ((Math.random() * 2 - 1) * varianceRate * 2.0);
+                                const shift = 1.0 + ((Math.random() * 2 - 1) * varianceRate * 3.5);
                                 rule.lfo.speed = Math.max(0, parseFloat((rule.lfo.speed * shift).toFixed(3)));
-                                if (oldSpeed !== rule.lfo.speed) { mutant._mutationNotes.push(`${chName}: Speed ${oldSpeed}→${rule.lfo.speed}`); chMutated = true; }
+                                if (oldSpeed !== rule.lfo.speed) { 
+                                    mutant._mutationNotes.push(`${chName}: ${rule.lfo.speed > oldSpeed ? 'Faster' : 'Slower'} (${rule.lfo.speed})`); 
+                                    chMutated = true; 
+                                }
                             }
-                            if (rule.lfo && rule.lfo.react !== undefined) {
+                            // Mutate Reactivity (Interaction with audio)
+                            if (rule.lfo.react !== undefined) {
                                 const oldReact = rule.lfo.react;
-                                const shift = 1.0 + ((Math.random() * 2 - 1) * varianceRate);
+                                const shift = 1.0 + ((Math.random() * 2 - 1) * varianceRate * 2.0);
                                 rule.lfo.react = Math.max(0, Math.min(1.0, parseFloat((rule.lfo.react * shift).toFixed(2))));
-                                if (oldReact !== rule.lfo.react) { mutant._mutationNotes.push(`${chName}: React ${oldReact}→${rule.lfo.react}`); chMutated = true; }
+                                if (oldReact !== rule.lfo.react) { 
+                                    mutant._mutationNotes.push(`${chName}: ${rule.lfo.react > oldReact ? 'More' : 'Less'} Reactive`); 
+                                    chMutated = true; 
+                                }
                             }
-                            if (rule.lfo && litmusGeneration < 3 && Math.random() < 0.15) {
+                            // Shape Changes
+                            if (litmusGeneration < 5 && Math.random() < 0.25) {
                                 const oldShape = rule.lfo.shape;
                                 const shapes = ['sine', 'triangle', 'square', 'sawtooth'];
                                 rule.lfo.shape = shapes[Math.floor(Math.random() * shapes.length)];
-                                if (oldShape !== rule.lfo.shape) { mutant._mutationNotes.push(`${chName}: Shape ${oldShape}→${rule.lfo.shape}`); chMutated = true; }
+                                if (oldShape !== rule.lfo.shape) { 
+                                    mutant._mutationNotes.push(`${chName}: New Waveform (${rule.lfo.shape})`); 
+                                    chMutated = true; 
+                                }
                             }
-                            if (rule.behavior === 'static' && rule.value !== undefined) {
-                                const oldVal = rule.value;
-                                const shift = (Math.random() * 2 - 1) * 255 * varianceRate;
-                                rule.value = Math.max(0, Math.min(255, Math.floor(rule.value + shift)));
-                                if (oldVal !== rule.value) { mutant._mutationNotes.push(`${chName}: Val ${oldVal}→${rule.value}`); chMutated = true; }
+                            // Band (Bin) Switches - what frequency it listens to
+                            if (Math.random() < 0.2) {
+                                const oldBin = rule.lfo.bin || 0;
+                                rule.lfo.bin = Math.floor(Math.random() * 6);
+                                if (oldBin !== rule.lfo.bin) {
+                                    const bands = ['Sub', 'Low', 'Mid', 'High-Mid', 'Treble', 'Presence'];
+                                    mutant._mutationNotes.push(`${chName}: Listening to ${bands[rule.lfo.bin]}`);
+                                    chMutated = true;
+                                }
                             }
-                            if (rule.cal) {
-                                let calMoved = false;
-                                if (rule.cal.min !== undefined && Math.random() < 0.4) { rule.cal.min = Math.max(0, Math.min(255, Math.floor(rule.cal.min + ((Math.random() * 2 - 1) * 255 * varianceRate)))); calMoved = true; }
-                                if (rule.cal.max !== undefined && Math.random() < 0.4) { rule.cal.max = Math.max(0, Math.min(255, Math.floor(rule.cal.max + ((Math.random() * 2 - 1) * 255 * varianceRate)))); calMoved = true; }
-                                if (rule.cal.center !== undefined && Math.random() < 0.4) { rule.cal.center = Math.max(0, Math.min(255, Math.floor(rule.cal.center + ((Math.random() * 2 - 1) * 255 * varianceRate)))); calMoved = true; }
-                                if (calMoved) { mutant._mutationNotes.push(`${chName}: Range Adjusted`); chMutated = true; }
+                            // Smoothing & Threshold
+                            if (Math.random() < 0.2) {
+                                rule.lfo.smoothing = Math.max(0, Math.min(0.95, (rule.lfo.smoothing || 0) + (Math.random() * 2 - 1) * varianceRate));
+                                rule.lfo.threshold = Math.max(0, Math.min(1.0, (rule.lfo.threshold || 0.1) + (Math.random() * 2 - 1) * varianceRate));
+                                mutant._mutationNotes.push(`${chName}: Refined Dynamics`);
+                                chMutated = true;
+                            }
+                            // Inversion
+                            if (Math.random() < 0.15) {
+                                rule.lfo.invert = !rule.lfo.invert;
+                                mutant._mutationNotes.push(`${chName}: Path Inverted`);
+                                chMutated = true;
                             }
                         });
                         if (chMutated) mutant._mutatedChannels.push(chIdx);
@@ -4443,17 +4480,30 @@ Output: Valid raw JSON object only.
             if (emptyState) emptyState.style.display = 'none';
 
             // Determine which fixtures to show. 
-            // If a function is selected, we show ALL fixtures that have that function.
-            // Otherwise we show the activeTestFixtures.
-            let fixturesToShow = [...activeTestFixtures];
-            if (activeTestFunctions.size > 0) {
-                db.stage.forEach(inst => {
-                    const profile = db.profiles.find(p => p.id === inst.profileId);
-                    if (profile && (profile.channels || []).some(ch => activeTestFunctions.has(ch.role))) {
-                        if (!fixturesToShow.includes(inst.id)) fixturesToShow.push(inst.id);
+            // A fixture only shows up if it has at least one channel that is:
+            // 1. Part of the active function set (if defined)
+            // 2. Not hidden
+            const fixturesToShow = (db.stage || []).filter(inst => {
+                const profile = db.profiles.find(p => p.id === inst.profileId);
+                if (!profile) return false;
+                
+                const inEnsemble = activeTestFixtures.includes(inst.id);
+                const fixtureHidden = hiddenTestChannels[inst.id] || [];
+                
+                return (profile.channels || []).some((ch, idx) => {
+                    // Exclusion check first
+                    if (fixtureHidden.includes(idx)) return false;
+                    
+                    // Filter logic
+                    if (activeTestFunctions.size > 0) {
+                        // If filtering by function, it MUST match the function AND either be in ensemble or just exist
+                        return activeTestFunctions.has(ch.role);
+                    } else {
+                        // No function filter? SHOW if in ensemble
+                        return inEnsemble;
                     }
                 });
-            }
+            }).map(inst => inst.id);
 
             // Clean up old strips
             stripsContainer.querySelectorAll('.test-strip-card').forEach(strip => {
@@ -4542,26 +4592,53 @@ Output: Valid raw JSON object only.
             renderActivePresets();
         }
 
+        function updatePresetFunctionDropdown() {
+            const stageId = document.getElementById('pres-add-stage-fix')?.value;
+            const funcSel = document.getElementById('pres-add-global-func');
+            if (!funcSel) return;
+
+            if (stageId === 'calibrated') {
+                funcSel.innerHTML = '<option value="">-- Select Pattern --</option>' +
+                    ['Figure-8', 'Circle', 'Lissajous A', 'Lissajous B'].map(p => `<option value="${p}">${p}</option>`).join('');
+            } else {
+                funcSel.innerHTML = '<option value="">-- Select Function --</option>' +
+                    Array.from(globalFunctions).map(f => `<option value="${f}">${f}</option>`).join('');
+            }
+        }
+
         function renderActivePresets() {
             const bar = document.getElementById('active-presets-bar');
             if (!bar) return;
 
             // Get all presets in current DB
             const allPresets = (db.presets || []);
-            if (allPresets.length === 0) {
+            
+            // SPECIAL INDICATORS
+            let indicatorHtml = '';
+            
+            // if channel range active, "lissajous" indicated.
+            if (latestAudioState.lissajous_active > 0.5) {
+                indicatorHtml += `<div style="background:var(--accent); color:#000; font-size:9px; font-weight:800; padding:2px 8px; border-radius:100px; margin-right:5px; box-shadow: 0 0 10px var(--accent);">LISSAJOUS</div>`;
+            }
+            
+            // if preset version active, test tab lights up the "calibrated" indicator.
+            if (latestAudioState.calibrated_preset_active) {
+                indicatorHtml += `<div style="background:var(--success); color:#000; font-size:9px; font-weight:800; padding:2px 8px; border-radius:100px; margin-right:5px; box-shadow: 0 0 10px var(--success);">CALIBRATED</div>`;
+            }
+
+            if (allPresets.length === 0 && !indicatorHtml) {
                 bar.innerHTML = '<span style="opacity:0.3; font-size:10px;">No presets loaded</span>';
                 return;
             }
 
-            bar.innerHTML = allPresets.map(p => {
+            bar.innerHTML = indicatorHtml + allPresets.map(p => {
                 const isActive = activePresets.includes(p.id) || activePresets.includes(p.name);
                 const color = isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)';
                 const textColor = isActive ? '#000' : 'rgba(255,255,255,0.4)';
                 const border = isActive ? 'none' : '1px solid rgba(255,255,255,0.1)';
-                const label = isActive ? '⚡ ' : '';
                 
                 return `<div style="background:${color}; color:${textColor}; border:${border}; font-size:9px; font-weight:800; padding:2px 8px; border-radius:100px; display:flex; align-items:center; transition: all 0.2s ease;">
-                            ${label}${p.name.toUpperCase()}
+                            ${p.name.toUpperCase()}
                         </div>`;
             }).join('');
         }
@@ -4947,6 +5024,8 @@ Output: Valid raw JSON object only.
                         if (msg.transient) latestAudioState.transient = msg.transient;
                         if (msg.overrides) latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
                         if (msg.active_presets) activePresets = msg.active_presets;
+                        if (msg.lissajous_active !== undefined) latestAudioState.lissajous_active = msg.lissajous_active;
+                        if (msg.calibrated_preset_active !== undefined) latestAudioState.calibrated_preset_active = msg.calibrated_preset_active;
                         if (document.getElementById('tab-test').classList.contains('active')) {
                             updateTestNumericalValues();
                         }
