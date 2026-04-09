@@ -48,6 +48,12 @@ setup.html.bak
 setup.html.old
 ravebox_frontend.zip
 *.pdf
+recordings/
+tmp/
+*.wav
+*.mp3
+*.mp4
+*.m4a
 
 # Node.js
 node_modules/
