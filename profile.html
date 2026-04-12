@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>RaveBox Setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RaveBox">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" href="icon.png">
+<link rel="stylesheet" href="setup.css?v=412261449">
+</head>
+
+<body>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-toggle" onclick="toggleSidebar()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </div>
+            <span class="sidebar-title">RaveBox Setup</span>
+        </div>
+
+
+
+        <div class="nav-btn active" id="nav-btn-profile" onclick="switchTab('tab-profile')" title="Profiles">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1.1 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.4 1.5 3.5.8.8 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>
+            <span class="nav-text">Profile</span>
+        </div>
+
+        <div class="nav-btn" id="nav-btn-stage" onclick="window.location.href='setup.html?tab=tab-stage'" title="Stage">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4"></path><path d="M2 10v11a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V10"></path><path d="M2 10h20"></path><path d="m9 15 3 3 3-3"></path></svg>
+            <span class="nav-text">Stage</span>
+        </div>
+
+        <div class="nav-btn" id="nav-btn-live" onclick="window.location.href='setup.html?tab=tab-live'" title="Live Console">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><circle cx="7" cy="7" r="2"></circle><circle cx="17" cy="7" r="2"></circle><circle cx="7" cy="17" r="2"></circle><circle cx="17" cy="17" r="2"></circle></svg>
+            <span class="nav-text">Live</span>
+        </div>
+
+        <div class="nav-btn" id="nav-btn-presets" onclick="window.location.href='setup.html?tab=tab-presets'" title="Presets">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            <span class="nav-text">Presets</span>
+        </div>
+
+        <div class="nav-btn" id="nav-btn-test" onclick="window.location.href='setup.html?tab=tab-test'" title="Test Hub">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            <span class="nav-text">Test</span>
+        </div>
+
+        <div class="nav-btn desktop-only" onclick="sendIt(event)" title="Send It">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z">
+                </path>
+                <path
+                    d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z">
+                </path>
+                <path d="M9 12H4s.55-3.03 2-4.5c1.11-1.12 2.65-2.01 4-2.5"></path>
+                <path d="M12 15v5s3.03-.55 4.5-2c1.12-1.11 2.01-2.65 2.5-4"></path>
+            </svg>
+            <span class="nav-text">Send It</span>
+        </div>
+
+        <div class="nav-btn desktop-only" onclick="window.location.href='manager.html'" title="Home">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span class="nav-text">Home</span>
+        </div>
+    </div>
+<div class="main">
+        <div id="tab-profile" class="tab-content active">
+            <div id="profile-list-view">
+                <div class="row" style="justify-content:space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin:0; border:none; padding:0;">Behavior Profiles</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="window.location.href='fixture_ai.html'">+ Add Profile</button>
+                        <button class="btn" onclick="document.getElementById('load-behavior-input').click()">Load
+                            Profile</button>
+                    </div>
+                </div>
+                <p style="color:var(--text-dim); margin-top: -10px; margin-bottom: 20px;">Behavior Set Up: Ranges and
+                    Reactivity - Assign DMX value ranges and reactivity profile. This will determine how each channel
+                    reacts to the music.</p>
+
+                <div class="card">
+                    <div class="card-title"
+                        style="color: var(--text-dim); border: none; padding: 0; margin-bottom: 20px;">Saved Behaviors
+                    </div>
+
+                    <hr style="border:0; border-top:1px solid #333; margin: 15px 0;">
+                    <div class="card-title"
+                        style="font-size: 0.9rem; color: var(--accent); border:none; margin-bottom: 10px;">Active
+                        Behaviors (Used on Stage)</div>
+                    <div id="active-profiles-list" class="item-list"></div>
+
+                    <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
+                    <div id="all-profiles-section" class="">
+                        <div class="card-title" onclick="toggleAllProfiles()"
+                            style="font-size: 0.9rem; color: var(--text-dim); border:none; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none;">
+                            <span class="collapse-icon" style="font-size: 10px;">▼</span>
+                            All Profiles:
+                        </div>
+                        <div id="saved-profiles-list" class="item-list collapsible-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="profile-editor-view" style="display:none">
+                <div class="row" style="justify-content:space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn btn-sm" onclick="showProfileList()">← Back</button>
+                        <h2 style="margin:0; border:none; padding:0;">Profile Editor</h2>
+                        <div id="editor-heartbeat"
+                            style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">
+                            IDLE</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveProfile()"
+                        title="Sync changes to the server backend">Save Profile</button>
+
+                    <button class="btn" style="margin-left: 5px;" onclick="duplicateProfile()">Duplicate</button>
+                    <button class="btn btn-primary" style="margin-left: 5px;" onclick="refineProfileGlobal()">Refine
+                        Profile</button>
+                    <button class="btn" style="margin-left: 5px;" onclick="addProfileChannel()">➕ Add Channel</button>
+                    <button class="btn" style="margin-left: 5px;" onclick="downloadBehaviorProfile()">Export
+                        JSON</button>
+                    <input type="file" id="load-behavior-input" style="display:none"
+                        onchange="loadBehaviorProfile(event)">
+                </div>
+                <div id="ai-loading-container" style="display:none; margin-bottom: 20px;">
+                    <div
+                        style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; position: relative;">
+                        <div id="ai-loading-bar"
+                            style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; position: absolute; top:0; left:0;">
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                        <button id="ai-view-diff-btn" class="btn btn-sm"
+                            style="display:none; padding:2px 8px; font-size:9px; background:var(--accent); border:none; height:18px;"
+                            onclick="showAiDiff()">🔍 View Changes</button>
+                        <div id="ai-loading-text"
+                            style="font-size: 10px; color: var(--accent); text-align: right; font-weight: bold; text-transform: uppercase;">
+                            Processing...</div>
+                    </div>
+                </div>
+
+
+                <div class="form-row">
+                    <div style="flex:1">
+                        <label>Profile Label</label>
+                        <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
+                        <input type="hidden" id="prof-base-fixture">
+                    </div>
+                </div>
+                <div id="prof-mappings" style="margin-top: 10px;"></div>
+
+
+            </div>
+        </div>
+
+</div>
+    <div id="ai-refine-modal" class="ai-modal-overlay"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center; padding:20px;"
+        onclick="closeAiModal()">
+        <div class="ai-modal-content chat-optimized" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
+                    <span style="font-size: 1.4rem;">🤖</span> AI Profile Architect
+                    <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
+                <button class="btn btn-sm" onclick="closeAiModal()">×</button>
+            </div>
+            
+            <div class="ai-modal-body chat-body">
+                <div id="ai-chat-history" style="display: flex; flex-direction: column; gap: 12px; min-height: 50px;">
+                    <div class="chat-bubble ai">
+                        Hello! I can help you refine this profile's behaviors. Just tell me what you want to change (e.g. "make it punchier", "smooth out the pan", "increase bass response").
+                    </div>
+                </div>
+                <div id="ai-response-log" class="ai-response-log"
+                    style="display:none; margin-top:15px; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--accent-glow); border-radius:8px; font-family:var(--font-mono); font-size:0.75rem; color:var(--success); max-height:150px; overflow-y:auto; white-space:pre-wrap;">
+                </div>
+            </div>
+
+            <div class="ai-modal-footer chat-footer">
+                <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
+                    <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;" onclick="appendAiSuggestion('Wipe all rules from this channel and make it static')">🗑️ Wipe</button>
+                    <button class="btn-suggestion" onclick="appendAiSuggestion('bside')">B-Side</button>
+                    <button class="btn-suggestion" onclick="appendAiSuggestion('rhythm')">Rhythm</button>
+                    <button class="btn-suggestion" onclick="appendAiSuggestion('liquid')">Liquid</button>
+                </div>
+                
+                <div style="display: flex; gap: 10px; position: relative;">
+                    <textarea id="ai-master-textarea" 
+                        style="width: 100%; height: 60px !important; border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.05); resize: none; border: 1px solid rgba(255,255,255,0.1); color: #ffffff !important; font-size: 14px !important; caret-color: #ffffff;" 
+                        placeholder="Type your refinements here..."
+                        onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendAiRefinement(); }"></textarea>
+                    
+                    <button class="btn btn-primary" id="ai-chat-send-btn" onclick="sendAiRefinement()" style="height: 60px; width: 60px; padding:0; border-radius: 12px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <div style="font-size:0.7rem; color:var(--text-dim); display:flex; align-items:center; gap:5px;">
+                        Using <span class="active-model-name" style="color:var(--accent-alt); font-weight:bold;">...</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary btn-sm" id="ai-chat-view-diff-btn" onclick="showAiDiff()" style="display:none; border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
+                        <button class="btn btn-primary btn-sm" id="ai-apply-final-btn" onclick="acceptAiTransformation()" style="display:none; background:var(--success);">Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI SETTINGS MODAL -->
+    <div id="ai-settings-modal" class="ai-modal-overlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:10000; align-items:center; justify-content:center;"
+        onclick="closeAiSettings()">
+        <div class="ai-modal-content" style="max-width:400px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    AI Engine Settings
+                </div>
+                <button class="btn btn-sm" onclick="closeAiSettings()">×</button>
+            </div>
+            <div class="ai-modal-body" style="display:flex; flex-direction:column; gap:20px;">
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Gemini
+                        API Key</label>
+                    <input type="text" id="gemini-key-input" placeholder="AI_Studio_Key_Here"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                    <div style="font-size: 10px; color: #666; margin-top:5px;">Shared across Profiler tools.</div>
+                </div>
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Model
+                        Selection</label>
+                    <select id="ai-model-select-settings"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;"
+                        onchange="updateModelLabelDisplay()">
+                        <option value="gemini-3-flash">Gemini 3 Flash</option>
+                        <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                        <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                        <option value="deep-research-pro-preview">Deep Research Pro Preview</option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Backend
+                        Host / IP</label>
+                    <input type="text" id="backend-host-input" placeholder="e.g. ravebox.local"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                </div>
+                <button class="btn btn-primary" onclick="saveAiSettings()"
+                    style="width:100%; height:45px; font-weight:800; border-radius:12px; box-shadow: 0 4px 15px var(--accent-glow);">Save
+                    Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI BATCH REVIEW BAR -->
+    <div id="ai-review-bar" class="ai-batch-review-bar" style="display:none">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+            </div>
+            <span style="font-size: 1.2rem;">📝</span>
+            <div>
+                <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">AI Profile Tuning</div>
+                <div style="font-size: 0.75rem; color: var(--accent-alt);"><span id="ai-pending-count">...</span>
+                    pending instruction(s)</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary btn-sm" onclick="clearAiInstructions()">Reset</button>
+            <button class="btn btn-primary btn-sm" id="ai-process-btn" onclick="processBatchAiInstructions()">Review &
+                Apply</button>
+        </div>
+    </div>
+    <!-- AI DIFF MODAL -->
+    <div id="ai-diff-modal" class="ai-modal-overlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:11000; align-items:center; justify-content:center;"
+        onclick="closeAiDiff()">
+        <div class="ai-modal-content" style="max-width:600px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800;">Refinement Diff</div>
+                <button class="btn btn-sm" onclick="closeAiDiff()">×</button>
+            </div>
+            <div class="ai-modal-body diff-modal-body" id="ai-diff-body">
+                <!-- Diff rows injected here -->
+            </div>
+            <div class="ai-modal-footer" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="undoAiTransformation()">Undo &
+                    Revert</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="acceptAiTransformation()">Accept
+                    Changes</button>
+            </div>
+        </div>
+    </div>
+    <script src="shared_setup.js?v=412261449"></script>
+    <script src="profile_logic.js?v=412261449"></script>
+    <script src="ai_architect.js?v=412261449"></script>
+    <script>window.onload = () => { 
+        if (typeof renderProfileList === 'function') {
+            renderProfileList(); 
+            if (typeof updateUniqueFunctions === 'function') updateUniqueFunctions(); 
+        } else {
+            console.error('CRITICAL: profile_logic.js failed to load. Checking for syntax errors...');
+        }
+    };</script>
+</body>
+</html>

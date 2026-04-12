@@ -581,8 +581,7 @@
         <!-- STEP 1: UPLOAD -->
         <section id="step-upload" class="card fade-in">
             <div class="card-title" id="mode-title">Extract DMX Chart</div>
-            <div class="card-subtitle" id="mode-subtitle">Upload your DMX table photo below to generate a behavioral
-                profile.</div>
+            <div class="card-subtitle" id="mode-subtitle">Upload your DMX chart from your fixture's manual</div>
 
             <div id="mode-new-content">
                 <div
@@ -616,19 +615,32 @@
                             <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
                         </svg>
                     </i>
-                    <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;">Upload Manual Image</div>
-                    <div style="font-size: 0.7rem; color: var(--text-dim);" id="file-label">DMX photo (Images Only)
+                    <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;">Upload image of DMX chart
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-dim);" id="file-label">from fixture user manual
                     </div>
                     <input type="file" id="file-input" accept="image/*" multiple
                         style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
                 </div>
             </div>
 
-            <button id="btn-analyze" class="btn"
-                style="width: 100%; margin-top: 12px; display: none; background: var(--accent); color: white; padding: 10px; font-size: 1rem; font-weight: 800; border-radius: 8px; box-shadow: 0 4px 15px var(--accent-glow);"
-                onclick="analyzeFiles()">
-                🚀 EXTRACT
-            </button>
+            <div style="display:flex; gap:10px; margin-top:12px;">
+                <button id="btn-analyze" class="btn"
+                    style="flex:1; display: none; background: var(--accent); color: white; padding: 10px; font-size: 1rem; font-weight: 800; border-radius: 8px; box-shadow: 0 4px 15px var(--accent-glow);"
+                    onclick="analyzeFiles()">
+                    🚀 Extract
+                </button>
+                <button id="btn-clear" class="btn btn-secondary"
+                    style="flex:0.3; display: none; padding: 10px; font-size: 0.9rem; font-weight: 800; border-radius: 8px;"
+                    onclick="clearFiles()">
+                    ✕
+                </button>
+                <button id="btn-manual" class="btn btn-secondary"
+                    style="flex:1; padding: 10px; font-size: 0.9rem; font-weight: 800; border-radius: 8px;"
+                    onclick="startManual()">
+                    Enter Manually
+                </button>
+            </div>
 
             <div
                 style="margin-top: 20px; display: flex; align-items: center; gap: 10px; color: var(--success); font-weight: 700; font-size: 0.9rem;">
@@ -636,7 +648,7 @@
                     stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
-                Powered by <span id="model-label">Gemini 3 Flash</span>
+                Powered by <span id="model-label">Hopes & Dreams</span>
             </div>
         </section>
 
@@ -662,7 +674,7 @@
                     </div>
                     <div style="flex: 0.5;">
                         <label>Test Address</label>
-                        <input type="number" id="test-addr" value="1" min="1" max="512">
+                        <input type="number" id="test-addr" value="1" min="1" max="512" onchange="renderResults(true)">
                     </div>
                 </div>
 
@@ -727,13 +739,10 @@
             <div>
                 <label>AI Model Selection</label>
                 <select id="ai-model-select" onchange="updateModelLabel()">
-                    <option value="gemini-3-flash" selected>Gemini 3 Flash</option>
+                    <option value="gemini-flash-latest" selected>Gemini Flash Latest</option>
                     <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
                     <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                    <option value="deep-research-pro-preview">Deep Research Pro Preview</option>
                 </select>
             </div>
             <div>
@@ -759,7 +768,7 @@
     </script>
 
     <script type="module">
-        const APP_VERSION = "49260014"; // Stamped by deploy.sh
+        const APP_VERSION = "412261449"; // Stamped by deploy.sh
         import { GoogleGenerativeAI } from "google-genai-sdk";
 
         // Global State
@@ -777,6 +786,7 @@
         if (!db.presets) db.presets = [];
 
         window.currentFixture = null;
+        window.sessionOverrides = {};
         let ws = null;
         let dmxConnected = false;
         window.pendingFiles = [];
@@ -785,55 +795,33 @@
 
         // STANDARD ROLES & BEHAVIOR TEMPLATES
         const WORKFLOW_ROLES = {
-            "pos_x": { name: "Pan / X-Position", keywords: ["pan", "x pos", "x move", "horizontal"], behavior: "direct", source: "flux" },
-            "pos_y": { name: "Tilt / Y-Position", keywords: ["tilt", "y pos", "y move", "vertical"], behavior: "direct", source: "flux" },
-            "zoom": { name: "Zoom / Size", keywords: ["zoom", "zooming", "scale", "size"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.05 },
-            "rot_z": { name: "Z-Rotation / Roll", keywords: ["rotation", "spin", "z-rot", "roll", "z rot"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.04 },
-            "rot_x": { name: "X-Rotation (Tilt)", keywords: ["rot x", "tilt roll"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.04 },
-            "rot_y": { name: "Y-Rotation (Pan)", keywords: ["rot y", "pan roll"], behavior: "lfo", shape: "sine", source: "ratio", speed: 0.04 },
+            "pos_x": { name: "Pan / X-Position", keywords: ["pan", "x pos", "x move", "horizontal"], behavior: "push", source: "flux" },
+            "pos_y": { name: "Tilt / Y-Position", keywords: ["tilt", "y pos", "y move", "vertical"], behavior: "push", source: "flux" },
+            "zoom": { name: "Zoom / Size", keywords: ["zoom", "zooming", "scale", "size"], behavior: "sine", source: "vol", speed: 0.05 },
+            "rot_z": { name: "Z-Rotation / Roll", keywords: ["rotation", "spin", "z-rot", "roll", "z rot"], behavior: "sine", source: "vol", speed: 0.04 },
+            "rot_x": { name: "X-Rotation (Tilt)", keywords: ["rot x", "tilt roll"], behavior: "sine", source: "vol", speed: 0.04 },
+            "rot_y": { name: "Y-Rotation (Pan)", keywords: ["rot y", "pan roll"], behavior: "sine", source: "vol", speed: 0.04 },
             "color_solid": { name: "Color (Solid/Static)", keywords: ["red", "blue", "green", "white", "rgb", "color wheel", "color1"], behavior: "static" },
-            "color_multi": { name: "Color (Multi/Chase)", keywords: ["rainbow", "chase", "multi color", "color chase"], behavior: "lfo", shape: "square", source: "beat" },
-            "pattern": { name: "Pattern / Gobo", keywords: ["pattern", "gobo", "shape", "listing"], behavior: "lfo", shape: "square", source: "beat" },
+            "color_multi": { name: "Color (Multi/Chase)", keywords: ["rainbow", "chase", "multi color", "color chase"], behavior: "square", source: "beat" },
+            "pattern": { name: "Pattern / Gobo", keywords: ["pattern", "gobo", "shape", "listing"], behavior: "square", source: "beat" },
             "beam_fx": { name: "Beam Effect", keywords: ["beam", "fx", "sparkle", "shimmer"], behavior: "static" },
             "grating": { name: "Grating / Split", keywords: ["grating", "grate", "split"], behavior: "static" },
             "drawing": { name: "Drawing / Path", keywords: ["draw", "drawing", "writing"], behavior: "static" },
             "drawing_delay": { name: "Drawing Delay", keywords: ["delay", "draw delay"], behavior: "static" },
-            "strobe": { name: "Strobe / Flash", keywords: ["strobe", "flash", "dots", "shutter"], behavior: "direct", source: "flux" },
-            "dimmer": { name: "Master Dimmer", keywords: ["dim", "dimmer", "intensity", "brightness"], behavior: "direct", source: "flux" },
+            "strobe": { name: "Strobe / Flash", keywords: ["strobe", "flash", "dots", "shutter"], behavior: "push", source: "flux" },
+            "dimmer": { name: "Master Dimmer", keywords: ["dim", "dimmer", "intensity", "brightness"], behavior: "push", source: "vol" },
             "mode": { name: "Functional Mode", keywords: ["mode", "function", "control"], behavior: "static" },
             "clip": { name: "Clip / Boundary", keywords: ["clip", "boundry", "out of bounds", "blanking"], behavior: "static" },
             "group": { name: "Pattern Group", keywords: ["group", "category", "library"], behavior: "static" },
             "generic": { name: "Generic Offset", keywords: ["custom", "effect", "reset", "unknown"], behavior: "static" }
         };
 
-        // NEW: Aesthetic Descriptor Registry (Expanded)
-        const AESTHETIC_REGISTRY = {
-            linear: [
-                { id: 'smooth_wave', label: 'Smooth Wave', behavior: 'lfo', lfo: { shape: 'sine', smoothing: 0.8, speed: 0.1, react: 0.5 }, source: 'raw' },
-                { id: 'breathe', label: 'Breathe (Pulse)', behavior: 'lfo', lfo: { shape: 'triangle', smoothing: 0.9, speed: 0.05, react: 0.3 }, source: 'raw' },
-                { id: 'rhythmic_snap', label: 'Rhythmic Snap', behavior: 'lfo', lfo: { shape: 'square', smoothing: 0.0, speed: 0.5, react: 1.0 }, source: 'beat' },
-                { id: 'jitter_center', label: 'Jitter Around Center', behavior: 'lfo', lfo: { shape: 'random', speed: 0.8, react: 0.8, smoothing: 0.1 }, source: 'flux' },
-                { id: 'static_pos', label: 'Static Position', behavior: 'static' }
-            ],
-            index: [
-                { id: 'static_hold', label: 'Static Hold', behavior: 'static' },
-                { id: 'cycle_random', label: 'Cycle Random', behavior: 'lfo', lfo: { shape: 'square', speed: 0.2, react: 1.0, smoothing: 0.0 }, source: 'beat' },
-                { id: 'cycle_slow', label: 'Cycle Slow', behavior: 'lfo', lfo: { shape: 'square', speed: 0.05, react: 0.2, smoothing: 0.0 }, source: 'bar' }
-            ],
-            macro: [
-                { id: 'macro_hold', label: 'Hold Macro (Steady)', behavior: 'static' },
-                { id: 'dynamic_hold', label: 'Dynamic Hold Pulse', behavior: 'lfo', lfo: { shape: 'square', hold: 0.5, speed: 0.1, smoothing: 0.0 }, source: 'bar' },
-                { id: 'speed_ramp', label: 'Speed Ramp', behavior: 'lfo', lfo: { shape: 'sawtooth', speed: 0.5, smoothing: 0.0 }, source: 'phrase' },
-                { id: 'macro_slow', label: 'Hold Macro (Slow)', behavior: 'static' },
-                { id: 'macro_fast', label: 'Hold Macro (Fast)', behavior: 'static' }
-            ]
-        };
 
         // Initialize UI
         function init() {
             document.getElementById('gemini-key').value = localStorage.getItem('vj_gemini_api_key') || "";
             document.getElementById('backend-host').value = localStorage.getItem('vj_backend_host') || window.location.hostname;
-            const savedModel = localStorage.getItem('vj_gemini_model') || "gemini-3-flash";
+            const savedModel = localStorage.getItem('vj_gemini_model') || "gemini-flash-latest";
             document.getElementById('ai-model-select').value = savedModel;
             updateModelLabel();
             connectWS();
@@ -935,6 +923,11 @@
             ws.send(JSON.stringify({ type: 'laser_override', overrides }));
         }
 
+        function sendBatchOverride(overrides) {
+            if (!dmxConnected || !ws) return;
+            ws.send(JSON.stringify({ type: 'laser_override', overrides }));
+        }
+
         // --- FILE SELECTION ---
         window.handleFiles = (files) => {
             console.log("📂 Files selected:", files.length);
@@ -945,6 +938,7 @@
             const dropZone = document.getElementById('drop-zone');
             const btn = document.getElementById('btn-analyze');
             const btnClear = document.getElementById('btn-clear');
+            const btnManual = document.getElementById('btn-manual');
 
             label.innerHTML = `<span style="color:var(--accent); font-weight:bold;">${window.pendingFiles.length} File(s) Ready</span> - Click below to start`;
             dropZone.style.borderColor = "var(--accent)";
@@ -953,7 +947,8 @@
             btn.style.display = 'flex';
             btn.style.justifyContent = 'center';
             btn.style.alignItems = 'center';
-            btnClear.style.display = 'block';
+            if (btnClear) btnClear.style.display = 'block';
+            if (btnManual) btnManual.style.display = 'none';
         }
 
         window.clearFiles = () => {
@@ -962,13 +957,15 @@
             const dropZone = document.getElementById('drop-zone');
             const btn = document.getElementById('btn-analyze');
             const btnClear = document.getElementById('btn-clear');
+            const btnManual = document.getElementById('btn-manual');
             const input = document.getElementById('file-input');
 
             label.innerText = "DMX table image or PDF manual";
             dropZone.style.borderColor = "";
             dropZone.style.background = "";
-            btn.style.display = 'none';
-            btnClear.style.display = 'none';
+            if (btn) btn.style.display = 'none';
+            if (btnClear) btnClear.style.display = 'none';
+            if (btnManual) btnManual.style.display = 'block';
             input.value = "";
         }
 
@@ -1024,43 +1021,66 @@
 
 ${limitText}
 
-3. MECHANICAL CLASS & BEHAVIOR MAPPING (CRITICAL): Categorize every sub-range rule by hardware physics:
+3. MULTI-RANGE EXTRACTION (CRITICAL): Examine the DMX tables in the images carefully. For EACH channel, you MUST extract ALL logical sub-ranges found (e.g., 0-10: Off, 11-127: Dimmer, 128-255: Strobe). Create a separate rule object for each range in the 'mappings' array for that channel. Do NOT collapse them into a single range.
 
-   - "LINEAR" (Software Drives Motion): Use for "Fixed Angles", "Static Positions", "Fixed Color", "Degree/Angle Selection", "Dimmer 0-100%", "Static Patterns". 
-     * Logic: If the hardware stands still by default (is manual/static), RaveBox must provide the motion.
-     * Aesthetic IDs: "smooth_wave", "breathe", "rhythmic_snap", "jitter_center".
-
+4. MECHANICAL CLASS mapping:
+   - "LINEAR" (Software Drives Motion): Use for "Fixed Angles", "Step Positions", "Fixed Color", "Degree/Angle Selection", "Dimmer 0-100%", "Patterns". 
    - "INDEX" (Discrete Steps): Use for "Select Gobo", "Select Color Wheeler", "Step Colors".
-     * Aesthetic IDs: "static_hold", "cycle_random", "cycle_slow".
+   - "MACRO" (Software Tracks): Use for "Auto Programs", "Hardware Macros", "Dynamic Programs", "Moving Patterns", "Hardware Auto". 
 
-   - "MACRO" (Software Holds Still): Use for "Auto Programs", "Hardware Macros", "Dynamic Programs", "Moving Patterns", "Hardware Auto".
-     * Logic: If the hardware moves on its own (Dynamic/Auto), RaveBox MUST assign a STATIC (Hold) behavior to let the macro play through without glitching or resetting.
-     * Aesthetic IDs: "macro_hold", "macro_slow", "macro_fast".
+4. SEMANTIC DECODER (RaveBox Decoupled Paradigm):
+   For every rule, identify the [DRIVER] (source), [SHAPE] (behavior), and [HOLD TYPE].
+   
+   RANGE RULE: 
+   - ALWAYS bring in the range as the 2 numbers provided (min and max). 
+   - NEVER use SHAPE: 'static' for a range (min != max). This freezes motion.
+   - Use 'sine', 'step', or another active shape for ranges.
 
-4. CALIBRATION: EVERY sub-range rule MUST have a complete 'cal' object:
+   Matrix Guidelines:
+    - POS_X, PAN, POS_Y, TILT: Linear Range? [DRIVER: flux, SHAPE: sine, SPEED: 0.5, HOLD: none]. Macro Range? [DRIVER: vol, SHAPE: step, SPEED: 0.1, HOLD: bar].
+    - ZOOM, FOCUS, IRIS: Linear Range? [DRIVER: bass, SHAPE: sine, SPEED: 0.1, HOLD: none]. 
+    - STROBE, SHUTTER, DIMMER: [DRIVER: vol, SHAPE: saw, SPEED: 1.0, HOLD: none].
+    - COLOR_MULTI, CHASES: [DRIVER: beat, SHAPE: square, SPEED: 0.1, HOLD: peakpause].
+    - COLOR_SOLID, GOBO, INDEXED: Range? [DRIVER: vol, SHAPE: random, SPEED: 0.1, HOLD: floorfreeze]. Single Value? [DRIVER: vol, SHAPE: push, SPEED: 0, HOLD: none].
+    - BEAM_FX, SHIMMER: [DRIVER: high, SHAPE: noise, SPEED: 0.8, HOLD: none].
+
+5. CALIBRATION: EVERY sub-range rule MUST have a complete 'cal' object:
    - 'cal.min': Start value of range.
    - 'cal.max': End value of range.
-   - 'cal.center': The mathematical middle (Center Point/Idle State).
-   - This calibration is required regardless of behavior.
+   - 'cal.center': The mathematical middle.
 
-5. ROLE MAPPING: Use standard roles: ${Object.keys(WORKFLOW_ROLES).join(', ')}.
+6. VIBE RULES & INTENSITY: For each channel, if there is only one range, set "vibe" to "any". If there are multiple ranges: Set the FIRST range to "any", the LAST range to "high", and any ranges in between to "mid". 
+   - INTENSITY DECODER: If the manual text is highly descriptive (e.g. "clockwise rotation then counterclockwise", "zoom in/out with strobe"), it indicates intensity. Assign these to "high" or "dropping" vibe.
 
-6. VIBE RULES: Set "vibe" to "any" for ALL extracted rules. NEVER combine sub-ranges.
+5. KEYWORD LOGIC (PHYSICAL ALIGNMENT):
+   - "STATIC" text in a RANGE (e.g. 0-100): Hardware is motionless. RaveBox MUST drive it. Set [SHAPE] to an active LFO and [HOLD] to 'none'.
+   - "DYNAMIC" or "MACRO" or "AUTO" text in a range: Hardware is moving. Set [SHAPE] to a slow 'step' or 'sine'. NEVER set to 'static'.
+   - "FAST": Speed 0.8-1.0. "SLOW": Speed 0.05-0.15.
+
+6. ENGINE SPECIFICATIONS:
+   - DRIVERS: bass, mid, high, vol, flux, impact, beat, bar.
+   - SHAPES: sine, saw, square, noise, step, random, push, pull. (RESERVE 'static' ONLY for explicit user overrides).
+   - HOLD TYPES: none, floorfreeze, peakpause, beat, bar.
+
+7. VIBE RULES & INTENSITY: For each channel, if there is only one range, set "vibe" to "any". If there are multiple ranges: Set the FIRST range to "any", the LAST range to "high", and any ranges in between to "mid". 
+   - INTENSITY DECODER: Highly descriptive text (e.g. "clockwise then counterclockwise", "zoom with strobe") indicates intensity. Assign these to "high" or "drop" vibe.
 
 OUTPUT JSON SCHEMA:
 {
   "id": "prof_generated", 
   "name": "${brand} ${fixModel}", 
   "channels": [ 
-    { "name": "Function Name", "role": "dimmer", "originalText": "Raw manual text here", "default": 0 } 
+    { "name": "Function Name", "role": "dimmer", "default": 0 } 
   ],
   "mappings": [ 
      [ 
        { 
          "vibe": "any", 
-         "description": "Short summary of what this range does",
-         "mechanical_class": "linear", 
-         "aesthetic_id": "smooth_wave", 
+         "description": "Short summary",
+         "source": "vol", 
+         "behavior": "sine", 
+         "speed": 0.5,
+         "hold_type": "none",
          "cal": { "min": 0, "center": 64, "max": 127 } 
        }
      ] 
@@ -1086,7 +1106,7 @@ OUTPUT JSON SCHEMA:
             try {
                 console.log("📡 Initializing Gemini SDK...");
                 const genAI = new GoogleGenerativeAI(apiKey);
-                const selectedModel = document.getElementById('ai-model-select').value || "gemini-1.5-flash";
+                const selectedModel = document.getElementById('ai-model-select').value || "gemini-flash-latest";
                 const model = genAI.getGenerativeModel({ model: selectedModel });
 
                 let contents = [{ role: 'user', parts: contextParts }];
@@ -1156,31 +1176,45 @@ OUTPUT JSON SCHEMA:
                 currentFixture.mappings = currentFixture.mappings.map((rules, chIdx) => {
                     const chRules = Array.isArray(rules) ? rules : [rules];
 
-                    // HYDRATION: Fill in Math from the Aesthetic Registry
                     return chRules.map(rule => {
                         const mClass = rule.mechanical_class || 'linear';
-                        const aId = rule.aesthetic_id || 'smooth_wave';
-                        const aesthetic = (AESTHETIC_REGISTRY[mClass] || []).find(a => a.id === aId) || AESTHETIC_REGISTRY.linear[0];
-
+                        
+                        // DECOUPLED HYDRATION: Use AI-transcribed values directly
                         const hydratedRule = {
                             ...rule,
-                            behavior: aesthetic.behavior || 'static',
-                            source: aesthetic.source || 'raw',
-                            lfo: aesthetic.lfo ? { ...aesthetic.lfo } : undefined,
-                            audio: aesthetic.audio ? { ...aesthetic.audio } : undefined
+                            behavior: rule.behavior || 'static',
+                            source: rule.source || 'volume',
+                            modifiers: {
+                                speed: parseFloat(rule.speed || (rule.behavior === 'static' ? 0 : 0.5)),
+                                react: 0.5,
+                                hold_type: rule.hold_type || 'none'
+                            }
                         };
 
-                        // Procedural Variety Logic
-                        if (hydratedRule.lfo) {
-                            hydratedRule.lfo.phase = (chIdx * 0.15) % (Math.PI * 2);
-                            hydratedRule.lfo.speed *= (0.95 + (Math.random() * 0.1));
-                        }
+                        // Note: Internal engine IDs for behaviors (e.g., lfo_sine) are used directly as 'behavior'.
+                        // Advanced LFO settings can be added if needed, but primary control is now decoupled.
 
                         return hydratedRule;
                     });
                 });
 
-                renderResults();
+                // ENFORCE VIBE RULES (Distribution Pattern)
+                currentFixture.mappings.forEach(rules => {
+                    if (rules.length === 1) {
+                        rules[0].vibe = 'any';
+                    } else if (rules.length > 1) {
+                        rules[0].vibe = 'any';
+                        rules[rules.length - 1].vibe = 'high';
+                        for (let i = 1; i < rules.length - 1; i++) {
+                            if (rules[i].vibe === 'any' || rules[i].vibe === 'high') {
+                                rules[i].vibe = 'mid'; // Default intermediates to mid
+                            }
+                        }
+                    }
+                });
+
+                window.sessionOverrides = {}; // Reset overrides for new extraction
+                renderResults(true);
                 setStep('results');
             } catch (e) {
                 console.log("JSON Parse failed or explanation required:", e);
@@ -1189,6 +1223,36 @@ OUTPUT JSON SCHEMA:
                 setStep('chat');
             }
         }
+
+        window.startManual = () => {
+            const brand = document.getElementById('ai-brand').value || "Generic";
+            const fixModel = document.getElementById('ai-model').value || "Manual Add";
+            const chCountInput = document.getElementById('ai-ch-count').value;
+            const chCount = parseInt(chCountInput) || 0;
+
+            if (chCount <= 0) {
+                alert("Please enter the number of channels first.");
+                document.getElementById('ai-ch-count').focus();
+                return;
+            }
+
+            const ts = Date.now();
+            currentFixture = {
+                id: "prof_" + ts,
+                name: `${brand} ${fixModel}`,
+                channels: Array.from({ length: chCount }, (_, i) => ({
+                    name: `Function ${i + 1}`,
+                    role: "unassigned",
+                    originalText: "Manual entry",
+                    default: 0
+                })),
+                mappings: Array.from({ length: chCount }, () => [])
+            };
+
+            window.sessionOverrides = {}; // Reset overrides
+            renderResults(true);
+            setStep('results');
+        };
 
         window.sendChatReply = () => {
             const input = document.getElementById('chat-reply-input');
@@ -1212,7 +1276,7 @@ OUTPUT JSON SCHEMA:
         }
 
         // --- RENDERING ---
-        function renderResults() {
+        function renderResults(resetDMX = false) {
             const list = document.getElementById('channels-list');
             const prof = currentFixture;
 
@@ -1220,12 +1284,59 @@ OUTPUT JSON SCHEMA:
 
             list.innerHTML = prof.channels.map((ch, idx) => {
                 const rules = prof.mappings[idx] || [];
-                const ruleSummary = rules.map(r => `
-                    <div class="rule-item">
-                        <span class="rule-desc">${r.description || r.mechanical_class}</span>
-                        <div style="display:flex; justify-content:space-between; align-items:center; opacity:0.8;">
-                             <span style="font-weight:bold; color:var(--accent-alt);">${r.aesthetic_id}</span>
-                             <span style="font-weight:bold; color:white; background:rgba(0,0,0,0.3); padding:1px 4px; border-radius:3px;">[${r.cal.min}-${r.cal.max}]</span>
+                const ruleSummary = rules.map((r, rIdx) => `
+                    <div class="rule-item" style="transition: border-color 0.2s; position:relative; overflow:hidden; padding:6px; border:1px solid rgba(255,255,255,0.05); background:rgba(255,255,255,0.02); border-radius:8px; margin-bottom:4px;">
+                        <button onclick="window.deleteRule(${idx}, ${rIdx})" 
+                                style="position:absolute; top:2px; right:2px; background:none; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:12px;">×</button>
+                        
+                        <!-- LINE 1: DESCRIPTION -->
+                        <div style="margin-bottom:4px;">
+                            <input type="text" value="${r.description || r.mechanical_class || 'Range'}" 
+                                   oninput="window.updateRuleDescription(${idx}, ${rIdx}, this.value)"
+                                   style="background:none; border:none; color:#fff; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; width:calc(100% - 20px); padding:0; outline:none; text-align:left;">
+                        </div>
+
+                        <!-- LINE 2: VIBE & DMX RANGE -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px;">
+                             <select onchange="window.currentFixture.mappings[${idx}][${rIdx}].vibe = this.value" 
+                                     style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:4px; color:var(--accent-alt); font-size:9px; font-weight:bold; height:20px; flex:1; padding:0 4px; text-transform:uppercase;">
+                                 <option value="any" ${r.vibe === 'any' ? 'selected' : ''}>ANY</option>
+                                 <option value="any 1" ${r.vibe === 'any 1' ? 'selected' : ''}>ANY 1</option>
+                                 <option value="any 2" ${r.vibe === 'any 2' ? 'selected' : ''}>ANY 2</option>
+                                 <option value="any 3" ${r.vibe === 'any 3' ? 'selected' : ''}>ANY 3</option>
+                                 <option value="chill" ${r.vibe === 'chill' ? 'selected' : ''}>CHILL</option>
+                                 <option value="chill 1" ${r.vibe === 'chill 1' ? 'selected' : ''}>CHILL 1</option>
+                                 <option value="chill 2" ${r.vibe === 'chill 2' ? 'selected' : ''}>CHILL 2</option>
+                                 <option value="chill 3" ${r.vibe === 'chill 3' ? 'selected' : ''}>CHILL 3</option>
+                                 <option value="mid" ${r.vibe === 'mid' ? 'selected' : ''}>MID</option>
+                                 <option value="mid 1" ${r.vibe === 'mid 1' ? 'selected' : ''}>MID 1</option>
+                                 <option value="mid 2" ${r.vibe === 'mid 2' ? 'selected' : ''}>MID 2</option>
+                                 <option value="mid 3" ${r.vibe === 'mid 3' ? 'selected' : ''}>MID 3</option>
+                                 <option value="high" ${r.vibe === 'high' ? 'selected' : ''}>HIGH</option>
+                                 <option value="high 1" ${r.vibe === 'high 1' ? 'selected' : ''}>HIGH 1</option>
+                                 <option value="high 2" ${r.vibe === 'high 2' ? 'selected' : ''}>HIGH 2</option>
+                                 <option value="high 3" ${r.vibe === 'high 3' ? 'selected' : ''}>HIGH 3</option>
+                                 <option value="build" ${r.vibe === 'build' ? 'selected' : ''}>BUILD</option>
+                                 <option value="drop" ${r.vibe === 'drop' ? 'selected' : ''}>DROP</option>
+                                 <option value="never" ${r.vibe === 'never' ? 'selected' : ''}>NEVER</option>
+                             </select>
+                             <div style="display:flex; align-items:center; gap:2px; color:white; font-size:9px; font-family:monospace; background:rgba(0,0,0,0.2); padding:2px 4px; border-radius:4px; width:75px; justify-content:center;">
+                                <input type="number" value="${r.cal.min}" oninput="window.updateRuleCal(${idx}, ${rIdx}, 'min', this.value)" 
+                                       style="background:none; border:none; color:#fff; width:34px; text-align:center; padding:0; outline:none;" min="0" max="255">
+                                <span style="opacity:0.3">-</span>
+                                <input type="number" value="${r.cal.max}" oninput="window.updateRuleCal(${idx}, ${rIdx}, 'max', this.value)" 
+                                       style="background:none; border:none; color:#fff; width:34px; text-align:center; padding:0; outline:none;" min="0" max="255">
+                             </div>
+                        </div>
+
+                        <!-- LINE 3: [DRIVER] [SHAPE] [HOLD] -->
+                        <div style="display:flex; gap:4px; font-size:9px; color:var(--text-dim); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; opacity:0.8;">
+                            <span style="color:var(--accent);">${r.source}</span>
+                            <span>•</span>
+                            <span style="color:var(--accent-alt);">${r.behavior}</span>
+                            <span>•</span>
+                            <span style="color:var(--success);">${r.modifiers?.hold_type || 'none'}</span>
+                            <span style="margin-left:auto; color:var(--text-dim);">SPD ${r.modifiers?.speed || 0}</span>
                         </div>
                     </div>
                 `).join('');
@@ -1234,16 +1345,18 @@ OUTPUT JSON SCHEMA:
                     <option value="${key}" ${ch.role === key ? 'selected' : ''}>${info.name}</option>
                 `).join('');
 
+                const currentVal = window.sessionOverrides[idx] || 0;
+
                 return `
                 <div class="channel-card" id="card-${idx}">
-                    <div class="channel-info" style="position:relative;">
-                        <span class="channel-num">CH ${idx + 1}</span>
-                        <button onclick="deleteChannel(${idx})" style="position:absolute; top:0; right:0; background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px;">×</button>
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; margin-top:20px;">
-                            <span style="font-size:10px; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">ORIGINAL: ${ch.originalText || ch.name}</span>
-                            <div style="margin-top:4px;">${ruleSummary}</div>
-                        </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span class="channel-num" style="display:flex; align-items:center; gap:10px;">
+                            CH ${idx + 1}
+                            ${ch.originalText && ch.originalText !== 'Manual entry' ? `<span style="font-size:8px; color:var(--text-dim); text-transform:uppercase; font-weight:bold; opacity:0.4; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;">REF: ${ch.originalText}</span>` : ''}
+                        </span>
+                        <button onclick="deleteChannel(${idx})" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:16px;">×</button>
                     </div>
+
                     <div class="channel-inputs">
                         <div>
                             <label>DMX Function Name</label>
@@ -1257,16 +1370,40 @@ OUTPUT JSON SCHEMA:
                             </select>
                         </div>
                     </div>
-                    <div class="test-controls">
-                        <input type="range" min="0" max="255" value="0" 
+
+                    <div style="margin-bottom:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:9px; color:var(--text-dim); text-transform:uppercase; font-weight:bold; opacity:0.6;">DMX RANGES & NOTES</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+                            ${ruleSummary}
+                            <button onclick="window.addRule(${idx})" 
+                                    style="font-size:9px; height:45px; display:flex; align-items:center; justify-content:center; background:rgba(var(--accent-rgb), 0.05); border:1px dashed var(--accent); color:var(--accent); border-radius:8px; cursor:pointer; font-weight:bold; text-transform:uppercase;">
+                                + Add Range
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="test-controls" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                        <input type="range" min="0" max="255" value="${currentVal}" 
                                oninput="handleSlider(${idx}, this.value)"
                                onmousedown="highlightCard(${idx}, true)"
-                               onmouseup="highlightCard(${idx}, false)">
-                        <div class="val-display" id="val-${idx}">0</div>
+                               onmouseup="highlightCard(${idx}, false)"
+                               style="flex: 1;">
+                        <div class="val-display" id="val-${idx}">${currentVal}</div>
                     </div>
                 </div>
                 `;
             }).join('');
+
+            if (resetDMX) {
+                const baseAddr = parseInt(document.getElementById('test-addr').value) || 1;
+                const overrides = prof.channels.map((ch, idx) => ({
+                    address: baseAddr + idx,
+                    value: parseInt(window.sessionOverrides[idx] || 0)
+                }));
+                sendBatchOverride(overrides);
+            }
         }
 
         window.deleteChannel = (idx) => {
@@ -1289,8 +1426,8 @@ OUTPUT JSON SCHEMA:
                 // DATA PERSISTENCE: Update the behavior/source but PRESERVE the cal (ranges)
                 window.currentFixture.mappings[idx] = existingMappings.map(rule => ({
                     ...rule,
-                    behavior: template.behavior || 'direct',
-                    source: template.source || 'raw',
+                    behavior: template.behavior || 'static',
+                    source: template.source || 'vol',
                     // Preserve value if static, otherwise default the template values
                     ...(template.value !== undefined ? { behavior: 'static', value: template.value } : {})
                 }));
@@ -1300,11 +1437,10 @@ OUTPUT JSON SCHEMA:
                     vibe: 'any',
                     mechanical_class: 'linear',
                     aesthetic_id: 'custom',
-                    behavior: template.behavior || 'direct',
-                    source: template.source || 'raw',
+                    behavior: template.behavior || 'static',
+                    source: template.source || 'vol',
                     cal: { min: 0, center: 127, max: 255 },
-                    lfo: { shape: 'sine', bin: 0, speed: 0.1, react: 0.5 },
-                    audio: { smoothing: 0.5, threshold: 0.1, react: 1.0 }
+                    modifiers: { speed: 0.1, react: 0.5, hold_type: 'none' }
                 };
                 if (template.value !== undefined) {
                     newRule.behavior = 'static';
@@ -1316,10 +1452,71 @@ OUTPUT JSON SCHEMA:
         };
 
         window.handleSlider = (idx, val) => {
-            // No need to store currentValue in Profile schema, just use it for local override
+            window.sessionOverrides[idx] = val;
             document.getElementById(`val-${idx}`).innerText = val;
             const baseAddr = parseInt(document.getElementById('test-addr').value) || 1;
             sendOverride(baseAddr + idx, val);
+        };
+
+        window.updateRuleDescription = (chIdx, ruleIdx, val) => {
+            if (window.currentFixture && window.currentFixture.mappings[chIdx] && window.currentFixture.mappings[chIdx][ruleIdx]) {
+                window.currentFixture.mappings[chIdx][ruleIdx].description = val;
+            }
+        };
+
+        window.updateRuleCal = (chIdx, ruleIdx, key, val) => {
+            if (!window.currentFixture || !window.currentFixture.mappings[chIdx][ruleIdx]) return;
+            const num = parseInt(val);
+            if (isNaN(num)) return;
+            const rule = window.currentFixture.mappings[chIdx][ruleIdx];
+            rule.cal[key] = Math.max(0, Math.min(255, num));
+            // Auto-center
+            rule.cal.center = Math.floor((rule.cal.min + rule.cal.max) / 2);
+        };
+
+        window.addRule = (chIdx) => {
+            if (!window.currentFixture.mappings[chIdx]) window.currentFixture.mappings[chIdx] = [];
+            window.currentFixture.mappings[chIdx].push({
+                vibe: 'any',
+                description: 'New Position',
+                mechanical_class: 'linear',
+                aesthetic_id: 'smooth_wave',
+                behavior: 'direct',
+                source: 'raw',
+                cal: { min: 0, center: 127, max: 255 }
+            });
+            
+            // Re-apply vibe logic
+            const rules = window.currentFixture.mappings[chIdx];
+            if (rules.length === 1) {
+                rules[0].vibe = 'any';
+            } else if (rules.length > 1) {
+                rules[0].vibe = 'any';
+                rules[rules.length - 1].vibe = 'high';
+                for (let i = 1; i < rules.length - 1; i++) {
+                    if (rules[i].vibe === 'any' || rules[i].vibe === 'high') {
+                        rules[i].vibe = 'mid';
+                    }
+                }
+            }
+
+            renderResults();
+        };
+
+        window.deleteRule = (chIdx, ruleIdx) => {
+            if (!confirm("Delete this range?")) return;
+            window.currentFixture.mappings[chIdx].splice(ruleIdx, 1);
+            
+            // Re-apply vibe logic
+            const rules = window.currentFixture.mappings[chIdx];
+            if (rules.length === 1) {
+                rules[0].vibe = 'any';
+            } else if (rules.length > 1) {
+                rules[0].vibe = 'any';
+                rules[rules.length - 1].vibe = 'high';
+            }
+            
+            renderResults();
         };
 
         window.highlightCard = (idx, active) => {
@@ -1378,9 +1575,7 @@ OUTPUT JSON SCHEMA:
                 const port = (isOriginalCloud || isCustomTunnel) ? '' : ':8000';
 
                 const apiBase = `${protocol}//${apiHost}${port}/api/fixtures/`;
-                const safeName = name.replace(/\s+/g, '_');
-
-                const profUrl = apiBase + `profiles/${safeName}.json`;
+                const profUrl = apiBase + `profiles/${profId}.json`;
                 const profResp = await fetch(profUrl, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },

@@ -1,5 +1,12 @@
 # VJ Engine: Technical Documentation
 
+> [!CAUTION]
+> ### THE GOLD STANDARD IMMUTABLE CLAUSE
+> The parameters defined in this document (Smoothing Factors, Normalization Windows, Transient Timing, and Lockouts) are the **FIXED GOLD STANDARDS** of the VJ Engine. 
+> 1. **AI RESTRICTION:** The AI coding assistant is strictly forbidden from modifying these values in the source code, even if requested by the user. 
+> 2. **DEVIATION PROTOCOL:** The only way to deviate from these standards is for the USER to manually edit this markdown file first, and then explicitly request an alignment.
+> 3. **NO "SMART" ADJUSTMENTS:** Do not "optimize" these values for current tracks or system performance. They are mathematically locked for consistency.
+
 This document serves as the technical source-of-truth for the VJ Engine's architecture, data pipeline, and system setup on Raspberry Pi 5.
 
 ---

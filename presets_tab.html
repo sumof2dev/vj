@@ -1,0 +1,60 @@
+        let audioEngineActive = true;
+        let current_editing_fixture_id = null;
+        let selected_offset_idx = -1;
+
+        if (!db.profiles) db.profiles = [];
+        if (!db.stage) db.stage = [];
+        if (!db.presets) db.presets = [];
+
+        // --- 2. TAB NAVIGATION ---
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+
+        function toggleAllProfiles() {
+            document.getElementById('all-profiles-section').classList.toggle('collapsed');
+        }
+
+        let currentTab = 'tab-profile';
+        function switchTab(tabId, skipReset = false) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const btns = document.querySelectorAll('.nav-btn');
+
+            // --- RE-CLICK TO SAVE LOGIC ---
+            if (currentTab === tabId) {
+                if (tabId === 'tab-profile') saveProfile();
+                else if (tabId === 'tab-stage') saveDB();
+                else if (tabId === 'tab-presets') savePreset();
+                return;
+            }
+            currentTab = tabId;
+
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.id === tabId) tab.classList.add('active');
+            });
+
+            btns.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Reset all nav labels
+            if (document.getElementById('nav-btn-profile')) document.querySelector('#nav-btn-profile .nav-text').innerText = 'Profile';
+            if (document.getElementById('nav-btn-stage')) document.querySelector('#nav-btn-stage .nav-text').innerText = 'Stage';
+            if (document.getElementById('nav-btn-presets')) document.querySelector('#nav-btn-presets .nav-text').innerText = 'Presets';
+
+            // Change active tab's label to SAVE
+            if (tabId === 'tab-profile') document.querySelector('#nav-btn-profile .nav-text').innerText = '💾 SAVE';
+            else if (tabId === 'tab-stage') document.querySelector('#nav-btn-stage .nav-text').innerText = '💾 SAVE';
+            else if (tabId === 'tab-presets') document.querySelector('#nav-btn-presets .nav-text').innerText = '💾 SAVE';
+
+            if (tabId === 'tab-profile' && !skipReset) {
+                activeProfileId = null;
+                renderProfileList();
+                document.getElementById('profile-editor-view').style.display = 'none';
+            }
+            if (tabId === 'tab-test') {
+                renderEnsemblePicker();

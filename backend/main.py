@@ -714,9 +714,10 @@ async def fast_broadcast_loop():
                         if dmx_port or dmx_engine:
                             universe = dmx_engine.get_universe()
                             monitored = {addr: universe[addr] for addr in [1, 7, 8, 175, 182] if addr < len(universe)}
+                            health = analyzer.get_signal_health()
                             vibe_name = audio_state.get('vibe', 'mid')
                             q_size = audio_queue.qsize()
-                            print(f"DMX_OUT: {monitored} | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Q: {q_size}")
+                            print(f"DMX_OUT: {monitored} | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Signal: {health['status']} ({health['peak']:.1f})")
                             last_log = current_time
 
                     if dmx_port:
@@ -1001,6 +1002,12 @@ async def ws_handler(websocket):
                             if dmx_engine:
                                 dmx_engine.clear_address_overrides(addresses)
                         
+                        elif msg_type == "toggle_preset":
+                            preset_id = data.get("preset_id")
+                            state = data.get("state") # optional
+                            if dmx_engine and preset_id:
+                                dmx_engine.toggle_manual_preset(preset_id, state)
+                        
                         elif msg_type == "visual_states":
                             # Update synchronized visual layer indices
                             for k in ["bg", "fg", "ov", "fx"]:
@@ -1128,6 +1135,9 @@ async def ws_handler(websocket):
                         elif msg_type == "run_calibration":
                             asyncio.create_task(run_calibration_task(websocket))
 
+                        elif msg_type == "run_audit":
+                            asyncio.create_task(run_audit_task(websocket))
+
                         elif msg_type == "start_recording":
                             name = data.get("name")
                             addresses = data.get("addresses", [])
@@ -1172,6 +1182,56 @@ async def ws_handler(websocket):
     finally:
         if websocket in connected_clients:
             connected_clients.remove(websocket)
+
+async def run_audit_task(websocket):
+    """Checks the live analyzer against Gold Standard parameters"""
+    print("🔬 [Audit] Starting Gold Standard Audit...")
+    try:
+        checks = []
+        
+        # 1. Check Window Size
+        window_pass = analyzer.rolling_window_size == 300
+        checks.append({
+            "name": "Normalization Window (300)",
+            "pass": window_pass,
+            "actual": f"{analyzer.rolling_window_size} frames",
+            "expected": "300 frames"
+        })
+        
+        # 2. Check Smoothing Factors
+        gold_smoothing = [0.70, 0.70, 0.70, 0.85, 0.85, 0.90]
+        actual_smoothing = getattr(analyzer, 'smoothing_configs', [])
+        
+        smoothing_pass = actual_smoothing == gold_smoothing
+        checks.append({
+            "name": "Snappy Smoothing Factors",
+            "pass": smoothing_pass,
+            "actual": str(actual_smoothing),
+            "expected": str(gold_smoothing)
+        })
+        
+        # 3. Check Data Exposure
+        # We check the most recent audio_state
+        has_ratios = "ratios" in audio_state
+        has_attacks = "attacks" in audio_state
+        checks.append({
+            "name": "Extended Timbre/Impact Data",
+            "pass": has_ratios and has_attacks,
+            "actual": f"Ratios: {'✅' if has_ratios else '❌'}, Attacks: {'✅' if has_attacks else '❌'}",
+            "expected": "Both Present"
+        })
+
+        await websocket.send(json.dumps({
+            "type": "audit_report",
+            "checks": checks,
+            "overall_pass": window_pass and smoothing_pass and has_ratios and has_attacks
+        }))
+        print("🔬 [Audit] Audit Report sent successfully")
+    except Exception as e:
+        print(f"❌ Audit Task Error: {e}")
+        try:
+            await websocket.send(json.dumps({"type": "calibration_error", "message": f"Audit Error: {e}"}))
+        except: pass
 
 async def run_calibration_task(websocket):
     """Background task to run audio engine sanity check and stream results"""
@@ -1342,13 +1402,13 @@ async def main():
     cert_path = os.path.join(BASE_DIR, '..', 'cert.pem')
     key_path = os.path.join(BASE_DIR, '..', 'key.pem')
 
-    # WS: Plain mode preferred for Cloudflare Tunnels
-    ssl_context = None
+    # WS: SSL Enabled to match Remote Tunnel Config
     if os.path.exists(cert_path) and os.path.exists(key_path):
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
         print(f"🔒 WS SSL Enabled (wss://0.0.0.0:{WS_PORT})")
     else:
+        ssl_context = None
         print(f"🔓 WS running in plain mode (ws://0.0.0.0:{WS_PORT})")
 
     # Start the native audio worker thread

@@ -1,0 +1,375 @@
+        .ai-modal-content {
+            background: rgba(24, 24, 30, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 20px !important;
+            width: 90% !important;
+            max-width: 450px !important;
+            padding: 30px !important;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+            animation: modalIn 0.3s ease-out;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* --- DIFF VIEWER --- */
+        .diff-modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .diff-row {
+            display: flex;
+            gap: 15px;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: flex-start;
+        }
+
+        .diff-ch-label {
+            width: 80px;
+            font-weight: 900;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        .diff-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .diff-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .diff-old {
+            color: #ff5e5e;
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .diff-new {
+            color: #5effa8;
+            font-weight: bold;
+        }
+
+        .diff-unchanged {
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-toggle" onclick="toggleSidebar()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </div>
+            <span class="sidebar-title">RaveBox Setup</span>
+        </div>
+
+
+
+        <div class="nav-btn active" id="nav-btn-profile" onclick="switchTab('tab-profile')" title="Profiles">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1.1 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.4 1.5 3.5.8.8 1.3 1.5 1.5 2.5">
+                </path>
+                <path d="M9 18h6"></path>
+                <path d="M10 22h4"></path>
+            </svg>
+            <span class="nav-text">Profile</span>
+        </div>
+
+        <div class="nav-btn" id="nav-btn-stage" onclick="switchTab('tab-stage')" title="Stage">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4"></path>
+                <path d="M2 10v11a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V10"></path>
+                <path d="M2 10h20"></path>
+                <path d="m9 15 3 3 3-3"></path>
+            </svg>
+            <span class="nav-text">Stage</span>
+        </div>
+
+        <div class="nav-btn" onclick="switchTab('tab-sim')" title="Sim">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+            <span class="nav-text">Sim</span>
+        </div>
+
+        <div class="nav-btn" id="nav-btn-presets" onclick="switchTab('tab-presets')" title="Presets">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            <span class="nav-text">Presets</span>
+        </div>
+
+        <div class="desktop-only" style="border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 15px; opacity: 0.5;">
+        </div>
+
+        <div class="nav-btn" onclick="switchTab('tab-test')" title="Test">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <span class="nav-text">Test</span>
+        </div>
+
+        <div class="nav-btn desktop-only" onclick="sendIt(event)" title="Send It">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z">
+                </path>
+                <path
+                    d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z">
+                </path>
+                <path d="M9 12H4s.55-3.03 2-4.5c1.11-1.12 2.65-2.01 4-2.5"></path>
+                <path d="M12 15v5s3.03-.55 4.5-2c1.12-1.11 2.01-2.65 2.5-4"></path>
+            </svg>
+            <span class="nav-text">Send It</span>
+        </div>
+
+        <div class="nav-btn desktop-only" onclick="window.location.href='manager.html'" title="Home">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span class="nav-text">Home</span>
+        </div>
+    </div>
+    </div>
+
+    <div class="main">
+
+
+
+        <div id="tab-profile" class="tab-content active">
+            <div id="profile-list-view">
+                <div class="row" style="justify-content:space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin:0; border:none; padding:0;">Behavior Profiles</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="window.location.href='fixture_ai.html'">+ Add Profile</button>
+                        <button class="btn" onclick="document.getElementById('load-behavior-input').click()">Load
+                            Profile</button>
+                    </div>
+                </div>
+                <p style="color:var(--text-dim); margin-top: -10px; margin-bottom: 20px;">Behavior Set Up: Ranges and
+                    Reactivity - Assign DMX value ranges and reactivity profile. This will determine how each channel
+                    reacts to the music.</p>
+
+                <div class="card">
+                    <div class="card-title"
+                        style="color: var(--text-dim); border: none; padding: 0; margin-bottom: 20px;">Saved Behaviors
+                    </div>
+
+                    <hr style="border:0; border-top:1px solid #333; margin: 15px 0;">
+                    <div class="card-title"
+                        style="font-size: 0.9rem; color: var(--accent); border:none; margin-bottom: 10px;">Active
+                        Behaviors (Used on Stage)</div>
+                    <div id="active-profiles-list" class="item-list"></div>
+
+                    <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
+                    <div id="all-profiles-section" class="">
+                        <div class="card-title" onclick="toggleAllProfiles()"
+                            style="font-size: 0.9rem; color: var(--text-dim); border:none; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none;">
+                            <span class="collapse-icon" style="font-size: 10px;">▼</span>
+                            All Profiles:
+                        </div>
+                        <div id="saved-profiles-list" class="item-list collapsible-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="profile-editor-view" style="display:none">
+                <div class="row" style="justify-content:space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn btn-sm" onclick="showProfileList()">← Back</button>
+                        <h2 style="margin:0; border:none; padding:0;">Profile Editor</h2>
+                        <div id="editor-heartbeat"
+                            style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">
+                            IDLE</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveProfile()"
+                        title="Sync changes to the server backend">Save Profile</button>
+                    <button class="btn" style="margin-left: 5px;" onclick="duplicateProfile()">Duplicate</button>
+                    <button class="btn btn-primary" style="margin-left: 5px;" onclick="refineProfileGlobal()">Refine
+                        Profile</button>
+                    <button class="btn" style="margin-left: 5px;" onclick="addProfileChannel()">➕ Add Channel</button>
+                    <button class="btn" style="margin-left: 5px;" onclick="downloadBehaviorProfile()">Export
+                        JSON</button>
+                    <input type="file" id="load-behavior-input" style="display:none"
+                        onchange="loadBehaviorProfile(event)">
+                </div>
+                <div id="ai-loading-container" style="display:none; margin-bottom: 20px;">
+                    <div
+                        style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; position: relative;">
+                        <div id="ai-loading-bar"
+                            style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; position: absolute; top:0; left:0;">
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                        <button id="ai-view-diff-btn" class="btn btn-sm"
+                            style="display:none; padding:2px 8px; font-size:9px; background:var(--accent); border:none; height:18px;"
+                            onclick="showAiDiff()">🔍 View Changes</button>
+                        <div id="ai-loading-text"
+                            style="font-size: 10px; color: var(--accent); text-align: right; font-weight: bold; text-transform: uppercase;">
+                            Processing...</div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div style="flex:1">
+                        <label>Profile Label</label>
+                        <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
+                        <input type="hidden" id="prof-base-fixture">
+                    </div>
+                </div>
+                <div id="prof-mappings" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+
+    <div id="tab-stage" class="tab-content">
+        <h2>Stage Patching</h2>
+        <p style="color:var(--text-dim)">Deploy profiles to the physical rig.</p>
+
+        <div class="card">
+            <div class="card-title">Patch to Stage</div>
+            <div class="form-row" style="grid-template-columns: 1fr 1fr 0.8fr 0.8fr 1fr;">
+                <div style="display:none">
+                    <label>Hardware Type</label>
+                    <select id="stage-fixture" onchange="updateStageProfileList()"></select>
+                </div>
+                <div>
+                    <label>Profile</label>
+                    <select id="stage-profile"></select>
+                </div>
+                <div>
+                    <label>Address (1-512)</label>
+                    <input type="number" id="stage-addr" value="1" min="1" max="512">
+                </div>
+                <div>
+                    <label>Offset</label>
+                    <input type="number" id="stage-offset" value="0" min="0" max="512">
+                </div>
+                <div>
+                    <label>Zone</label>
+                    <input type="text" id="stage-zone" value="center" list="zone-options">
+                    <datalist id="zone-options">
+                        <option value="left">
+                        <option value="right">
+                        <option value="center">
+                        <option value="top">
+                        <option value="bottom">
+                    </datalist>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="patchToStage()">➕ Add to Stage</button>
+        </div>
+
+        <div class="card">
+            <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div class="card-title" style="margin:0;">On Stage</div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-sm" id="btn-toggle-json" onclick="toggleStageJson()">JSON</button>
+                    <button class="btn btn-primary btn-sm" onclick="sendIt(event)">Save Stage</button>
+                </div>
+            </div>
+            <div id="stage-list" class="item-list"></div>
+            <div id="stage-json-container" style="display:none; margin-top: 10px;">
+                <textarea id="stage-json-editor"
+                    style="width:100%; height:300px; background:#1a1a1f; color:#0f0; font-family:monospace; border:1px solid #333; padding:10px; border-radius:4px;"></textarea>
+                <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="saveStageJson()">💾 Save JSON
+                    Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-presets" class="tab-content">
+        <h2>Presets</h2>
+        <p style="color:var(--text-dim)">Define structural overrides and automated triggers (e.g., The Drop).</p>
+
+        <div class="card">
+            <div class="card-title">Create New Preset</div>
+            <div class="form-row">
+                <div>
+                    <label>Preset Name</label>
+                    <input type="text" id="pres-name" placeholder="e.g., Massive Drop Lock">
+                </div>
+                <div
+                    style="margin-top:15px; background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid #333;">
+                    <label>Active Triggers</label>
+                    <div id="pres-active-triggers" style="margin-bottom:10px;"></div>
+
+                    <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; text-align:right;">
+                        <button class="btn btn-primary" onclick="addEmptyTrigger()">+ AND (Add Condition)</button>
+                    </div>
+                </div> <!-- Closes line 637 Trigger Box -->
+            </div> <!-- Closes line 632 form-row -->
+
+            <!-- Hidden templates for inputs, managed by JS -->
+            <div id="trigger-input-temp" style="display:none"></div>
+
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #444;">
+                <label style="font-size:1.1rem; font-weight:bold; color:var(--accent);">THEN:</label>
+                <div class="form-row" style="grid-template-columns: 1.5fr 1.5fr auto; align-items: end;">
+                    <div>
+                        <label>Target Fixture</label>
+                        <select id="pres-add-stage-fix">
+                            <option value="global">ALL FIXTURES (Global)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Target Function</label>
+                        <select id="pres-add-global-func">
+                            <option value="">-- Select Function --</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="addOverrideToCurrentPreset()">ADD ACTION</button>
+                </div>
+            </div>
+
+            <div id="pres-overrides-container" style="margin-top:20px;">
+                <!-- Active overrides will be rendered here -->
+            </div>
+
+            <div style="margin-top: 20px; padding-top:15px; border-top:1px solid #333;">
+                <button class="btn btn-primary" onclick="savePreset()">💾 Save Preset</button>
+                <button class="btn btn-sm" style="margin-left:10px;" onclick="resetPresetForm()">Clear</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Saved Presets</div>
+            <div id="saved-presets-list" class="item-list"></div>

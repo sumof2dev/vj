@@ -99,14 +99,16 @@ if [ "$START_SERVER" = true ]; then
 fi
 
 # 3. Start Launcher (For UI control & Status)
-echo "🚀 Starting Launcher..."
-$PYTHON_CMD -u launcher.py &
-LAUNCHER_PID=$!
+if [ "$IS_SERVICE" = false ]; then
+    echo "🚀 Starting Launcher..."
+    $PYTHON_CMD -u launcher.py &
+    LAUNCHER_PID=$!
 
-# 4. Start Camera Service (Port 8004)
-echo "📸 Starting Camera Service..."
-$PYTHON_CMD -u scripts/calibration_server.py &
-CAMERA_PID=$!
+    # 4. Start Camera Service (Port 8004)
+    echo "📸 Starting Camera Service..."
+    $PYTHON_CMD -u scripts/calibration_server.py &
+    CAMERA_PID=$!
+fi
 
 
 echo "✅ LFG!"

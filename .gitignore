@@ -54,6 +54,11 @@ tmp/
 *.mp3
 *.mp4
 *.m4a
+backup-unused/
+tests/
+tests/calibration/
+scripts/
+
 
 # Node.js
 node_modules/
@@ -63,3 +68,6 @@ assets/
 
 # Logs
 *.log
+
+# antigravity rules
+.agent/rules/setup

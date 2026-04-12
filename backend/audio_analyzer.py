@@ -11,7 +11,7 @@ class AudioAnalyzer:
         ]
         
         # Audio History for Rolling Normalization
-        self.rolling_window_size = 800 # Approx 30-40 seconds @ 20-30 updates/sec
+        self.rolling_window_size = 300 # Approx 5-10 seconds @ 30-60 updates/sec
         self.history_bass = collections.deque(maxlen=self.rolling_window_size)
         self.history_mid  = collections.deque(maxlen=self.rolling_window_size)
         self.history_high = collections.deque(maxlen=self.rolling_window_size)
@@ -44,7 +44,11 @@ class AudioAnalyzer:
         self.prev_raw_bins = [0.0] * 6
         self.beat_count = 0
         self.flux_sensitivity_percentage = 0.5 # Track raw slider percentage (0-1)
-        self.cumulative_max = 150.0 # High Initial Baseline (protects quiet intros)
+        self.cumulative_max = 5.0 # LOW Initial Baseline (allows quick adaptation to quiet starts)
+        
+        # FIXED GOLD STANDARDS (Smoothing)
+        # Low bins (0-2): 0.70, Mid bins (3-4): 0.85, High bin (5): 0.90
+        self.smoothing_configs = [0.70, 0.70, 0.70, 0.85, 0.85, 0.90]
 
     def get_signal_health(self):
         """Analyze raw peak history to detect environment-level issues (Spotify vol, ALSA)."""
@@ -166,14 +170,14 @@ class AudioAnalyzer:
         global_peak = max(self.cumulative_max, max(self.history_raw_max) if self.history_raw_max else self.cumulative_max)
         self.history_raw_max.append(current_raw_max)
 
-        if raw_vol > 0.0002: 
+        if raw_vol > 0.00001:  # Lowered from 0.0002 for sensitvity
             self.last_sound_time = now
         elif now - self.last_sound_time > 5.0:
             self.bpm = 120.0
             self.bpm_list = []
             return self.get_empty_state()
         
-        if raw_vol < 0.0002:
+        if raw_vol < 0.00001:  # Lowered from 0.0002 for sensitivity
             return self.get_empty_state()
 
         # --- Timbre (Spectral Ratios) ---
@@ -228,15 +232,8 @@ class AudioAnalyzer:
             normalized = min(1.0, (val / global_peak) * self.gain)
             
             # --- SNAPPY FREQUENCY-AWARE SMOOTHING ---
-            # Reverting coefficients towards the user-preferred ~0.35 range
-            # Low bins (0-2) are punchy (65/35). 
-            # High bins (3-5) are smooth (75/25 to 80/20).
-            if bi < 3:
-                s_factor = 0.65 
-            elif bi < 5:
-                s_factor = 0.75
-            else:
-                s_factor = 0.80 # Prevent strobe-flicker on Air
+            # Using Gold Standard Coefficients from self.smoothing_configs
+            s_factor = self.smoothing_configs[bi]
             
             out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * s_factor + normalized * (1.0 - s_factor)))
         self.prev_bins = out_bins
@@ -283,28 +280,31 @@ class AudioAnalyzer:
             "bass": float(out_bass),
             "mid": float(out_mid),
             "high": float(out_high),
-            "vol":  float(out_vol),
+            "vol": float(out_vol),
             "flux": float(flux),
             "beat": bool(is_beat),
+            "bar": bool(is_beat and (self.beat_count % 4 == 0)),
             "bass_onset": bool(bass_onset),
             "high_onset": bool(high_onset),
             "beat_phase": float(beat_phase),
             "beat_count": int(self.beat_count),
             "bpm": float(self.bpm),
+            "impact": float(max(attacks) if attacks else 0.0),
+            "attacks": attacks,
+            "ratios": ratios,
             "suggested_animation": suggested_shape,
             "bins": [float(b) for b in out_bins],
-            "ratios": ratios,
-            "attacks": attacks,
             "spectral_complexity": spectral_complexity
         }
 
     def get_empty_state(self):
          return { 
              "bass": 0.0, "mid": 0.0, "high": 0.0, "vol": 0.0, "flux": 0.0, 
-             "beat": False, "bpm": 120.0,
+             "beat": False, "bar": False, "bpm": 120.0,
              "bass_onset": False, "high_onset": False, "beat_phase": 0.0,
              "suggested_animation": None, "vibe": "chill", "transient": "steady",
              "bins": [0.0] * 6,
+             "attacks": [0.0] * 6,
              "ratios": [0.0] * 6,
-             "attacks": [0.0] * 6
+             "spectral_complexity": 0.5
          }

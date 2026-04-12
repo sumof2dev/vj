@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UI Style Trial | RaveBox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --sidebar-width: 240px;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+
+        .layout {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* --- Sidebar Navigation --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: #0a0a0c;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 0 24px 20px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            letter-spacing: -0.5px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 20px;
+        }
+
+        .nav-btn {
+            padding: 14px 24px;
+            background: transparent;
+            border: none;
+            color: #888;
+            text-align: left;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .nav-btn.active {
+            color: #fff;
+            background: rgba(124, 77, 255, 0.15);
+            border-left: 4px solid #7c4dff;
+        }
+
+        /* --- Content Area --- */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .style-page {
+            display: none;
+            height: 100%;
+            min-height: 100vh;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        .style-page.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============================================================
+           STYLE 1: FIXTURE AI (MODERN GLASS)
+           ============================================================ */
+        #style-ai {
+            --ai-bg: #050508;
+            --ai-accent: #7c4dff;
+            --ai-glass: blur(16px) saturate(180%);
+            --ai-panel: rgba(20, 20, 27, 0.7);
+            --ai-border: rgba(255, 255, 255, 0.1);
+            
+            background: var(--ai-bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(124, 77, 255, 0.15) 0, transparent 40%),
+                radial-gradient(at 100% 100%, rgba(0, 255, 204, 0.1) 0, transparent 40%);
+        }
+
+        .ai-card {
+            background: var(--ai-panel);
+            backdrop-filter: var(--ai-glass);
+            -webkit-backdrop-filter: var(--ai-glass);
+            border: 1px solid var(--ai-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        .ai-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #fff, #a29bfe);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .ai-btn {
+            background: var(--ai-accent);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(124, 77, 255, 0.4);
+        }
+
+        .ai-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(124, 77, 255, 0.6);
+        }
+
+        .ai-slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            -webkit-appearance: none;
+            margin: 20px 0;
+        }
+
+        .ai-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--ai-accent);
+            border-radius: 50%;
+            border: 3px solid #fff;
+            cursor: pointer;
+        }
+
+        /* ============================================================
+           STYLE 2: CYBERPUNK NEON (HIGH CONTRAST)
+           ============================================================ */
+        #style-cyber {
+            --cy-bg: #000;
+            --cy-accent: #00f2ff;
+            --cy-accent2: #ff00ff;
+            --cy-border: #00f2ff33;
+            
+            background: var(--cy-bg);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cy-card {
+            background: #080808;
+            border: 2px solid var(--cy-accent);
+            border-radius: 0;
+            padding: 24px;
+            position: relative;
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+            margin-bottom: 24px;
+        }
+
+        .cy-card::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 20px;
+            height: 20px;
+            background: var(--cy-accent);
+        }
+
+        .cy-title {
+            font-size: 1.4rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: var(--cy-accent);
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+            margin-bottom: 15px;
+        }
+
+        .cy-btn {
+            background: transparent;
+            color: var(--cy-accent);
+            border: 1px solid var(--cy-accent);
+            padding: 10px 20px;
+            text-transform: uppercase;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .cy-btn:hover {
+            background: var(--cy-accent);
+            color: #000;
+            box-shadow: 0 0 20px var(--cy-accent);
+        }
+
+        .cy-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        /* ============================================================
+           STYLE 3: INDUSTRIAL DARK (RUGGED/MINIMAL)
+           ============================================================ */
+        #style-industrial {
+            --in-bg: #111;
+            --in-panel: #1a1a1a;
+            --in-accent: #ff8c00;
+            --in-border: #333;
+            
+            background: var(--in-bg);
+        }
+
+        .in-card {
+            background: var(--in-panel);
+            border-left: 4px solid var(--in-accent);
+            padding: 30px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.5);
+        }
+
+        .in-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #eee;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--in-border);
+            padding-bottom: 10px;
+        }
+
+        .in-btn {
+            background: #222;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 8px 16px;
+            font-weight: 600;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .in-btn:hover {
+            background: var(--in-accent);
+            color: #fff;
+            border-color: var(--in-accent);
+        }
+
+        .in-stat {
+            font-family: monospace;
+            font-size: 2rem;
+            color: var(--in-accent);
+        }
+
+        .in-label {
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="layout">
+        <nav class="sidebar">
+            <div class="sidebar-header">STYLE_TRIAL</div>
+            
+            <button class="nav-btn active" onclick="showStyle('ai', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                Modern Glass (AI)
+            </button>
+            
+            <button class="nav-btn" onclick="showStyle('cyber', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="22" y2="7"></line><line x1="2" y1="17" x2="22" y2="17"></line></svg>
+                Cyberpunk Neon
+            </button>
+            
+            <button class="nav-btn" onclick="showStyle('industrial', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                Industrial Dark
+            </button>
+
+            <div style="flex: 1;"></div>
+            
+            <button class="nav-btn" onclick="window.location.href='setup.html'" style="opacity: 0.5;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                Back to Setup
+            </button>
+        </nav>
+
+        <main class="main-content">
+            
+            <!-- STYLE 1: FIXTURE AI -->
+            <section id="style-ai" class="style-page active">
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div class="ai-title" style="margin-bottom: 40px; font-size: 2.5rem;">The Future of Control</div>
+                    
+                    <div class="ai-card">
+                        <div class="ai-title">Adaptive Interface</div>
+                        <p style="color: rgba(255,255,255,0.6); line-height: 1.6;">This style matches the AI Profiler. It uses deep blurs, vibrant purple accents, and a sense of depth through layered glass surfaces.</p>
+                        <div style="margin: 30px 0;">
+                            <label style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #7c4dff;">Intensity Control</label>
+                            <input type="range" class="ai-slider" value="75">
+                        </div>
+                        <button class="ai-btn">Verify Signal</button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div class="ai-card">
+                            <div style="font-weight: 800; margin-bottom: 10px;">Network Node</div>
+                            <div style="height: 100px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; color: #444;">Visualization Area</div>
+                        </div>
+                        <div class="ai-card">
+                            <div style="font-weight: 800; margin-bottom: 10px;">System Health</div>
+                            <div style="display: flex; gap: 8px;">
+                                <div style="flex: 1; height: 4px; background: #00ffcc; border-radius: 2px;"></div>
+                                <div style="flex: 1; height: 4px; background: #00ffcc; border-radius: 2px;"></div>
+                                <div style="flex: 0.5; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STYLE 2: CYBERPUNK -->
+            <section id="style-cyber" class="style-page">
+                <div style="max-width: 900px; margin: 0 auto;">
+                    <div class="cy-title" style="font-size: 3rem; border-bottom: 4px solid var(--cy-accent); display: inline-block; margin-bottom: 40px;">System_Override_v4.2</div>
+                    
+                    <div class="cy-grid">
+                        <div class="cy-card">
+                            <div class="cy-title" style="font-size: 1rem;">// Data_Stream</div>
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 20px;">
+                                [STATUS: ACTIVE]<br>
+                                [PACKETS: 14,204]<br>
+                                [ERROR: 0.002%]
+                            </div>
+                            <button class="cy-btn">Initiate_Sync</button>
+                        </div>
+
+                        <div class="cy-card" style="border-color: var(--cy-accent2);">
+                            <div class="cy-title" style="font-size: 1rem; color: var(--cy-accent2); text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);">// Power_Grid</div>
+                            <div style="height: 80px; background: repeating-linear-gradient(45deg, #000, #000 10px, #111 10px, #111 20px); border: 1px solid #333; margin-top: 10px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="cy-card" style="margin-top: 24px;">
+                        <div class="cy-title">Mainframe_Console</div>
+                        <div style="background: #050505; padding: 15px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #0f0; border: 1px solid #1a1a1a;">
+                            > BOOTING RAVEBOX_ENGINE...<br>
+                            > SEARCHING FOR DMX_UNIVERSE_1...<br>
+                            > FOUND 12_FIXTURES.<br>
+                            > INJECTING VISUAL_SYNTH_MODULES...<br>
+                            > READY.
+                        </div>
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button class="cy-btn" style="background: var(--cy-accent); color: #000;">Commit</button>
+                            <button class="cy-btn">Retry</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STYLE 3: INDUSTRIAL -->
+            <section id="style-industrial" class="style-page">
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;">
+                        <div>
+                            <div class="in-label">Workspace</div>
+                            <div style="font-size: 2rem; font-weight: 800;">Heavy Duty Terminal</div>
+                        </div>
+                        <div class="in-stat">84.2<span style="font-size: 1rem; color: #444;">%</span></div>
+                    </div>
+
+                    <div class="in-card">
+                        <div class="in-title">Core Parameters</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;">
+                            <div>
+                                <div class="in-label">Voltage</div>
+                                <div style="font-family: monospace; font-size: 1.5rem; margin-top: 5px;">240.4v</div>
+                            </div>
+                            <div>
+                                <div class="in-label">Throttle</div>
+                                <div style="font-family: monospace; font-size: 1.5rem; margin-top: 5px;">62.0%</div>
+                            </div>
+                            <div>
+                                <div class="in-label">Temp</div>
+                                <div style="font-family: monospace; font-size: 1.5rem; margin-top: 5px; color: #ff4757;">42°C</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="in-card" style="border-left-color: #444;">
+                        <div class="in-title">Control Surfaces</div>
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #111; padding: 15px; border: 1px solid #222;">
+                                <div>Fixture #1 - Laser Array</div>
+                                <button class="in-btn">On</button>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #111; padding: 15px; border: 1px solid #222;">
+                                <div>Fixture #2 - Beam Wash</div>
+                                <button class="in-btn" style="background: var(--in-accent); color: #fff; border-color: var(--in-accent);">Active</button>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #111; padding: 15px; border: 1px solid #222; opacity: 0.5;">
+                                <div>Fixture #3 - Strobe</div>
+                                <button class="in-btn">Locked</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        function showStyle(styleId, btn) {
+            // Hide all pages
+            document.querySelectorAll('.style-page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show target page
+            document.getElementById('style-' + styleId).classList.add('active');
+            
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            btn.classList.add('active');
+        }
+    </script>
+</body>
+</html>

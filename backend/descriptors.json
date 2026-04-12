@@ -1,0 +1,82 @@
+[
+    {
+        "id": "pulse_beat",
+        "label": "Pulse with Beat",
+        "behavior": "square",
+        "source": "impact",
+        "speed": 0,
+        "react": 0.6,
+        "hold_type": "none"
+    },
+    {
+        "id": "smooth_drift",
+        "label": "Smooth Drift",
+        "behavior": "noise",
+        "source": "bar",
+        "speed": 0.1,
+        "react": 0.65,
+        "hold_type": "none"
+    },
+    {
+        "id": "bass_pump",
+        "label": "Bass Pump",
+        "behavior": "pull",
+        "source": "beat",
+        "speed": 1,
+        "react": 1,
+        "hold_type": "floorfreeze"
+    },
+    {
+        "id": "snap_phrase",
+        "label": "Snap Phrase",
+        "behavior": "step",
+        "source": "flux",
+        "speed": 0.1,
+        "react": 0.3,
+        "hold_type": "beat"
+    },
+    {
+        "id": "pause_jitter",
+        "label": "Pause-Jitter Sine",
+        "behavior": "noise",
+        "source": "beat",
+        "speed": 0,
+        "react": 0.95,
+        "hold_type": "none"
+    },
+    {
+        "id": "rapid_climb",
+        "label": "Rapid Climb",
+        "behavior": "square",
+        "source": "vol",
+        "speed": 0.5,
+        "react": 0.85,
+        "hold_type": "none"
+    },
+    {
+        "id": "static_hold",
+        "label": "Hold Fixed Value",
+        "behavior": "static",
+        "value": 127,
+        "rel_center": 0.5
+    },
+    {
+        "id": "cycle_random",
+        "label": "Random - On Beat",
+        "behavior": "noise",
+        "source": "flux",
+        "speed": 0.95,
+        "react": 0.8,
+        "hold_type": "beat"
+    },
+    {
+        "id": "inverse_bass",
+        "label": "Inverse Bass",
+        "behavior": "pull",
+        "source": "bass",
+        "speed": 0.4,
+        "react": 0.8,
+        "hold_type": "none",
+        "rel_center": 0.5
+    }
+]

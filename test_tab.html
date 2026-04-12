@@ -1,0 +1,39 @@
+            }));
+            ws.send(JSON.stringify({ type: 'laser_override', overrides }));
+        }
+
+        function toggleConnect() {
+            dmx_connected = !dmx_connected;
+            const btn = document.getElementById('btn-connect');
+            if (!btn) return;
+
+            if (dmx_connected) {
+                btn.innerText = 'Disconnect';
+                btn.classList.replace('btn-primary', 'btn-danger');
+            } else {
+                btn.innerText = 'Connect';
+                btn.classList.replace('btn-danger', 'btn-primary');
+
+                // Clear manual overrides on disconnect
+                const addrInput = document.getElementById('fix-test-addr');
+                if (addrInput && ws && ws.readyState === WebSocket.OPEN) {
+                    const baseAddr = parseInt(addrInput.value);
+                    const addresses = tempChannels.map((_, idx) => baseAddr + idx);
+                    ws.send(JSON.stringify({ type: 'clear_channel_overrides', addresses }));
+                }
+            }
+            checkAddrOccupied();
+        }
+
+        function checkAddrOccupied() {
+            const addrInput = document.getElementById('fix-test-addr');
+            if (!addrInput) return;
+            const start = parseInt(addrInput.value) || 1;
+            const count = tempChannels.length;
+            const end = start + count - 1;
+            const warningEl = document.getElementById('addr-warning');
+            if (!warningEl) return;
+
+            let occupied = false;
+            let reason = "";
+

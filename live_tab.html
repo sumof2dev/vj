@@ -1,0 +1,91 @@
+                renderTestTab();
+            }
+            if (tabId === 'tab-sim') {
+                renderStageMap();
+            }
+        }
+
+        // --- 3. UNIFIED PROFILE LOGIC ---
+        function updateUniqueFunctions() {
+            // Update Presets Function Dropdown
+            const presFuncSel = document.getElementById('pres-add-global-func');
+            if (presFuncSel) {
+                const current = presFuncSel.value;
+                presFuncSel.innerHTML = '<option value="">-- Select Function --</option>' +
+                    window.KNOWN_ROLES.slice().sort().map(f => `<option value="${f}">${f}</option>`).join('');
+                if (current) presFuncSel.value = current;
+            }
+
+            // Update Test Function Dropdown
+            const testFuncSel = document.getElementById('test-function-picker');
+            if (testFuncSel) {
+                const current = testFuncSel.value;
+                testFuncSel.innerHTML = '<option value="">-- All Channels --</option>' +
+                    window.KNOWN_ROLES.slice().sort().map(f => `<option value="${f}">${f}</option>`).join('');
+                if (current) testFuncSel.value = current;
+            }
+        }
+
+        function addChannel() { }
+        function renderTempChannels() { }
+        function selectOffset() { }
+        function updateValue() { }
+        function adjustValue() { }
+        function applyLaserOverride() { }
+        function saveFixture() { }
+        function downloadFixtureProfile() { }
+        function loadFixtureProfile() { }
+
+
+        function addChannel() {
+            const num = tempChannels.length;
+            tempChannels.push({ name: `Name Ch${num + 1}`, role: '', default: 0, currentValue: 0 });
+            selected_offset_idx = num;
+            renderTempChannels();
+        }
+
+        function selectOffset(idx) {
+            if (selected_offset_idx === idx) return;
+            selected_offset_idx = idx;
+            renderTempChannels();
+        }
+
+        function updateValue(idx, val) {
+            tempChannels[idx].currentValue = parseInt(val);
+            const valEl = document.getElementById(`val-${idx}`);
+            if (valEl) valEl.innerText = val;
+            updateDMXOutput();
+        }
+
+        function adjustValue(idx, delta) {
+            if (idx < 0 || idx >= tempChannels.length) return;
+            let newVal = Math.max(0, Math.min(255, tempChannels[idx].currentValue + delta));
+            updateValue(idx, newVal);
+            const slider = document.querySelector(`.item-row[onclick="selectOffset(${idx})"] input[type="range"]`);
+            if (slider) slider.value = newVal;
+        }
+
+        function updateDMXOutput() {
+            if (!dmx_connected || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            const addrInput = document.getElementById('fix-test-addr');
+            if (!addrInput) return;
+            const baseAddr = parseInt(addrInput.value);
+
+            let conflict = false;
+            // Range check against active stage instances
+            db.stage.forEach(s => {
+                const start = parseInt(s.address);
+                const profile = db.profiles.find(p => p.id === s.profileId);
+                const fixture = profile ? db.fixtures.find(f => f.id === profile.fixtureId) : null;
+                const end = start + (fixture ? fixture.channels.length : 0);
+
+                // If requested range overlaps with active instance
+                if (baseAddr + tempChannels.length > start && baseAddr < end) conflict = true;
+            });
+
+
+            // Send manual slider values (Override engine)
+            const overrides = tempChannels.map((ch, idx) => ({
+                address: baseAddr + idx,
+                value: ch.currentValue || 0

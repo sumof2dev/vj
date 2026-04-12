@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
-    "deploy": "npm run build && mkdir -p ../assets && rm -rf ../assets/* && cp dist/index.html ../visualdmx.html && cp -r dist/assets/* ../assets/ && cp ../icon.png ../favicon.ico && (sed -i \"s/CACHE_NAME = '.*'/CACHE_NAME = 'ravebox-vj-$(date +%s)'/\" ../sw.js || true) && ([ -d dist_gcs ] && rm -rf dist_gcs); mkdir -p dist_gcs/assets && cp ../visuals.html ../visualdmx.html ../manager.html ../setup.html ../help.html ../gamepad.html ../fixture_ai.html ../index.html ../sw.js ../manifest.json ../favicon.ico ../icon.png ../background.png dist_gcs/ && cp -r ../library dist_gcs/ && cp -r ../assets/* dist_gcs/assets/ && (gsutil -m rsync -r -d dist_gcs gs://ravebox || echo 'GCS upload failed') && rm -rf dist_gcs",
+    "deploy": "npm run build && mkdir -p ../assets && rm -rf ../assets/* && cp dist/index.html ../visualdmx.html && cp -r dist/assets/* ../assets/ && cp ../icon.png ../favicon.ico && (sed -i \"s/CACHE_NAME = '.*'/CACHE_NAME = 'ravebox-vj-$(date +%s)'/\" ../sw.js || true) && ([ -d dist_gcs ] && rm -rf dist_gcs); mkdir -p dist_gcs/assets && cp ../visualdmx.html ../manager.html ../setup.html ../profile.html ../help.html ../fixture_ai.html ../index.html ../sw.js ../manifest.json ../favicon.ico ../icon.png ../background.png ../setup.css ../shared_setup.js ../profile_logic.js ../stage_logic.js ../live_controller.js ../ai_architect.js dist_gcs/ && cp -r ../library dist_gcs/ && cp -r ../assets/* dist_gcs/assets/ && (gsutil -m rsync -r -d dist_gcs gs://ravebox || echo 'GCS upload failed') && rm -rf dist_gcs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"

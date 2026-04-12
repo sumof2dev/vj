@@ -565,7 +565,7 @@
 <body>
 
     <div class="container">
-        <h1>RaveBox Control</h1>
+        <h1>RaveBox <a href="setup.html?tab=live&view=console" style="color: inherit; text-decoration: none;">Control</a></h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
@@ -734,8 +734,8 @@
         const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
 
         // LAUNCHER API: Use prefixed host if custom tunnel, otherwise same-origin if custom subdomain
-        const launcherHost = isCustomTunnel ? apiHost : (isCustomSubdomain ? window.location.host : host + ':8001');
-        const LAUNCHER_API = host ? (window.location.protocol + "//" + (isOriginalCloud ? 'api.ravebox.love' : launcherHost)) : null;
+        const launcherHost = isCustomTunnel ? baseHost : (isCustomSubdomain ? baseHost : host + ':8001');
+        const LAUNCHER_API = host ? (window.location.protocol + '//' + (isOriginalCloud ? 'api.ravebox.love' : launcherHost + (isCustomTunnel ? '' : ':8001'))) : null;
 
         function changeHost() {
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
@@ -806,12 +806,12 @@
                 }
 
                 if (data.active) {
-                    btn.innerText = "ACTIVE";
+                    btn.innerText = "DEACTIVATE";
                     btn.className = "btn btn-stop";
                     if (!lastKnownActive) connectLiveDashboard(); // Restore WS if it was dead
                     if (document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
                 } else {
-                    btn.innerText = "START";
+                    btn.innerText = "ACTIVATE";
                     btn.className = "btn btn-start";
                 }
                 lastKnownActive = data.active;
@@ -847,7 +847,7 @@
             const originalText = btn.innerText;
 
             btn.classList.add('loading');
-            btn.innerText = action === 'start' ? "49260014" : "Until next time";
+            btn.innerText = action === 'start' ? "49260014" : "RAVEBOX NAVIGATION SYS INITIATE";
 
             try {
                 const res = await fetch(`${LAUNCHER_API}/${action}`);
@@ -1188,7 +1188,6 @@
             const deltaX = touchEndX - touchStartX;
             if (Math.abs(deltaX) > 100) { // Threshold for swipe
                 if (deltaX < -100) window.location.href = './visualdmx.html'; // Swipe Left
-                if (deltaX > 100) window.location.href = './setup.html'; // Swipe Right
             }
         }, { passive: true });
 

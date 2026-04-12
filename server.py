@@ -118,6 +118,16 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_save_shader()
             return
 
+        # NEW: Add Premade Descriptor
+        if path == '/api/descriptors':
+            self._handle_add_descriptor()
+            return
+ 
+        # API: Update Premade Descriptor Default
+        if path == '/api/descriptors/update':
+            self._handle_update_descriptor()
+            return
+
         # API: Rename UserGen Shader (Metadata prompt)
         if path == '/api/usergen/rename':
             self._handle_rename_shader()
@@ -475,7 +485,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
              url = f"{protocol}://127.0.0.1:8001{subpath}"
              
              req = urllib.request.Request(url)
-             with urllib.request.urlopen(req, timeout=8, context=ctx) as response:
+             with urllib.request.urlopen(req, timeout=20, context=ctx) as response:
                  self.send_response(200)
                  self.send_header('Content-Type', 'application/json')
                  self.end_headers()
@@ -483,6 +493,170 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
              print(f"❌ Proxy Error to {subpath}: {e}")
              self.send_error(500, f"Launcher Proxy Error: {e}")
+
+    def _handle_update_descriptor(self):
+        """Update an existing premade descriptor's defaults in shared_setup.js"""
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length == 0:
+                self.send_error(400, "Empty request")
+                return
+            
+            data = json.loads(self.rfile.read(content_length).decode('utf-8'))
+            id_to_update = data.get('id')
+            if not id_to_update:
+                self.send_error(400, "Missing descriptor id")
+                return
+
+            setup_path = os.path.join(BASE_DIR, 'shared_setup.js')
+            with open(setup_path, 'r') as f:
+                lines = f.readlines()
+
+            import re
+            updated = False
+            new_lines = []
+            
+            # Use a more robust check for the ID field that handles both "id": and id:
+            for line in lines:
+                # Matches "id": "my_id" or id: 'my_id' or id: "my_id"
+                if re.search(rf'["\']?id["\']?\s*:\s*["\']{id_to_update}["\']', line):
+                    # Found the line! Replace it.
+                    new_entry = {
+                        "id": id_to_update,
+                        "label": data.get('label', id_to_update),
+                        "behavior": data.get('behavior', 'sine'),
+                        "source": data.get('source', 'vol'),
+                        "speed": data.get('speed', 0.1),
+                        "react": data.get('react', 0.5),
+                        "hold_type": data.get('hold_type', 'none'),
+                        "rel_center": data.get('rel_center', 0.5)
+                    }
+                    if new_entry['behavior'] == 'static':
+                        new_entry['value'] = data.get('value', 127)
+                    
+                    # Convert to JS object format
+                    js_entry = f"    {json.dumps(new_entry)},"
+                    new_lines.append(js_entry + "\n")
+                    updated = True
+                    print(f"🔄 Updated Premade Descriptor Default: {id_to_update}")
+                else:
+                    new_lines.append(line)
+
+            if updated:
+                with open(setup_path, 'w') as f:
+                    f.writelines(new_lines)
+                
+                # BRIDGE: Write to backend/descriptors.json for DMX engine
+                try:
+                    self._export_descriptors_json(new_lines)
+                except Exception as e:
+                    print(f"⚠️ Bridge Error (JSON export): {e}")
+
+                self._send_json({"status": "ok", "descriptor": data})
+            else:
+                self.send_error(404, f"Descriptor {id_to_update} not found in shared_setup.js")
+        except Exception as e:
+            print(f"❌ Error updating descriptor: {e}")
+            self.send_error(500, str(e))
+
+    def _export_descriptors_json(self, lines):
+        """Extract EASY_DESCRIPTORS from lines and write to backend/descriptors.json"""
+        import re
+        descriptors = []
+        in_descriptors = False
+        for line in lines:
+            if "window.EASY_DESCRIPTORS = [" in line or "var EASY_DESCRIPTORS = [" in line:
+                in_descriptors = True
+                continue
+            if in_descriptors and "];" in line:
+                in_descriptors = False
+                break
+            
+            if in_descriptors:
+                # Try to parse the object from the line
+                # Matches: { id: '...', ... } or {"id": "...", ...}
+                match = re.search(r'\{(.*)\}', line)
+                if match:
+                    try:
+                        # Convert JS-like object to JSON
+                        raw = match.group(0).rstrip(',').strip()
+                        # Replace unquoted keys with quoted keys for json.loads
+                        # (Basic regex replacement for simple cases)
+                        json_str = re.sub(r'([{,])\s*([a-zA-Z0-9_]+)\s*:', r'\1"\2":', raw)
+                        # Replace single quotes with double quotes
+                        json_str = json_str.replace("'", '"')
+                        # Remove trailing commas inside objects
+                        json_str = json_str.replace(',}', '}').replace(', ]', ']').replace(',]', ']')
+                        
+                        data = json.loads(json_str)
+                        descriptors.append(data)
+                    except:
+                        continue
+        
+        if descriptors:
+            dest_path = os.path.join(BASE_DIR, 'backend', 'descriptors.json')
+            with open(dest_path, 'w') as f:
+                json.dump(descriptors, f, indent=4)
+            print(f"📦 Exported {len(descriptors)} descriptors to {dest_path}")
+
+    def _handle_add_descriptor(self):
+        """Add a new premade descriptor to shared_setup.js"""
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length == 0:
+                self.send_error(400, "Empty request")
+                return
+            
+            data = json.loads(self.rfile.read(content_length).decode('utf-8'))
+            label = data.get('label', 'New Behavior')
+            # Generate ID from label
+            import re
+            desc_id = re.sub(r'[^a-zA-Z0-9_]', '_', label.lower())
+            if not desc_id: desc_id = f"custom_{int(time.time())}"
+            
+            # Check for collisions and append suffix if needed
+            new_entry = {
+                "id": desc_id,
+                "label": label,
+                "behavior": data.get('behavior', 'sine'),
+                "source": data.get('source', 'vol'),
+                "speed": data.get('speed', 0.1),
+                "react": data.get('react', 0.5),
+                "hold_type": data.get('hold_type', 'none'),
+                "rel_center": data.get('rel_center', 0.5)
+            }
+            if new_entry['behavior'] == 'static':
+                new_entry['value'] = data.get('value', 127)
+
+            setup_path = os.path.join(BASE_DIR, 'shared_setup.js')
+            with open(setup_path, 'r') as f:
+                lines = f.readlines()
+
+            new_lines = []
+            inserted = False
+            for line in lines:
+                new_lines.append(line)
+                if "// PREMADE_ANCHOR" in line:
+                    js_entry = f"    {json.dumps(new_entry)},"
+                    # Insert BEFORE the anchor
+                    new_lines.insert(-1, js_entry + "\n")
+                    inserted = True
+            
+            if inserted:
+                with open(setup_path, 'w') as f:
+                    f.writelines(new_lines)
+                
+                # BRIDGE: Write to backend/descriptors.json
+                self._export_descriptors_json(new_lines)
+                
+                print(f"✨ Added New Premade Descriptor: {desc_id}")
+                self._send_json({"status": "ok", "descriptor": new_entry})
+            else:
+                self.send_error(500, "Could not find PREMADE_ANCHOR in shared_setup.js")
+        except Exception as e:
+            print(f"❌ Error adding descriptor: {e}")
+            self.send_error(500, str(e))
+
 
     def _send_json(self, data):
         self.send_response(200)

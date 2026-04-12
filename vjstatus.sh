@@ -18,7 +18,7 @@ echo -e "${DIM}─────────────────────�
 
 # --- Systemd Services ---
 echo -e "\n${BOLD}Services${RESET}"
-for svc in vj-server vj-launcher vj-engine; do
+for svc in vj-server vj-launcher vj-engine vj-camera; do
     status=$(systemctl is-active ${svc}.service 2>/dev/null)
     if [ "$status" = "active" ]; then
         echo -e "  ${GREEN}●${RESET} ${svc}  ${GREEN}running${RESET}"
@@ -32,10 +32,11 @@ echo -e "\n${BOLD}Ports${RESET}"
 declare -A PORTS
 PORTS[8000]="Server (HTTPS)"
 PORTS[8001]="Launcher"
+PORTS[8004]="Camera/Cal"
 PORTS[8765]="Engine WS"
 PORTS[8085]="Dev Server (HTTP)"
 
-for port in 8000 8001 8765 8085; do
+for port in 8000 8001 8004 8765 8085; do
     pid=$(fuser ${port}/tcp 2>/dev/null | awk '{print $1}')
     if [ -n "$pid" ]; then
         proc=$(ps -p $pid -o comm= 2>/dev/null)
