@@ -66,17 +66,38 @@
         }
 
         .logo {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.0 !important;
+        }
+
+        .logo .brand {
             font-weight: 900;
             font-size: 1.2rem;
             letter-spacing: -1px;
-            color: #fff;
+            color: #fff !important;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            align-items: baseline;
+            text-transform: uppercase;
         }
 
-        .logo span {
-            color: var(--accent);
+        .logo .brand span {
+            color: var(--accent) !important;
+            font-size: 0.85em !important;
+            margin-left: 2px;
+            font-weight: 900;
+        }
+
+        .logo .subtitle {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent) !important;
+            opacity: 0.8;
+            align-self: flex-start;
+            margin-top: -2px;
+            margin-left: 12px;
         }
 
         .btn-settings {
@@ -143,6 +164,114 @@
             position: relative;
             overflow: hidden;
             background: rgba(255, 255, 255, 0.02);
+            min-height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-content-wrapper {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            padding: 10px;
+            pointer-events: none;
+        }
+
+        .upload-text-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .example-image-container {
+            position: relative;
+            flex-shrink: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            transition: all 0.3s;
+        }
+
+        .example-image-container img {
+            height: 110px;
+            display: block;
+            opacity: 0.8;
+            filter: contrast(1.1);
+        }
+
+        .example-tag {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--accent);
+            color: white;
+            font-size: 8px;
+            font-weight: 900;
+            padding: 2px 6px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        /* --- EXPANDABLE PREVIEW --- */
+        .example-image-container {
+            cursor: zoom-in;
+            transition: transform 0.3s ease, width 0.3s ease, height 0.3s ease;
+        }
+
+        .example-image-container.expanded {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            width: 85vw;
+            height: 85vh;
+            z-index: 2000;
+            background: rgba(10, 10, 15, 0.95);
+            border: 2px solid var(--accent);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+            box-shadow: 0 0 100px rgba(0,0,0,0.9);
+        }
+
+        .example-image-container.expanded img {
+            height: auto;
+            max-height: 100%;
+            max-width: 100%;
+            opacity: 1;
+            filter: none;
+        }
+
+        .example-image-container.expanded .example-tag {
+            display: none;
+        }
+
+        #preview-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 1999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #preview-overlay.active {
+            display: block;
+            opacity: 1;
         }
 
         .upload-zone:hover {
@@ -528,6 +657,15 @@
                 right: 15px;
                 padding: 6px 12px;
             }
+
+            .upload-content-wrapper {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .example-image-container img {
+                height: 90px;
+            }
         }
 
         /* --- UI CONSISTENCY (Setup Match) --- */
@@ -560,7 +698,10 @@
 
     <header>
         <div class="header-content">
-            <div class="logo">RAVE<span>BOX</span> AI PROFILER</div>
+            <div class="logo">
+                <div class="brand">RAVE<span>BOX</span></div>
+                <div class="subtitle">AI PROFILER</div>
+            </div>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <button class="btn btn-secondary btn-sm" onclick="window.location.href='setup.html?tab=fixture'"
                     style="padding: 6px 12px; font-size: 0.8rem;">← Back to Setup</button>
@@ -603,24 +744,28 @@
                     </div>
                 </div>
 
-                <div class="upload-zone" id="drop-zone"
-                    style="min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
-                    <i class="upload-icon">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
-                            <line x1="16" y1="5" x2="22" y2="5"></line>
-                            <line x1="19" y1="2" x2="19" y2="8"></line>
-                            <circle cx="9" cy="11" r="2"></circle>
-                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
-                        </svg>
-                    </i>
-                    <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;">Upload image of DMX chart
+                <div class="upload-zone" id="drop-zone">
+                    <div class="upload-content-wrapper">
+                        <div class="upload-text-group">
+                            <i class="upload-icon" style="margin-bottom: 8px;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"></path>
+                                    <line x1="16" y1="5" x2="22" y2="5"></line>
+                                    <line x1="19" y1="2" x2="19" y2="8"></line>
+                                    <circle cx="9" cy="11" r="2"></circle>
+                                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                                </svg>
+                            </i>
+                            <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;">Upload image of DMX chart</div>
+                            <div style="font-size: 0.7rem; color: var(--text-dim);" id="file-label">from fixture user manual</div>
+                        </div>
+                        <div class="example-image-container" id="example-container" onclick="toggleExampleImage()">
+                            <img src="dmxchartexample.png" alt="DMX Chart Example">
+                            <div class="example-tag">EXAMPLE</div>
+                        </div>
                     </div>
-                    <div style="font-size: 0.7rem; color: var(--text-dim);" id="file-label">from fixture user manual
-                    </div>
-                    <input type="file" id="file-input" accept="image/*" multiple
-                        style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+                    <input type="file" id="file-input" accept="image/*" multiple>
                 </div>
             </div>
 
@@ -639,6 +784,11 @@
                     style="flex:1; padding: 10px; font-size: 0.9rem; font-weight: 800; border-radius: 8px;"
                     onclick="startManual()">
                     Enter Manually
+                </button>
+                <button id="btn-duplicate" class="btn btn-secondary"
+                    style="flex:1; padding: 10px; font-size: 0.9rem; font-weight: 800; border-radius: 8px;"
+                    onclick="openDuplicateSelector()">
+                    Duplicate Profile
                 </button>
             </div>
 
@@ -753,11 +903,34 @@
         </div>
     </div>
 
+    <!-- DUPLICATE SELECTOR MODAL -->
+    <div id="duplicate-modal" class="modal-overlay" onclick="closeDuplicateSelector()">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width: 500px;">
+            <div class="card-title">Duplicate Profile</div>
+            <div class="card-subtitle">Select an existing profile to clone</div>
+            
+            <input type="text" id="prof-search" placeholder="Search profiles..." 
+                   style="margin-bottom: 15px; background: rgba(0,0,0,0.2); width: 100%; box-sizing: border-box;"
+                   oninput="filterDuplicates(this.value)">
+                   
+            <div id="duplicate-list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+                <!-- Profiles populated here -->
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1" onclick="closeDuplicateSelector()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- STATUS BAR -->
     <div class="status-bar">
         <div id="status-dot" class="status-dot"></div>
         <span id="status-text">Disconnected</span>
     </div>
+
+    <!-- PREVIEW OVERLAY -->
+    <div id="preview-overlay" onclick="toggleExampleImage()"></div>
 
     <script type="importmap">
         {
@@ -768,7 +941,7 @@
     </script>
 
     <script type="module">
-        const APP_VERSION = "412261449"; // Stamped by deploy.sh
+        const APP_VERSION = "415260742"; // Stamped by deploy.sh
         import { GoogleGenerativeAI } from "google-genai-sdk";
 
         // Global State
@@ -795,12 +968,12 @@
 
         // STANDARD ROLES & BEHAVIOR TEMPLATES
         const WORKFLOW_ROLES = {
-            "pos_x": { name: "Pan / X-Position", keywords: ["pan", "x pos", "x move", "horizontal"], behavior: "push", source: "flux" },
-            "pos_y": { name: "Tilt / Y-Position", keywords: ["tilt", "y pos", "y move", "vertical"], behavior: "push", source: "flux" },
+            "pos_x": { name: "Pan / X-Position", keywords: ["pan", "x pos", "x move", "horizontal", "x position"], behavior: "push", source: "flux" },
+            "pos_y": { name: "Tilt / Y-Position", keywords: ["tilt", "y pos", "y move", "vertical", "y position"], behavior: "push", source: "flux" },
             "zoom": { name: "Zoom / Size", keywords: ["zoom", "zooming", "scale", "size"], behavior: "sine", source: "vol", speed: 0.05 },
-            "rot_z": { name: "Z-Rotation / Roll", keywords: ["rotation", "spin", "z-rot", "roll", "z rot"], behavior: "sine", source: "vol", speed: 0.04 },
-            "rot_x": { name: "X-Rotation (Tilt)", keywords: ["rot x", "tilt roll"], behavior: "sine", source: "vol", speed: 0.04 },
-            "rot_y": { name: "Y-Rotation (Pan)", keywords: ["rot y", "pan roll"], behavior: "sine", source: "vol", speed: 0.04 },
+            "rot_z": { name: "Z-Rotation / Roll", keywords: ["rotation", "spin", "z-rot", "roll", "z rot", "z rotation", "z-rotation", "barrel roll"], behavior: "sine", source: "vol", speed: 0.04 },
+            "rot_x": { name: "X-Rotation (Tilt)", keywords: ["rot x", "tilt roll", "x rotation", "x-rotation", "x rot", "x-rot", "rotate x"], behavior: "sine", source: "vol", speed: 0.04 },
+            "rot_y": { name: "Y-Rotation (Pan)", keywords: ["rot y", "pan roll", "y rotation", "y-rotation", "y rot", "y-rot", "rotate y"], behavior: "sine", source: "vol", speed: 0.04 },
             "color_solid": { name: "Color (Solid/Static)", keywords: ["red", "blue", "green", "white", "rgb", "color wheel", "color1"], behavior: "static" },
             "color_multi": { name: "Color (Multi/Chase)", keywords: ["rainbow", "chase", "multi color", "color chase"], behavior: "square", source: "beat" },
             "pattern": { name: "Pattern / Gobo", keywords: ["pattern", "gobo", "shape", "listing"], behavior: "square", source: "beat" },
@@ -853,6 +1026,21 @@
             const label = select.options[select.selectedIndex].text;
             document.getElementById('model-label').innerText = label;
         }
+
+        window.toggleExampleImage = () => {
+            const container = document.getElementById('example-container');
+            const overlay = document.getElementById('preview-overlay');
+            if (!container || !overlay) return;
+
+            const isExpanded = container.classList.toggle('expanded');
+            if (isExpanded) {
+                overlay.style.display = 'block';
+                setTimeout(() => overlay.classList.add('active'), 10);
+            } else {
+                overlay.classList.remove('active');
+                setTimeout(() => overlay.style.display = 'none', 300);
+            }
+        };
 
         let isConnecting = false;
         // --- WEBSOCKET LOGIC ---
@@ -949,6 +1137,7 @@
             btn.style.alignItems = 'center';
             if (btnClear) btnClear.style.display = 'block';
             if (btnManual) btnManual.style.display = 'none';
+            if (document.getElementById('btn-duplicate')) document.getElementById('btn-duplicate').style.display = 'none';
         }
 
         window.clearFiles = () => {
@@ -966,28 +1155,22 @@
             if (btn) btn.style.display = 'none';
             if (btnClear) btnClear.style.display = 'none';
             if (btnManual) btnManual.style.display = 'block';
+            if (document.getElementById('btn-duplicate')) document.getElementById('btn-duplicate').style.display = 'block';
             input.value = "";
         }
 
         const REFERENCE_GUIDELINE = `
         RaveBox DMX ROLE STANDARD (Must match THESE exact strings in the 'role' property):
-        - Directional: 'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y'
+        - Directional: 'pos_x' (Pan/X-Position), 'pos_y' (Tilt/Y-Position), 'zoom'
+        - Rotation: 'rot_x' (X-Rotation/Tilt-Roll), 'rot_y' (Y-Rotation/Pan-Roll), 'rot_z' (Z-Rotation/Roll/Spin)
         - Visuals: 'color_solid', 'color_multi', 'pattern', 'beam_fx', 'grating', 'drawing', 'drawing_delay'
         - Utility: 'strobe', 'generic', 'unassigned', 'dimmer', 'mode', 'clip', 'group'
 
-        # BEHAVIOR-TO-RANGE MAPPING (Phase 1 Semantic matrix)
-        For every sub-range (vibe_rule), identify the natural behavior (easy_id):
-        - 'pan', 'tilt', 'pos', 'move': use 'pulse_beat' or 'smooth_drift'
-        - 'zoom', 'iris', 'focus': use 'bass_pump' or 'wavy_shimmer'
-        - 'rotation', 'spin', 'speed': use 'bass_pump' or 'flux_jitter'
-        - 'gobo', 'color_wheel', 'patterns': use 'random_bin' or 'static' (if fixed)
-        - 'strobe', 'shutter', 'dimmer': use 'intensity_pulse' or 'static'
-
-        # VARIETY LOGIC (Phase 3)
-        For multi-head fixtures, de-synchronize heads:
-        - Head 1: default lfo.bin/react.
-        - Head 2: lfo.bin + 1, lfo.react + 0.2, invert = true.
-        - Continue pattern for all heads.
+        # ROTATION AXIS DECODER (Critical for correct role assignment):
+        - "X Rotation" / "Rotate X" / "Tilt Roll" → role: 'rot_x'
+        - "Y Rotation" / "Rotate Y" / "Pan Roll" → role: 'rot_y'
+        - "Z Rotation" / "Rotation" / "Roll" / "Spin" → role: 'rot_z'
+        - If the manual says just "Rotation" without axis, default to 'rot_z'.
         `;
 
         // --- IMAGE EXTRACTION ENGINE ---
@@ -1049,20 +1232,30 @@ ${limitText}
    - 'cal.max': End value of range.
    - 'cal.center': The mathematical middle.
 
-6. VIBE RULES & INTENSITY: For each channel, if there is only one range, set "vibe" to "any". If there are multiple ranges: Set the FIRST range to "any", the LAST range to "high", and any ranges in between to "mid". 
-   - INTENSITY DECODER: If the manual text is highly descriptive (e.g. "clockwise rotation then counterclockwise", "zoom in/out with strobe"), it indicates intensity. Assign these to "high" or "dropping" vibe.
-
-5. KEYWORD LOGIC (PHYSICAL ALIGNMENT):
+6. KEYWORD LOGIC (PHYSICAL ALIGNMENT):
    - "STATIC" text in a RANGE (e.g. 0-100): Hardware is motionless. RaveBox MUST drive it. Set [SHAPE] to an active LFO and [HOLD] to 'none'.
    - "DYNAMIC" or "MACRO" or "AUTO" text in a range: Hardware is moving. Set [SHAPE] to a slow 'step' or 'sine'. NEVER set to 'static'.
    - "FAST": Speed 0.8-1.0. "SLOW": Speed 0.05-0.15.
 
-6. ENGINE SPECIFICATIONS:
+7. ENGINE SPECIFICATIONS:
    - DRIVERS: bass, mid, high, vol, flux, impact, beat, bar.
    - SHAPES: sine, saw, square, noise, step, random, push, pull. (RESERVE 'static' ONLY for explicit user overrides).
    - HOLD TYPES: none, floorfreeze, peakpause, beat, bar.
 
-7. VIBE RULES & INTENSITY: For each channel, if there is only one range, set "vibe" to "any". If there are multiple ranges: Set the FIRST range to "any", the LAST range to "high", and any ranges in between to "mid". 
+8. CHANNEL FUNCTION AWARENESS (for relational user prompts):
+   - Understand channel relationships. "X rotation" = rot_x, "Y rotation" = rot_y, "Z rotation" = rot_z.
+   - Understand relational instructions like "if zoom is at 127, rotation should be below 127" — this means the rotation channel's cal.max should be less than 127 when zoom's center is 127.
+   - Pan = pos_x, Tilt = pos_y, Zoom = zoom, Roll/Spin = rot_z.
+
+9. VIBE RULES & SYNC GROUPS:
+   The "vibe" field controls WHEN a rule activates. It supports sync group numbers (1, 2, 3) for multi-fixture coordination.
+   
+   VALID VIBE VALUES: "any", "chill", "chill 1", "chill 2", "chill 3", "mid", "mid 1", "mid 2", "mid 3", "high", "high 1", "high 2", "high 3", "build", "drop", "never".
+   
+   DISTRIBUTION RULES:
+   - Single-range channel: Set vibe to "any" (no number).
+   - Multi-range channels: FIRST range = "any" (no number). LAST range = "high" (may include number 1, 2, or 3). Middle ranges = "mid" (may include number).
+   - The sync group number (1, 2, 3) is for multi-fixture coordination. When auto-generating, omit the number from vibes. The post-processor will assign randomized numbers.
    - INTENSITY DECODER: Highly descriptive text (e.g. "clockwise then counterclockwise", "zoom with strobe") indicates intensity. Assign these to "high" or "drop" vibe.
 
 OUTPUT JSON SCHEMA:
@@ -1198,16 +1391,27 @@ OUTPUT JSON SCHEMA:
                     });
                 });
 
-                // ENFORCE VIBE RULES (Distribution Pattern)
-                currentFixture.mappings.forEach(rules => {
+                // ENFORCE VIBE RULES (Distribution Pattern with Randomized Sync Groups)
+                // Randomize sync group numbers across channels to prevent "too busy" output
+                // Each channel gets a different number so not everything fires in the same group
+                const totalChannels = currentFixture.mappings.length;
+                currentFixture.mappings.forEach((rules, chIdx) => {
+                    // Assign a rotating sync group number based on channel index
+                    // This ensures adjacent channels get different numbers (1, 2, 3, 1, 2, 3...)
+                    const syncNum = (chIdx % 3) + 1;
+
                     if (rules.length === 1) {
                         rules[0].vibe = 'any';
                     } else if (rules.length > 1) {
+                        // First range: always "any" with no number
                         rules[0].vibe = 'any';
-                        rules[rules.length - 1].vibe = 'high';
+                        // Last range: "high" with randomized sync group number
+                        const lastVibeOptions = ['high', 'high 1', 'high 2', 'high 3'];
+                        rules[rules.length - 1].vibe = lastVibeOptions[syncNum]; // syncNum is 1-3
+                        // Middle ranges: "mid" with randomized sync group number
                         for (let i = 1; i < rules.length - 1; i++) {
-                            if (rules[i].vibe === 'any' || rules[i].vibe === 'high') {
-                                rules[i].vibe = 'mid'; // Default intermediates to mid
+                            if (rules[i].vibe === 'any' || rules[i].vibe === 'high' || rules[i].vibe === 'mid') {
+                                rules[i].vibe = 'mid ' + syncNum;
                             }
                         }
                     }
@@ -1252,6 +1456,60 @@ OUTPUT JSON SCHEMA:
             window.sessionOverrides = {}; // Reset overrides
             renderResults(true);
             setStep('results');
+        };
+
+        window.openDuplicateSelector = () => {
+            const list = document.getElementById('duplicate-list');
+            const search = document.getElementById('prof-search');
+            search.value = "";
+            
+            const profiles = db.profiles || [];
+            if (profiles.length === 0) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-dim);">No profiles found. Create one first!</div>';
+            } else {
+                renderDuplicateList(profiles);
+            }
+            
+            document.getElementById('duplicate-modal').style.display = 'flex';
+        };
+
+        window.closeDuplicateSelector = () => {
+            document.getElementById('duplicate-modal').style.display = 'none';
+        };
+
+        window.filterDuplicates = (val) => {
+            const profiles = db.profiles || [];
+            const filtered = profiles.filter(p => p.name.toLowerCase().includes(val.toLowerCase()));
+            renderDuplicateList(filtered);
+        };
+
+        function renderDuplicateList(profiles) {
+            const list = document.getElementById('duplicate-list');
+            list.innerHTML = profiles.map(p => `
+                <div class="channel-card" style="cursor: pointer; padding: 12px; display: flex; justify-content: space-between; align-items: center;" onclick="duplicateProfileById('${p.id}')">
+                    <div style="font-weight: 700; color: #fff;">${p.name}</div>
+                    <div style="font-size: 0.8rem; color: var(--accent);">${p.channels?.length || 0} CH</div>
+                </div>
+            `).join('');
+        }
+
+        window.duplicateProfileById = async (id) => {
+            const original = db.profiles.find(p => p.id === id);
+            if (!original) return;
+
+            const copy = JSON.parse(JSON.stringify(original));
+            copy.id = 'prof_' + Date.now();
+            copy.name = (copy.name || "Unnamed Profile") + " (Copy)";
+            
+            // Cleanup
+            delete copy._fileName;
+
+            // Load into editor
+            window.currentFixture = copy;
+            window.sessionOverrides = {};
+            renderResults(true);
+            setStep('results');
+            window.closeDuplicateSelector();
         };
 
         window.sendChatReply = () => {
@@ -1486,16 +1744,18 @@ OUTPUT JSON SCHEMA:
                 cal: { min: 0, center: 127, max: 255 }
             });
             
-            // Re-apply vibe logic
+            // Re-apply vibe logic with sync group
             const rules = window.currentFixture.mappings[chIdx];
+            const syncNum = (chIdx % 3) + 1;
             if (rules.length === 1) {
                 rules[0].vibe = 'any';
             } else if (rules.length > 1) {
                 rules[0].vibe = 'any';
-                rules[rules.length - 1].vibe = 'high';
+                const lastVibeOptions = ['high', 'high 1', 'high 2', 'high 3'];
+                rules[rules.length - 1].vibe = lastVibeOptions[syncNum];
                 for (let i = 1; i < rules.length - 1; i++) {
-                    if (rules[i].vibe === 'any' || rules[i].vibe === 'high') {
-                        rules[i].vibe = 'mid';
+                    if (rules[i].vibe === 'any' || rules[i].vibe === 'high' || rules[i].vibe === 'mid' || /^(high|mid) \d$/.test(rules[i].vibe)) {
+                        rules[i].vibe = 'mid ' + syncNum;
                     }
                 }
             }
@@ -1507,13 +1767,15 @@ OUTPUT JSON SCHEMA:
             if (!confirm("Delete this range?")) return;
             window.currentFixture.mappings[chIdx].splice(ruleIdx, 1);
             
-            // Re-apply vibe logic
+            // Re-apply vibe logic with sync group
             const rules = window.currentFixture.mappings[chIdx];
+            const syncNum = (chIdx % 3) + 1;
             if (rules.length === 1) {
                 rules[0].vibe = 'any';
             } else if (rules.length > 1) {
                 rules[0].vibe = 'any';
-                rules[rules.length - 1].vibe = 'high';
+                const lastVibeOptions = ['high', 'high 1', 'high 2', 'high 3'];
+                rules[rules.length - 1].vibe = lastVibeOptions[syncNum];
             }
             
             renderResults();

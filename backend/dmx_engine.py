@@ -400,7 +400,7 @@ class DMXEngine:
                 elif t_cat == 'bin':
                     bins = audio.get('bins', [0.0]*6)
                     target = trig.get('target', 'BASS')
-                    bin_map = {'SUB':0, 'BASS':1, 'KICK':2, 'LOW_MID':3, 'MID':4, 'HIGH_MID':5}
+                    bin_map = {'SUB':0, 'BASS':1, 'KICK':2, 'LOW_MID':3, 'MID':4, 'HIGH_MID':5, 'PRESENCE':4, 'BRILLIANCE':5}
                     b_idx = bin_map.get(target, int(trig.get('bin', 1)))
                     
                     if b_idx < len(bins):
@@ -580,27 +580,37 @@ class DMXEngine:
             
             for p_data in self.active_presets:
                 overrides = p_data.get('overrides', [])
+                p_id = p_data.get('id', p_data.get('name', 'unknown'))
                 for ov in overrides:
                     ov_type = ov.get('type')
                     ov_name = ov.get('name', '')
                     target_role = ch_def.get('role', ch_def.get('name'))
                     
+                    matched_ov_ch = None
+                    
                     if ov_type == 'instance' and ov.get('id') == inst['id']:
                         for ov_ch in ov.get('channels', []):
                             if ov_ch.get('name') == target_role:
-                                preset_override_val = int(ov_ch.get('value', 0))
+                                matched_ov_ch = ov_ch
                     elif ov_type == 'global':
-                        # Match if name matches exactly or has "Global: " prefix
                         if ov_name == target_role or ov_name == f"Global: {target_role}":
-                    # Check channels list for the specific function value
                             for ov_ch in ov.get('channels', []):
                                 if ov_ch.get('name') == target_role:
-                                    preset_override_val = int(ov_ch.get('value', 0))
+                                    matched_ov_ch = ov_ch
                                     break
-                            
-                            # Fallback to direct 'value' for legacy global presets if channels is missing
-                            if preset_override_val is None and 'value' in ov:
+                            # Fallback to direct 'value' for legacy global presets
+                            if matched_ov_ch is None and 'value' in ov:
                                 preset_override_val = int(ov.get('value', 0))
+                    
+                    if matched_ov_ch is not None:
+                        if matched_ov_ch.get('mode') == 'behavior':
+                            # Dynamic behavior override — evaluate like a profile rule
+                            bkey = f"preset_{p_id}_{ov.get('id','g')}_{target_role}_{zone_idx}"
+                            preset_override_val = self._evaluate_preset_behavior(
+                                matched_ov_ch, active_audio, active_logic, bkey
+                            )
+                        else:
+                            preset_override_val = int(matched_ov_ch.get('value', 0))
             
             if preset_override_val is not None:
                 val = preset_override_val
@@ -711,14 +721,16 @@ class DMXEngine:
         
         elif behavior in ['sine', 'saw', 'square', 'triangle', 'lfo_sine', 'lfo_saw', 'lfo_square', 'lfo_triangle']:
             # NEW STANDARD: Volume modulates Frequency, Driver modulates Amplitude
-            vol_driver = float(audio.get('vol', 0.1)) # Use overall volume for speed
+            # RHYTHMIC SYNC: If source is 'beat' or 'bar', lock phase to the driver
+            vol_driver = float(audio.get('vol', 0.1)) 
             
-            # Base speed of 0.1Hz when silent (BaseSpeed * 0.1)
-            f_base = speed * 1.0 # Base freq multiplier
-            freq = (f_base * 0.1) + (vol_driver * 5.0) 
-            
-            st['phase'] = (st['phase'] + dt * freq) % 1.0
-            p = st['phase']
+            if source in ['beat', 'bar']:
+                p = E_eff # Rhythmic phase lock
+            else:
+                f_base = speed * 1.0
+                freq = (f_base * 0.1) + (vol_driver * 5.0) 
+                st['phase'] = (st['phase'] + dt * freq) % 1.0
+                p = st['phase']
             
             # Amplitude determined by driver (E_eff) multiplied by reactivity
             amp = E_eff * react
@@ -748,13 +760,17 @@ class DMXEngine:
             st['t'] += dt * noise_rate
             y = (logic_matrix._noise1d(st['t']) * 2.0) - 1.0
 
-        elif behavior in ['forward', 'pingpong', 'step_forward', 'step_pingpong']:
-            # Step Pillar: Standard sequences for movement vs rhythm
-            role = (ch_def.get('role', '') if ch_def else '').lower()
-            seq = [0, 85, 170, 255] if role in ['pos_x', 'pos_y', 'pan', 'tilt'] else [0, 255]
+        elif behavior in ['step', 'forward', 'pingpong', 'step_forward', 'step_pingpong']:
+            # Step Pillar: Standard 4-step sequence (0, 85, 170, 255) for all roles
+            seq = [0, 85, 170, 255]
             
             rate = speed * 4.0
-            st['phase'] += dt * rate * (1.0 + E_eff * 2.0)
+            
+            if source in ['beat', 'bar']:
+                st['phase'] = E_eff # Step on each beat cycle
+            else:
+                st['phase'] += dt * rate * (1.0 + E_eff * 2.0)
+
             if st['phase'] >= 1.0:
                 st['phase'] = 0.0
                 if behavior in ['forward', 'step_forward']:
@@ -804,9 +820,171 @@ class DMXEngine:
 
         return max(c_min, min(c_max, int(final_dmx)))
 
+    def _evaluate_preset_behavior(self, ov_ch, audio, logic_matrix, instance_key):
+        """
+        Evaluate a behavior-mode preset override channel using the same math
+        as _calculate_channel, but driven by the override's own definition
+        instead of a profile rule.
+        
+        ov_ch schema:
+        {
+            "name": "dimmer",
+            "mode": "behavior",
+            "behavior": "sine|saw|square|triangle|push|pull|noise|step|...",
+            "source": "volume|bass|flux|beat|...",
+            "modifiers": {"speed": 0.5, "react": 0.5, "hold_type": "none"},
+            "cal": {"min": 0, "center": 127, "max": 255}
+        }
+        """
+        behavior = ov_ch.get('behavior', 'static')
+        source = ov_ch.get('source', 'volume')
+        mods = ov_ch.get('modifiers', {})
+        speed = float(mods.get('speed', 0.5))
+        react = float(mods.get('react', 0.5))
+        hold_type = mods.get('hold_type', 'none')
+
+        cal = ov_ch.get('cal', {})
+        c_min = int(cal.get('min', 0))
+        c_max = int(cal.get('max', 255))
+        c_center = int(cal.get('center', (c_min + c_max) // 2))
+
+        if behavior == 'static':
+            return max(0, min(255, int(ov_ch.get('value', c_center))))
+
+        # Resolve driver energy from LogicMatrix
+        E = logic_matrix.state.get(source, 0.0)
+
+        # Per-instance state persistence
+        st = logic_matrix.states[instance_key]
+        if 'pos' not in st:
+            st.update({
+                'pos': 0.0, 'vel': 0.0, 'phase': 0.0, 't': 0.0,
+                'bucket': 0, 'step': 0, 'hold_active': False,
+                'last_beat': False
+            })
+
+        # Hold logic
+        is_beat = audio.get('beat', False)
+        is_bar = audio.get('bar', False)
+        trigger_hold = False
+        is_pulse_type = hold_type in ['beat', 'sync_beat', 'bar', 'sync_bar']
+
+        if hold_type in ['beat', 'sync_beat'] and is_beat: trigger_hold = True
+        elif hold_type in ['bar', 'sync_bar'] and is_bar: trigger_hold = True
+        elif hold_type == 'peakpause' and E > 0.85: trigger_hold = True
+        elif hold_type == 'floorfreeze' and E < 0.15: trigger_hold = True
+
+        is_kinematics = behavior in ['push', 'pull', 'kinematic_push', 'kinematic_pull']
+
+        if trigger_hold:
+            if is_kinematics:
+                st['held_force'] = E
+            else:
+                if is_pulse_type:
+                    st.pop('held_dmx', None)
+                st['hold_active'] = True
+        else:
+            if not is_pulse_type:
+                st['hold_active'] = False
+                st.pop('held_force', None)
+                st.pop('held_dmx', None)
+
+        E_eff = st.get('held_force', E)
+        dt = self._dt
+        y = 0.0
+
+        # --- Behavior evaluation (same math as _calculate_channel) ---
+        if behavior in ['sine', 'saw', 'square', 'triangle',
+                        'lfo_sine', 'lfo_saw', 'lfo_square', 'lfo_triangle']:
+            vol_driver = float(audio.get('vol', 0.1))
+            if source in ['beat', 'bar']:
+                p = E_eff
+            else:
+                f_base = speed * 1.0
+                freq = (f_base * 0.1) + (vol_driver * 5.0)
+                st['phase'] = (st['phase'] + dt * freq) % 1.0
+                p = st['phase']
+
+            amp = E_eff * react
+            if behavior in ['sine', 'lfo_sine']: y = amp * math.sin(p * 2.0 * math.pi)
+            elif behavior in ['saw', 'lfo_saw']: y = amp * ((p * 2.0) - 1.0)
+            elif behavior in ['square', 'lfo_square']: y = amp if p < 0.5 else -amp
+            elif behavior in ['triangle', 'lfo_triangle']: y = amp * (abs((p * 4.0) - 2.0) - 1.0)
+
+        elif behavior in ['push', 'pull', 'kinematic_push', 'kinematic_pull']:
+            k = speed * 25.0 + 1.0
+            c = (1.0 - react) * 8.0 + 2.0
+            force_mult = 15.0
+            force = E_eff * force_mult if behavior in ['push', 'kinematic_push'] else -E_eff * force_mult
+            accel = force - (k * st['pos']) - (c * st['vel'])
+            st['vel'] += accel * dt
+            st['pos'] += st['vel'] * dt
+            y = st['pos']
+
+        elif behavior in ['noise', 'simplex', 'perlin', 'noise_simplex', 'noise_perlin']:
+            noise_rate = speed * 0.5 + (E_eff * react * 2.0)
+            st['t'] += dt * noise_rate
+            y = (logic_matrix._noise1d(st['t']) * 2.0) - 1.0
+
+        elif behavior in ['step', 'forward', 'pingpong', 'step_forward', 'step_pingpong']:
+            seq = [0, 85, 170, 255]
+            rate = speed * 4.0
+            if source in ['beat', 'bar']:
+                st['phase'] = E_eff
+            else:
+                st['phase'] += dt * rate * (1.0 + E_eff * 2.0)
+            if st['phase'] >= 1.0:
+                st['phase'] = 0.0
+                if behavior in ['forward', 'step_forward']:
+                    st['step'] = (st['step'] + 1) % len(seq)
+                else:
+                    if 'dir' not in st: st['dir'] = 1
+                    st['step'] += st['dir']
+                    if st['step'] >= len(seq)-1 or st['step'] <= 0: st['dir'] *= -1
+            y = (seq[st['step']] / 127.5) - 1.0
+
+        elif behavior in ['random', 'adjacent', 'erratic', 'markov_adjacent', 'markov_erratic']:
+            is_beat_trig = audio.get('beat', False)
+            if is_beat_trig and not st.get('last_beat'):
+                r = random.random()
+                curr = st['bucket']
+                if behavior in ['adjacent', 'markov_adjacent']:
+                    if r < 0.20: pass
+                    elif r < 0.55: st['bucket'] = min(4, curr + 1)
+                    elif r < 0.90: st['bucket'] = max(0, curr - 1)
+                    elif r < 0.95: st['bucket'] = min(4, curr + 2)
+                    else: st['bucket'] = max(0, curr - 2)
+                else:
+                    if r < 0.10:
+                        st['bucket'] = min(4, max(0, curr + random.choice([-1, 0, 1])))
+                    else:
+                        others = [i for i in range(5) if abs(i - curr) > 1]
+                        if others: st['bucket'] = random.choice(others)
+            st['last_beat'] = is_beat_trig
+            y = (st['bucket'] * 64.0 / 127.5) - 1.0
+
+        elif behavior == 'direct':
+            y = (E_eff * react * 2.0) - 1.0
+
+        # Map normalized y to DMX via 3-point calibration
+        y = max(-1.0, min(1.0, y))
+        if y >= 0: final_dmx = c_center + (y * (c_max - c_center))
+        else: final_dmx = c_center + (y * (c_center - c_min))
+
+        # Hold persistence
+        if not is_kinematics:
+            if st.get('hold_active'):
+                if 'held_dmx' not in st: st['held_dmx'] = final_dmx
+                final_dmx = st['held_dmx']
+            else:
+                st.pop('held_dmx', None)
+
+        return max(c_min, min(c_max, int(final_dmx)))
+
     def get_universe(self): return self.universe[:]
     def set_intensity(self, val): self.intensity = float(val)
     def set_speed(self, val): self.speed = float(val)
+    def set_audio_sensitivity(self, val): self.audio_sensitivity = float(val)
     # Removed legacy _detect_bass_style
 
     def apply_overrides(self, ol, sl=[]):

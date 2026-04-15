@@ -152,6 +152,33 @@ SCHEMA RULES:
 5. NO STATIC FOR RANGES: Never use behavior 'static' if min != max. Use 'sine' or 'step' instead.
 6. CLEANUP: Do NOT include legacy keys like "lfo", "audio", or "bin_idx" at the root level of a rule.
 
+CHANNEL FUNCTION DICTIONARY (use when interpreting user prompts):
+- "pan" / "x position" = role: pos_x
+- "tilt" / "y position" = role: pos_y
+- "zoom" / "size" = role: zoom
+- "x rotation" / "rotate x" / "tilt roll" = role: rot_x
+- "y rotation" / "rotate y" / "pan roll" = role: rot_y  
+- "z rotation" / "rotation" / "roll" / "spin" = role: rot_z
+- "color" / "color wheel" = role: color_solid or color_multi
+- "pattern" / "gobo" = role: pattern
+- "strobe" / "shutter" = role: strobe
+- "dimmer" / "brightness" = role: dimmer
+When the user says "rotation" without axis, interpret as rot_z. Match these aliases to the correct channel by checking the Fixture Context roles.
+
+RELATIONAL PROMPTS: Understand cross-channel relationships.
+- "if zoom is at 127, rotation should be below 127" = find channel with role zoom, note its cal.center (127), then find rotation channel and set its cal.max below that value.
+- "pan faster than tilt" = pos_x speed should be higher than pos_y speed.
+- Apply the user's intent across the correct channels by matching role names from the dictionary above.
+
+VIBE RULES & SYNC GROUPS:
+The "vibe" field controls WHEN a rule activates based on detected audio energy level.
+Valid values: "any", "chill", "chill 1", "chill 2", "chill 3", "mid", "mid 1", "mid 2", "mid 3", "high", "high 1", "high 2", "high 3", "build", "drop", "never".
+- The base vibe (any/chill/mid/high) controls activation threshold.
+- The number suffix (1, 2, 3) is a sync group for multi-fixture coordination.
+- "any" = active at all times. First range should always be "any" with no number.
+- The last range of a multi-range channel can be "high", "high 1", "high 2", or "high 3".
+- When modifying vibes, RANDOMIZE the sync group numbers across different channels to prevent all channels from landing in the same group (which makes output "too busy"). Spread 1, 2, 3 across channels.
+
 THE PLAYBOOK (Style Macros):
 - "B-Side": Shift bin sources (e.g. bin_0 -> bin_1). Invert movement directions. Swap speeds between related axes (Pan/Tilt).
 - "Rhythm": Use 'square' or 'saw' behaviors. Set source to 'impact' or 'beat'. Set 'react' to 1.0 (high sensitivity) and 'speed' to 0.8+. 
@@ -299,28 +326,69 @@ Output: Valid raw JSON object only.
 
                 let chChanges = [];
                 newRules.forEach((nr, rIdx) => {
+                    if (nr._is_deleted) return; // Skip if already marked for deletion during this session
+
                     const or = oldRules[rIdx];
                     if (!or) {
-                        chChanges.push(`<div class="diff-item"><span class="diff-new">[NEW RULE]</span> ${nr.behavior} - ${nr.source}</div>`);
+                        const isReverted = nr._is_reverted;
+                        chChanges.push(`
+                            <div class="diff-item ${isReverted ? 'reverted' : ''}">
+                                <input type="checkbox" ${isReverted ? '' : 'checked'} class="diff-check" 
+                                    onchange="previewRevert(this)"
+                                    data-ch="${chIdx}" data-rule="${rIdx}" data-type="new-rule">
+                                <span class="diff-new">[NEW RULE]</span> ${nr.behavior} - ${nr.source}
+                            </div>`);
                         return;
                     }
 
                     // Compare keys
-                    const keys = ['source', 'behavior', 'vibe', 'value'];
+                    const keys = ['source', 'behavior', 'vibe', 'value', 'invert', 'offset'];
                     keys.forEach(k => {
-                        if (nr[k] !== or[k]) {
-                            chChanges.push(`<div class="diff-item"><b>${k}:</b> <span class="diff-old">${or[k]}</span> → <span class="diff-new">${nr[k]}</span></div>`);
+                        const isReverted = nr._reverted_fields && nr._reverted_fields.has(k);
+                        if (nr[k] !== or[k] || isReverted) {
+                            chChanges.push(`
+                                <div class="diff-item ${isReverted ? 'reverted' : ''}">
+                                    <input type="checkbox" ${isReverted ? '' : 'checked'} class="diff-check" 
+                                        onchange="previewRevert(this)"
+                                        data-ch="${chIdx}" data-rule="${rIdx}" data-key="${k}" data-old="${or[k]}" data-type="field">
+                                    <b>${k}:</b> <span class="diff-old">${or[k] ?? '—'}</span> → <span class="diff-new">${nr[k] ?? '—'}</span>
+                                </div>`);
                         }
                     });
 
-                    // Compare Modifiers (The new Source of Truth)
-                    if (JSON.stringify(nr.modifiers) !== JSON.stringify(or.modifiers)) {
-                        const nm = nr.modifiers || {};
-                        const om = or.modifiers || {};
-                        if (nm.speed !== om.speed) chChanges.push(`<div class="diff-item"><b>speed:</b> <span class="diff-old">${om.speed}</span> → <span class="diff-new">${nm.speed}</span></div>`);
-                        if (nm.react !== om.react) chChanges.push(`<div class="diff-item"><b>react:</b> <span class="diff-old">${om.react}</span> → <span class="diff-new">${nm.react}</span></div>`);
-                        if (nm.hold_type !== om.hold_type) chChanges.push(`<div class="diff-item"><b>hold:</b> <span class="diff-old">${om.hold_type}</span> → <span class="diff-new">${nm.hold_type}</span></div>`);
-                    }
+                    // Compare Modifiers
+                    const nm = nr.modifiers || {};
+                    const om = or.modifiers || {};
+                    const modKeys = ['speed', 'react', 'hold_type'];
+                    modKeys.forEach(mk => {
+                        const isReverted = nr._reverted_fields && nr._reverted_fields.has('modifiers.' + mk);
+                        if (nm[mk] !== om[mk] || isReverted) {
+                            chChanges.push(`
+                                <div class="diff-item ${isReverted ? 'reverted' : ''}">
+                                    <input type="checkbox" ${isReverted ? '' : 'checked'} class="diff-check" 
+                                        onchange="previewRevert(this)"
+                                        data-ch="${chIdx}" data-rule="${rIdx}" data-key="modifiers.${mk}" data-old="${om[mk]}" data-type="field">
+                                    <b>${mk}:</b> <span class="diff-old">${om[mk] ?? '—'}</span> → <span class="diff-new">${nm[mk] ?? '—'}</span>
+                                </div>`);
+                        }
+                    });
+
+                    // Compare Calibration (CRITICAL: Often modified by AI for range tuning)
+                    const ncal = nr.cal || {};
+                    const ocal = or.cal || {};
+                    const calKeys = ['min', 'max', 'center'];
+                    calKeys.forEach(ck => {
+                        const isReverted = nr._reverted_fields && nr._reverted_fields.has('cal.' + ck);
+                        if (ncal[ck] !== ocal[ck] || isReverted) {
+                            chChanges.push(`
+                                <div class="diff-item ${isReverted ? 'reverted' : ''}">
+                                    <input type="checkbox" ${isReverted ? '' : 'checked'} class="diff-check" 
+                                        onchange="previewRevert(this)"
+                                        data-ch="${chIdx}" data-rule="${rIdx}" data-key="cal.${ck}" data-old="${ocal[ck]}" data-type="field">
+                                    <b>cal ${ck}:</b> <span class="diff-old">${ocal[ck] ?? '—'}</span> → <span class="diff-new">${ncal[ck] ?? '—'}</span>
+                                </div>`);
+                        }
+                    });
                 });
 
                 if (chChanges.length > 0) {
@@ -340,11 +408,78 @@ Output: Valid raw JSON object only.
                 body.innerHTML = `<div style="padding:40px; text-align:center; color:var(--text-dim);">No significant changes detected in the behavior structure.</div>`;
             }
 
-            modal.style.display = 'flex';
+            modal.classList.add('active');
+        }
+
+        function previewRevert(cb) {
+            const chIdx = parseInt(cb.dataset.ch);
+            const rIdx = parseInt(cb.dataset.rule);
+            const type = cb.dataset.type;
+            const checked = cb.checked;
+
+            const rule = currentProfileMappings[chIdx][rIdx];
+            if (!rule) return;
+
+            if (type === 'new-rule') {
+                if (!checked) {
+                    rule._is_reverted = true;
+                } else {
+                    delete rule._is_reverted;
+                }
+            } else if (type === 'field') {
+                const key = cb.dataset.key;
+                const oldVal = cb.dataset.old;
+                
+                if (!rule._reverted_fields) rule._reverted_fields = new Set();
+                if (!rule._original_values) rule._original_values = {};
+
+                if (!checked) {
+                    // Store current "new" value before reverting if we haven't yet
+                    if (!(key in rule._original_values)) {
+                        const path = key.split('.');
+                        let val = rule;
+                        for(let i=0; i<path.length; i++) {
+                            val = val[path[i]];
+                        }
+                        rule._original_values[key] = val;
+                    }
+                    
+                    // Apply old value
+                    const path = key.split('.');
+                    let target = rule;
+                    for(let i=0; i<path.length-1; i++) {
+                        target = target[path[i]];
+                    }
+                    // Handle numeric values and undefined/null strings
+                    let parsed = oldVal;
+                    if (oldVal === "undefined") parsed = undefined;
+                    else if (oldVal === "null") parsed = null;
+                    else if (!isNaN(oldVal) && oldVal !== "") {
+                        parsed = oldVal.includes('.') ? parseFloat(oldVal) : parseInt(oldVal);
+                    }
+                    target[path[path.length-1]] = parsed;
+                    rule._reverted_fields.add(key);
+                } else {
+                    // Re-apply "new" value
+                    const path = key.split('.');
+                    let target = rule;
+                    for(let i=0; i<path.length-1; i++) {
+                        target = target[path[i]];
+                    }
+                    target[path[path.length-1]] = rule._original_values[key];
+                    rule._reverted_fields.delete(key);
+                }
+            }
+
+            // Visual feedback on the row
+            cb.closest('.diff-item').classList.toggle('reverted', !checked);
+
+            // Live Profile refresh
+            loadProfileChannels();
         }
 
         function closeAiDiff() {
-            document.getElementById('ai-diff-modal').style.display = 'none';
+            document.getElementById('ai-diff-modal').classList.remove('active');
             document.getElementById('ai-loading-container').style.display = 'none';
         }
 
@@ -604,7 +739,7 @@ Output: Valid raw JSON object only.
                         }
                         
                         if (role.includes('color') || role === 'shutter' || role === 'rot_z') {
-                            rule.source = 'attack';
+                            rule.source = 'impact';
                             rule.modifiers.speed = 1.0; 
                         }
                     }
@@ -696,13 +831,43 @@ Output: Valid raw JSON object only.
 
         function acceptAiTransformation() {
             closeAiDiff();
-            // Clear review bar instructions just in case
+            
+            // Clean up the reverted rules and metadata
+            currentProfileMappings.forEach((rules, chIdx) => {
+                currentProfileMappings[chIdx] = rules.filter(r => !r._is_reverted);
+                currentProfileMappings[chIdx].forEach(r => {
+                    delete r._reverted_fields;
+                    delete r._original_values;
+                    delete r._is_reverted;
+                });
+            });
+
+            // Update DB with the final filtered state
+            if (activeProfileId) {
+                const existing = db.profiles.find(p => p.id === activeProfileId);
+                if (existing) {
+                    existing.mappings = JSON.parse(JSON.stringify(currentProfileMappings));
+                    saveDB();
+                }
+            }
+
+            // Add confirmation to chat history
+            addAiChatMessage('system', "✅ Selective changes have been accepted and applied to the profile.");
+            
+            // Clear review bar instructions
             pendingAiInstructions = {};
             updateAiReviewBar();
 
-            // Optional: Hide loading bar immediately on accept
-            const loadingContainer = document.getElementById('ai-loading-container');
-            if (loadingContainer) loadingContainer.style.display = 'none';
+            // Close the main modal too, as the user is done with this refinement cycle
+            setTimeout(() => {
+                closeAiModal();
+                
+                // Optional: Hide loading bar immediately on accept
+                const loadingContainer = document.getElementById('ai-loading-container');
+                if (loadingContainer) loadingContainer.style.display = 'none';
+                
+                loadProfileChannels();
+            }, 500);
         }
 
         function appendAiSuggestion(type) {
@@ -749,3 +914,498 @@ Output: Valid raw JSON object only.
         async function refineProfileChannel(chIdx) {
             // Deprecated, sparkle button now toggles the inline input via toggleChannelAiInput.
         }
+
+        // ============================================================
+        // === AI PRESET GENERATION SYSTEM ===
+        // ============================================================
+
+        var presetConversationHistory = [];
+        var isProcessingPresetAi = false;
+
+        function openPresetAiChat() {
+            const modal = document.getElementById('ai-preset-modal');
+            if (!modal) return;
+
+            // Reset footer buttons
+            const diffBtn = document.getElementById('ai-preset-view-diff-btn');
+            const applyBtn = document.getElementById('ai-preset-apply-btn');
+            if (diffBtn) diffBtn.style.display = 'none';
+            if (applyBtn) applyBtn.style.display = 'none';
+
+            // Snapshot current state for diff/undo
+            window.preAiPresetTriggers = JSON.parse(JSON.stringify(currentPresetTriggers || []));
+            window.preAiPresetOverrides = JSON.parse(JSON.stringify(currentPresetOverrides || []));
+            window.preAiPresetName = document.getElementById('pres-name')?.value || '';
+
+            document.body.classList.add('ai-modal-open');
+            modal.classList.add('active');
+
+            const textarea = document.getElementById('ai-preset-textarea');
+            if (textarea) {
+                textarea.value = '';
+                textarea.focus();
+            }
+
+            // Update model label
+            if (typeof updateModelLabelDisplay === 'function') updateModelLabelDisplay();
+        }
+
+        function closePresetAiModal() {
+            const modal = document.getElementById('ai-preset-modal');
+            if (modal) modal.classList.remove('active');
+            document.body.classList.remove('ai-modal-open');
+
+            const diffBtn = document.getElementById('ai-preset-view-diff-btn');
+            const applyBtn = document.getElementById('ai-preset-apply-btn');
+            if (diffBtn) diffBtn.style.display = 'none';
+            if (applyBtn) applyBtn.style.display = 'none';
+        }
+
+        function addPresetAiChatMessage(role, text) {
+            if (!text) return;
+            presetConversationHistory.push({ role, text, timestamp: Date.now() });
+            renderPresetAiChat();
+        }
+
+        function renderPresetAiChat() {
+            const container = document.getElementById('ai-preset-chat-history');
+            if (!container) return;
+
+            container.innerHTML = presetConversationHistory.map(msg => `
+                <div class="chat-bubble ${msg.role}">
+                    ${msg.role === 'system' ? '💡 ' : ''}${msg.text}
+                </div>
+            `).join('');
+
+            const body = container.closest('.chat-body');
+            if (body) setTimeout(() => body.scrollTop = body.scrollHeight, 50);
+        }
+
+        function clearPresetAiChatHistory() {
+            if (!confirm("Clear preset AI chat history?")) return;
+            presetConversationHistory = [];
+            const container = document.getElementById('ai-preset-chat-history');
+            if (container) {
+                container.innerHTML = `<div class="chat-bubble ai">
+                    Describe the preset you want to create. For example: "blackout all fixtures when volume drops below 5%" or "when vibe goes high, crank dimmers to max on the rhythm fixtures."
+                </div>`;
+            }
+            const diffBtn = document.getElementById('ai-preset-view-diff-btn');
+            const applyBtn = document.getElementById('ai-preset-apply-btn');
+            if (diffBtn) diffBtn.style.display = 'none';
+            if (applyBtn) applyBtn.style.display = 'none';
+        }
+
+        function _buildStageContext() {
+            const stageInstances = db.stage || [];
+            const profiles = db.profiles || [];
+
+            return stageInstances.map(inst => {
+                const prof = profiles.find(p => p.id === inst.profileId);
+                const channels = prof ? (prof.channels || []) : [];
+                return {
+                    id: inst.id,
+                    address: inst.address,
+                    zone: inst.zone || 'center',
+                    profileName: prof ? prof.name : 'Unknown',
+                    roles: channels.map(ch => ch.role || ch.name || 'unknown')
+                };
+            });
+        }
+
+        async function sendPresetAiPrompt() {
+            const textarea = document.getElementById('ai-preset-textarea');
+            const text = (textarea?.value || '').trim();
+            if (!text || isProcessingPresetAi) return;
+
+            addPresetAiChatMessage('user', text);
+            textarea.value = '';
+
+            const apiKey = localStorage.getItem('vj_gemini_api_key');
+            if (!apiKey) {
+                alert("Gemini API Key missing! Set it in AI settings.");
+                if (typeof openAiSettings === 'function') openAiSettings();
+                return;
+            }
+
+            isProcessingPresetAi = true;
+            const sendBtn = document.getElementById('ai-preset-send-btn');
+            if (textarea) textarea.disabled = true;
+            if (sendBtn) sendBtn.disabled = true;
+
+            // Snapshot for diff
+            window.preAiPresetTriggers = JSON.parse(JSON.stringify(currentPresetTriggers || []));
+            window.preAiPresetOverrides = JSON.parse(JSON.stringify(currentPresetOverrides || []));
+            window.preAiPresetName = document.getElementById('pres-name')?.value || '';
+
+            // Thinking bubble
+            const chatHistory = document.getElementById('ai-preset-chat-history');
+            const thinkingId = 'preset-thinking-' + Date.now();
+            if (chatHistory) {
+                const bubble = document.createElement('div');
+                bubble.id = thinkingId;
+                bubble.className = 'chat-bubble thinking';
+                bubble.innerHTML = `<span>Thinking</span> <div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div>`;
+                chatHistory.appendChild(bubble);
+                const body = chatHistory.closest('.chat-body');
+                if (body) body.scrollTop = body.scrollHeight;
+            }
+
+            const stageContext = _buildStageContext();
+
+            // Build the current preset context (for editing existing presets)
+            let currentPresetContext = null;
+            if (current_editing_preset_id) {
+                const existing = (db.presets || []).find(p => p.id === current_editing_preset_id);
+                if (existing) currentPresetContext = existing;
+            }
+
+            const systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox Preset System.
+Task: Generate or refine a preset based on the user's natural language description.
+
+Context:
+- A Preset consists of TRIGGERS (when it activates) and OVERRIDES (what it does when active).
+- Triggers define conditions. ALL triggers must be true simultaneously (AND logic).
+- If user describes "X OR Y", return MULTIPLE presets with different triggers but same overrides.
+- Overrides target specific stage fixtures by ID, or "global" for all.
+
+TRIGGER SCHEMA:
+- {type: "vibe", value: "<value>"} — values: chill, mid, high
+- {type: "state", value: "<value>"} — values: building, tension, dropping
+- {type: "volume", greater_than: N, less_than: N} — 0-100 scale. ALWAYS provide both.
+- {type: "bin", target: "<name>", greater_than: N, less_than: N} — names: SUB..BRILLIANCE. ALWAYS provide both.
+- {type: "channel", target: <addr>, greater_than: N, less_than: N} — raw DMX. ALWAYS provide both.
+- {type: "manual"} — activated only by user click.
+- For all numeric triggers (volume, bin, channel), you MUST specify both "greater_than" and "less_than" to define a clear range.
+
+OVERRIDE SCHEMA:
+Each override targets one fixture + one channel role:
+- Instance: {id: "<fixture_id>", target: "<fixture_id>", type: "instance", name: "<role>", role: "<role>", value: <0-255>, smoothing: 0, channels: [{name: "<role>", value: <0-255>}]}
+- Global: {id: "global", target: "global", type: "global", name: "<role>", role: "<role>", value: <0-255>, smoothing: 0, channels: [{name: "<role>", value: <0-255>}]}
+
+BEHAVIOR OVERRIDES (for movement/strobe/sweep):
+When the user describes dynamic behavior (strobe, sweep, oscillate, pulse), use mode:"behavior" on the channel:
+- {name: "<role>", mode: "behavior", behavior: "<type>", source: "<driver>", modifiers: {speed: 0.5, react: 0.5, hold_type: "none"}, cal: {min: 0, center: 127, max: 255}}
+- behavior types: sine, saw, square, triangle, push, pull, noise, step, forward, pingpong, random, adjacent, erratic, direct, static
+- source drivers: volume, bass, flux, beat, bar, axis_a, axis_b, axis_c, axis_d, axis_e
+- speed: 0.0-1.0 (oscillation speed), react: 0.0-1.0 (audio reactivity)
+- hold_type: none, beat, bar, peakpause, floorfreeze
+- Example strobe: {name: "dimmer", mode: "behavior", behavior: "square", source: "volume", modifiers: {speed: 0.8, react: 0.7}, cal: {min: 0, center: 127, max: 215}}
+- Example sweep: {name: "pos_x", mode: "behavior", behavior: "sine", source: "bass", modifiers: {speed: 0.3, react: 0.5}, cal: {min: 0, center: 64, max: 127}}
+- For phase offset between channels (e.g. Y 50% ahead of X), use different speed values or add a phase note in modifiers
+
+AVAILABLE ROLES: pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, generic, dimmer, mode, clip, group
+
+FIXTURE ALIAS HINTS:
+- "all fixtures" / "everything" = use type "global"
+- Match user references to fixture IDs by name similarity (e.g. "rhythm fixtures" matches IDs containing "Ryth")
+- "blackout" = set dimmer to 0
+- "full brightness" / "max" = set dimmer to 255
+
+Stage Instances (fixture IDs and their roles): ${JSON.stringify(stageContext)}
+${currentPresetContext ? 'Current Preset Being Edited: ' + JSON.stringify(currentPresetContext) : 'Creating new preset.'}
+User Prompt: ${text}
+Conversation History: ${JSON.stringify(presetConversationHistory.slice(-5))}
+
+Output: Return a valid JSON object with:
+- "presets": array of objects, each with {name: string, triggers: array, overrides: array}
+- "logic_explanation": compact summary of what was generated
+
+Return raw JSON only, no markdown.`;
+
+            try {
+                const model = localStorage.getItem('vj_gemini_model') || 'gemini-2.5-flash';
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: systemPrompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const responseText = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/^```json|```$/g, "").trim();
+                let aiResult = null;
+                try {
+                    aiResult = JSON.parse(responseText);
+                } catch (e) {
+                    const match = responseText.match(/\{.*\}/s);
+                    if (match) aiResult = JSON.parse(match[0]);
+                }
+
+                if (!aiResult) throw new Error("AI returned invalid JSON.");
+
+                const presets = aiResult.presets || [aiResult];
+                const logicLog = aiResult.logic_explanation || "";
+
+                if (!Array.isArray(presets) || presets.length === 0) throw new Error("No presets in AI response.");
+
+                // Remove thinking bubble
+                const thinkingBubble = document.getElementById(thinkingId);
+                if (thinkingBubble) thinkingBubble.remove();
+
+                // Log AI explanation
+                if (logicLog) addPresetAiChatMessage('ai', logicLog);
+
+                // Use the first preset to populate the form
+                const primary = presets[0];
+
+                // Store generated result for diff
+                window.generatedPresetResult = primary;
+                window.generatedAllPresets = presets;
+
+                // Apply to form state
+                currentPresetTriggers = JSON.parse(JSON.stringify(primary.triggers || []));
+                currentPresetOverrides = JSON.parse(JSON.stringify(primary.overrides || []));
+                if (primary.name) {
+                    const nameField = document.getElementById('pres-name');
+                    if (nameField && !nameField.value.trim()) nameField.value = primary.name;
+                }
+
+                // Render the form
+                if (typeof renderPresetTriggers === 'function') renderPresetTriggers();
+                if (typeof renderPresetOverrides === 'function') renderPresetOverrides();
+
+                // Show diff/apply buttons
+                const diffBtn = document.getElementById('ai-preset-view-diff-btn');
+                const applyBtn = document.getElementById('ai-preset-apply-btn');
+                if (diffBtn) diffBtn.style.display = 'block';
+                if (applyBtn) applyBtn.style.display = 'block';
+
+                // If multiple presets were generated (OR logic), notify user
+                if (presets.length > 1) {
+                    addPresetAiChatMessage('system', `Generated ${presets.length} presets (OR conditions split). The first is loaded in the form. Apply to save all ${presets.length}.`);
+                }
+
+            } catch (err) {
+                console.error("Preset AI Error:", err);
+                const thinkingBubble = document.getElementById(thinkingId);
+                if (thinkingBubble) thinkingBubble.remove();
+                addPresetAiChatMessage('ai', "🚨 Error: " + err.message);
+            } finally {
+                isProcessingPresetAi = false;
+                if (textarea) textarea.disabled = false;
+                if (sendBtn) sendBtn.disabled = false;
+                if (textarea) textarea.focus();
+            }
+        }
+
+        function showPresetAiDiff() {
+            const oldTriggers = window.preAiPresetTriggers || [];
+            const oldOverrides = window.preAiPresetOverrides || [];
+            const newTriggers = currentPresetTriggers || [];
+            const newOverrides = currentPresetOverrides || [];
+
+            const modal = document.getElementById('ai-preset-diff-modal');
+            const body = document.getElementById('ai-preset-diff-body');
+            if (!modal || !body) return;
+            body.innerHTML = "";
+
+            // --- TRIGGER DIFF ---
+            let triggerChanges = [];
+
+            newTriggers.forEach((nt, idx) => {
+                const ot = oldTriggers[idx];
+                if (!ot) {
+                    triggerChanges.push(`<div class="diff-item">
+                        <span class="diff-new">[NEW]</span> ${nt.type}: ${nt.value || nt.target || ''} ${nt.greater_than !== undefined ? '>' + nt.greater_than : ''} ${nt.less_than !== undefined ? '<' + nt.less_than : ''}
+                    </div>`);
+                } else {
+                    const ntStr = JSON.stringify(nt);
+                    const otStr = JSON.stringify(ot);
+                    if (ntStr !== otStr) {
+                        triggerChanges.push(`<div class="diff-item">
+                            <b>Trigger ${idx + 1}:</b> <span class="diff-old">${ot.type}:${ot.value || ot.target || ''}</span> → <span class="diff-new">${nt.type}:${nt.value || nt.target || ''}</span>
+                        </div>`);
+                    }
+                }
+            });
+
+            // Removed triggers
+            oldTriggers.forEach((ot, idx) => {
+                if (idx >= newTriggers.length) {
+                    triggerChanges.push(`<div class="diff-item">
+                        <span class="diff-old">[REMOVED]</span> ${ot.type}: ${ot.value || ot.target || ''}
+                    </div>`);
+                }
+            });
+
+            if (triggerChanges.length > 0) {
+                const row = document.createElement('div');
+                row.className = 'diff-row';
+                row.innerHTML = `<div class="diff-ch-label">TRIGGERS</div><div class="diff-content">${triggerChanges.join('')}</div>`;
+                body.appendChild(row);
+            }
+
+            // --- OVERRIDE DIFF ---
+            let overrideChanges = [];
+
+            newOverrides.forEach((no, idx) => {
+                const oo = oldOverrides[idx];
+                const label = `${no.target || 'global'} → ${no.role || no.name || '?'}`;
+                if (!oo) {
+                    overrideChanges.push(`<div class="diff-item">
+                        <span class="diff-new">[NEW]</span> ${label} = ${no.value}
+                    </div>`);
+                } else {
+                    if (no.value !== oo.value || no.target !== oo.target || no.role !== oo.role) {
+                        const oldLabel = `${oo.target || 'global'} → ${oo.role || oo.name || '?'}`;
+                        overrideChanges.push(`<div class="diff-item">
+                            <span class="diff-old">${oldLabel} = ${oo.value}</span> → <span class="diff-new">${label} = ${no.value}</span>
+                        </div>`);
+                    }
+                }
+            });
+
+            oldOverrides.forEach((oo, idx) => {
+                if (idx >= newOverrides.length) {
+                    overrideChanges.push(`<div class="diff-item">
+                        <span class="diff-old">[REMOVED]</span> ${oo.target || 'global'} → ${oo.role || oo.name || '?'} = ${oo.value}
+                    </div>`);
+                }
+            });
+
+            if (overrideChanges.length > 0) {
+                const row = document.createElement('div');
+                row.className = 'diff-row';
+                row.innerHTML = `<div class="diff-ch-label">OVERRIDES</div><div class="diff-content">${overrideChanges.join('')}</div>`;
+                body.appendChild(row);
+            }
+
+            if (body.innerHTML === "") {
+                body.innerHTML = `<div style="padding:40px; text-align:center; color:var(--text-dim);">No changes detected — this is a fresh preset.</div>`;
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closePresetAiDiff() {
+            const modal = document.getElementById('ai-preset-diff-modal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        function undoPresetAi() {
+            currentPresetTriggers = JSON.parse(JSON.stringify(window.preAiPresetTriggers || []));
+            currentPresetOverrides = JSON.parse(JSON.stringify(window.preAiPresetOverrides || []));
+
+            const nameField = document.getElementById('pres-name');
+            if (nameField && window.preAiPresetName !== undefined) {
+                nameField.value = window.preAiPresetName;
+            }
+
+            if (typeof renderPresetTriggers === 'function') renderPresetTriggers();
+            if (typeof renderPresetOverrides === 'function') renderPresetOverrides();
+
+            closePresetAiDiff();
+            addPresetAiChatMessage('system', '↩️ Reverted to previous state.');
+        }
+
+        function acceptPresetAi() {
+            closePresetAiDiff();
+
+            // Save all generated presets (handles OR-split case)
+            const allPresets = window.generatedAllPresets || [];
+
+            if (allPresets.length > 1) {
+                // Multiple presets generated (OR logic). Save the extras directly.
+                for (let i = 1; i < allPresets.length; i++) {
+                    const p = allPresets[i];
+                    db.presets.push({
+                        id: 'pre_' + (Date.now() + i),
+                        name: p.name || `Generated Preset ${i + 1}`,
+                        triggers: JSON.parse(JSON.stringify(p.triggers || [])),
+                        overrides: JSON.parse(JSON.stringify(p.overrides || []))
+                    });
+                }
+                saveDB();
+                if (typeof refreshUI === 'function') refreshUI();
+            }
+
+            addPresetAiChatMessage('system', '✅ Preset applied to form. Click "Save Preset" when ready.');
+
+            // Close modal
+            setTimeout(() => {
+                closePresetAiModal();
+            }, 500);
+        }
+
+        function appendPresetAiSuggestion(type) {
+            const stageContext = _buildStageContext();
+            const fixtureIds = stageContext.map(s => s.id);
+            let text = "";
+            let prompt = "";
+
+            if (type === 'blackout') {
+                text = "Blackout when quiet.";
+
+                // Local instant generation — no API needed
+                currentPresetTriggers = [{ type: 'volume', greater_than: 0, less_than: 5 }];
+                currentPresetOverrides = [];
+
+                // Add dimmer=0 for every stage fixture
+                fixtureIds.forEach(id => {
+                    currentPresetOverrides.push({
+                        id: id, target: id, type: 'instance',
+                        name: 'dimmer', role: 'dimmer', value: 0, smoothing: 0,
+                        channels: [{ name: 'dimmer', value: 0 }]
+                    });
+                });
+
+                // If no stage fixtures, use global
+                if (fixtureIds.length === 0) {
+                    currentPresetOverrides.push({
+                        id: 'global', target: 'global', type: 'global',
+                        name: 'dimmer', role: 'dimmer', value: 0, smoothing: 0,
+                        channels: [{ name: 'dimmer', value: 0 }]
+                    });
+                }
+
+                const nameField = document.getElementById('pres-name');
+                if (nameField && !nameField.value.trim()) nameField.value = "Blackout";
+
+                if (typeof renderPresetTriggers === 'function') renderPresetTriggers();
+                if (typeof renderPresetOverrides === 'function') renderPresetOverrides();
+
+                addPresetAiChatMessage('user', text);
+                addPresetAiChatMessage('ai', `Generated blackout preset: dims all ${fixtureIds.length || 'global'} fixtures when volume < 5%.`);
+
+                window.generatedAllPresets = [{ name: "Blackout", triggers: currentPresetTriggers, overrides: currentPresetOverrides }];
+
+                const diffBtn = document.getElementById('ai-preset-view-diff-btn');
+                const applyBtn = document.getElementById('ai-preset-apply-btn');
+                if (diffBtn) diffBtn.style.display = 'block';
+                if (applyBtn) applyBtn.style.display = 'block';
+                return;
+
+            } else if (type === 'drop_punch') {
+                text = "Max brightness on all fixtures during a drop.";
+                prompt = "When the transient state is 'dropping', set all fixture dimmers to 255 (max brightness). Name it 'Drop Punch'.";
+
+            } else if (type === 'breakdown') {
+                text = "Dim everything during builds/tension.";
+                prompt = "When the transient state is 'tension', set all fixture dimmers to 25 (very dim). Also set any rotation to 0. Name it 'Breakdown'.";
+            }
+
+            if (prompt) {
+                addPresetAiChatMessage('user', text);
+                const textarea = document.getElementById('ai-preset-textarea');
+                if (textarea) textarea.value = '';
+                // Use AI for these
+                const fakeTextarea = document.getElementById('ai-preset-textarea');
+                if (fakeTextarea) fakeTextarea.value = prompt;
+                sendPresetAiPrompt();
+            }
+        }
+
+        // Global exports for preset AI
+        window.openPresetAiChat = openPresetAiChat;
+        window.closePresetAiModal = closePresetAiModal;
+        window.sendPresetAiPrompt = sendPresetAiPrompt;
+        window.showPresetAiDiff = showPresetAiDiff;
+        window.closePresetAiDiff = closePresetAiDiff;
+        window.undoPresetAi = undoPresetAi;
+        window.acceptPresetAi = acceptPresetAi;
+        window.appendPresetAiSuggestion = appendPresetAiSuggestion;
+        window.clearPresetAiChatHistory = clearPresetAiChatHistory;

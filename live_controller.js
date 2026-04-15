@@ -149,16 +149,18 @@ function renderLiveTab() {
         let content = '';
         let label = '';
         let sublabel = '';
-        let style = `background:${cfg.color || '#333'}; height:100px; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:8px; cursor:pointer; position:relative; overflow:hidden; touch-action:none; border:2px solid ${liveEditMode ? 'var(--danger)' : 'transparent'}; gap:4px; opacity:${(cfg.type === 'none' && !liveEditMode) ? 0 : 1};`;
+        let extraClass = '';
+        let style = `background:${cfg.color || 'rgba(255,255,255,0.03)'}; opacity:${(cfg.type === 'none' && !liveEditMode) ? 0 : 1};`;
         
+        if (liveEditMode) style += `border-color: var(--danger); border-style: ${cfg.type === 'none' ? 'dashed' : 'solid'};`;
+
         if (cfg.type === 'preset') {
             const preset = (window.db.presets || []).find(p => p.id === cfg.targetId);
             label = preset ? preset.name : 'PRESET';
             const isActive = (window.latestAudioState.manual_active_presets || []).includes(cfg.targetId);
             content = `<div style="font-size:10px; font-weight:800; opacity:0.8;">PRESET</div>`;
-            if (isActive) style += ' border-color: var(--accent); box-shadow: 0 0 10px var(--accent);';
+            if (isActive) extraClass = 'active';
         } else if (cfg.type === 'slider') {
-            // Vertical (Y)
             const instY = (window.db.stage || []).find(s => s.id === cfg.targetId);
             const profY = instY ? (window.db.profiles || []).find(p => p.id === instY.profileId) : null;
             const chY = (profY && profY.channels) ? profY.channels[cfg.channelIdx] : null;
@@ -192,24 +194,24 @@ function renderLiveTab() {
                                 </div>`;
             }
 
-            content = `<div class="fill-indicator" style="position:absolute; bottom:0; left:0; width:100%; height:${pctY}%; background:rgba(255,255,255,${isOverriddenY ? 0.2 : 0.05}); pointer-events:none; transition: height 0.05s;"></div>
+            content = `<div class="fill-indicator" style="position:absolute; bottom:0; left:0; width:100%; height:${pctY}%; pointer-events:none; transition: height 0.05s;"></div>
                        ${xyLabelHtml}`;
+            if (isOverriddenY) extraClass = 'active';
         } else if (cfg.type === 'live_feed') {
             const isFeedActive = document.getElementById('live-console-feed-container') && document.getElementById('live-console-feed-container').style.display === 'block';
             label = "LIVE FEED";
             content = `<div style="font-size:24px; z-index:1;">📷 ${isFeedActive ? 'ON' : 'OFF'}</div>`;
-            if (isFeedActive) style += ' border-color: var(--accent); box-shadow: 0 0 10px var(--accent);';
+            if (isFeedActive) extraClass = 'active';
         } else {
             if (liveEditMode) {
                 label = "ADD BUTTON";
                 content = `<div style="font-size:24px; opacity:0.3; z-index:1;">+</div>`;
-                style += ' background:rgba(255,255,255,0.05); border-style: dashed;';
             } else {
                 continue; // Hide empty buttons in play mode
             }
         }
 
-        html += `<div class="live-btn" style="${style} ${draggedBtnIdx === i ? 'opacity:0.5; transform:scale(0.9); z-index:10;' : ''} ${dragTargetIdx === i ? 'box-shadow: 0 0 15px var(--accent);' : ''}" 
+        html += `<div class="live-btn ${extraClass}" style="${style} ${draggedBtnIdx === i ? 'opacity:0.5; transform:scale(0.9); z-index:10;' : ''} ${dragTargetIdx === i ? 'box-shadow: 0 0 15px var(--accent);' : ''}; height:100px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; position:relative; overflow:hidden; touch-action:none; gap:4px;" 
                      onpointerdown="handleLivePointerDown(event, ${i})"
                      onpointermove="handleLivePointerMove(event, ${i})"
                      onpointerup="handleLivePointerUp(event, ${i})"
@@ -224,6 +226,15 @@ function renderLiveTab() {
     grid.innerHTML = html;
 }
 
+// --- PRESET INTERACTION STATE ---
+let presetHoldActive = false;      // Is a preset currently held?
+let presetHoldId = null;           // Which preset targetId is held?
+let presetHoldMoved = false;       // Did the pointer move during hold?
+let presetCycleInterval = null;    // Interval for movement-based cycling
+let presetCycleState = false;      // Current on/off state during cycling
+let presetLastMovePos = { x: 0, y: 0 };
+let presetMoveSpeed = 0;           // Pixels/frame movement speed
+
 function handleLivePointerDown(e, idx) {
     activePointerIdx = idx;
     pointerInitialClientY = e.clientY;
@@ -235,6 +246,7 @@ function handleLivePointerDown(e, idx) {
     draggedBtnIdx = null;
     dragTargetIdx = null;
     isDraggingBtn = false;
+    presetHoldMoved = false;
 
     if (liveEditMode) {
         longPressTimer = setTimeout(() => {
@@ -249,7 +261,27 @@ function handleLivePointerDown(e, idx) {
     const cfg = liveConfig[idx];
     if (!cfg || cfg.type === 'none') return;
 
-    if (cfg.type === 'slider') {
+    if (cfg.type === 'preset' && cfg.targetId) {
+        e.target.closest('.live-btn')?.setPointerCapture(e.pointerId);
+        presetHoldActive = true;
+        presetHoldId = cfg.targetId;
+        presetLastMovePos = { x: e.clientX, y: e.clientY };
+        presetMoveSpeed = 0;
+
+        // Start hold timer — after 300ms without a pointerup, activate momentary mode
+        longPressTimer = setTimeout(() => {
+            if (presetHoldActive && !presetHoldMoved) {
+                // Momentary hold: activate now, will deactivate on release
+                isLongPress = true;
+                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                    window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: true }));
+                }
+                // Visual feedback
+                const btn = document.querySelectorAll('.live-btn')[idx];
+                if (btn) btn.classList.add('active');
+            }
+        }, 300);
+    } else if (cfg.type === 'slider') {
         e.target.setPointerCapture(e.pointerId);
     } else if (cfg.type === 'live_feed') {
         toggleLiveConsoleFeed();
@@ -270,8 +302,63 @@ function handleLivePointerMove(e, idx) {
             if (liveEditMode) {
                 isDraggingBtn = true;
                 draggedBtnIdx = idx;
+            } else if (presetHoldActive) {
+                // Movement detected during preset hold — enter cycle mode
+                presetHoldMoved = true;
             }
         }
+    }
+
+    // --- PRESET CYCLE MODE (hold + move) ---
+    if (presetHoldActive && presetHoldMoved && !liveEditMode) {
+        const dx = e.clientX - presetLastMovePos.x;
+        const dy = e.clientY - presetLastMovePos.y;
+        const moveDist = Math.sqrt(dx * dx + dy * dy);
+        presetLastMovePos = { x: e.clientX, y: e.clientY };
+
+        // Smooth the speed (exponential moving average)
+        presetMoveSpeed = presetMoveSpeed * 0.7 + moveDist * 0.3;
+
+        // Map speed to cycle interval: faster movement = shorter interval
+        // Speed range roughly 0-50px/event → interval 500ms-50ms
+        const clampedSpeed = Math.min(50, Math.max(2, presetMoveSpeed));
+        const cycleMs = Math.round(500 - (clampedSpeed / 50) * 450); // 500ms → 50ms
+
+        // Start or update the cycle interval
+        if (!presetCycleInterval) {
+            // First cycle activation
+            presetCycleState = true;
+            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: true }));
+            }
+            const btn = document.querySelectorAll('.live-btn')[idx];
+            if (btn) btn.classList.add('active');
+        }
+
+        // Clear and reset interval at new speed
+        if (presetCycleInterval) clearInterval(presetCycleInterval);
+        presetCycleInterval = setInterval(() => {
+            presetCycleState = !presetCycleState;
+            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: presetCycleState }));
+            }
+            const btn = document.querySelectorAll('.live-btn')[idx];
+            if (btn) {
+                if (presetCycleState) btn.classList.add('active');
+                else btn.classList.remove('active');
+            }
+        }, cycleMs);
+
+        // Visual: move the button with the finger like sliders do
+        const btn = e.target.closest('.live-btn');
+        if (btn) {
+            const tdx = pointerCurrentClientX - pointerInitialClientX;
+            const tdy = pointerCurrentClientY - pointerInitialClientY;
+            btn.style.transform = `translate(${tdx}px, ${tdy}px)`;
+            btn.style.zIndex = "1000";
+        }
+
+        return; // Don't process slider logic
     }
 
     if (isDraggingBtn) {
@@ -393,6 +480,46 @@ async function handleLivePointerUp(e, idx) {
         await saveLiveConfig();
     }
 
+    // --- PRESET RELEASE LOGIC ---
+    const wasPresetHold = presetHoldActive;
+    const wasPresetMoved = presetHoldMoved;
+    const wasLongPress = isLongPress;
+
+    // Clean up cycle interval
+    if (presetCycleInterval) {
+        clearInterval(presetCycleInterval);
+        presetCycleInterval = null;
+    }
+
+    if (wasPresetHold && presetHoldId) {
+        const cfg = liveConfig[idx];
+        const dist = Math.sqrt(Math.pow(pointerCurrentClientX - pointerInitialClientX, 2) + Math.pow(pointerCurrentClientY - pointerInitialClientY, 2));
+
+        if (wasPresetMoved) {
+            // MODE 3: Hold + Move (Cycle) → turn OFF on release
+            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: false }));
+            }
+        } else if (wasLongPress) {
+            // MODE 2: Hold without move (Momentary) → turn OFF on release
+            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: false }));
+            }
+        } else if (dist < 10) {
+            // MODE 1: Quick tap → Toggle (stays on/off)
+            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId }));
+            }
+        }
+
+        // Reset preset state
+        presetHoldActive = false;
+        presetHoldId = null;
+        presetHoldMoved = false;
+        presetCycleState = false;
+        presetMoveSpeed = 0;
+    }
+
     activePointerIdx = null;
     draggedBtnIdx = null;
     dragTargetIdx = null;
@@ -403,26 +530,26 @@ async function handleLivePointerUp(e, idx) {
         longPressTimer = null;
     }
 
-    if (isLongPress) {
+    if (isLongPress && !wasPresetHold) {
         isLongPress = false;
         renderLiveTab();
         return;
     }
+    isLongPress = false;
 
-    const cfg = liveConfig[idx];
-    const dist = Math.sqrt(Math.pow(pointerCurrentClientX - pointerInitialClientX, 2) + Math.pow(pointerCurrentClientY - pointerInitialClientY, 2));
+    // Non-preset interactions
+    if (!wasPresetHold) {
+        const cfg = liveConfig[idx];
+        const dist = Math.sqrt(Math.pow(pointerCurrentClientX - pointerInitialClientX, 2) + Math.pow(pointerCurrentClientY - pointerInitialClientY, 2));
 
-    if (dist < 10) {
-        if (!liveEditMode) {
-            if (cfg && cfg.type === 'preset' && cfg.targetId) {
-                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                    window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: cfg.targetId }));
+        if (dist < 10) {
+            if (!liveEditMode) {
+                if (cfg && cfg.type === 'slider') {
+                    await clearSliderOverrides(cfg);
                 }
-            } else if (cfg && cfg.type === 'slider') {
-                await clearSliderOverrides(cfg);
+            } else {
+                openAssignment(idx);
             }
-        } else {
-            openAssignment(idx);
         }
     }
 

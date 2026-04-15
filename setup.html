@@ -12,7 +12,13 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=412261449">
+<link rel="stylesheet" href="setup.css?v=415260742">
+<style>
+    .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
+    .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
+    .sidebar-title .brand span { color: var(--accent) !important; font-size: 0.85em !important; margin-left: 2px !important; font-weight: 900 !important; }
+    .sidebar-title .subtitle { font-size: 0.75rem !important; font-weight: 800 !important; letter-spacing: 1px !important; text-transform: uppercase !important; color: var(--accent) !important; opacity: 0.8 !important; align-self: flex-start !important; margin-top: -2px !important; margin-left: 12px !important; }
+</style>
 </head>
 
 <body>
@@ -26,7 +32,10 @@
                     <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
             </div>
-            <span class="sidebar-title">RaveBox Setup</span>
+            <div class="sidebar-title">
+                <div class="brand">RAVE<span>BOX</span></div>
+                <div class="subtitle">SETUP</div>
+            </div>
         </div>
 
 
@@ -70,7 +79,7 @@
             <span class="nav-text">Send It</span>
         </div>
 
-        <div class="nav-btn desktop-only" onclick="window.location.href='manager.html'" title="Home">
+        <div class="nav-btn" onclick="window.location.href='manager.html'" title="Home">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -236,6 +245,7 @@
                 <div>
                     <label>Preset Name</label>
                     <input type="text" id="pres-name" placeholder="e.g., Massive Drop Lock">
+                    <button class="btn btn-primary btn-sm" onclick="openPresetAiChat()" style="margin-top:8px;">✨ Generate</button>
                 </div>
                 <div
                     style="margin-top:15px; background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid #333;">
@@ -283,6 +293,151 @@
         <div class="card">
             <div class="card-title">Saved Presets</div>
             <div id="saved-presets-list" class="item-list"></div>
+        </div>
+    </div>
+
+    <!-- AI PRESET CHAT MODAL -->
+    <div id="ai-preset-modal" class="ai-modal-overlay"
+        onclick="closePresetAiModal()">
+        <div class="ai-modal-content chat-optimized" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
+                    <span style="font-size: 1.4rem;">🤖</span> AI Preset Generator
+                    <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
+                <button class="btn btn-sm" onclick="closePresetAiModal()">×</button>
+            </div>
+
+            <div class="ai-modal-body chat-body">
+                <div id="ai-preset-chat-history" style="display: flex; flex-direction: column; gap: 12px; min-height: 50px;">
+                    <div class="chat-bubble ai">
+                        Describe the preset you want to create. For example: "blackout all fixtures when volume drops below 5%" or "when vibe goes high, crank dimmers to max on the rhythm fixtures."
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-modal-footer chat-footer">
+                <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
+                    <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
+                        onclick="clearPresetAiChatHistory()">🗑️ Wipe</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
+                </div>
+
+                <div style="display: flex; gap: 10px; position: relative;">
+                    <textarea id="ai-preset-textarea"
+                        style="width: 100%; height: 60px !important; border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.05); resize: none; border: 1px solid rgba(255,255,255,0.1); color: #ffffff !important; font-size: 14px !important; caret-color: #ffffff;"
+                        placeholder="Describe your preset..."
+                        onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendPresetAiPrompt(); }"></textarea>
+
+                    <button class="btn btn-primary" id="ai-preset-send-btn" onclick="sendPresetAiPrompt()"
+                        style="height: 60px; width: 60px; padding:0; border-radius: 12px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <div style="font-size:0.7rem; color:var(--text-dim); display:flex; align-items:center; gap:5px;">
+                        Using <span class="active-model-name"
+                            style="color:var(--accent-alt); font-weight:bold;">...</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary btn-sm" id="ai-preset-view-diff-btn" onclick="showPresetAiDiff()"
+                            style="display:none; border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
+                        <button class="btn btn-primary btn-sm" id="ai-preset-apply-btn"
+                            onclick="acceptPresetAi()"
+                            style="display:none; background:var(--success);">Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI PRESET DIFF MODAL -->
+    <div id="ai-preset-diff-modal" class="ai-modal-overlay"
+        style="display:none; z-index:11000;"
+        onclick="closePresetAiDiff()">
+        <div class="ai-modal-content" style="max-width:600px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800;">Preset Diff</div>
+                <button class="btn btn-sm" onclick="closePresetAiDiff()">×</button>
+            </div>
+            <div class="ai-modal-body diff-modal-body" id="ai-preset-diff-body">
+                <!-- Diff rows injected here -->
+            </div>
+            <div class="ai-modal-footer" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="undoPresetAi()">Undo &
+                    Revert</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="acceptPresetAi()">Accept
+                    Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI SETTINGS MODAL -->
+    <div id="ai-settings-modal" class="ai-modal-overlay"
+        style="display:none; z-index:10000;"
+        onclick="closeAiSettings()">
+        <div class="ai-modal-content" style="max-width:400px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    AI Engine Settings
+                </div>
+                <button class="btn btn-sm" onclick="closeAiSettings()">×</button>
+            </div>
+            <div class="ai-modal-body" style="display:flex; flex-direction:column; gap:20px;">
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Gemini
+                        API Key</label>
+                    <input type="text" id="gemini-key-input" placeholder="AI_Studio_Key_Here"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                    <div style="font-size: 10px; color: #666; margin-top:5px;">Shared across Profiler tools.</div>
+                </div>
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Model
+                        Selection</label>
+                    <select id="ai-model-select-settings"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;"
+                        onchange="updateModelLabelDisplay()">
+                        <option value="gemini-flash-latest">Gemini Flash Latest</option>
+                        <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                        <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite Preview</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Backend
+                        Host / IP</label>
+                    <input type="text" id="backend-host-input" placeholder="e.g. ravebox.local"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                </div>
+                <button class="btn btn-primary" onclick="saveAiSettings()"
+                    style="width:100%; height:45px; font-weight:800; border-radius:12px; box-shadow: 0 4px 15px var(--accent-glow);">Save
+                    Configuration</button>
+            </div>
         </div>
     </div>
 
@@ -377,8 +532,15 @@
 
     </div>
 
-<script src="shared_setup.js?v=412261449"></script>
-<script src="live_controller.js?v=412261449"></script>
-<script src="profile_logic.js?v=412261449"></script>
-<script src="stage_logic.js?v=412261449"></script>
-<script>window.onload = () => { console.log("🚀 VJ Manager v412261449 starting..."); const params = new URLSearchParams(window.location.search); const targetTab = params.get("tab") || "tab-stage"; switchTab(targetTab, true); };</script></body></html>
+<script src="shared_setup.js?v=415260742"></script>
+<script src="live_controller.js?v=415260742"></script>
+<script src="profile_logic.js?v=415260742"></script>
+<script src="ai_architect.js?v=415260742"></script>
+<script src="stage_logic.js?v=415260742"></script>
+<script>window.onload = () => { 
+    console.log("🚀 VJ Manager starting (UI Refreshed)..."); 
+    // All routing and landing logic (redirects, tab switching) 
+    // is now handled by Core Routing in shared_setup.js (v424)
+    // to ensure deterministic behavior across all pages.
+    if (typeof refreshUI === 'function') refreshUI();
+};</script></body></html>

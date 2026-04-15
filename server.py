@@ -49,17 +49,22 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # API: List UserGen Shaders
-        if path == '/api/usergen/list':
+        if path.startswith('/api/usergen/list') or path.startswith('/api/usergen2/list'):
             query = parsed.query
             layer_type = None
             if 'type=' in query:
                 layer_type = query.split('type=')[1].split('&')[0]
-            self._handle_list_shaders(layer_type)
+            self._handle_list_shaders(layer_type, is_sandbox=path.startswith('/api/usergen2'))
             return
 
         # API: List Fixtures
         if path == '/api/fixtures':
             self._handle_list_fixtures()
+            return
+
+        # API: List Images
+        if path == '/api/images/list':
+            self._handle_list_images()
             return
 
         # API: Get Specific Fixture or Stage Config
@@ -114,8 +119,13 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path.rstrip('/')
         
         # API: Save UserGen Shader
-        if path == '/api/usergen/save':
-            self._handle_save_shader()
+        if path.startswith('/api/usergen/save') or path.startswith('/api/usergen2/save'):
+            self._handle_save_shader(is_sandbox=path.startswith('/api/usergen2'))
+            return
+
+        # API: Save Image
+        if path == '/api/images/save':
+            self._handle_save_image()
             return
 
         # NEW: Add Premade Descriptor
@@ -129,8 +139,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # API: Rename UserGen Shader (Metadata prompt)
-        if path == '/api/usergen/rename':
-            self._handle_rename_shader()
+        if path.startswith('/api/usergen/rename') or path.startswith('/api/usergen2/rename'):
+            self._handle_rename_shader(is_sandbox=path.startswith('/api/usergen2'))
             return
 
         # API: Proxy Engine Restart
@@ -151,6 +161,11 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
     def do_DELETE(self):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip('/')
+        
+        # API: Delete Image
+        if path == '/api/images/delete':
+            self._handle_delete_image(parsed.query)
+            return
         
         # API: Soft Delete Fixture/Profile
         if path.startswith('/api/fixtures/'):
@@ -185,7 +200,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # API: Delete UserGen Shader (Existing Logic)
-        if path == '/api/usergen/delete':
+        if path.startswith('/api/usergen/delete') or path.startswith('/api/usergen2/delete'):
+            is_sandbox = path.startswith('/api/usergen2')
             from urllib.parse import parse_qs, unquote
             qs = parse_qs(parsed.query)
             fname = qs.get('file', [None])[0]
@@ -194,7 +210,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(400, "Invalid filename")
                 return
 
-            lib_root = os.path.join(BASE_DIR, 'library')
+            lib_root = os.path.join(BASE_DIR, 'library2' if is_sandbox else 'library')
             fpath = os.path.join(lib_root, fname)
             
             if os.path.exists(fpath):
@@ -296,9 +312,9 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, str(e))
 
 
-    def _handle_list_shaders(self, filter_type=None):
+    def _handle_list_shaders(self, filter_type=None, is_sandbox=False):
         """List all .frag files in library/ (recursive)"""
-        lib_root = os.path.join(BASE_DIR, 'library')
+        lib_root = os.path.join(BASE_DIR, 'library2' if is_sandbox else 'library')
         try:
             if not os.path.exists(lib_root):
                 os.makedirs(lib_root)
@@ -354,7 +370,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             print(f"❌ Error listing shaders: {e}")
             self.send_error(500, str(e))
 
-    def _handle_save_shader(self):
+    def _handle_save_shader(self, is_sandbox=False):
         """Save a shader .frag file to library/"""
         length = int(self.headers['Content-Length'])
         body = self.rfile.read(length)
@@ -372,7 +388,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(400, "Missing code")
                 return
 
-            lib_root = os.path.join(BASE_DIR, 'library')
+            lib_root = os.path.join(BASE_DIR, 'library2' if is_sandbox else 'library')
             target_dir = os.path.join(lib_root, layer_type)
             if not os.path.exists(target_dir):
                 os.makedirs(target_dir)
@@ -397,7 +413,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             print(f"❌ Error saving shader: {e}")
             self.send_error(500, str(e))
 
-    def _handle_rename_shader(self):
+    def _handle_rename_shader(self, is_sandbox=False):
         """Update the prompt (label) of a shader in its metadata file"""
         length = int(self.headers['Content-Length'])
         body = self.rfile.read(length)
@@ -411,24 +427,111 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(400, "Invalid input")
                 return
 
-            lib_root = os.path.join(BASE_DIR, 'library')
+            lib_root = os.path.join(BASE_DIR, 'library2' if is_sandbox else 'library')
             meta_path = os.path.join(lib_root, fname + ".json")
             
+            meta = {}
             if os.path.exists(meta_path):
-                with open(meta_path, 'r') as f:
-                    meta = json.load(f)
-                
-                meta['prompt'] = new_prompt
-                
-                with open(meta_path, 'w') as f:
-                    json.dump(meta, f)
-                
-                print(f"📝 Renamed UserGen Shader: {fname} -> {new_prompt}")
-                self._send_json({"status": "ok"})
-            else:
-                self.send_error(404, "Metadata not found")
+                try:
+                    with open(meta_path, 'r') as f:
+                        meta = json.load(f)
+                except Exception as e:
+                    print(f"⚠️ Error reading existing meta for {fname}: {e}")
+            
+            meta['prompt'] = new_prompt
+            # If it's a new meta, we might want to infer type from path
+            if 'type' not in meta:
+                meta['type'] = 'fx' if '/fx' in fname else 'base'
+            
+            with open(meta_path, 'w') as f:
+                json.dump(meta, f)
+            
+            print(f"📝 Renamed Shader: {fname} -> {new_prompt}")
+            self._send_json({"status": "ok"})
         except Exception as e:
+            print(f"❌ Error renaming shader: {e}")
             self.send_error(500, str(e))
+
+    def _handle_list_images(self):
+        """List all saved image files in library/images/"""
+        img_root = os.path.join(BASE_DIR, 'library', 'images')
+        try:
+            if not os.path.exists(img_root):
+                os.makedirs(img_root)
+            results = []
+            for f in os.listdir(img_root):
+                if f.endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    fpath = os.path.join(img_root, f)
+                    results.append({
+                        "file": f"library/images/{f}",
+                        "name": f,
+                        "mtime": os.path.getmtime(fpath)
+                    })
+            results.sort(key=lambda x: x['mtime'], reverse=True)
+            self._send_json(results)
+        except Exception as e:
+            print(f"❌ Error listing images: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_save_image(self):
+        """Save a base64 encoded image to library/images/"""
+        length = int(self.headers['Content-Length'])
+        body = self.rfile.read(length)
+        import base64
+        import time
+        try:
+            data = json.loads(body)
+            b64_data = data.get('image')
+            
+            if not b64_data or ',' not in b64_data:
+                self.send_error(400, "Invalid base64 image data")
+                return
+
+            header, encoded = b64_data.split(",", 1)
+            ext = 'png'
+            if 'jpeg' in header or 'jpg' in header: ext = 'jpg'
+            elif 'webp' in header: ext = 'webp'
+
+            img_bytes = base64.b64decode(encoded)
+            img_root = os.path.join(BASE_DIR, 'library', 'images')
+            if not os.path.exists(img_root):
+                os.makedirs(img_root)
+
+            ts = int(time.time() * 1000)
+            fname = f"vj_image_{ts}.{ext}"
+            fpath = os.path.join(img_root, fname)
+
+            with open(fpath, "wb") as f:
+                f.write(img_bytes)
+
+            print(f"📸 Saved Image Texture: {fname} ({len(img_bytes)} bytes)")
+            self._send_json({"status": "ok", "file": f"library/images/{fname}", "name": fname})
+        except Exception as e:
+            print(f"❌ Error saving image: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_delete_image(self, query_string):
+        """Delete an image from library/images/"""
+        from urllib.parse import parse_qs
+        qs = parse_qs(query_string)
+        fname = qs.get('file', [None])[0]
+        
+        if not fname or '..' in fname or '/' in fname:
+            self.send_error(400, "Invalid filename")
+            return
+
+        img_root = os.path.join(BASE_DIR, 'library', 'images')
+        fpath = os.path.join(img_root, fname)
+        
+        if os.path.exists(fpath):
+            try:
+                os.remove(fpath)
+                print(f"🗑️ Deleted Image: {fname}")
+                self._send_json({"status": "ok"})
+            except Exception as e:
+                self.send_error(500, str(e))
+        else:
+            self.send_error(404, f"File not found: {fname}")
 
     def _proxy_to_camera(self, subpath):
         """Proxy a request to the camera service on 8004"""

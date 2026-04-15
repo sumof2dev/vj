@@ -477,6 +477,23 @@ function removeProfileChannel(chIdx) {
 }
 
 
+async function duplicateProfileById(id) {
+    const original = db.profiles.find(p => p.id === id);
+    if (!original) return;
+
+    const copy = JSON.parse(JSON.stringify(original));
+    copy.id = 'prof_' + Date.now();
+    copy.name = (copy.name || "Unnamed Profile") + " (Copy)";
+    
+    // Ensure we don't accidentally copy the filename reference which would overwrite the original
+    delete copy._fileName;
+
+    db.profiles.push(copy);
+    saveDB();
+    await window.saveProfileToServer(copy);
+    refreshUI();
+}
+
 function duplicateProfile() {
     activeProfileId = null;
     const nameField = document.getElementById('prof-name');
@@ -637,10 +654,11 @@ function editProfile(id) {
 
     document.getElementById('prof-name').value = prof.name;
     
-    // Set collapsed state FIRST (Start expanded so users can see rules)
+    // Set collapsed state FIRST (Start collapsed as requested)
     collapsedChannels = new Set();
-    // const mappingsCount = (prof.mappings || []).length;
-    // for(let i=0; i < mappingsCount; i++) collapsedChannels.add(i);
+    if (prof.mappings) {
+        prof.mappings.forEach((_, i) => collapsedChannels.add(i));
+    }
 
     currentProfileMappings = JSON.parse(JSON.stringify(prof.mappings));
 
@@ -662,7 +680,12 @@ async function deleteProfile(id) {
     const prof = db.profiles.find(p => p.id === id);
     if (prof && prof._fileName) {
         console.log(`🗑️ Deleting server file: ${prof._fileName}`);
-        await fetch(`${API_BASE_ROOT}/api/fixtures/${prof._fileName}`, { method: 'DELETE' });
+        try {
+            const res = await fetch(`${API_BASE_ROOT}/api/fixtures/${prof._fileName}`, { method: 'DELETE' });
+            if (!res.ok) console.warn("⚠️ Server file deletion returned an error, but proceeding with local removal.");
+        } catch (e) {
+            console.error("❌ Failed to delete server file:", e);
+        }
     }
 
     db.profiles = db.profiles.filter(p => p.id !== id);
@@ -742,29 +765,29 @@ function renderPresetTriggers() {
             `;
         } else if (t.type === 'volume') {
             inputs = `
-                <input type="number" value="${t.greater_than}" style="width:60px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
+                <input type="number" value="${t.greater_than}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
                 <span>&le;</span>
                 <span style="font-weight:bold; color:#ccc;">VOL</span>
                 <span>&le;</span>
-                <input type="number" value="${t.less_than}" style="width:60px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
+                <input type="number" value="${t.less_than}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
             `;
         } else if (t.type === 'bin') {
             inputs = `
-                <input type="number" value="${t.greater_than}" style="width:60px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
+                <input type="number" value="${t.greater_than}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
                 <span>&le;</span>
                 <select onchange="updateTriggerVal(${idx}, 'target', this.value)">
                     ${['SUB', 'BASS', 'KICK', 'LOW_MID', 'MID', 'HIGH_MID', 'PRESENCE', 'BRILLIANCE'].map(b => `<option value="${b}" ${t.target === b ? 'selected' : ''}>${b}</option>`).join('')}
                 </select>
                 <span>&le;</span>
-                <input type="number" value="${t.less_than}" style="width:60px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
+                <input type="number" value="${t.less_than}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
             `;
         } else if (t.type === 'channel') {
             inputs = `
-                <input type="number" value="${t.greater_than}" style="width:60px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
+                <input type="number" value="${t.greater_than}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
                 <span>&le;</span>
-                <input type="number" value="${t.target}" style="width:60px;" placeholder="Ch #" onchange="updateTriggerVal(${idx}, 'target', parseInt(this.value))">
+                <input type="number" value="${t.target}" style="width:85px;" placeholder="Ch #" onchange="updateTriggerVal(${idx}, 'target', parseInt(this.value))">
                 <span>&le;</span>
-                <input type="number" value="${t.less_than}" style="width:60px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
+                <input type="number" value="${t.less_than}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
             `;
         } else if (t.type === 'manual') {
             inputs = 'Manual Activation Only';
@@ -825,9 +848,9 @@ function renderPresetOverrides() {
                     <!-- Channel-specific settings for this override -->
                     <div style="display:flex; gap:10px; align-items:center;">
                         <label style="font-size:0.8rem;">Value Override:</label>
-                        <input type="number" min="0" max="255" value="${ov.value || 0}" onchange="updateOverrideVal(${ovIdx}, this.value)" style="width:70px;">
+                        <input type="number" min="0" max="255" value="${ov.value || 0}" onchange="updateOverrideVal(${ovIdx}, this.value)" style="width:85px;">
                         <label style="font-size:0.8rem;">Smoothing:</label>
-                        <input type="number" min="0" max="1" step="0.1" value="${ov.smoothing || 0}" onchange="updateOverrideSmooth(${ovIdx}, this.value)" style="width:70px;">
+                        <input type="number" min="0" max="1" step="0.1" value="${ov.smoothing || 0}" onchange="updateOverrideSmooth(${ovIdx}, this.value)" style="width:85px;">
                     </div>
                 </div>
             </div>
@@ -876,35 +899,53 @@ function resetPresetForm() {
 function renderProfileList() {
     const activeProfList = document.getElementById('active-profiles-list');
     if (activeProfList) {
-const stageInstances = db.stage || [];
-const uniqueProfs = [];
-const seenIds = new Set();
-stageInstances.forEach(inst => {
-    if (inst.profileId && !seenIds.has(inst.profileId)) {
-        const prof = (db.profiles || []).find(p => p.id === inst.profileId);
-        if (prof) {
-            uniqueProfs.push(prof);
-            seenIds.add(inst.profileId);
-        }
-    }
-});
-activeProfList.innerHTML = uniqueProfs.map(p => `
-    <div class="item-row" onclick="editProfile('${p.id}')" style="cursor:pointer">
-        <div style="flex:1;">
-            <b>${p.name}</b>
-            <div style="font-size:10px; color:var(--accent);">In Use on Stage | ${p.channels?.length || 0} Channels</div>
-        </div>
-    </div>`).join('') || '<div style="padding:10px; color:#666;">No behaviors currently active on stage.</div>';
+        const stageInstances = db.stage || [];
+        const uniqueProfs = [];
+        const seenIds = new Set();
+        stageInstances.forEach(inst => {
+            if (inst.profileId && !seenIds.has(inst.profileId)) {
+                const prof = (db.profiles || []).find(p => p.id === inst.profileId);
+                if (prof) {
+                    uniqueProfs.push(prof);
+                    seenIds.add(inst.profileId);
+                }
+            }
+        });
+        activeProfList.innerHTML = uniqueProfs.map(p => `
+            <div class="item-row" style="cursor:pointer; display:flex; flex-direction:column; align-items:stretch; gap:8px; padding:12px 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-weight:700; font-size:1rem; color:#fff;" onclick="editProfile('${p.id}')">${p.name}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;" onclick="editProfile('${p.id}')">
+                    <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+                    <div class="channel-count">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        ${p.channels?.length || 0} Channels
+                    </div>
+                </div>
+            </div>`).join('') || '<div style="padding:10px; color:#666; font-size:13px;">No behaviors currently active on stage.</div>';
     }
 
     const savedProfList = document.getElementById('saved-profiles-list');
     if (savedProfList) {
-const uniqueAllProfs = getUniqueProfiles();
-savedProfList.innerHTML = uniqueAllProfs.map(p => `
-    <div class="item-row" onclick="editProfile('${p.id}')" style="cursor:pointer">
-        <span>${p.name}</span>
-        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
-    </div>`).join('') || '<div style="padding:10px; color:#666;">No profiles yet.</div>';
+        const uniqueAllProfs = getUniqueProfiles();
+        savedProfList.innerHTML = uniqueAllProfs.map(p => `
+            <div class="item-row" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
+                <div style="display:flex; align-items:center; gap:10px;" onclick="editProfile('${p.id}')">
+                    <div style="width:8px; height:8px; border-radius:50%; background:var(--accent); opacity:0.5;"></div>
+                    <span style="font-weight:600; font-size:13px;">${p.name}</span>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn btn-danger btn-sm" style="opacity:0; transition:opacity 0.2s; padding:2px 8px; font-size:9px;" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
+                </div>
+            </div>`).join('') || '<div style="padding:10px; color:#666; font-size:13px;">No profiles yet.</div>';
+        
+        // Add hover effect to show delete button
+        const rows = savedProfList.querySelectorAll('.item-row');
+        rows.forEach(row => {
+            row.addEventListener('mouseenter', () => { if(row.querySelector('.btn-danger')) row.querySelector('.btn-danger').style.opacity = '1'; });
+            row.addEventListener('mouseleave', () => { if(row.querySelector('.btn-danger')) row.querySelector('.btn-danger').style.opacity = '0'; });
+        });
     }
 }
 
@@ -928,6 +969,8 @@ window.renderProfileList = renderProfileList;
 window.editProfile = editProfile;
 window.loadProfileChannels = loadProfileChannels;
 window.saveProfile = saveProfile;
+window.addProfileChannel = addProfileChannel;
+window.duplicateProfileById = duplicateProfileById;
 window.removeProfileChannel = removeProfileChannel;
 window.addProfileChannel = addProfileChannel;
 window.updateProfileMapping = updateProfileMapping;

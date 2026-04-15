@@ -129,7 +129,7 @@ var BACKEND_ROOT = window.isCustomSubdomain ? (PROTO + '//' + baseHost) : (windo
 window.API_BASE_ROOT = API_BASE_ROOT;
 window.BACKEND_ROOT = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "412261449";
+window.APP_VERSION = "415260742";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -145,6 +145,20 @@ try {
 }
 if (!window.db.liveConsole) window.db.liveConsole = [];
 if (!window.db.savedConsoles) window.db.savedConsoles = [];
+
+// --- 2.5 CROSS-TAB SYNCHRONIZATION ---
+window.addEventListener('storage', (event) => {
+    if (event.key === 'ravebox_v2_db' && event.newValue) {
+        try {
+            const freshDB = JSON.parse(event.newValue);
+            Object.assign(window.db, freshDB);
+            console.log("🔄 Database updated from another tab.");
+            if (typeof refreshUI === 'function') refreshUI();
+        } catch (e) {
+            console.error("Failed to sync DB from storage event:", e);
+        }
+    }
+});
 
 // Shared Persistence
 var saveDB = window.saveDB = function() {
@@ -267,6 +281,10 @@ var switchTab = window.switchTab = function(tabId, noHistory = false) {
     if (tabId === 'tab-live') { if (typeof loadLiveConfig === 'function') loadLiveConfig(); if (typeof renderLiveTab === 'function') renderLiveTab(); }
     if (tabId === 'tab-test') { if (typeof renderTestTab === 'function') renderTestTab(); }
 
+    // Persist for state-aware components
+    localStorage.setItem('vj_active_tab', tabId);
+    window.currentTab = tabId;
+
     if (!noHistory) {
         const url = new URL(window.location);
         url.searchParams.set('tab', tabId.replace('tab-', ''));
@@ -331,4 +349,59 @@ var sendIt = window.sendIt = async function(event) {
 
 // --- BOOT COMPLETE ---
 window.RAVEBOX_READY = true;
-console.log("✅ RaveBox Core Ready (v420)");
+console.log("✅ RaveBox Core Ready (v421)");
+
+// --- HOOKS & EXPORTS ---
+window.RAVEBOX_READY = true;
+console.log("✅ RaveBox Core Ready (v424)");
+
+// --- CORE ROUTING (BULLETPROOF) ---
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    const profileId = urlParams.get('id');
+    const path = window.location.pathname;
+    const isSetup = path.includes('setup.html');
+    const isProfile = path.includes('profile.html');
+
+    const initializeRouting = () => {
+        if (isSetup) {
+            // Priority 1: Direct Redirect if no tab or explicit profile tab
+            if (!tabParam || tabParam === 'profiles' || tabParam === 'profile') {
+                window.location.href = 'profile.html' + (profileId ? '?id=' + profileId : '');
+                return;
+            }
+
+            // Priority 2: Map Parameter to Tab ID
+            let targetTab = null;
+            if (tabParam === 'stage') targetTab = 'tab-stage';
+            else if (tabParam === 'live' || tabParam === 'sim') targetTab = 'tab-live';
+            else if (tabParam === 'presets') targetTab = 'tab-presets';
+            else if (tabParam === 'test') targetTab = 'tab-test';
+            else if (tabParam && tabParam.startsWith('tab-')) targetTab = tabParam;
+
+            // Priority 3: localStorage Fallback (Only if valid setup tab)
+            if (!targetTab) {
+                targetTab = localStorage.getItem('vj_active_tab') || 'tab-stage';
+            }
+
+            // Priority 4: Final Validation and Trigger
+            if (typeof window.switchTab === 'function') {
+                // Ensure switchTab runs AFTER a tiny stabilization pause (Avoids race with render logic)
+                setTimeout(() => {
+                    window.currentTab = targetTab;
+                    window.switchTab(targetTab, true);
+                }, 50);
+            }
+        } else if (isProfile && profileId) {
+            if (typeof editProfile === 'function') editProfile(profileId);
+        }
+    };
+
+    // Trigger on DOM ready OR immediate if parsed
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        initializeRouting();
+    } else {
+        window.addEventListener('DOMContentLoaded', initializeRouting);
+    }
+})();

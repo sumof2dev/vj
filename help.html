@@ -1480,14 +1480,18 @@ dtoverlay=hifiberry-dacplus</pre>
                 return parseInt(rule.value || 0);
             } else if (['sine', 'saw', 'square', 'triangle', 'lfo_sine', 'lfo_saw', 'lfo_square', 'lfo_triangle'].includes(behavior)) {
                 // NEW STANDARD: Volume modulates Frequency, Driver modulates Amplitude
+                // RHYTHMIC SYNC: If source is 'beat' or 'bar', lock phase to the driver
                 const vol_driver = (latestAudioState.vol || 0.1);
                 
-                // Base speed of 0.1Hz when silent
-                const f_base = speed * 1.0;
-                const freq = (f_base * 0.1) + (vol_driver * 5.0);
-                
-                labState.phase = (labState.phase + dt * freq) % 1.0;
-                const p = labState.phase;
+                let p;
+                if (source === 'beat' || source === 'bar') {
+                    p = E_eff; // Rhythmic phase lock
+                } else {
+                    const f_base = speed * 1.0;
+                    const freq = (f_base * 0.1) + (vol_driver * 5.0);
+                    labState.phase = (labState.phase + dt * freq) % 1.0;
+                    p = labState.phase;
+                }
 
                 // Amplitude determined by driver (E_eff) multiplied by reactivity
                 const amp = E_eff * react;
@@ -1515,7 +1519,13 @@ dtoverlay=hifiberry-dacplus</pre>
                 y = (perlin1d(labState.t) * 2.0) - 1.0;
             } else if (['step', 'forward'].includes(behavior)) {
                 const rate = speed * 4.0;
-                labState.phase += dt * rate * (1.0 + E_eff * 2.0);
+                
+                if (source === 'beat' || source === 'bar') {
+                    labState.phase = E_eff; // Step on each beat cycle
+                } else {
+                    labState.phase += dt * rate * (1.0 + E_eff * 2.0);
+                }
+
                 if (labState.phase >= 1.0) {
                     labState.phase = 0.0;
                     labState.step = (labState.step + 1) % 4;

@@ -153,24 +153,37 @@ var switchTab = window.switchTab || function() { };
                 const profName = profile ? profile.name : (s.profileName || 'Unknown Profile');
                 const profOptions = uniqueAllProfs.map(p => `<option value="${p.id}" ${p.id === s.profileId ? 'selected' : ''}>${p.name}</option>`).join('');
 
-                return `<div class="item-row" onclick="goToProfile('${s.profileId}')" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
-                    <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); height:32px; flex-shrink:0;" onclick="event.stopPropagation()">
-                        <span style="color:#666; font-size:9px; font-weight:bold; margin-right:4px;">A</span>
-                        <input type="number" value="${s.address}" min="1" max="512" style="width:38px; background:none; border:none; color:white; font-weight:900; font-size:13px; padding:0; outline:none; text-align:center;" onchange="updateInstanceAddress('${s.id}', parseInt(this.value))">
-                        <span style="color:#444; margin:0 4px;">|</span>
-                        <input type="number" value="${s.offset || 0}" min="0" max="512" style="width:28px; background:none; border:none; color:var(--accent); font-weight:600; font-size:12px; padding:0; outline:none; text-align:center;" onchange="updateInstanceOffset('${s.id}', parseInt(this.value))">
+                return `<div class="item-row" onclick="goToProfile('${s.profileId}')" style="cursor:pointer; display:flex; flex-direction:column; align-items:stretch; gap:12px; padding:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:1.1rem; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${profName}">${profName}</div>
+                            <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
+                                <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+                                <div class="channel-count">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                    ${profile ? (profile.channels || []).length : 0} Channels
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" style="width:24px; height:24px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; min-width:24px; flex-shrink:0; opacity:0.6;" onclick="event.stopPropagation(); deleteStageInstance('${s.id}')" title="Delete">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
                     </div>
-                    <div style="flex:1; min-width:0; overflow:hidden; display:flex; flex-direction:column;" onclick="event.stopPropagation()">
-                        <span style="font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${profName}">${profName}</span>
-                        <input type="text" value="${s.id}" style="font-size:10px; color:#aaa; background:transparent; border:none; border-bottom:1px dashed #444; width:100%; margin:1px 0; outline:none; padding:1px; cursor:text;" onchange="updateInstanceId('${s.id}', this.value)" title="Instance ID (Editable)">
-                        <input type="text" value="${s.zone}" list="zone-options" style="color:var(--text-dim); font-size:9px; background:transparent; border:none; outline:none; cursor:text; padding:0; height:auto; line-height:1;" onchange="updateInstanceZone('${s.id}', this.value)" title="Zone (Editable)">
+
+                    <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);" onclick="event.stopPropagation()">
+                         <div style="display:flex; align-items:center; gap:4px;">
+                            <span style="color:#666; font-size:9px; font-weight:bold;">ADDR</span>
+                            <input type="number" value="${s.address}" min="1" max="512" style="width:42px; background:none; border:none; color:white; font-weight:900; font-size:14px; padding:0; outline:none; text-align:center;" onchange="updateInstanceAddress('${s.id}', parseInt(this.value))">
+                         </div>
+                         <div style="color:#444; margin:0 4px;">|</div>
+                         <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+                             <input type="text" value="${s.id}" style="font-size:11px; color:#fff; font-weight:600; background:transparent; border:none; width:100%; outline:none; padding:0;" onchange="updateInstanceId('${s.id}', this.value)" title="Instance ID">
+                             <input type="text" value="${s.zone}" list="zone-options" style="color:var(--accent-alt); font-size:9px; font-weight:bold; background:transparent; border:none; outline:none; padding:0; height:auto; line-height:1; text-transform:uppercase;" onchange="updateInstanceZone('${s.id}', this.value)" title="Zone (Editable)">
+                         </div>
+                         <select class="btn-sm" style="width:90px; background:#222; border:1px solid #444; border-radius:6px; color:#fff; font-size:10px; height:28px; padding:0 4px;" onchange="updateInstanceProfile('${s.id}', this.value)">
+                            ${profOptions}
+                         </select>
                     </div>
-                    <select class="btn-sm" style="width:85px; background:#222; border:1px solid #444; border-radius:6px; color:#fff; font-size:10px; height:28px; padding:0 4px; flex-shrink:0;" onclick="event.stopPropagation()" onchange="updateInstanceProfile('${s.id}', this.value)">
-                        ${profOptions}
-                    </select>
-                    <button class="btn btn-danger btn-sm" style="width:28px; height:28px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; min-width:28px; flex-shrink:0;" onclick="event.stopPropagation(); deleteStageInstance('${s.id}')" title="Delete">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
                 </div>`;
             }).join('') || '<div style="padding:10px; color:#666;">No behaviors currently active on stage.</div>';
 
@@ -702,11 +715,17 @@ var switchTab = window.switchTab || function() { };
                         if (msg.vibe) latestAudioState.vibe = msg.vibe;
                         if (msg.transient) latestAudioState.transient = msg.transient;
                         if (msg.overrides) latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
-                        if (msg.active_presets) activePresets = msg.active_presets;
+                        if (msg.active_presets) {
+                            activePresets = msg.active_presets;
+                            latestAudioState.manual_active_presets = msg.active_presets;
+                        }
                         if (msg.lissajous_active !== undefined) latestAudioState.lissajous_active = msg.lissajous_active;
                         if (msg.calibrated_preset_active !== undefined) latestAudioState.calibrated_preset_active = msg.calibrated_preset_active;
-                        if (document.getElementById('tab-test').classList.contains('active')) {
+                        if (document.getElementById('tab-test')?.classList.contains('active')) {
                             updateTestNumericalValues();
+                        }
+                        if (msg.active_presets && document.getElementById('tab-live')?.classList.contains('active')) {
+                            if (typeof renderLiveTab === 'function') renderLiveTab();
                         }
                     } else if (msg.type === 'audio') {
                         // SYNC FROM BACKEND (Throttled/Batched JSON)
@@ -1221,6 +1240,10 @@ var switchTab = window.switchTab || function() { };
                     const fileList = await resList.json();
 
                     if (fileList && Array.isArray(fileList)) {
+                        // Keep track of which profiles we found on the server
+                        const serverProfileIds = new Set();
+                        const serverFileNames = new Set(fileList);
+
                         for (const fileName of fileList) {
                             try {
                                 const resFile = await fetch(`${root}/api/fixtures/${fileName}`);
@@ -1229,8 +1252,10 @@ var switchTab = window.switchTab || function() { };
 
                                 if (fileName.startsWith('profiles/')) {
                                     data._fileName = fileName;
+                                    // Overwrite or add
                                     db.profiles = db.profiles.filter(p => p.id !== data.id && p._fileName !== fileName);
                                     db.profiles.push(data);
+                                    serverProfileIds.add(data.id);
                                 } else if (fileName.includes('stage_config.json')) {
                                     db.stage = data;
                                 } else if (fileName.includes('presets.json')) {
@@ -1240,6 +1265,19 @@ var switchTab = window.switchTab || function() { };
                                 console.error(`Error loading ${fileName}:`, err);
                             }
                         }
+
+                        // PRUNE GHOSTS: Remove profiles from memory that HAVE a _fileName but weren't found in serverFileNames
+                        // OR profiles that match IDs we expect to be on the server but weren't present.
+                        const originalCount = db.profiles.length;
+                        db.profiles = db.profiles.filter(p => {
+                            if (!p._fileName) return true; // Keep local-only unsaved stuff
+                            return serverFileNames.has(p._fileName);
+                        });
+
+                        if (db.profiles.length !== originalCount) {
+                            console.log(`🧹 Pruned ${originalCount - db.profiles.length} ghost profiles not found on server.`);
+                        }
+
                         saveDB();
                     }
                 }
@@ -1255,26 +1293,8 @@ var switchTab = window.switchTab || function() { };
                 }
             });
 
-            // URL Tab Handling
-            const urlParams = new URLSearchParams(window.location.search);
-            const tab = urlParams.get('tab');
-            const profileId = urlParams.get('id');
-            if (tab === 'profiles' || tab === 'profile') {
-                window.location.href = 'profile.html' + (profileId ? '?id=' + profileId : '');
-                if (profileId) editProfile(profileId);
-            }
-            else if (tab === 'fixtures' || tab === 'fixture') switchTab('tab-fixture');
-            else if (tab === 'stage') switchTab('tab-stage');
-            else if (tab === 'sim') switchTab('tab-sim');
-            else if (tab === 'presets') switchTab('tab-presets');
-            else if (tab === 'test') switchTab('tab-test');
-            else {
-                // FALLBACK: use tab-test or tab-presets as default if no tab selected
-                const defaultTab = 'tab-test';
-                switchTab(defaultTab, true);
-            }
         }
-
+        
         // Swipe Gestures
         let touchStartX = 0, touchStartY = 0;
         document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; }, { passive: true });

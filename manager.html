@@ -565,7 +565,8 @@
 <body>
 
     <div class="container">
-        <h1>RaveBox <a href="setup.html?tab=live&view=console" style="color: inherit; text-decoration: none;">Control</a></h1>
+        <h1>RaveBox <a href="setup.html?tab=live&view=console"
+                style="color: inherit; text-decoration: none;">Control</a></h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
@@ -839,7 +840,7 @@
 
         async function doAction(action) {
             if (!LAUNCHER_API) {
-                alert("Enter the code, yo!");
+                alert("Enter the code!");
                 return;
             }
             const loader = document.getElementById('loader');
@@ -847,7 +848,7 @@
             const originalText = btn.innerText;
 
             btn.classList.add('loading');
-            btn.innerText = action === 'start' ? "49260014" : "RAVEBOX NAVIGATION SYS INITIATE";
+            btn.innerText = action === 'start' ? "49260014" : "RAVEBOX Shutdown Sequence Initiated";
 
             try {
                 const res = await fetch(`${LAUNCHER_API}/${action}`);
