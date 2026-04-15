@@ -109,7 +109,7 @@ class VibeEngine:
         self.energy_history.append(energy)
         
         # Suppress transient detection until history is warm (~3s).
-        if self._history_frame >= 180 and len(self.energy_history) >= 180 and len(self.impact_history) >= 90:
+        if self._history_frame >= 60 and len(self.energy_history) >= 60 and len(self.impact_history) >= 60:
             # Windowed Trend: Compare recent 30-frame average to a 30-frame block from ~2s ago
             # This is MUCH more stable than single-frame comparisons.
             recent_energy = float(sum(list(self.energy_history)[-30:]) / 30.0)

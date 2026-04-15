@@ -738,58 +738,64 @@ function renderPresetTriggers() {
     const container = document.getElementById('pres-active-triggers');
     container.innerHTML = currentPresetTriggers.map((t, idx) => {
         let inputs = '';
-        if (t.type === 'vibe') {
+        const type = t.type || 'manual';
+        const val = t.value || '';
+        const target = t.target || '';
+        const gt = t.greater_than ?? 0;
+        const lt = t.less_than ?? 100;
+
+        if (type === 'vibe') {
             inputs = `
                 <select onchange="updateTriggerVal(${idx}, 'value', this.value)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); color:var(--accent-alt); font-weight:bold;">
-                    <option value="chill" ${t.value === 'chill' ? 'selected' : ''}>Chill</option>
-                    <option value="chill 1" ${t.value === 'chill 1' ? 'selected' : ''}>Chill 1</option>
-                    <option value="chill 2" ${t.value === 'chill 2' ? 'selected' : ''}>Chill 2</option>
-                    <option value="chill 3" ${t.value === 'chill 3' ? 'selected' : ''}>Chill 3</option>
-                    <option value="mid" ${t.value === 'mid' ? 'selected' : ''}>Mid</option>
-                    <option value="mid 1" ${t.value === 'mid 1' ? 'selected' : ''}>Mid 1</option>
-                    <option value="mid 2" ${t.value === 'mid 2' ? 'selected' : ''}>Mid 2</option>
-                    <option value="mid 3" ${t.value === 'mid 3' ? 'selected' : ''}>Mid 3</option>
-                    <option value="high" ${t.value === 'high' ? 'selected' : ''}>High</option>
-                    <option value="high 1" ${t.value === 'high 1' ? 'selected' : ''}>High 1</option>
-                    <option value="high 2" ${t.value === 'high 2' ? 'selected' : ''}>High 2</option>
-                    <option value="high 3" ${t.value === 'high 3' ? 'selected' : ''}>High 3</option>
+                    <option value="chill" ${val === 'chill' ? 'selected' : ''}>Chill</option>
+                    <option value="chill 1" ${val === 'chill 1' ? 'selected' : ''}>Chill 1</option>
+                    <option value="chill 2" ${val === 'chill 2' ? 'selected' : ''}>Chill 2</option>
+                    <option value="chill 3" ${val === 'chill 3' ? 'selected' : ''}>Chill 3</option>
+                    <option value="mid" ${val === 'mid' ? 'selected' : ''}>Mid</option>
+                    <option value="mid 1" ${val === 'mid 1' ? 'selected' : ''}>Mid 1</option>
+                    <option value="mid 2" ${val === 'mid 2' ? 'selected' : ''}>Mid 2</option>
+                    <option value="mid 3" ${val === 'mid 3' ? 'selected' : ''}>Mid 3</option>
+                    <option value="high" ${val === 'high' ? 'selected' : ''}>High</option>
+                    <option value="high 1" ${val === 'high 1' ? 'selected' : ''}>High 1</option>
+                    <option value="high 2" ${val === 'high 2' ? 'selected' : ''}>High 2</option>
+                    <option value="high 3" ${val === 'high 3' ? 'selected' : ''}>High 3</option>
                 </select>
             `;
-        } else if (t.type === 'state') {
+        } else if (type === 'state') {
             inputs = `
                 <select onchange="updateTriggerVal(${idx}, 'value', this.value)">
-                    <option value="building" ${t.value === 'building' ? 'selected' : ''}>Building</option>
-                    <option value="tension" ${t.value === 'tension' ? 'selected' : ''}>Tension</option>
-                    <option value="dropping" ${t.value === 'dropping' ? 'selected' : ''}>Dropping</option>
+                    <option value="building" ${val === 'building' ? 'selected' : ''}>Building</option>
+                    <option value="tension" ${val === 'tension' ? 'selected' : ''}>Tension</option>
+                    <option value="dropping" ${val === 'dropping' ? 'selected' : ''}>Dropping</option>
                 </select>
             `;
-        } else if (t.type === 'volume') {
+        } else if (type === 'volume') {
             inputs = `
-                <input type="number" value="${t.greater_than}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
+                <input type="number" value="${gt}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
                 <span>&le;</span>
                 <span style="font-weight:bold; color:#ccc;">VOL</span>
                 <span>&le;</span>
-                <input type="number" value="${t.less_than}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
+                <input type="number" value="${lt}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
             `;
-        } else if (t.type === 'bin') {
+        } else if (type === 'bin') {
             inputs = `
-                <input type="number" value="${t.greater_than}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
+                <input type="number" value="${gt}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
                 <span>&le;</span>
                 <select onchange="updateTriggerVal(${idx}, 'target', this.value)">
-                    ${['SUB', 'BASS', 'KICK', 'LOW_MID', 'MID', 'HIGH_MID', 'PRESENCE', 'BRILLIANCE'].map(b => `<option value="${b}" ${t.target === b ? 'selected' : ''}>${b}</option>`).join('')}
+                    ${['SUB', 'BASS', 'KICK', 'LOW_MID', 'MID', 'HIGH_MID', 'PRESENCE', 'BRILLIANCE'].map(b => `<option value="${b}" ${target === b ? 'selected' : ''}>${b}</option>`).join('')}
                 </select>
                 <span>&le;</span>
-                <input type="number" value="${t.less_than}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
+                <input type="number" value="${lt}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
             `;
-        } else if (t.type === 'channel') {
+        } else if (type === 'channel') {
             inputs = `
-                <input type="number" value="${t.greater_than}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
+                <input type="number" value="${gt}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
                 <span>&le;</span>
-                <input type="number" value="${t.target}" style="width:85px;" placeholder="Ch #" onchange="updateTriggerVal(${idx}, 'target', parseInt(this.value))">
+                <input type="number" value="${target}" style="width:85px;" placeholder="Ch #" onchange="updateTriggerVal(${idx}, 'target', parseInt(this.value))">
                 <span>&le;</span>
-                <input type="number" value="${t.less_than}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
+                <input type="number" value="${lt}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
             `;
-        } else if (t.type === 'manual') {
+        } else if (type === 'manual') {
             inputs = 'Manual Activation Only';
         }
 

@@ -198,33 +198,24 @@ Output: Valid raw JSON object only.
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: systemPrompt }] }]
+                        contents: [{ parts: [{ text: systemPrompt }] }],
+                        generationConfig: { responseMimeType: "application/json" }
                     })
                 });
 
                 const data = await response.json();
                 if (data.error) throw new Error(data.error.message);
 
-                const responseText = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/^```json|```$/g, "").trim();
+                const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
                 let aiResult = null;
                 try {
-                    aiResult = JSON.parse(responseText);
+                    aiResult = JSON.parse(responseText.replace(/^```json|```$/g, "").trim());
                 } catch (e) {
-                    // Try stripping any wrapping text
-                    const match = responseText.match(/\{.*\}/s);
-                    if (match) aiResult = JSON.parse(match[0]);
+                    throw new Error("AI returned invalid JSON: " + e.message);
                 }
-
-                if (!aiResult) throw new Error("AI returned invalid JSON.");
 
                 let newMappings = aiResult.mappings || aiResult;
                 const logicLog = aiResult.logic_explanation || "";
-
-                if (!Array.isArray(newMappings)) {
-                    // Fallback search for array
-                    const matchArr = responseText.match(/\[.*\]/s);
-                    if (matchArr) newMappings = JSON.parse(matchArr[0]);
-                }
 
                 if (!Array.isArray(newMappings)) throw new Error("AI returned invalid mapping format (expected array).");
 
@@ -255,15 +246,9 @@ Output: Valid raw JSON object only.
                 if (chatDiffBtn) chatDiffBtn.style.display = 'block';
                 if (chatApplyBtn) chatApplyBtn.style.display = 'block';
 
-                // Auto-sync back to the actual profile object
-                currentProfileMappings = newMappings;
-                if (activeProfileId) {
-                    const existing = db.profiles.find(p => p.id === activeProfileId);
-                    if (existing) {
-                        existing.mappings = JSON.parse(JSON.stringify(currentProfileMappings));
-                        saveDB();
-                    }
-                }
+                // STAGING: Update the live mappings for preview, but DO NOT save to DB yet.
+                window.stagedAiMappings = JSON.parse(JSON.stringify(newMappings));
+                currentProfileMappings = JSON.parse(JSON.stringify(newMappings));
 
                 pendingAiInstructions = {}; // Clear after success
                 loadProfileChannels();
@@ -417,6 +402,8 @@ Output: Valid raw JSON object only.
             const type = cb.dataset.type;
             const checked = cb.checked;
 
+            if (!window.preAiMappings || !window.stagedAiMappings) return;
+
             const rule = currentProfileMappings[chIdx][rIdx];
             if (!rule) return;
 
@@ -424,57 +411,40 @@ Output: Valid raw JSON object only.
                 if (!checked) {
                     rule._is_reverted = true;
                 } else {
-                    delete rule._is_reverted;
+                    rule._is_reverted = false;
                 }
             } else if (type === 'field') {
                 const key = cb.dataset.key;
-                const oldVal = cb.dataset.old;
+                const path = key.split('.');
                 
-                if (!rule._reverted_fields) rule._reverted_fields = new Set();
-                if (!rule._original_values) rule._original_values = {};
-
-                if (!checked) {
-                    // Store current "new" value before reverting if we haven't yet
-                    if (!(key in rule._original_values)) {
-                        const path = key.split('.');
-                        let val = rule;
-                        for(let i=0; i<path.length; i++) {
-                            val = val[path[i]];
-                        }
-                        rule._original_values[key] = val;
-                    }
-                    
-                    // Apply old value
-                    const path = key.split('.');
-                    let target = rule;
-                    for(let i=0; i<path.length-1; i++) {
-                        target = target[path[i]];
-                    }
-                    // Handle numeric values and undefined/null strings
-                    let parsed = oldVal;
-                    if (oldVal === "undefined") parsed = undefined;
-                    else if (oldVal === "null") parsed = null;
-                    else if (!isNaN(oldVal) && oldVal !== "") {
-                        parsed = oldVal.includes('.') ? parseFloat(oldVal) : parseInt(oldVal);
-                    }
-                    target[path[path.length-1]] = parsed;
-                    rule._reverted_fields.add(key);
-                } else {
-                    // Re-apply "new" value
-                    const path = key.split('.');
-                    let target = rule;
-                    for(let i=0; i<path.length-1; i++) {
-                        target = target[path[i]];
-                    }
-                    target[path[path.length-1]] = rule._original_values[key];
-                    rule._reverted_fields.delete(key);
+                // Source of truth for the value
+                const source = checked ? window.stagedAiMappings : window.preAiMappings;
+                
+                // Navigate to the value in the source
+                let newVal = source[chIdx] && source[chIdx][rIdx];
+                for (let i = 0; i < path.length; i++) {
+                    if (newVal === undefined) break;
+                    newVal = newVal[path[i]];
                 }
+
+                // Apply to currentProfileMappings
+                let target = currentProfileMappings[chIdx][rIdx];
+                for (let i = 0; i < path.length - 1; i++) {
+                    if (!target[path[i]]) target[path[i]] = {};
+                    target = target[path[i]];
+                }
+                target[path[path.length - 1]] = newVal;
+
+                // Track rejections
+                if (!rule._reverted_fields) rule._reverted_fields = new Set();
+                if (!checked) rule._reverted_fields.add(key);
+                else rule._reverted_fields.delete(key);
             }
 
             // Visual feedback on the row
             cb.closest('.diff-item').classList.toggle('reverted', !checked);
 
-            // Live Profile refresh
+            // Live Profile refresh (visualizer preview)
             loadProfileChannels();
         }
 
@@ -801,25 +771,24 @@ Output: Valid raw JSON object only.
 
             // Finalize and Sync
             loadProfileChannels();
-            if (activeProfileId) {
-                const existing = db.profiles.find(p => p.id === activeProfileId);
-                if (existing) {
-                    existing.mappings = JSON.parse(JSON.stringify(currentProfileMappings));
-                    saveDB();
-                }
-            }
+            
+            // Sync with staged mappings so the Diff UI works correctly
+            window.stagedAiMappings = JSON.parse(JSON.stringify(currentProfileMappings));
         }
 
         function undoAiTransformation() {
             if (window.preAiMappings) {
+                // Restore original state to both memory and active profile (without saving to DB file)
                 currentProfileMappings = JSON.parse(JSON.stringify(window.preAiMappings));
+                
                 if (activeProfileId) {
                     const existing = db.profiles.find(p => p.id === activeProfileId);
                     if (existing) {
                         existing.mappings = JSON.parse(JSON.stringify(currentProfileMappings));
-                        saveDB();
+                        // DO NOT call saveDB() here - we are undoing a transformation that was never saved
                     }
                 }
+                
                 loadProfileChannels();
                 closeAiDiff();
 
@@ -832,13 +801,14 @@ Output: Valid raw JSON object only.
         function acceptAiTransformation() {
             closeAiDiff();
             
-            // Clean up the reverted rules and metadata
-            currentProfileMappings.forEach((rules, chIdx) => {
-                currentProfileMappings[chIdx] = rules.filter(r => !r._is_reverted);
-                currentProfileMappings[chIdx].forEach(r => {
-                    delete r._reverted_fields;
-                    delete r._original_values;
-                    delete r._is_reverted;
+            // Finalize currentProfileMappings by filtering out reverted rules and cleaning metadata
+            currentProfileMappings = currentProfileMappings.map((rules) => {
+                return rules.filter(r => !r._is_reverted).map(r => {
+                    const cleaned = { ...r };
+                    delete cleaned._reverted_fields;
+                    delete cleaned._original_values;
+                    delete cleaned._is_reverted;
+                    return cleaned;
                 });
             });
 
@@ -1149,12 +1119,44 @@ Return raw JSON only, no markdown.`;
                 // Log AI explanation
                 if (logicLog) addPresetAiChatMessage('ai', logicLog);
 
+                // Hydrate and sanitize all presets before applying
+                const sanitizedPresets = presets.map(p => {
+                    return {
+                        name: p.name || "Untitled Preset",
+                        triggers: (p.triggers || []).map(t => ({
+                            type: t.type || 'manual',
+                            value: t.value || '',
+                            target: t.target || '',
+                            greater_than: t.greater_than ?? 0,
+                            less_than: t.less_than ?? 100
+                        })),
+                        overrides: (p.overrides || []).map(o => {
+                            const role = o.role || o.name || 'dimmer';
+                            const val = o.value ?? 0;
+                            return {
+                                id: o.id || 'global',
+                                target: o.target || 'global',
+                                type: o.type || (o.id === 'global' ? 'global' : 'instance'),
+                                name: role,
+                                role: role,
+                                value: val,
+                                smoothing: o.smoothing ?? 0,
+                                channels: (o.channels && o.channels.length > 0) ? o.channels.map(ch => ({
+                                    name: ch.name || role,
+                                    value: ch.value ?? val,
+                                    mode: ch.mode || 'value'
+                                })) : [{ name: role, value: val }]
+                            };
+                        })
+                    };
+                });
+
                 // Use the first preset to populate the form
-                const primary = presets[0];
+                const primary = sanitizedPresets[0];
 
                 // Store generated result for diff
                 window.generatedPresetResult = primary;
-                window.generatedAllPresets = presets;
+                window.generatedAllPresets = sanitizedPresets;
 
                 // Apply to form state
                 currentPresetTriggers = JSON.parse(JSON.stringify(primary.triggers || []));
@@ -1213,9 +1215,9 @@ Return raw JSON only, no markdown.`;
                         <span class="diff-new">[NEW]</span> ${nt.type}: ${nt.value || nt.target || ''} ${nt.greater_than !== undefined ? '>' + nt.greater_than : ''} ${nt.less_than !== undefined ? '<' + nt.less_than : ''}
                     </div>`);
                 } else {
-                    const ntStr = JSON.stringify(nt);
-                    const otStr = JSON.stringify(ot);
-                    if (ntStr !== otStr) {
+                    const ntSorted = JSON.stringify(Object.keys(nt).sort().reduce((obj, key) => { obj[key] = nt[key]; return obj; }, {}));
+                    const otSorted = JSON.stringify(Object.keys(ot).sort().reduce((obj, key) => { obj[key] = ot[key]; return obj; }, {}));
+                    if (ntSorted !== otSorted) {
                         triggerChanges.push(`<div class="diff-item">
                             <b>Trigger ${idx + 1}:</b> <span class="diff-old">${ot.type}:${ot.value || ot.target || ''}</span> → <span class="diff-new">${nt.type}:${nt.value || nt.target || ''}</span>
                         </div>`);
@@ -1305,30 +1307,122 @@ Return raw JSON only, no markdown.`;
         function acceptPresetAi() {
             closePresetAiDiff();
 
-            // Save all generated presets (handles OR-split case)
+            // Avoid silent database writes for multi-presets
             const allPresets = window.generatedAllPresets || [];
 
             if (allPresets.length > 1) {
-                // Multiple presets generated (OR logic). Save the extras directly.
-                for (let i = 1; i < allPresets.length; i++) {
-                    const p = allPresets[i];
-                    db.presets.push({
-                        id: 'pre_' + (Date.now() + i),
-                        name: p.name || `Generated Preset ${i + 1}`,
-                        triggers: JSON.parse(JSON.stringify(p.triggers || [])),
-                        overrides: JSON.parse(JSON.stringify(p.overrides || []))
-                    });
+                // Store extras in a review queue instead of writing directly to DB
+                window.stagedGeneratedPresets = allPresets.slice(1);
+                addPresetAiChatMessage('system', `⚠️ ${allPresets.length - 1} additional presets have been staged for review. Click "Review Extras" in the chat to see them.`);
+                
+                // Add a button to the chat to review them
+                const chatHistory = document.getElementById('ai-preset-chat-history');
+                if (chatHistory) {
+                    const btnWrap = document.createElement('div');
+                    btnWrap.style.padding = '10px';
+                    btnWrap.style.textAlign = 'center';
+                    btnWrap.innerHTML = `<button class="btn btn-accent btn-sm" onclick="showStagedPresetsReview()">Review ${allPresets.length - 1} Extras</button>`;
+                    chatHistory.appendChild(btnWrap);
                 }
-                saveDB();
-                if (typeof refreshUI === 'function') refreshUI();
             }
 
-            addPresetAiChatMessage('system', '✅ Preset applied to form. Click "Save Preset" when ready.');
+            addPresetAiChatMessage('system', '✅ Primary preset applied to form. Click "Save Preset" to finalize.');
 
             // Close modal
             setTimeout(() => {
                 closePresetAiModal();
             }, 500);
+        }
+
+        function showStagedPresetsReview() {
+            const presets = window.stagedGeneratedPresets || [];
+            if (presets.length === 0) return;
+
+            const modal = document.getElementById('ai-preset-staged-modal');
+            const body = document.getElementById('ai-preset-staged-body');
+            if (!modal || !body) return;
+
+            body.innerHTML = presets.map((p, i) => `
+                <div class="card" style="padding:15px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:bold; color:var(--accent);">${p.name}</div>
+                        <div style="font-size:10px; color:var(--text-dim);">${p.triggers.length} Triggers, ${p.overrides.length} Overrides</div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-sm" onclick="loadStagedPreset(${i})">Load to Form</button>
+                        <button class="btn btn-success btn-sm" onclick="saveStagedPresetToDb(${i})">Quick Save</button>
+                    </div>
+                </div>
+            `).join('');
+
+            modal.style.display = 'flex';
+        }
+
+        function closeStagedPresetsReview() {
+            const modal = document.getElementById('ai-preset-staged-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function loadStagedPreset(idx) {
+            const p = window.stagedGeneratedPresets[idx];
+            if (!p) return;
+
+            // Apply to form state
+            currentPresetTriggers = JSON.parse(JSON.stringify(p.triggers || []));
+            currentPresetOverrides = JSON.parse(JSON.stringify(p.overrides || []));
+            const nameField = document.getElementById('pres-name');
+            if (nameField) nameField.value = p.name || '';
+
+            // Render
+            if (typeof renderPresetTriggers === 'function') renderPresetTriggers();
+            if (typeof renderPresetOverrides === 'function') renderPresetOverrides();
+
+            closeStagedPresetsReview();
+            addPresetAiChatMessage('system', `Loaded "${p.name}" into the editor.`);
+        }
+
+        function saveStagedPresetToDb(idx) {
+            const p = window.stagedGeneratedPresets[idx];
+            if (!p) return;
+
+            db.presets.push({
+                id: 'pre_' + (Date.now() + idx),
+                name: p.name || "Untitled Preset",
+                triggers: JSON.parse(JSON.stringify(p.triggers || [])),
+                overrides: JSON.parse(JSON.stringify(p.overrides || []))
+            });
+            saveDB();
+            if (typeof refreshUI === 'function') refreshUI();
+
+            addPresetAiChatMessage('system', `✅ Saved "${p.name}" to library.`);
+            
+            // Remove from staging
+            window.stagedGeneratedPresets.splice(idx, 1);
+            if (window.stagedGeneratedPresets.length === 0) {
+                closeStagedPresetsReview();
+            } else {
+                showStagedPresetsReview();
+            }
+        }
+
+        function saveAllStagedPresets() {
+            const presets = window.stagedGeneratedPresets || [];
+            if (presets.length === 0) return;
+
+            presets.forEach((p, i) => {
+                db.presets.push({
+                    id: 'pre_' + (Date.now() + i + 100),
+                    name: p.name || "Untitled Preset",
+                    triggers: JSON.parse(JSON.stringify(p.triggers || [])),
+                    overrides: JSON.parse(JSON.stringify(p.overrides || []))
+                });
+            });
+            saveDB();
+            if (typeof refreshUI === 'function') refreshUI();
+
+            addPresetAiChatMessage('system', `✅ Saved ${presets.length} presets to library.`);
+            window.stagedGeneratedPresets = [];
+            closeStagedPresetsReview();
         }
 
         function appendPresetAiSuggestion(type) {
@@ -1409,3 +1503,8 @@ Return raw JSON only, no markdown.`;
         window.acceptPresetAi = acceptPresetAi;
         window.appendPresetAiSuggestion = appendPresetAiSuggestion;
         window.clearPresetAiChatHistory = clearPresetAiChatHistory;
+        window.showStagedPresetsReview = showStagedPresetsReview;
+        window.closeStagedPresetsReview = closeStagedPresetsReview;
+        window.loadStagedPreset = loadStagedPreset;
+        window.saveStagedPresetToDb = saveStagedPresetToDb;
+        window.saveAllStagedPresets = saveAllStagedPresets;

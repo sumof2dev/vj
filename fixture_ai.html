@@ -1305,7 +1305,10 @@ OUTPUT JSON SCHEMA:
                 let contents = [{ role: 'user', parts: contextParts }];
 
                 console.log("📡 Calling Gemini API...");
-                const result = await model.generateContent({ contents });
+                const result = await model.generateContent({ 
+                    contents, 
+                    generationConfig: { responseMimeType: "application/json" } 
+                });
                 const responseText = result.response.text();
                 console.log("🤖 AI RAW RESPONSE RECEIVED.");
 
@@ -1327,35 +1330,9 @@ OUTPUT JSON SCHEMA:
         }
 
         function processAIResponse(text) {
-            let jsonString = "";
-            let explanation = "";
-
-            const firstBrace = text.indexOf('{');
-            const lastBrace = text.lastIndexOf('}');
-
-            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-                jsonString = text.substring(firstBrace, lastBrace + 1);
-                explanation = text.substring(0, firstBrace).trim();
-            } else {
-                // No JSON found
-                explanation = text.trim();
-            }
-
-            const trimmed = jsonString.replace(/^```json|```$/g, "").trim();
-
-            // IF THERE IS SIGNIFICANT EXPLANATION TEXT (> 100 chars), IT'S LIKELY GUIDANCE
-            // OR IF JSON PARSING FAILS
-            if (explanation.length > 80 && !chatHistory.some(m => m.role === 'model')) {
-                // First-time explanation or major note
-                chatHistory.push({ role: 'model', parts: [{ text }] });
-                updateChatUI();
-                setStep('chat');
-                return;
-            }
-
+            // NEW: Structured output mode returns valid JSON directly
             try {
-                if (!trimmed) throw new Error("No JSON found");
-                const data = JSON.parse(trimmed);
+                const data = JSON.parse(text);
                 currentFixture = data; // Now a Profile object
 
                 // Final verification
@@ -1370,22 +1347,24 @@ OUTPUT JSON SCHEMA:
                     const chRules = Array.isArray(rules) ? rules : [rules];
 
                     return chRules.map(rule => {
-                        const mClass = rule.mechanical_class || 'linear';
-                        
-                        // DECOUPLED HYDRATION: Use AI-transcribed values directly
+                        // HARDENED HYDRATION: Explicit cast and sanitation for all risky fields
                         const hydratedRule = {
                             ...rule,
                             behavior: rule.behavior || 'static',
-                            source: rule.source || 'volume',
+                            source: rule.source || 'vol',
+                            cal: {
+                                min: parseInt(rule.cal?.min) || 0,
+                                max: parseInt(rule.cal?.max) || 255,
+                                center: parseInt(rule.cal?.center) || 127
+                            },
                             modifiers: {
-                                speed: parseFloat(rule.speed || (rule.behavior === 'static' ? 0 : 0.5)),
+                                speed: parseFloat(rule.speed ?? (rule.behavior === 'static' ? 0 : 0.5)) || 0,
                                 react: 0.5,
                                 hold_type: rule.hold_type || 'none'
                             }
                         };
 
-                        // Note: Internal engine IDs for behaviors (e.g., lfo_sine) are used directly as 'behavior'.
-                        // Advanced LFO settings can be added if needed, but primary control is now decoupled.
+                        if (isNaN(hydratedRule.modifiers.speed)) hydratedRule.modifiers.speed = 0.5;
 
                         return hydratedRule;
                     });

@@ -878,8 +878,8 @@ var switchTab = window.switchTab || function() { };
 
                 // Simulation: Match backend which uses 0.3x baseline multiplier
                 const freq = (speed + (energy * react)) * 0.3 * 2 * Math.PI;
-                simulationPhases[id] += dt * freq;
-                const p = (simulationPhases[id] / (2 * Math.PI)) % 1.0;
+                simulationPhases[id] = (simulationPhases[id] + dt * freq) % (2 * Math.PI);
+                const p = simulationPhases[id] / (2 * Math.PI);
                 const prevP = simulationPrevPs[id];
                 simulationPrevPs[id] = p;
 
@@ -1078,7 +1078,9 @@ var switchTab = window.switchTab || function() { };
                     const posY = zY + (yNorm * zH);
                     const alpha = intensity / 255;
                     const shapeSize = Math.min(zW, zH) * 0.3 * scale;
-                    const shapeIdx = Math.floor(patVal / (256 / simulationShapes.length)) % simulationShapes.length;
+                    const safePatVal = Number(patVal) || 0;
+                    const shapeIdx = Math.floor(safePatVal / (256 / simulationShapes.length)) % simulationShapes.length;
+                    const safeIdx = isNaN(shapeIdx) ? 0 : shapeIdx;
 
                     ctx.save();
                     ctx.translate(posX, posY);
@@ -1087,7 +1089,7 @@ var switchTab = window.switchTab || function() { };
                     ctx.lineWidth = 2;
                     ctx.shadowBlur = 15 * alpha;
                     ctx.shadowColor = '#fff';
-                    simulationShapes[shapeIdx](ctx, 0, 0, shapeSize);
+                    simulationShapes[safeIdx](ctx, 0, 0, shapeSize);
                     ctx.restore();
 
                     ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
@@ -1114,7 +1116,11 @@ var switchTab = window.switchTab || function() { };
             });
 
             listItems.sort((a, b) => (a.isMuted === b.isMuted ? a.index - b.index : (a.isMuted ? 1 : -1)));
-            if (activeList) activeList.innerHTML = listItems.map(item => item.html).join('');
+            const newHtml = listItems.map(item => item.html).join('');
+            if (activeList && activeList._lastHtml !== newHtml) {
+                activeList.innerHTML = newHtml;
+                activeList._lastHtml = newHtml;
+            }
         }
 
         // --- ENSEMBLE PICKER RENDERER ---
@@ -1175,8 +1181,8 @@ var switchTab = window.switchTab || function() { };
                 const id = `inst_${instId}_${chIdx}`;
                 if (simulationPhases[id] === undefined) simulationPhases[id] = 0;
                 const freq = (parseFloat(lfo.speed || 0.5) + (energy * parseFloat(lfo.react || 0.5))) * 0.3 * 2 * Math.PI;
-                simulationPhases[id] += dt * freq;
-                const p = (simulationPhases[id] / (2 * Math.PI)) % 1.0;
+                simulationPhases[id] = (simulationPhases[id] + dt * freq) % (2 * Math.PI);
+                const p = simulationPhases[id] / (2 * Math.PI);
 
                 if (lfo.shape === 'sine') norm = Math.sin(simulationPhases[id]);
                 else if (lfo.shape === 'sawtooth') norm = (p * 2.0) - 1.0;
@@ -1256,9 +1262,9 @@ var switchTab = window.switchTab || function() { };
                                     db.profiles = db.profiles.filter(p => p.id !== data.id && p._fileName !== fileName);
                                     db.profiles.push(data);
                                     serverProfileIds.add(data.id);
-                                } else if (fileName.includes('stage_config.json')) {
+                                } else if (fileName === 'stage_config.json') {
                                     db.stage = data;
-                                } else if (fileName.includes('presets.json')) {
+                                } else if (fileName === 'presets.json') {
                                     db.presets = data;
                                 }
                             } catch (err) {

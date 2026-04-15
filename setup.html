@@ -387,6 +387,25 @@
         </div>
     </div>
 
+    <!-- AI STAGED PRESETS REVIEW MODAL -->
+    <div id="ai-preset-staged-modal" class="ai-modal-overlay"
+        style="display:none; z-index:12000;"
+        onclick="closeStagedPresetsReview()">
+        <div class="ai-modal-content" style="max-width:500px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800;">Review Generated Extras</div>
+                <button class="btn btn-sm" onclick="closeStagedPresetsReview()">×</button>
+            </div>
+            <div class="ai-modal-body" id="ai-preset-staged-body" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Staged presets list -->
+            </div>
+            <div class="ai-modal-footer" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="closeStagedPresetsReview()">Close</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="saveAllStagedPresets()">Save All to Library</button>
+            </div>
+        </div>
+    </div>
+
     <!-- AI SETTINGS MODAL -->
     <div id="ai-settings-modal" class="ai-modal-overlay"
         style="display:none; z-index:10000;"

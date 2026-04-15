@@ -790,10 +790,12 @@ async def fast_broadcast_loop():
                     broadcast_version += 1
                     
                     # Also prepare a lighter-weight JSON update for UI elements (Vibe changes, etc)
+                    current_vibe = audio_state.get('vibe', 'mid')
                     state_dict = {
                         "type": "state",
                         "session_id": SESSION_ID,
-                        "vibe": audio_state.get('vibe', 'mid'),
+                        "vibe": current_vibe,
+                        "vibe_variant": dmx_engine.sync_indices.get(current_vibe, 0) + 1 if dmx_engine else 1,
                         "transient": audio_state.get('transient', 'steady'),
                         "active_presets": [p.get('id', p['name']) for p in dmx_engine.active_presets] if dmx_engine else [],
                         "lissajous_active": dmx_engine.logic.state.get('lissajous_active', 0.0) if dmx_engine and dmx_engine.logic else 0.0,

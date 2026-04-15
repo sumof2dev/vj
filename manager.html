@@ -1095,7 +1095,10 @@
                     if (msg.type === 'state') {
                         lastStateUpdate = msg;
                         // Immediate update for state changes (vibe, overrides)
-                        if (msg.vibe) document.getElementById('hubVibe').textContent = msg.vibe.toUpperCase();
+                        if (msg.vibe) {
+                            const variantTag = msg.vibe_variant ? `<sup>${msg.vibe_variant}</sup>` : '';
+                            document.getElementById('hubVibe').innerHTML = msg.vibe.toUpperCase() + variantTag;
+                        }
                         if (msg.transient) document.getElementById('hubTransient').textContent = msg.transient.toUpperCase();
                         if (msg.error) {
                             const st = document.getElementById('status');
