@@ -133,28 +133,8 @@ class LogicMatrix:
             if i < 6:
                 self.state[f'bin_{i}'] = float(val)
 
-        # Pillar States are updated in _calculate_channel for per-rule state maintenance.
-        # However, global grids (Figure-8) still live here.
-        eff_beat = float(self.beat_count % 16) + (1.0 - audio.get('beat_phase', 0.0))
-        t = (eff_beat / 16.0) * 2.0 * math.pi
-        
-        p = active_pattern.lower() if active_pattern else "figure-8"
-        if "circle" in p:
-            self.grid_x = math.cos(t)
-            self.grid_y = math.sin(t)
-        elif "lissajous a" in p:
-            self.grid_x = math.sin(3 * t + math.pi/2)
-            self.grid_y = math.sin(2 * t)
-        elif "lissajous b" in p:
-            self.grid_x = math.sin(5 * t)
-            self.grid_y = math.sin(4 * t)
-        else:
-            self.grid_x = math.cos(t)
-            self.grid_y = math.sin(2 * t)
-
+        # State update for master intensity
         self.state.update({
-            'grid_x': float(self.grid_x),
-            'grid_y': float(self.grid_y),
             'intensity': master_intensity
         })
 
@@ -169,13 +149,13 @@ class DMXEngine:
         self.logic_l = LogicMatrix()
         self.logic_r = LogicMatrix()
         
-        self.intensity = 1.0
         self.speed = 0.6 
+        self.intensity = 1.0
+        self.eff_speed = 0.6
+        self.eff_intensity = 1.0
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
         self.active_presets = []
-        self.calibrated_preset_active = False
-        self.active_lissajous_pattern = "Figure-8"
         
         self._one_shot_active = False
         self._last_drop_time = 0.0
@@ -187,7 +167,9 @@ class DMXEngine:
         self._last_vibe = 'mid'
         self._last_transient = 'steady'
         self._preset_holds = {}
+        self._preset_sweep_phases = {}
         self._silence_start = None
+        self.blackout = False
         
         self.behavior_defaults = {}
         self._descriptors_path = os.path.join('backend', 'descriptors.json')
@@ -219,6 +201,7 @@ class DMXEngine:
         self._fast_cache = {} 
         self.active_presets = [] 
         self.manual_active_presets = set() # Set of preset IDs manually forced ON
+        self.active_visual_commands = []
         
         self._load_profiles()
         self._load_descriptors()
@@ -354,11 +337,12 @@ class DMXEngine:
         self.transient = audio.get('transient', 'steady')
         current_vibe = audio.get('vibe', 'mid')
 
-        self.logic.update(dt, audio, self.transient, self.speed, self.intensity)
+        self.eff_speed = self.speed
+        self.eff_intensity = self.intensity
+        self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
         
         # Pre-calculate active presets (Global check once per frame)
         self.active_presets = []
-        self.calibrated_preset_active = False
         
         active_triggers = [f"vibe:{current_vibe}"]
         if self.transient: active_triggers.append(f"state:{self.transient}") # Support state triggers correctly
@@ -368,8 +352,11 @@ class DMXEngine:
             triggers = p_data.get('triggers', [])
             if p_data.get('trigger'): triggers = [p_data.get('trigger')] # Legacy support
             
-            is_active = False
+            # NEW STANDARD: All triggers in the list must be met (AND logic)
+            is_active = len(triggers) > 0
+            
             for trig in triggers:
+                trig_matched = False
                 t_cat = trig.get('category') or trig.get('type')
                 
                 # Numeric range helper
@@ -381,21 +368,21 @@ class DMXEngine:
                     return True
 
                 if t_cat == 'vibe' and trig.get('vibe', trig.get('value')) == current_vibe:
-                    is_active = True
+                    trig_matched = True
                 elif t_cat == 'state' and (trig.get('state') == self.transient or trig.get('value') == self.transient):
-                    is_active = True
+                    trig_matched = True
                 elif t_cat == 'volume':
                     v_pct = audio.get('vol', 0.0) * 100.0
                     if 'less_than' in trig or 'greater_than' in trig:
-                        if check_range(v_pct, trig): is_active = True
+                        if check_range(v_pct, trig): trig_matched = True
                     else:
                         # Legacy keyword support
                         target_v = trig.get('value', 'mid')
                         v = audio.get('vol', 0.0)
                         r = float(trig.get('range', 5)) / 100.0 
-                        if target_v == 'silence' and v <= r: is_active = True
-                        elif target_v == 'loud' and v >= (1.0 - r): is_active = True
-                        elif target_v == 'mid' and abs(v - 0.5) <= (r / 2.0): is_active = True
+                        if target_v == 'silence' and v <= r: trig_matched = True
+                        elif target_v == 'loud' and v >= (1.0 - r): trig_matched = True
+                        elif target_v == 'mid' and abs(v - 0.5) <= (r / 2.0): trig_matched = True
 
                 elif t_cat == 'bin':
                     bins = audio.get('bins', [0.0]*6)
@@ -405,13 +392,13 @@ class DMXEngine:
                     
                     if b_idx < len(bins):
                         val = bins[b_idx] * 100.0
-                        if check_range(val, trig): is_active = True
+                        if check_range(val, trig): trig_matched = True
 
                 elif t_cat == 'channel':
                     addr = int(trig.get('target', 0))
                     if 0 < addr < len(self.universe):
                         val = self.universe[addr]
-                        if check_range(val, trig): is_active = True
+                        if check_range(val, trig): trig_matched = True
 
                 elif t_cat == 'function':
                     # Search logic matrix state for matching keys
@@ -423,9 +410,12 @@ class DMXEngine:
                             break
                     
                     if val is not None:
-                        if check_range(val, trig): is_active = True
+                        if check_range(val, trig): trig_matched = True
                 
-                if is_active: break
+                # If ANY trigger fails, the whole preset is inactive (AND logic)
+                if not trig_matched:
+                    is_active = False
+                    break
                 
             if is_active:
                 self.active_presets.append(p_data)
@@ -438,22 +428,44 @@ class DMXEngine:
                 if p_data not in self.active_presets:
                     self.active_presets.append(p_data)
 
-        # Check for "Calibrated" virtual fixture in overrides across all active presets
+        self.active_visual_commands = []
+        force_next_visual = False
+        force_next_fx = False
         for p_data in self.active_presets:
+            p_id = p_data.get('id', p_data.get('name'))
             for ov in p_data.get('overrides', []):
-                if ov.get('type') == 'calibrated' or ov.get('id') == 'calibrated':
-                    self.calibrated_preset_active = True
-                    # The "Target Function" (ch.name) becomes the pattern
+                if ov.get('target') == 'visualdmx':
                     for ch in ov.get('channels', []):
-                        self.active_lissajous_pattern = ch.get('name', 'Figure-8')
+                        fn = ch.get('name', 'none').lower()
+                        ov_key = f"visual_{p_id}_{fn}"
+                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 0), self._dt)
+                        self.active_visual_commands.append({
+                            "function": fn,
+                            "value": resolved_val
+                        })
+                        if fn == 'next_visual': force_next_visual = True
+                        if fn == 'next_fx': force_next_fx = True
+                elif ov.get('target') == 'system':
+                    for ch in ov.get('channels', []):
+                        fn = ch.get('name', 'none').lower()
+                        ov_key = f"system_{p_id}_{fn}"
+                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 100), self._dt)
+                        
+                        # Apply multiplier (resolved_val is 0-255, we treat 100 as 1.0x)
+                        multiplier = resolved_val / 100.0
+                        if fn == 'speed':
+                            self.eff_speed = self.speed * multiplier
+                        elif fn == 'intensity':
+                            self.eff_intensity = self.intensity * multiplier
+
 
         if 'left' in audio and 'right' in audio:
-            self.logic_l.update(dt, audio['left'], self.transient, self.speed, self.intensity)
-            self.logic_r.update(dt, audio['right'], self.transient, self.speed, self.intensity)
+            self.logic_l.update(dt, audio['left'], self.transient, self.eff_speed, self.eff_intensity)
+            self.logic_r.update(dt, audio['right'], self.transient, self.eff_speed, self.eff_intensity)
         else:
             self.logic_l = self.logic
             self.logic_r = self.logic
-            self.logic.update(dt, audio, self.transient, self.speed, self.intensity)
+            self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
         
         # Removed legacy rhythm triggers
         
@@ -474,14 +486,15 @@ class DMXEngine:
             if visual_states.get("fx", -1) != -1: self.current_fx_layer = visual_states["fx"]
             if visual_states.get("fg", -1) != -1: self.current_fg_layer = visual_states["fg"]
 
-        if should_switch:
+        if should_switch or force_next_visual:
             if not visual_states or visual_states.get("bg", -1) == -1:
                 # Pick a global index for the base layer (UserGen uses this to index library)
-                self.current_base_layer = random.randint(0, 999)
-            if not visual_states or visual_states.get("fx", -1) == -1:
-                # Pick a global index for the fx layer
-                self.current_fx_layer = random.randint(0, 999)
+                self.current_base_layer = (self.current_base_layer + 1) % 1000
             self._last_scene_switch_beat = current_beat
+
+        if force_next_fx:
+            if not visual_states or visual_states.get("fx", -1) == -1:
+                self.current_fx_layer = (self.current_fx_layer + 1) % 1000
             
         self.logic.state['scene_trigger'] = 1.0 if should_switch else -1.0
             
@@ -515,6 +528,22 @@ class DMXEngine:
             if 0 < addr < len(self.universe):
                 self.universe[addr] = max(0, min(255, int(val)))
 
+        # GLOBAL BLACKOUT OVERRIDE
+        if self.blackout:
+            for i in range(1, len(self.universe)):
+                self.universe[i] = 0
+
+    def get_active_preset_names(self):
+        """Returns a list of names for currently active presets."""
+        names = []
+        for p in self.active_presets:
+            names.append(p.get('name', 'unnamed'))
+        return list(set(names)) # De-duplicate names
+
+    def set_blackout(self, state):
+        self.blackout = bool(state)
+        print(f"🔦 Global Blackout: {'ON' if self.blackout else 'OFF'}")
+
     def _process_instance(self, inst, zone_idx, audio, sync_indices=None):
         profile = self.profiles.get(inst.get('profileId'))
         if not profile: return
@@ -543,22 +572,7 @@ class DMXEngine:
         elif 'right' in zone_str: active_logic = self.logic_r; active_audio = audio.get('right', audio)
         else: active_logic = self.logic; active_audio = audio
         
-        # X/Y LINKING PRE-PASS: If either X or Y is calibrated, both follow grid
-        force_calibrated = False
-        if self.calibrated_preset_active:
-             force_calibrated = True
-             active_logic.state['lissajous_active'] = 1.0
 
-        for ch_idx, ch_def in enumerate(channels):
-            role = ch_def.get('role', '').lower()
-            if role in ['pos_x', 'pos_y']:
-                cache = self._fast_cache.get(profile['id'], {}).get(ch_idx)
-                if cache:
-                    rule = cache.get_active_rule(current_vibe, self.transient, f"{profile['id']}_{ch_idx}_{zone_idx}")
-                    if rule and rule.get('behavior') == 'calibrated':
-                        force_calibrated = True
-                        active_logic.state['lissajous_active'] = 1.0
-                        break
 
         for ch_idx, ch_def in enumerate(channels):
 
@@ -573,7 +587,7 @@ class DMXEngine:
             cache = self._fast_cache.get(profile['id'], {}).get(ch_idx)
             if not cache: continue
             
-            val = self._calculate_channel(ch_idx, active_audio, active_logic, zone_idx, cache, profile['id'], force_calibrated, ch_def, sync_indices)
+            val = self._calculate_channel(ch_idx, active_audio, active_logic, zone_idx, cache, profile['id'], ch_def, sync_indices)
 
             # Preset Overrides (Optimized)
             preset_override_val = None
@@ -600,7 +614,8 @@ class DMXEngine:
                                     break
                             # Fallback to direct 'value' for legacy global presets
                             if matched_ov_ch is None and 'value' in ov:
-                                preset_override_val = int(ov.get('value', 0))
+                                ov_key = f"dimmer_{p_id}_{ov_name}_{inst['id']}"
+                                preset_override_val = self._resolve_preset_value(ov_key, ov.get('value', 0), self._dt)
                     
                     if matched_ov_ch is not None:
                         if matched_ov_ch.get('mode') == 'behavior':
@@ -610,14 +625,15 @@ class DMXEngine:
                                 matched_ov_ch, active_audio, active_logic, bkey
                             )
                         else:
-                            preset_override_val = int(matched_ov_ch.get('value', 0))
+                            ov_key = f"dmx_{p_id}_{target_role}_{inst['id']}"
+                            preset_override_val = self._resolve_preset_value(ov_key, matched_ov_ch.get('value', 0), self._dt)
             
             if preset_override_val is not None:
                 val = preset_override_val
                 
             self.universe[final_addr] = max(0, min(255, int(val)))
 
-    def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id, force_calibrated=False, ch_def=None, sync_indices=None):
+    def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id, ch_def=None, sync_indices=None):
         current_vibe = audio.get('vibe', 'mid')
         current_transient = audio.get('transient', 'steady')
         instance_key = f"{profile_id}_{ch_idx}_{zone_idx}"
@@ -811,16 +827,101 @@ class DMXEngine:
         else: final_dmx = c_center + (y * (c_center - c_min))
         
         # 5. Hold Persistence Logic (NON-KINEMATICS)
-        if not is_kinematics:
-            if st.get('hold_active'):
-                if 'held_dmx' not in st: st['held_dmx'] = final_dmx
-                final_dmx = st['held_dmx']
+        if hold_type != 'none':
+            if st['hold_active']:
+                final_dmx = st.get('held_dmx', final_dmx)
             else:
-                st.pop('held_dmx', None)
+                st['held_dmx'] = final_dmx
+        
+        return final_dmx
 
-        return max(c_min, min(c_max, int(final_dmx)))
+    def _resolve_preset_value(self, ov_key, val, dt):
+        """
+        Resolves a preset value string to an integer.
+        Supports:
+          - Integers/Floats: "255"
+          - Linear Sweeps: "0-255"
+          - Sequences: "30, 50-100, 255"
+          - Offsets: "32-96+32" (Starts at 64)
+          - Hybrid: "30, 50-100, 30 + 16"
+          - Reverse Sweeps: "255-0"
+        """
+        if isinstance(val, (int, float)):
+            return int(val)
+        if not isinstance(val, str):
+            return 0
 
-    def _evaluate_preset_behavior(self, ov_ch, audio, logic_matrix, instance_key):
+        # 1. Parse Offset (at the very end of the string)
+        offset = 0.0
+        main_val = val
+        if '+' in val:
+            parts = val.rsplit('+', 1)
+            main_val = parts[0].strip()
+            try:
+                offset = float(parts[1].strip())
+            except:
+                pass
+
+        # 2. Parse Sequence (split by comma)
+        seq_parts = [p.strip() for p in main_val.split(',')]
+        num_parts = len(seq_parts)
+        if num_parts == 0: return 0
+
+        # 3. Maintain/Update Phase Accumulator
+        if ov_key not in self._preset_sweep_phases:
+            self._preset_sweep_phases[ov_key] = 0.0
+        
+        # Rate: 60 bits per second (Legacy speed standard)
+        rate = 60.0 
+        self._preset_sweep_phases[ov_key] += dt * rate
+        
+        # Each part occupies a consistent "64 bit" phase window
+        part_duration = 64.0
+        total_cycle = num_parts * part_duration
+        
+        # Apply offset and wrap
+        eff_phase = (self._preset_sweep_phases[ov_key] + offset) % total_cycle
+        
+        # Determine which part of the sequence we are in
+        part_idx = int(eff_phase // part_duration)
+        local_phase = eff_phase % part_duration # 0.0 to 64.0
+        
+        part_str = seq_parts[part_idx]
+
+        # 4. Resolve the specific part (Value or Sweep)
+        if '-' in part_str:
+            try:
+                # Handle multi-dash chains like "32-96-32"
+                points = [float(p.strip()) for p in part_str.split('-') if p.strip()]
+                num_points = len(points)
+                if num_points < 2: return int(points[0]) if points else 0
+                
+                # Divide the part's duration into sub-segments for the chain
+                num_segments = max(1, len(points) - 1)
+                sub_duration = part_duration / num_segments
+                
+                sub_idx = int(local_phase // sub_duration)
+                sub_idx = min(sub_idx, num_segments - 1)
+                sub_local_phase = local_phase % sub_duration
+                
+                v_start = points[sub_idx]
+                v_end = points[sub_idx + 1]
+                
+                # Interpolate within the sub-segment
+                # Removed the "-1.0" to ensure continuous motion across segments
+                t = sub_local_phase / sub_duration if sub_duration > 0 else 0.0
+                t = max(0.0, min(1.0, t))
+                
+                return int(v_start + t * (v_end - v_start))
+            except:
+                return 0
+        
+        try:
+            return int(float(part_str))
+        except:
+            return 0
+
+    def _evaluate_preset_behavior(self, ch_def, audio, logic_matrix, instance_key):
         """
         Evaluate a behavior-mode preset override channel using the same math
         as _calculate_channel, but driven by the override's own definition

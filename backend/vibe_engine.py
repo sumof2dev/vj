@@ -109,7 +109,7 @@ class VibeEngine:
         self.energy_history.append(energy)
         
         # Suppress transient detection until history is warm (~3s).
-        if self._history_frame >= 60 and len(self.energy_history) >= 60 and len(self.impact_history) >= 60:
+        if self._history_frame >= 180 and len(self.energy_history) >= 180 and len(self.impact_history) >= 180:
             # Windowed Trend: Compare recent 30-frame average to a 30-frame block from ~2s ago
             # This is MUCH more stable than single-frame comparisons.
             recent_energy = float(sum(list(self.energy_history)[-30:]) / 30.0)
@@ -131,13 +131,8 @@ class VibeEngine:
                 # STATE MACHINE: steady → building → tension → dropping → steady
                 
                 if self.transient == "steady":
-                    # IMPACT BYPASS: Sudden energy explosion
-                    if (impact > 0.6 or sustained_spike > 0.4) and recent_avg > 0.45 and now - self._steady_since > 5.0:
-                        self.transient = "dropping"
-                        self._transient_hold_until = now + HOLD_TIMES["dropping"]
-                    
                     # BUILDING: Sustained rise over ~2s
-                    elif trend_long > 0.25 and recent_avg > 0.35 and now - self._steady_since > 5.0 and self.current_vibe != "high":
+                    if trend_long > 0.25 and recent_avg > 0.35 and now - self._steady_since > 5.0 and self.current_vibe != "high":
                         self.transient = "building"
                         self._transient_hold_until = now + HOLD_TIMES["building"]
                 
@@ -146,9 +141,6 @@ class VibeEngine:
                     if recent_avg < old_avg * 0.70 and past_energy > 0.05:
                         self.transient = "tension"
                         self._transient_hold_until = now + HOLD_TIMES["tension"]
-                    elif impact > 0.5: # DROP BYPASS: building directly into a drop
-                        self.transient = "dropping"
-                        self._transient_hold_until = now + HOLD_TIMES["dropping"]
                     elif trend_long > -0.02 or recent_avg > 0.2:
                         # Energy still rising or high, DO NOT revert to steady
                         self._transient_hold_until = now + 1.0 # Extend

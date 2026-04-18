@@ -26,6 +26,8 @@ echo "🧹 Updating cache busters (?v=) in HTML files..."
 sed -i -E "s/(\.js\?v=)[0-9]+/\1$VERSION_CODE/g" *.html
 sed -i -E "s/(\.css\?v=)[0-9]+/\1$VERSION_CODE/g" *.html
 sed -i -E "s/(VJ Manager v)[0-9]+/\1$VERSION_CODE/g" setup.html
+sed -i -E "s/(VJ Player v)[0-9]+/\1$VERSION_CODE/g" player.html
+sed -i -E "s/(VJ Standalone v)[0-9]+/\1$VERSION_CODE/g" standalone.html
 
 if [ ! -d "visualizer_src" ]; then
     echo "❌ Error: visualizer_src directory not found!"

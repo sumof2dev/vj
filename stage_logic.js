@@ -1,4 +1,6 @@
 // --- SAFETY GLOBALS ---
+var everActivatedPresets = new Set();
+var activePresets = []; 
 var db = window.db || { profiles: [], stage: [], presets: [], liveConsole: [], savedConsoles: [] };
 var activeTestFixtures = window.activeTestFixtures || [];
 var activeTestFunctions = window.activeTestFunctions || new Set();
@@ -14,6 +16,7 @@ var refreshUI = window.refreshUI || function() { };
 var saveDB = window.saveDB || function() { };
 var switchTab = window.switchTab || function() { };
 
+
 // --- GLOBAL STATE (Managed in shared_setup.js) ---
 
 // (savePreset, editPreset, deletePreset moved to profile_logic.js)
@@ -26,7 +29,7 @@ var switchTab = window.switchTab || function() { };
             }
         }
 
-        function patchToStage() {
+        async function patchToStage() {
             const profId = document.getElementById('stage-profile').value;
             const addr = parseInt(document.getElementById('stage-addr').value);
             const offset = parseInt(document.getElementById('stage-offset').value) || 0;
@@ -45,23 +48,23 @@ var switchTab = window.switchTab || function() { };
                 offset: offset,
                 zone
             });
-            saveDB();
+            await saveDB();
             refreshUI();
         }
 
-        function updateInstanceProfile(instId, newProfId) {
+        async function updateInstanceProfile(instId, newProfId) {
             const inst = db.stage.find(s => s.id === instId);
             const prof = db.profiles.find(p => p.id === newProfId);
             if (inst && prof) {
                 inst.profileId = newProfId;
                 inst.profileName = prof.name;
-                saveDB();
+                await saveDB();
                 // refreshUI naturally called by any upstream trigger, but let's be safe
                 renderStageList(); 
             }
         }
 
-        function updateInstanceId(oldId, newId) {
+        async function updateInstanceId(oldId, newId) {
             newId = newId.trim();
             if (!newId || newId === oldId) return;
             if (db.stage.find(s => s.id === newId)) {
@@ -84,24 +87,24 @@ var switchTab = window.switchTab || function() { };
                         }
                     });
                 }
-                saveDB();
+                await saveDB();
                 refreshUI();
             }
         }
 
-        function updateInstanceZone(instId, newZone) {
+        async function updateInstanceZone(instId, newZone) {
             const inst = db.stage.find(s => s.id === instId);
             if (inst) {
                 inst.zone = newZone.trim();
-                saveDB();
+                await saveDB();
             }
         }
 
-        function updateInstanceAddress(instId, newAddr) {
+        async function updateInstanceAddress(instId, newAddr) {
             const inst = db.stage.find(s => s.id === instId);
             if (inst && !isNaN(newAddr) && newAddr >= 1 && newAddr <= 512) {
                 inst.address = newAddr;
-                saveDB();
+                await saveDB();
             }
         }
 
@@ -130,12 +133,12 @@ var switchTab = window.switchTab || function() { };
             }
         }
 
-        function saveStageJson() {
+        async function saveStageJson() {
             try {
                 const editor = document.getElementById('stage-json-editor');
                 const parsed = JSON.parse(editor.value);
                 db.stage = parsed;
-                saveDB();
+                await saveDB();
                 refreshUI();
                 alert('Stage JSON Saved Successfully!');
             } catch (e) {
@@ -564,21 +567,51 @@ var switchTab = window.switchTab || function() { };
         function startRecording() {
             if (!ws || ws.readyState !== WebSocket.OPEN) return alert("System disconnected.");
             
-            // Gather addresses currently in the Test Hub
             const addresses = new Set();
+            const roles = {};
+
+            // Hybrid Approach: Look at what strips are physically on screen, 
+            // but fetch their roles from the data source (db).
             const strips = document.querySelectorAll('.test-strip-card');
             strips.forEach(strip => {
+                const fixtureId = strip.dataset.fixtureId;
+                const inst = (db.stage || []).find(s => s.id === fixtureId);
+                if (!inst) return;
+                
+                const profile = (db.profiles || []).find(p => p.id === inst.profileId);
+                if (!profile) return;
+                
+                const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
                 const rows = strip.querySelectorAll('.compact-slider-row');
+                
                 rows.forEach(row => {
-                    addresses.add(parseInt(row.dataset.addr));
+                    const addr = parseInt(row.dataset.addr);
+                    addresses.add(addr);
+                    
+                    // Match this address to a profile channel
+                    const channel = (profile.channels || []).find((ch, idx) => {
+                        const chAddr = baseAddr + (parseInt(ch.addrOffset) || idx);
+                        return chAddr === addr;
+                    });
+                    
+                    if (channel) {
+                        roles["" + addr] = (channel.role || channel.name || "unknown").toLowerCase();
+                    }
                 });
             });
 
-            // Start immediately (No prompt)
+            if (addresses.size === 0) {
+                console.warn("Recording attempted with 0 addresses found in DOM.");
+                return alert("No active channels to record. Please ensure fixtures are loaded in the Test Hub.");
+            }
+
+            console.log("🎬 Sending Start Recording:", { addrCount: addresses.size, roles: Object.keys(roles).length });
+
             ws.send(JSON.stringify({
                 type: 'start_recording',
                 name: null,
-                addresses: Array.from(addresses)
+                addresses: Array.from(addresses),
+                roles: roles
             }));
         }
 
@@ -636,7 +669,6 @@ var switchTab = window.switchTab || function() { };
         // --- 6. LIVE DMX WEBSOCKET & RENDER ENGINE ---
         // (Globals now shared from shared_setup.js)
         let testWaveformChannel = -1;
-        let activePresets = [];
         let simulationPhases = {};
         let simulationPrevPs = {}; // { ruleId: prevP } for transition detection
         let simulationSamples = {}; // { ruleId: sampledEnergy }
@@ -644,6 +676,7 @@ var switchTab = window.switchTab || function() { };
 
         let ws_reconnect_delay = 2000;
         function connectWs() {
+            if (window.isStandaloneMode) return;
             if (!window.RAVEBOX_READY) return setTimeout(connectWs, 500);
             
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -684,10 +717,16 @@ var switchTab = window.switchTab || function() { };
                     for (let i = 0; i < 6; i++) bins.push(view.getFloat32(28 + (i * 4), true));
                     latestAudioState.bins = bins;
 
+                    // Populate top-level fields for visualizers and legacy logic
+                    latestAudioState.flux = view.getFloat32(4, true);
+                    latestAudioState.bass = view.getFloat32(8, true);
+                    latestAudioState.mid = view.getFloat32(12, true);
+                    latestAudioState.high = view.getFloat32(16, true);
+
                     latestAudioState.mods = {
-                        flux: view.getFloat32(4, true),
-                        bass: view.getFloat32(8, true),
-                        high: view.getFloat32(16, true),
+                        flux: latestAudioState.flux,
+                        bass: latestAudioState.bass,
+                        high: latestAudioState.high,
                         vol: latestAudioState.vol
                     };
 
@@ -714,10 +753,13 @@ var switchTab = window.switchTab || function() { };
                     if (msg.type === 'state') {
                         if (msg.vibe) latestAudioState.vibe = msg.vibe;
                         if (msg.transient) latestAudioState.transient = msg.transient;
+                        if (msg.blackout !== undefined) latestAudioState.blackout = msg.blackout;
                         if (msg.overrides) latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
                         if (msg.active_presets) {
                             activePresets = msg.active_presets;
                             latestAudioState.manual_active_presets = msg.active_presets;
+                            // Track that these have been activated at least once
+                            msg.active_presets.forEach(p => everActivatedPresets.add(p));
                         }
                         if (msg.lissajous_active !== undefined) latestAudioState.lissajous_active = msg.lissajous_active;
                         if (msg.calibrated_preset_active !== undefined) latestAudioState.calibrated_preset_active = msg.calibrated_preset_active;
@@ -762,6 +804,12 @@ var switchTab = window.switchTab || function() { };
                         document.getElementById('rec-status').classList.remove('active');
                         document.getElementById('btn-record').innerText = "🔴 Record";
                         document.getElementById('btn-record').style.borderColor = "#444";
+                        
+                        if (msg.path) {
+                            const folder = msg.path.split('/').pop();
+                            const link = `<a href="player.html?session=${folder}" target="_blank" style="color:var(--accent); font-weight:bold; text-decoration:underline;">Open X-Ray Player 📈</a>`;
+                            showToast(`🎬 Recording Saved! ${link}`, 10000);
+                        }
                     }
                 } catch (e) { }
             };
@@ -1314,3 +1362,14 @@ var switchTab = window.switchTab || function() { };
 
         // --- WEBSOCKET FLOW ---
 
+function togglePreset(presetId) {
+    if (!presetId) return;
+    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetId }));
+    } else {
+        console.warn("WebSocket not connected, cannot toggle preset:", presetId);
+    }
+}
+window.togglePreset = togglePreset;
+window.everActivatedPresets = everActivatedPresets;
+window.activePresets = activePresets;

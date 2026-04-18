@@ -53,20 +53,7 @@ function loadLiveConfig() {
 async function saveLiveConfig(skipServer = false) {
     localStorage.setItem('vj_live_console_config', JSON.stringify(liveConfig));
     window.db.liveConsole = [...liveConfig];
-    if (typeof saveDB === 'function') saveDB();
-    
-    if (!skipServer) {
-        try {
-            await fetch(`${window.API_BASE}/live_console.json`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(liveConfig)
-            });
-            console.log("✅ [LIVE CONSOLE] Synced to server.");
-        } catch (e) {
-            console.warn("⚠️ [LIVE CONSOLE] Could not sync to server, saved locally only.");
-        }
-    }
+    if (typeof saveDB === 'function') await saveDB(skipServer);
 }
 
 function toggleLiveEditMode() {
@@ -202,12 +189,18 @@ function renderLiveTab() {
             label = "LIVE FEED";
             content = `<div style="font-size:24px; z-index:1;">📷 ${isFeedActive ? 'ON' : 'OFF'}</div>`;
             if (isFeedActive) extraClass = 'active';
+        } else if (cfg.type === 'blackout') {
+            const isBlackout = window.latestAudioState && window.latestAudioState.blackout;
+            label = "BLACKOUT";
+            content = `<div style="font-size:24px; z-index:1;">🌑 ${isBlackout ? 'ACTIVE' : 'READY'}</div>`;
+            if (isBlackout) extraClass = 'active';
         } else {
             if (liveEditMode) {
                 label = "ADD BUTTON";
                 content = `<div style="font-size:24px; opacity:0.3; z-index:1;">+</div>`;
             } else {
-                continue; // Hide empty buttons in play mode
+                label = "";
+                content = "";
             }
         }
 
@@ -546,6 +539,12 @@ async function handleLivePointerUp(e, idx) {
             if (!liveEditMode) {
                 if (cfg && cfg.type === 'slider') {
                     await clearSliderOverrides(cfg);
+                } else if (cfg && cfg.type === 'live_feed') {
+                    toggleLiveConsoleFeed();
+                } else if (cfg && cfg.type === 'blackout') {
+                    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                        window.ws.send(JSON.stringify({ type: 'blackout' }));
+                    }
                 }
             } else {
                 openAssignment(idx);
@@ -728,4 +727,216 @@ async function saveAssignment() {
     await saveLiveConfig();
     closeAssignment();
     renderLiveTab();
+}
+
+// --- AUDIO TIMELINE VISUALIZER ---
+let audioTimelineBuffer = [];
+const TIMELINE_MAX_FRAMES = 300; // ~10 seconds of history at 30fps
+
+// 1. Constantly record the incoming audio state into a rolling buffer
+setInterval(() => {
+    if (window.latestAudioState) {
+        audioTimelineBuffer.push({
+            bass: window.latestAudioState.bass || 0,
+            mid: window.latestAudioState.mid || 0,
+            high: window.latestAudioState.high || 0,
+            flux: window.latestAudioState.flux || 0
+        });
+        // Remove oldest frame when we exceed 10 seconds
+        if (audioTimelineBuffer.length > TIMELINE_MAX_FRAMES) {
+            audioTimelineBuffer.shift();
+        }
+    }
+}, 33); // ~30 fps update
+
+// 2. The Modal UI & Interaction
+function openAudioTimelineModal() {
+    // Create the modal container if it doesn't exist
+    let modal = document.getElementById('audio-timeline-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'audio-timeline-modal';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 9999; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none;
+        `;
+        modal.innerHTML = `
+            <div style="background: #111114; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; width: 95%; max-width: 1100px; padding: 30px; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 100px rgba(0, 242, 255, 0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 25px;">
+                    <div>
+                        <h2 style="margin: 0; color: #fff; font-weight: 800; font-size: 1.8rem; letter-spacing: -0.5px; display:flex; align-items:center; gap:12px;">
+                            <span style="color:var(--accent); text-shadow: 0 0 20px rgba(0,242,255,0.4);">📈</span> Audio & DMX Timeline
+                        </h2>
+                        <p style="color: #666; font-size: 13px; margin: 4px 0 0 35px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Real-time 10-second history of audio reactivity.</p>
+                    </div>
+                    <button onclick="closeAudioTimelineModal()" style="background: rgba(255,255,255,0.05); border: none; color: #fff; font-size: 20px; width:40px; height:40px; border-radius:50%; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: all 0.2s;">&times;</button>
+                </div>
+
+                <div style="background: #000; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; position: relative; height: 400px; overflow: hidden; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                    <canvas id="audio-timeline-canvas" style="width: 100%; height: 100%; cursor: crosshair;"></canvas>
+                    <div id="audio-timeline-inspect" style="position: absolute; top: 0; left: 0; height: 100%; width: 2px; background: linear-gradient(to bottom, transparent, var(--accent), transparent); display: none; pointer-events: none; box-shadow: 0 0 15px var(--accent);">
+                        <div id="audio-timeline-tooltip" style="position: absolute; top: 20px; left: 15px; background: rgba(10,10,12,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: bold; white-space: nowrap; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px; display: flex; flex-wrap: wrap; gap: 25px; padding: 0 10px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="width:12px; height:12px; border-radius:3px; background:#ff3366; box-shadow: 0 0 10px rgba(255,51,102,0.4);"></span>
+                        <span style="color: #ff3366; font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Bass</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="width:12px; height:12px; border-radius:3px; background:var(--accent); box-shadow: 0 0 10px rgba(0,242,255,0.4);"></span>
+                        <span style="color: var(--accent); font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Mid</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="width:12px; height:12px; border-radius:3px; background:#ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.4);"></span>
+                        <span style="color: #ffaa00; font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">High</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="width:12px; height:12px; border-radius:3px; background:rgba(255,255,255,0.3);"></span>
+                        <span style="color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Flux</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Interaction for tooltip
+        const canvas = document.getElementById('audio-timeline-canvas');
+        const inspect = document.getElementById('audio-timeline-inspect');
+        const tooltip = document.getElementById('audio-timeline-tooltip');
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const frameIdx = Math.floor((x / rect.width) * audioTimelineBuffer.length);
+            const data = audioTimelineBuffer[frameIdx];
+
+            if (data) {
+                inspect.style.display = 'block';
+                inspect.style.left = x + 'px';
+                tooltip.innerHTML = `
+                    <div style="margin-bottom:6px; color:#aaa; font-size:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:4px;">T-MINUS ${((TIMELINE_MAX_FRAMES - frameIdx) / 30).toFixed(1)}s</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px 15px;">
+                        <span style="color:#ff3366">BASS:</span> <span>${data.bass.toFixed(3)}</span>
+                        <span style="color:var(--accent)">MID:</span> <span>${data.mid.toFixed(3)}</span>
+                        <span style="color:#ffaa00">HIGH:</span> <span>${data.high.toFixed(3)}</span>
+                        <span style="color:#fff; opacity:0.5">FLUX:</span> <span>${data.flux.toFixed(3)}</span>
+                    </div>
+                `;
+                // Keep tooltip inside bounds
+                if (x > rect.width * 0.7) {
+                    tooltip.style.left = 'auto';
+                    tooltip.style.right = '15px';
+                } else {
+                    tooltip.style.left = '15px';
+                    tooltip.style.right = 'auto';
+                }
+            }
+        });
+        canvas.addEventListener('mouseleave', () => inspect.style.display = 'none');
+        
+        // Modal close on overlay click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeAudioTimelineModal();
+        });
+    }
+
+    modal.style.opacity = '1';
+    modal.style.pointerEvents = 'auto';
+    startAudioTimelineLoop();
+}
+
+function closeAudioTimelineModal() {
+    const modal = document.getElementById('audio-timeline-modal');
+    if (modal) {
+        modal.style.opacity = '0';
+        modal.style.pointerEvents = 'none';
+        stopAudioTimelineLoop();
+    }
+}
+
+let timelineLoopId = null;
+function startAudioTimelineLoop() {
+    if (timelineLoopId) return;
+    const canvas = document.getElementById('audio-timeline-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    function tick() {
+        drawAudioTimeline(canvas, ctx);
+        timelineLoopId = requestAnimationFrame(tick);
+    }
+    tick();
+}
+
+function stopAudioTimelineLoop() {
+    if (timelineLoopId) cancelAnimationFrame(timelineLoopId);
+    timelineLoopId = null;
+}
+
+function drawAudioTimeline(canvas, ctx) {
+    if (!canvas) return;
+    // Resize internal buffer to match display
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== canvas.clientWidth * dpr) {
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        ctx.scale(dpr, dpr);
+    }
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, (h / 4) * i);
+        ctx.lineTo(w, (h / 4) * i);
+        ctx.stroke();
+    }
+    for (let i = 1; i < 10; i++) {
+        ctx.beginPath();
+        ctx.moveTo((w / 10) * i, 0);
+        ctx.lineTo((w / 10) * i, h);
+        ctx.stroke();
+    }
+
+    if (audioTimelineBuffer.length < 2) return;
+
+    const drawLine = (key, color, width, alpha = 1, fill = false) => {
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        
+        const points = [];
+        for (let i = 0; i < audioTimelineBuffer.length; i++) {
+            const x = (i / TIMELINE_MAX_FRAMES) * w;
+            const val = Math.max(0, Math.min(1.0, audioTimelineBuffer[i][key]));
+            const y = h - (val * h * 0.9) - (h * 0.05); // Slight padding
+            points.push({x, y});
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        
+        if (fill) {
+            ctx.lineTo(points[points.length-1].x, h);
+            ctx.lineTo(points[0].x, h);
+            ctx.closePath();
+            ctx.globalAlpha = alpha * 0.1;
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+    };
+
+    drawLine('flux', 'rgba(255,255,255,0.5)', 1, 0.4);
+    drawLine('high', '#ffaa00', 2, 1, true);
+    drawLine('mid', '#00f2ff', 2, 1, true);
+    drawLine('bass', '#ff3366', 3, 1, true);
 }

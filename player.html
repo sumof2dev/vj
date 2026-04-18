@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VJ Recording X-Ray Player</title>
+    <style>
+        body { background: #0f0f13; color: #fff; font-family: sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+        .container { width: 100%; max-width: 1200px; height: 100vh; display: flex; flex-direction: column; margin: 0 auto; overflow: hidden; }
+        
+        .sticky-viewer { padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #0f0f13; z-index: 10; border-bottom: 2px solid #222; }
+        .scrollable-content { flex-grow: 1; overflow-y: auto; padding: 20px; }
+
+        .controls { display: flex; gap: 10px; background: #1a1a24; padding: 15px; border-radius: 8px; border: 1px solid #333; justify-content: space-between; align-items: center; }
+        .session-info { flex-grow: 1; font-family: monospace; font-size: 14px; color: #aaa; }
+        
+        .playback-controls { display: flex; gap: 8px; align-items: center; }
+        button { background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        button:hover { background: #ff7979; }
+        button.secondary { background: #34495e; }
+        button.secondary:hover { background: #4b6584; }
+        button.step-btn { background: #1a1a24; border: 1px solid #444; width: 34px; padding: 8px 0; }
+        button.step-btn:hover { background: #333; }
+
+        .video-wrapper { background: #000; border-radius: 8px; overflow: hidden; border: 1px solid #333; display: flex; justify-content: center; align-items: center; min-height: 350px; position: relative; }
+        video { max-width: 100%; height: 350px; outline: none; }
+        
+        .timeline-wrapper { position: relative; width: 100%; height: 160px; background: #000; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; cursor: text; }
+        .playhead { position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: rgba(255, 255, 255, 0.8); pointer-events: none; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        
+        .legend { display: flex; gap: 20px; font-size: 12px; font-weight: bold; justify-content: center; background: #1a1a24; padding: 8px; border-radius: 8px; border: 1px solid #333; }
+        .legend span { cursor: pointer; transition: opacity 0.2s; }
+        .legend span:hover { opacity: 0.8; }
+        .legend span.off { opacity: 0.25; text-decoration: line-through; }
+        .status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+
+        .channel-grid-wrapper { display: flex; flex-direction: column; gap: 15px; }
+        .grid-header { font-size: 14px; font-weight: bold; color: #888; border-bottom: 1px solid #333; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .channel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        
+        .channel-chip { 
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
+            padding: 0 10px; border-radius: 6px; font-size: 11px; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap; overflow: hidden;
+            min-height: 36px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .channel-chip:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+        .channel-chip.active { background: rgba(100,100,250,0.1); border-color: #6464fa; box-shadow: 0 0 15px rgba(100,100,250,0.2); }
+        
+        .chip-label { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; }
+        .chip-val { 
+            background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; 
+            font-family: monospace; opacity: 0; transition: opacity 0.2s; 
+            font-weight: bold; min-width: 25px; text-align: center;
+        }
+        .paused .chip-val { opacity: 1; }
+
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; backdrop-filter: blur(5px); }
+        .modal { background:#1a1a24; width: 100%; max-width: 600px; max-height: 80vh; border-radius:12px; border: 1px solid #333; display:flex; flex-direction:column; overflow:hidden; }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #333; display:flex; justify-content:space-between; align-items:center; }
+        .modal-body { padding: 10px; overflow-y:auto; }
+        .session-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; display:flex; justify-content:space-between; align-items:center; transition: background 0.2s; border-bottom: 1px solid #222; }
+        .session-item:hover { background: rgba(255,255,255,0.05); }
+        .session-item:hover { background: rgba(255,255,255,0.05); }
+        
+        /* Correction Modal */
+        .correction-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center; }
+        .correction-modal { background:#1a1a24; padding: 20px; border-radius:12px; border: 1px solid #444; width: 300px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .label-btn { width: 100%; padding: 12px; margin-top: 8px; background: #333; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; text-align: left; }
+        .label-btn:hover { background: #444; border-color: #666; }
+        .label-btn.steady { border-left: 4px solid #888; }
+        .label-btn.building { border-left: 4px solid #f1c40f; }
+        .label-btn.tension { border-left: 4px solid #9b59b6; }
+        .label-btn.dropping { border-left: 4px solid #fff; }
+    </style>
+</head>
+<body class="paused">
+
+<div class="container">
+    <div class="sticky-viewer">
+        <div class="controls">
+            <div class="session-info">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span id="session-display">No Session Loaded</span>
+                    <div id="hostBadge" style="font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1px; cursor:pointer;" onclick="changeHost()">
+                        Source: <span id="hostDisplay" style="color:#00f2ff; font-weight:bold;">Local</span>
+                    </div>
+                </div>
+                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v417262238</span>
+            </div>
+            <div class="playback-controls">
+                <button class="step-btn" title="Step Back (0.05s) - Arrow Left" onclick="stepFrame(-1)">❮</button>
+                <button class="step-btn" title="Step Forward (0.05s) - Arrow Right" onclick="stepFrame(1)">❯</button>
+                <button class="secondary" onclick="openSessionBrowser()">📂 Browse</button>
+            </div>
+        </div>
+
+        <div class="video-wrapper">
+            <video id="vid" controls muted></video>
+            <audio id="aud" style="display:none;"></audio>
+            <div id="vid-status" class="status">Waiting for recording...</div>
+        </div>
+
+        <div class="timeline-wrapper">
+            <canvas id="timeline-canvas"></canvas>
+            <div id="playhead" class="playhead"></div>
+        </div>
+
+        <div class="legend" id="legend">
+            <span id="leg-b" style="color:#ff4757;" onclick="toggleAudio('b')">— Audio Bass</span>
+            <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Audio Flux</span>
+            <span id="leg-h" style="color:#1e90ff;" onclick="toggleAudio('h')">— Audio High</span>
+            <span id="leg-vl" style="color:#fff;" onclick="toggleAudio('vl')">— Master Vol</span>
+            <span style="color:#fff; text-shadow: 0 0 5px #fff; cursor: default;">▬▬ DMX Output</span>
+            <span style="color:#fff; opacity:0.3; cursor: default;">| Beat Flash</span>
+        </div>
+    </div>
+
+    <div class="scrollable-content">
+        <div class="channel-grid-wrapper">
+            <div class="grid-header">
+                <span>DMX CHANNELS</span>
+                <span id="grid-selection-count" style="font-size: 11px; opacity: 0.6;">0 Selected</span>
+            </div>
+            <div id="channel-grid" class="channel-grid">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Correction Modal -->
+<div id="correction-modal" class="correction-overlay" onclick="closeLabeler()">
+    <div class="correction-modal" onclick="event.stopPropagation()">
+        <div style="font-weight:bold; margin-bottom: 15px; font-size: 14px; color: #aaa;">Correct Transient State:</div>
+        <div id="segment-info" style="font-size: 11px; margin-bottom: 12px; opacity: 0.6;">Segment: 0s - 0s</div>
+        <button class="label-btn steady" onclick="submitLabel('steady')">Steady (Groove)</button>
+        <button class="label-btn building" onclick="submitLabel('building')">Building (Energy Up)</button>
+        <button class="label-btn tension" onclick="submitLabel('tension')">Tension (Breakdown)</button>
+        <button class="label-btn dropping" onclick="submitLabel('dropping')">Dropping (The Drop)</button>
+        <button class="secondary" style="width:100%; margin-top: 15px;" onclick="closeLabeler()">Cancel</button>
+    </div>
+</div>
+
+<!-- Modal Browser -->
+<div id="session-modal" class="modal-overlay" onclick="closeSessionBrowser()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 style="margin:0;">Select Recording Session</h3>
+            <button onclick="closeSessionBrowser()" style="padding: 5px 10px; background:#333;">&times;</button>
+        </div>
+        <div class="modal-body" id="session-list"></div>
+    </div>
+</div>
+
+<script src="shared_setup.js?v=417262238"></script>
+
+<script>
+    // --- ROBUST ENDPOINT RESOLUTION (Parity with App.tsx) ---
+    const currentSavedHost = localStorage.getItem('vj_backend_host'); // Re-checking because it might have changed
+    const effectiveHost = currentSavedHost || window.location.hostname;
+    const currentIsLocal = effectiveHost === "localhost" || effectiveHost === "127.0.0.1";
+    const currentSetupHostname = window.location.hostname;
+    const isHostedDomain = (currentSetupHostname === 'ravebox.love' || currentSetupHostname === 'api.ravebox.love' || currentSetupHostname.includes('storage.googleapis.com'));
+    
+    // Auto-prompt on Cloud if no host is set
+    if (!currentSavedHost && isHostedDomain) {
+        const newHost = prompt("Welcome to Recording Player. Enter your RaveBox Secret Code / Box ID to sync:");
+        if (newHost) {
+            localStorage.setItem('vj_backend_host', newHost.trim());
+            location.reload();
+        }
+    }
+
+    const p_currentBoxName = (effectiveHost === 'ravebox') ? 'ravebox.love' : ((effectiveHost && !effectiveHost.includes('.') && !currentIsLocal) ? `${effectiveHost}.ravebox.love` : effectiveHost);
+    const p_currentIsCustomTunnel = p_currentBoxName.endsWith('.ravebox.love') && p_currentBoxName !== 'ravebox.love' && p_currentBoxName !== 'api.ravebox.love';
+    const p_resolvedWsHost = p_currentIsCustomTunnel ? `ws-${p_currentBoxName}` : (p_currentBoxName === 'ravebox.love' ? 'wss.ravebox.love' : p_currentBoxName);
+    const p_resolvedApiHost = p_currentIsCustomTunnel ? `api-${p_currentBoxName}` : (p_currentBoxName === 'ravebox.love' ? 'ravebox.love' : p_currentBoxName);
+    const p_isSsl = window.location.protocol === "https:" || p_currentIsCustomTunnel || p_currentBoxName.includes('ravebox.love');
+
+    const P_API_BASE = `${p_isSsl ? "https:" : "http:"}//${p_resolvedApiHost}${p_currentIsCustomTunnel ? "" : ":8000"}`;
+    const P_WS_URL = `${p_isSsl ? "wss:" : "ws:"}//${p_resolvedWsHost}${p_currentIsCustomTunnel ? "" : ":8765"}/`;
+
+    function changeHost() {
+        const next = prompt("Enter RaveBox Secret Code (e.g. 'mybox') or local IP:", effectiveHost);
+        if (next !== null) {
+            if (next.trim() === "" || next === window.location.hostname) localStorage.removeItem('vj_backend_host');
+            else localStorage.setItem('vj_backend_host', next.trim());
+            location.reload();
+        }
+    }
+
+    const hostDisplay = document.getElementById('hostDisplay');
+    if (hostDisplay) {
+        hostDisplay.textContent = (localStorage.getItem('vj_backend_host') || "Local");
+    }
+
+    const vid = document.getElementById('vid');
+    const aud = document.getElementById('aud');
+    const canvas = document.getElementById('timeline-canvas');
+    const ctx = canvas.getContext('2d');
+    const playhead = document.getElementById('playhead');
+    const statusEl = document.getElementById('vid-status');
+    const sessionDisplay = document.getElementById('session-display');
+    const channelGrid = document.getElementById('channel-grid');
+    const selectionCountEl = document.getElementById('grid-selection-count');
+
+    // --- Media Error Handling ---
+    vid.onerror = () => {
+        console.error("Video Error:", vid.error);
+        statusEl.innerHTML = `<span style="color:#e74c3c;">🔴 Video Load Error: ${vid.error?.message || 'Code ' + vid.error?.code}</span>`;
+    };
+    aud.onerror = () => {
+        console.error("Audio Error:", aud.error);
+        statusEl.innerHTML = `<span style="color:#e74c3c;">🔴 Audio Load Error: ${aud.error?.message || 'Code ' + aud.error?.code}</span>`;
+    };
+
+    const FRAME_STEP = 0.05; // 20Hz step
+    const performanceHeight = 22;
+
+    let selectedAddrs = new Set();
+    let selectedAudio = new Set(['b', 'h', 'f', 'vl']);
+    let perfSegments = [];
+    let currentSessionId = null;
+    let ws = null;
+    let activeLabelReq = null;
+    let logData = [];
+    let maxTime = 0;
+    let trackedAddrs = [];
+    let channelRoles = {};
+
+    function initWS() {
+        ws = new WebSocket(P_WS_URL);
+        ws.onopen = () => console.log("Connected for labeling");
+        ws.onmessage = (e) => {
+            if (typeof e.data !== 'string') return; // Ignore binary DMX stream noise
+            try {
+                const data = JSON.parse(e.data);
+                if (data.type === 'label_status') {
+                    alert(data.message);
+                    closeLabeler();
+                }
+            } catch (err) {
+                // Not a JSON message we care about
+            }
+        };
+    }
+    initWS();
+
+    function toggleAudio(key) {
+        if (selectedAudio.has(key)) selectedAudio.delete(key);
+        else selectedAudio.add(key);
+        
+        // Update Legend UI
+        const el = document.getElementById(`leg-${key}`);
+        if (el) el.classList.toggle('off', !selectedAudio.has(key));
+        
+        drawTimeline();
+    }
+
+    function resizeCanvas() {
+        if (canvas.parentElement) {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        drawTimeline();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // KEYBOARD SCRUBBING
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); stepFrame(-1); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
+        if (e.key === ' ') { e.preventDefault(); vid.paused ? vid.play() : vid.pause(); }
+    });
+
+    function stepFrame(dir) {
+        if (!vid.src) return;
+        vid.pause();
+        const target = Math.max(0, Math.min(maxTime, vid.currentTime + (dir * FRAME_STEP)));
+        vid.currentTime = target;
+        updateStatusDisplay();
+    }
+
+    async function openSessionBrowser() {
+        const listEl = document.getElementById('session-list');
+        listEl.innerHTML = "Loading sessions...";
+        document.getElementById('session-modal').style.display = 'flex';
+        
+        try {
+            const res = await fetch(`${P_API_BASE}/api/recordings`);
+            const data = await res.json();
+            listEl.innerHTML = "";
+            
+            data.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'session-item';
+                const date = new Date(s.mtime * 1000).toLocaleString();
+                const dur = s.duration ? `${Math.floor(s.duration)}s` : '??';
+                item.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold;">${s.name}</div>
+                        <div style="font-size:11px; color:#444; margin-top:4px;">${dur} | ${s.channels} channels</div>
+                    </div>
+                    <div style="font-size:12px; color:#666; font-family:monospace;">${date}</div>
+                `;
+                item.onclick = () => selectSession(s.id, s.name);
+                listEl.appendChild(item);
+            });
+        } catch (e) {
+            listEl.innerText = "Error loading sessions: " + e.message;
+        }
+    }
+
+    function closeSessionBrowser() {
+        document.getElementById('session-modal').style.display = 'none';
+    }
+
+    function selectSession(id, name) {
+        closeSessionBrowser();
+        sessionDisplay.innerText = `Session: ${name}`;
+        currentSessionId = id;
+        loadRecording(id);
+    }
+
+    async function loadRecording(folder) {
+        if (!folder) return;
+        
+        statusEl.innerText = "Loading data...";
+        playhead.style.left = "0%";
+        selectedAddrs.clear();
+        trackedAddrs = [];
+        channelRoles = {};
+
+        // 1. Load native un-muxed files side-by-side
+        vid.src = `${P_API_BASE}/recordings/${folder}/video.mp4`;
+        aud.src = `${P_API_BASE}/recordings/${folder}/audio.wav`;
+        vid.load();
+        aud.load();
+
+        // 2. Load Metadata
+        try {
+            const metaRes = await fetch(`${P_API_BASE}/recordings/${folder}/meta.json`);
+            if (metaRes.ok) {
+                const meta = await metaRes.json();
+                channelRoles = meta.roles || {};
+            }
+        } catch (e) { console.warn("Could not load roles from meta.json"); }
+
+        // 3. Load the JSON Data
+        try {
+            const res = await fetch(`${P_API_BASE}/recordings/${folder}/dmx.json`);
+            if (!res.ok) throw new Error("dmx.json not found in this folder.");
+            logData = await res.json();
+            
+            if (logData.length > 0) {
+                maxTime = logData[logData.length - 1].t;
+                if (logData[0].v) {
+                    trackedAddrs = Object.keys(logData[0].v).sort((a,b) => parseInt(a)-parseInt(b));
+                }
+                updateChannelGrid();
+            }
+            resizeCanvas();
+        } catch (e) {
+            statusEl.innerText = `Error: ${e.message}`;
+            logData = [];
+            drawTimeline();
+        }
+    }
+
+    function updateChannelGrid() {
+        channelGrid.innerHTML = "";
+        selectionCountEl.innerText = `${selectedAddrs.size} Selected`;
+        
+        trackedAddrs.forEach((addr, i) => {
+            const chip = document.createElement('div');
+            const color = `hsla(${(addr * 45) % 360}, 70%, 70%, 1)`;
+            chip.className = `channel-chip ${selectedAddrs.has(addr) ? 'active' : ''}`;
+            chip.dataset.addr = addr;
+            chip.style.borderLeft = `4px solid ${color}`;
+            
+            const role = channelRoles[addr] || "";
+            chip.innerHTML = `
+                <span class="chip-label">${role ? addr + ':' + role : addr}</span>
+                <span class="chip-val" id="val-${addr}">-</span>
+            `;
+            chip.title = role ? `${addr}: ${role}` : `Channel ${addr}`;
+            
+            chip.onclick = () => toggleChannel(addr);
+            channelGrid.appendChild(chip);
+        });
+        updateStatusDisplay();
+    }
+
+    function toggleChannel(addr) {
+        if (selectedAddrs.has(addr)) selectedAddrs.delete(addr);
+        else selectedAddrs.add(addr);
+        updateChannelGrid();
+        drawTimeline();
+    }
+
+    function drawTimeline() {
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        
+        if (logData.length === 0) return;
+        
+        // --- PRESET TIMELINE LAYER (Data extraction moved up for height calculation) ---
+        const presetHeight = 18;
+        const presetPadding = 4;
+        const activePresetsAtT = new Map(); // name -> {start, list_of_segments}
+        const intervals = {}; // name -> [{s, e}]
+
+        // Extract intervals
+        logData.forEach((f, idx) => {
+            const names = new Set(f.p || []);
+            // End existing
+            Object.keys(intervals).forEach(name => {
+                if (!names.has(name) && activePresetsAtT.has(name)) {
+                    intervals[name].push({ s: activePresetsAtT.get(name), e: f.t });
+                    activePresetsAtT.delete(name);
+                }
+            });
+            // Start new
+            names.forEach(name => {
+                if (!intervals[name]) intervals[name] = [];
+                if (!activePresetsAtT.has(name)) activePresetsAtT.set(name, f.t);
+            });
+        });
+        activePresetsAtT.forEach((s, name) => {
+            intervals[name].push({ s, e: maxTime });
+        });
+        
+        // Graph area is the middle section
+        const graphTop = performanceHeight + 10;
+        const graphBottom = h - (Object.keys(intervals).length * (presetHeight + presetPadding)) - 10;
+        const graphH = Math.max(20, graphBottom - graphTop);
+
+        // --- PERFORMANCE ROW (Vibe & Transient) ---
+        const activeVibeAtT = { vb: null, tr: null, start: 0 };
+        perfSegments = [];
+        
+        logData.forEach((f, idx) => {
+            const vb = f.a?.vb || 'mid';
+            const tr = f.a?.tr || 'steady';
+            
+            if (vb !== activeVibeAtT.vb || tr !== activeVibeAtT.tr) {
+                if (activeVibeAtT.vb !== null) {
+                    perfSegments.push({ vb: activeVibeAtT.vb, tr: activeVibeAtT.tr, s: activeVibeAtT.start, e: f.t });
+                }
+                activeVibeAtT.vb = vb;
+                activeVibeAtT.tr = tr;
+                activeVibeAtT.start = f.t;
+            }
+        });
+        perfSegments.push({ vb: activeVibeAtT.vb, tr: activeVibeAtT.tr, s: activeVibeAtT.start, e: maxTime });
+
+        perfSegments.forEach(seg => {
+            const x1 = (seg.s / maxTime) * w;
+            const x2 = (seg.e / maxTime) * w;
+            const width = x2 - x1;
+            
+            // Vibe Backgrounds
+            if (seg.vb === 'high') ctx.fillStyle = 'rgba(255, 50, 50, 0.3)';
+            else if (seg.vb === 'chill') ctx.fillStyle = 'rgba(50, 150, 255, 0.3)';
+            else ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            
+            ctx.fillRect(x1, 0, width, performanceHeight);
+            
+            // Transient Special highlights/borders
+            if (seg.tr === 'dropping') { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(x1, 1, width, performanceHeight-2); }
+            else if (seg.tr === 'building') { ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)'; ctx.lineWidth = 1; ctx.strokeRect(x1, 1, width, performanceHeight-2); }
+            
+            // Label
+            if (width > 30) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 9px Roboto, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                let label = seg.vb.toUpperCase();
+                if (seg.tr !== 'steady') label += ` [${seg.tr.toUpperCase()}]`;
+                ctx.fillText(label, x1 + width/2, performanceHeight/2, width - 4);
+            }
+        });
+
+        // --- DRAW PRESETS ---
+
+        // Draw intervals
+        let row = 0;
+        const sortedNames = Object.keys(intervals).sort();
+        sortedNames.forEach(name => {
+            const y = h - (row + 1) * (presetHeight + presetPadding);
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.15)';
+            ctx.strokeStyle = 'rgba(0, 255, 204, 0.8)';
+            ctx.lineWidth = 1;
+
+            intervals[name].forEach(inv => {
+                const x1 = (inv.s / maxTime) * w;
+                const x2 = (inv.e / maxTime) * w;
+                const width = Math.max(2, x2 - x1);
+
+                ctx.fillRect(x1, y, width, presetHeight);
+                ctx.strokeRect(x1, y, width, presetHeight);
+
+                // Label
+                if (width > 40) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '10px Roboto, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(name.toUpperCase(), x1 + width/2, y + presetHeight/2, width - 10);
+                }
+            });
+            row++;
+        });
+        
+        // Grid/Beat markers
+        logData.forEach(frame => {
+            if (frame.a && frame.a.bt) {
+                const x = (frame.t / maxTime) * w;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.fillRect(x, 0, 2, h);
+            }
+        });
+
+        function drawBand(getDataFn, color, thickness, isShadow = false) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = thickness;
+            if (isShadow) { ctx.shadowColor = color; ctx.shadowBlur = 8; } 
+            else { ctx.shadowBlur = 0; }
+            
+            ctx.beginPath();
+            let started = false;
+            logData.forEach(frame => {
+                const val = getDataFn(frame);
+                if (val !== null && val !== undefined) {
+                    const x = (frame.t / maxTime) * w;
+                    const y = graphTop + (graphH - (val * graphH));
+                    if (!started) { ctx.moveTo(x, y); started = true; } 
+                    else { ctx.lineTo(x, y); }
+                }
+            });
+            ctx.stroke();
+        }
+
+        if (selectedAudio.has('h')) drawBand(f => f.a ? f.a.h : null, 'rgba(30, 144, 255, 0.4)', 1.5);
+        if (selectedAudio.has('b')) drawBand(f => f.a ? f.a.b : null, 'rgba(255, 71, 87, 0.5)', 2);
+        if (selectedAudio.has('f')) drawBand(f => f.a ? f.a.f : null, 'rgba(241, 196, 15, 0.6)', 1.5);
+        if (selectedAudio.has('vl')) drawBand(f => f.a ? f.a.vl : null, 'rgba(255, 255, 255, 0.7)', 2, true);
+
+        selectedAddrs.forEach(addr => {
+            const color = `hsla(${(addr * 45) % 360}, 70%, 70%, 1)`;
+            drawBand(f => (f.v[addr] || 0) / 255.0, color, 3, true);
+        });
+
+        ctx.shadowBlur = 0;
+    }
+
+    function updateStatusDisplay() {
+        if (maxTime > 0) {
+            const pct = vid.currentTime / maxTime;
+            playhead.style.left = `${Math.min(100, Math.max(0, pct * 100))}%`;
+            
+            const frame = logData.find(f => f.t >= vid.currentTime);
+            if (frame) {
+                let txt = `Time: ${vid.currentTime.toFixed(2)}s`;
+                if (frame.a) {
+                    const vb = (frame.a.vb || 'mid').toUpperCase();
+                    const tr = (frame.a.tr || 'steady');
+                    const vol = ((frame.a.vl || 0) * 100).toFixed(0);
+                    txt += ` | <b>${vb}</b> | ${tr} | Vol: ${vol}% | Bass: ${(frame.a.b*100).toFixed(0)}%`;
+                }
+                statusEl.innerHTML = txt;
+
+                trackedAddrs.forEach(addr => {
+                    const vEl = document.getElementById(`val-${addr}`);
+                    if (vEl) vEl.innerText = frame.v[addr] !== undefined ? frame.v[addr] : '-';
+                });
+            }
+        }
+    }
+
+    // Tight A/V Synchronization bindings
+    vid.onplay = () => { 
+        aud.currentTime = vid.currentTime; 
+        aud.play().catch(e => console.warn("Audio sync play failed:", e)); 
+        document.body.classList.remove('paused'); 
+    };
+    vid.onpause = () => { 
+        aud.pause(); 
+        document.body.classList.add('paused'); 
+    };
+    vid.onwaiting = () => aud.pause(); // Catch buffering pauses
+    vid.onplaying = () => { 
+        aud.currentTime = vid.currentTime; 
+        aud.play().catch(e => console.warn("Audio sync playing failed:", e)); 
+    };
+    vid.ontimeupdate = updateStatusDisplay;
+    vid.onseeked = () => { 
+        aud.currentTime = vid.currentTime; 
+        updateStatusDisplay(); 
+    };
+
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const pct = x / canvas.width;
+        
+        // Check if clicking Performance Row
+        if (y < performanceHeight) {
+            const t = pct * maxTime;
+            const seg = perfSegments.find(s => t >= s.s && t <= s.e);
+            if (seg) {
+                activeLabelReq = seg;
+                document.getElementById('segment-info').innerText = `Segment: ${seg.s.toFixed(2)}s - ${seg.e.toFixed(2)}s (Original: ${seg.tr})`;
+                document.getElementById('correction-modal').style.display = 'flex';
+            }
+            return;
+        }
+
+        vid.currentTime = pct * maxTime;
+    });
+
+    function closeLabeler() {
+        document.getElementById('correction-modal').style.display = 'none';
+        activeLabelReq = null;
+    }
+
+    function submitLabel(newLabel) {
+        if (!activeLabelReq || !currentSessionId) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            alert("Not connected to backend");
+            return;
+        }
+        
+        ws.send(JSON.stringify({
+            type: 'label_transient',
+            sessionId: currentSessionId,
+            start_t: activeLabelReq.s,
+            end_t: activeLabelReq.e,
+            label: newLabel
+        }));
+    }
+
+    // Auto-load if 'session' param is in URL
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const folder = urlParams.get('session');
+        if (folder) loadRecording(folder);
+        resizeCanvas();
+    };
+</script>
+</body>
+</html>

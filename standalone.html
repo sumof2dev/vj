@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaveBox Visualizer - Standalone Demo</title>
+    <style>
+        :root {
+            --bg: #050508;
+            --accent: #7c4dff;
+            --text: #ffffff;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #standalone-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        #launch-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 1.2rem;
+            font-weight: 900;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(124, 77, 255, 0.4);
+            transition: transform 0.2s;
+            letter-spacing: 2px;
+        }
+        #launch-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(124, 77, 255, 0.6);
+        }
+        iframe {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+        }
+        #info-peek {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.3);
+            pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+    <!-- Core logic dependencies (stubbed for standalone) -->
+    <script src="shared_setup.js?v=417262238"></script>
+    <script src="profile_logic.js?v=417262238"></script>
+    <script src="stage_logic.js?v=417262238"></script>
+    <script src="standalone_engine.js?v=417262238"></script>
+</head>
+<body>
+    <div id="standalone-overlay">
+        <button id="launch-btn" onclick="launchDemo()">🚀 Launch Visualizer</button>
+    </div>
+
+    <iframe id="viz-frame" src="visualdmx.html"></iframe>
+
+    <div id="info-peek">Standalone Mode // No Backend Required // VJ Standalone v417262238</div>
+
+    <script>
+        function launchDemo() {
+            document.getElementById('standalone-overlay').style.display = 'none';
+            if (typeof startStandaloneEngine === 'function') {
+                startStandaloneEngine();
+            }
+        }
+    </script>
+</body>
+</html>

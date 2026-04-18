@@ -265,6 +265,7 @@ if os.path.exists(SPOT_CREDS_FILE):
 SPOTIFY_CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".spotify_cache")
 SESSION_ID = int(time.time())
 SERVER_START_TIME = time.time()
+GLOBAL_CLOCK = 0.0
 DMX_ENABLED = True
 active_clients = set()
 last_callback_time = time.time()
@@ -641,7 +642,15 @@ def pack_binary_state(current_time):
     - base, fx, fg layerIdx (3x u16, offset 76-81)
     - dmx (513x u8, offset 82-594)
     """
-    m_time = (current_time - SERVER_START_TIME) * 0.6
+    global GLOBAL_CLOCK
+    # Use the dmx_engine effective speed for the global visual clock
+    # This ensures backend/frontend synchronization of "Time Warp" effects
+    dt_val = (current_time - getattr(pack_binary_state, 'last_t', current_time))
+    pack_binary_state.last_t = current_time
+    
+    speed_factor = dmx_engine.eff_speed if dmx_engine else 0.6
+    GLOBAL_CLOCK += dt_val * speed_factor
+    m_time = GLOBAL_CLOCK
     flux = audio_state.get('flux', 0.0)
     bass = audio_state.get('bass', 0.0)
     mid = audio_state.get('mid', 0.0)
@@ -725,7 +734,9 @@ async def fast_broadcast_loop():
                         
                         # LOG DATA TO RECORDER IF ACTIVE
                         if recorder.is_recording:
-                            recorder.log_dmx(full_u)
+                            # Capture names of active presets for timeline visualization
+                            active_preset_names = dmx_engine.get_active_preset_names() if dmx_engine else []
+                            recorder.log_dmx(full_u, audio_state=audio_state, active_presets=active_preset_names)
 
                         max_addr = 0
                         for inst in dmx_engine.stage_instances:
@@ -798,8 +809,10 @@ async def fast_broadcast_loop():
                         "vibe_variant": dmx_engine.sync_indices.get(current_vibe, 0) + 1 if dmx_engine else 1,
                         "transient": audio_state.get('transient', 'steady'),
                         "active_presets": [p.get('id', p['name']) for p in dmx_engine.active_presets] if dmx_engine else [],
-                        "lissajous_active": dmx_engine.logic.state.get('lissajous_active', 0.0) if dmx_engine and dmx_engine.logic else 0.0,
-                        "calibrated_preset_active": dmx_engine.calibrated_preset_active if dmx_engine else False,
+                        "visual_commands": dmx_engine.active_visual_commands if dmx_engine else [],
+                        "blackout": dmx_engine.blackout if dmx_engine else False,
+                        "eff_speed": dmx_engine.eff_speed if dmx_engine else 0.6,
+                        "eff_intensity": dmx_engine.eff_intensity if dmx_engine else 1.0,
                         "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
                         "spotify": audio_state.get('spotify')
                     }
@@ -1004,6 +1017,14 @@ async def ws_handler(websocket):
                             if dmx_engine:
                                 dmx_engine.clear_address_overrides(addresses)
                         
+                        elif msg_type == "blackout":
+                            # Toggle global blackout
+                            state = data.get("state")
+                            if dmx_engine:
+                                # If state is provided, use it, otherwise toggle
+                                new_state = state if state is not None else not dmx_engine.blackout
+                                dmx_engine.set_blackout(new_state)
+                        
                         elif msg_type == "toggle_preset":
                             preset_id = data.get("preset_id")
                             state = data.get("state") # optional
@@ -1137,13 +1158,41 @@ async def ws_handler(websocket):
                         elif msg_type == "run_calibration":
                             asyncio.create_task(run_calibration_task(websocket))
 
+                        elif msg_type == "label_transient":
+                            # Handle manual transient state labeling for ML training
+                            s_id = data.get("sessionId")
+                            start_t = data.get("start_t")
+                            end_t = data.get("end_t")
+                            label = data.get("label")
+                            
+                            success = recorder.save_training_sample(s_id, start_t, end_t, label)
+                            await websocket.send(json.dumps({
+                                "type": "label_status",
+                                "success": success,
+                                "message": "Training sample saved" if success else "Failed to save sample"
+                            }))
+
                         elif msg_type == "run_audit":
                             asyncio.create_task(run_audit_task(websocket))
 
                         elif msg_type == "start_recording":
                             name = data.get("name")
                             addresses = data.get("addresses", [])
-                            success = recorder.start(name=name, addresses=addresses)
+                            roles = data.get("roles", {})
+                            
+                            # BACKEND FALLBACK: If roles are empty (e.g. browser cache), auto-resolve from engine state
+                            if not roles and dmx_engine:
+                                for inst in dmx_engine.stage_instances:
+                                    base_addr = (int(inst.get('address', 1)) + int(inst.get('offset', 0)))
+                                    profile = dmx_engine.profiles.get(inst.get('profileId'))
+                                    if profile:
+                                        for idx, ch in enumerate(profile.get('channels', [])):
+                                            addr = base_addr + int(ch.get('addrOffset', idx))
+                                            # We use string keys to match JSON expectations
+                                            roles[str(addr)] = (ch.get('role') or ch.get('name') or "unknown").lower()
+                            
+                            print(f"🎬 REC START: {len(addresses)} addresses, Roles: {len(roles)} keys captured", flush=True)
+                            success = recorder.start(name=name, addresses=addresses, roles=roles)
                             await websocket.send(json.dumps({"type": "recording_started", "success": success}))
 
                         elif msg_type == "stop_recording":

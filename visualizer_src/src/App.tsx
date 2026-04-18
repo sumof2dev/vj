@@ -19,6 +19,8 @@ uniform float u_vol;  // 0.0 to 1.5, tied to overall volume
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
 uniform sampler2D u_image2;
+uniform float u_strobe;   // 0.0 or 1.0, flips at ~10Hz when strobe command active
+uniform float u_blackout; // 1.0 when blackout command active
 
 Must contain:
 precision highp float;
@@ -34,28 +36,25 @@ uniform float u_bass;
 uniform float u_high;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
+uniform float u_hue;
+uniform float u_invert;
 
 void main() {
     vec2 uv = vUv - 0.5;
-    uv.x *= u_resolution.x / u_resolution.y; // Aspect correction
+    uv.x *= u_resolution.x / u_resolution.y;
     
     float radius = length(uv);
     float angle = atan(uv.y, uv.x);
     
-    // Bass dictates the number of geometric slices
     float segments = 4.0 + floor(u_bass * 4.0) * 2.0;
     angle = mod(angle, 6.28318 / segments);
     angle = abs(angle - (3.14159 / segments));
     
     vec2 polarUv = vec2(cos(angle), sin(angle)) * radius;
-    
-    // u_high adds sharp, percussive zoom punches
     polarUv *= 0.8 - (u_bass * 0.2) - (u_high * 0.15); 
     polarUv += u_clock * 0.2; 
     
     vec3 color = texture2D(u_image, fract(polarUv)).rgb;
-    
-    // High contrast for LEDs
     color = clamp((color - 0.1) / 0.9, 0.0, 1.0);
     gl_FragColor = vec4(color, 1.0);
 }`;
@@ -179,9 +178,127 @@ void main() {
     gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
 }`;
 
-const VERTEX_SHADER = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position, 1.0); }`;
+const FRACTAL_CRYSTAL_SHADER = `
+precision highp float;
+varying vec2 vUv;
+uniform float u_clock;
+uniform float u_bass;
+uniform float u_flux;
+uniform float u_high;
+uniform vec2 u_resolution;
+uniform sampler2D u_image;
 
-const PRESET_WARPS = [DEFAULT_FRAGMENT_SHADER, RGB_GLITCH_SHADER, FLUX_MELT_SHADER, DEEP_TUNNEL_SHADER];
+mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+void main() {
+    vec2 uv = vUv - 0.5;
+    uv.x *= u_resolution.x / u_resolution.y;
+    
+    vec2 z = uv;
+    float scale = 1.0;
+    
+    // KIFS Space Folding: Fold the space over itself 4 times
+    for(int i = 0; i < 4; i++) {
+        // u_bass opens and closes the geometric folds
+        z = abs(z) - (0.3 + u_bass * 0.15); 
+        
+        // Twist each fold slightly differently
+        z *= rot(u_clock * 0.3 + float(i) * 0.5); 
+        
+        // Scale up the space
+        z *= 1.4; 
+        scale *= 1.4;
+    }
+    
+    // Map the folded coordinates back to the texture space
+    vec2 sampleUv = (z / scale) + 0.5;
+    
+    // u_high adds chromatic aberration to the sharp edges
+    float split = u_high * 0.05;
+    float r = texture2D(u_image, fract(sampleUv + split)).r;
+    float g = texture2D(u_image, fract(sampleUv)).g;
+    float b = texture2D(u_image, fract(sampleUv - split)).b;
+    
+    vec3 color = vec3(r, g, b);
+    
+    // Draw neon lines exactly where the math folds the space
+    float edge = exp(-15.0 * abs(z.x * z.y));
+    color += vec3(edge) * (0.5 + u_flux);
+    
+    gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
+}`;
+
+const HEX_MIRROR_SHADER = `
+precision highp float;
+varying vec2 vUv;
+uniform float u_clock;
+uniform float u_bass;
+uniform float u_flux;
+uniform float u_high;
+uniform vec2 u_resolution;
+uniform sampler2D u_image;
+
+// Hexagonal grid calculation
+vec4 hexCoords(vec2 uv) {
+    vec2 r = vec2(1.0, 1.7320508); // sqrt(3)
+    vec2 h = r * 0.5;
+    vec2 a = mod(uv, r) - h;
+    vec2 b = mod(uv - h, r) - h;
+    vec2 gv = dot(a, a) < dot(b, b) ? a : b;
+    vec2 id = uv - gv;
+    return vec4(gv.x, gv.y, id.x, id.y); // xy = local UV, zw = cell ID
+}
+
+float rand(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+void main() {
+    vec2 uv = vUv - 0.5;
+    uv.x *= u_resolution.x / u_resolution.y;
+    
+    // Scale the grid, u_bass zooms the camera into the mirrors
+    float gridScale = 8.0 - (u_bass * 3.0);
+    vec4 hex = hexCoords(uv * gridScale);
+    
+    vec2 localUv = hex.xy;
+    vec2 cellId = hex.zw;
+    
+    // Generate a unique random number for every single mirror
+    float cellRand = rand(cellId);
+    
+    // Twist the mirror lens based on its random ID and the audio flux
+    localUv *= rot(cellRand * 6.28 + u_clock + (u_flux * 2.0));
+    
+    // Scale the image inside the mirror based on hi-hats
+    localUv *= 1.0 - (u_high * 0.5 * cellRand);
+    
+    // Map back to texture coordinates and scroll the underlying image
+    vec2 sampleUv = (localUv / gridScale) + 0.5;
+    sampleUv += u_clock * 0.1; 
+    
+    vec3 color = texture2D(u_image, fract(sampleUv)).rgb;
+    
+    // Create a dark border around each hexagonal mirror lens
+    float hexEdge = max(abs(hex.x), abs(hex.x * 0.5 + hex.y * 0.866025));
+    float border = smoothstep(0.4, 0.45, hexEdge);
+    
+    // u_high flashes random mirrors
+    float flash = step(0.9, fract(cellRand + u_time * 5.0)) * u_high;
+    
+    color = mix(color + flash, vec3(0.0), border);
+    
+    gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
+}`;
+
+const VERTEX_SHADER = `
+varying vec2 vUv;
+void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const PRESET_WARPS = [DEFAULT_FRAGMENT_SHADER, RGB_GLITCH_SHADER, FLUX_MELT_SHADER, DEEP_TUNNEL_SHADER, FRACTAL_CRYSTAL_SHADER, HEX_MIRROR_SHADER];
 
 export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -209,6 +326,7 @@ export default function App() {
     const [unsavedShader, setUnsavedShader] = useState<{code: string, prompt: string, category: string} | null>(null);
     const [undoHistory, setUndoHistory] = useState<{base: string | null, fx: string | null}>({base: null, fx: null});
     const [activeShaderId, setActiveShaderId] = useState<string | null>(null);
+    const [currentSpotifyArt, setCurrentSpotifyArt] = useState<string | null>(null);
 
     // Audio Sync Vibe
     const vibeRef = useRef('mid');
@@ -342,6 +460,20 @@ export default function App() {
     };
 
     const loadFromLibrary = (item: any, styleIndex?: number) => {
+        if (item.category === 'spotify') {
+            if (spotifyTextureRef.current) {
+                applyNewTexture(spotifyTextureRef.current);
+                setActiveShaderId('spotify-art');
+                const warp = (styleIndex !== undefined) 
+                    ? PRESET_WARPS[styleIndex % PRESET_WARPS.length] 
+                    : PRESET_WARPS[Math.floor(Math.random() * PRESET_WARPS.length)];
+                applyNewShader(warp, 'image');
+                setStatus("🎵 Spotify Art Live");
+                setStatusColor("text-emerald-400");
+            }
+            return;
+        }
+
         setActiveShaderId(item.file);
         setStatus(`📂 Loading Image...`);
         new THREE.TextureLoader().load(`${apiBase}/${item.file}`, (texture) => {
@@ -386,23 +518,51 @@ export default function App() {
             u_resolution: 'uniform vec2 u_resolution;',
             u_image:      'uniform sampler2D u_image;',
             u_image2:     'uniform sampler2D u_image2;',
+            u_strobe:     'uniform float u_strobe;',
+            u_blackout:   'uniform float u_blackout;',
+            u_spin:       'uniform float u_spin;',
+            u_spin_angle: 'uniform float u_spin_angle;',
+            u_zoom:       'uniform float u_zoom;',
+            u_hue:        'uniform float u_hue;',
+            u_invert:     'uniform float u_invert;',
             vUv:          'varying vec2 vUv;',
         };
         const toInject = Object.entries(defs)
             .filter(([name, decl]) => {
                 const usedInCode = new RegExp(`\\b${name}\\b`).test(code);
                 const alreadyDeclared = new RegExp(`(uniform|varying)\\s+\\S+\\s+${name}\\s*[;,]`).test(code);
-                return usedInCode && !alreadyDeclared;
+                // ALWAYS include hue/invert if they aren't declared, as we auto-inject logic that uses them
+                const isGlobalFX = (name === 'u_hue' || name === 'u_invert');
+                return (usedInCode || isGlobalFX) && !alreadyDeclared;
             })
             .map(([, decl]) => decl);
         if (toInject.length === 0) return code;
         const preamble = toInject.join('\n');
-        const precisionMatch = code.match(/precision\s+\w+\s+\w+\s*;/);
+        let finalCode = code;
+        const precisionMatch = finalCode.match(/precision\s+\w+\s+\w+\s*;/);
         if (precisionMatch) {
-            const endIdx = code.indexOf(precisionMatch[0]) + precisionMatch[0].length;
-            return code.slice(0, endIdx) + '\n' + preamble + '\n' + code.slice(endIdx);
+            const endIdx = finalCode.indexOf(precisionMatch[0]) + precisionMatch[0].length;
+            finalCode = finalCode.slice(0, endIdx) + '\n' + preamble + '\n' + finalCode.slice(endIdx);
+        } else {
+            finalCode = preamble + '\n' + finalCode;
         }
-        return preamble + '\n' + code;
+
+        // GLOBAL FX INJECTION: Append to the end of main()
+        const lastBrace = finalCode.lastIndexOf('}');
+        if (lastBrace > 0 && finalCode.includes('gl_FragColor')) {
+             const fxLogic = `
+    // Global FX Phase 1
+    if (u_invert > 0.0) gl_FragColor.rgb = mix(gl_FragColor.rgb, 1.0 - gl_FragColor.rgb, u_invert);
+    if (u_hue > 0.0) {
+        vec3 c_fx = gl_FragColor.rgb;
+        const vec3 k_fx = vec3(0.57735);
+        float cosA_fx = cos(u_hue * 6.28318);
+        gl_FragColor.rgb = c_fx * cosA_fx + cross(k_fx, c_fx) * sin(u_hue * 6.28318) + k_fx * dot(k_fx, c_fx) * (1.0 - cosA_fx);
+    }
+`;
+             finalCode = finalCode.slice(0, lastBrace) + fxLogic + '\n}';
+        }
+        return finalCode;
     };
 
     const applyNewShader = (code: string, category: string = 'base') => {
@@ -555,10 +715,29 @@ export default function App() {
         u_high: { value: 0 },
         u_vol: { value: 0 },
         u_image: { value: new THREE.Texture() },
-        u_image2: { value: new THREE.Texture() }
+        u_image2: { value: new THREE.Texture() },
+        u_strobe: { value: 0 },
+        u_blackout: { value: 0 },
+        u_spin: { value: 0 },
+        u_spin_angle: { value: 0 },
+        u_zoom: { value: 0 },
+        u_hue: { value: 0 },
+        u_invert: { value: 0 }
     });
     const baseMeshRef = useRef<THREE.Mesh | null>(null);
     const fxMeshRef = useRef<THREE.Mesh | null>(null);
+    const strobeActiveRef = useRef(false);
+    const blackoutActiveRef = useRef(false);
+    const spinActiveRef = useRef(false);
+    const spinAngleRef = useRef(0);
+    const zoomTargetRef = useRef(1.0);
+    const hueTargetRef = useRef(0.0);
+    const invertActiveRef = useRef(false);
+    const currentScaleRef = useRef(1);
+    const currentHueRef = useRef(0.0);
+    const currentInvertRef = useRef(0.0);
+    const effSpeedRef = useRef(0.6);
+    const effIntensityRef = useRef(1.0);
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -675,9 +854,39 @@ export default function App() {
                         const msg = JSON.parse(event.data);
                         if (msg.type === "state") {
                             if (msg.vibe) vibeRef.current = msg.vibe;
+                            if (msg.eff_speed !== undefined) effSpeedRef.current = msg.eff_speed;
+                            if (msg.eff_intensity !== undefined) effIntensityRef.current = msg.eff_intensity;
+                            
+                            // Handle DMX-Timed Visual Commands
+                            if (msg.visual_commands) {
+                                strobeActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'strobe' && c.value > 0);
+                                blackoutActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'blackout' && c.value > 0);
+                                spinActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'spin' && c.value > 0);
+                                
+                                const zoomCmd = msg.visual_commands.find((c: any) => c.function === 'zoom');
+                                zoomTargetRef.current = zoomCmd ? (parseFloat(zoomCmd.value) || 1.0) : 1.0;
+                                
+                                const hueCmd = msg.visual_commands.find((c: any) => c.function === 'hue');
+                                hueTargetRef.current = hueCmd ? (parseFloat(hueCmd.value) / 255.0 || 0.0) : 0.0;
+                                
+                                invertActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'invert' && c.value > 0);
+                                
+                                if (msg.visual_commands.length > 0) {
+                                    console.log("🎬 Visual Commands:", msg.visual_commands);
+                                }
+                            } else {
+                                strobeActiveRef.current = false;
+                                blackoutActiveRef.current = false;
+                                spinActiveRef.current = false;
+                                zoomTargetRef.current = 1.0;
+                                hueTargetRef.current = 0.0;
+                                invertActiveRef.current = false;
+                            }
+
                             if (msg.spotify && msg.spotify.image_high) {
                                 if (lastSpotifyUrlRef.current !== msg.spotify.image_high) {
                                     lastSpotifyUrlRef.current = msg.spotify.image_high;
+                                    setCurrentSpotifyArt(msg.spotify.image_high);
                                     new THREE.TextureLoader().setCrossOrigin('anonymous').load(msg.spotify.image_high, (tex) => {
                                         spotifyTextureRef.current = tex;
                                         // Trigger immediate update on song change
@@ -691,6 +900,7 @@ export default function App() {
                             } else if (!msg.spotify) {
                                 spotifyTextureRef.current = null;
                                 lastSpotifyUrlRef.current = null;
+                                setCurrentSpotifyArt(null);
                             }
                         }
                     } catch(e) {}
@@ -711,11 +921,78 @@ export default function App() {
             smoothedMods.high += (targetMods.high - smoothedMods.high) * sf;
             smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * sf;
 
-            uniformsRef.current.u_clock.value += dt * (0.6 + smoothedMods.flux * 1.5 + smoothedMods.bass * 0.4);
+            uniformsRef.current.u_clock.value += dt * (effSpeedRef.current + smoothedMods.flux * 1.5 + smoothedMods.bass * 0.4);
+            // Master intensity scalar for the whole visual system
+            const masterAlpha = effIntensityRef.current;
             uniformsRef.current.u_flux.value = smoothedMods.flux;
             uniformsRef.current.u_bass.value = smoothedMods.bass;
             uniformsRef.current.u_high.value = smoothedMods.high;
             uniformsRef.current.u_vol.value = smoothedMods.vol;
+
+            // Handle Blackout
+            const isBlackout = blackoutActiveRef.current;
+            uniformsRef.current.u_blackout.value = isBlackout ? 1.0 : 0.0;
+            if (isBlackout) {
+                if (baseMeshRef.current) baseMeshRef.current.visible = false;
+                if (fxMeshRef.current) fxMeshRef.current.visible = false;
+            } else {
+                if (baseMeshRef.current) baseMeshRef.current.visible = true;
+                // FX visibility is usually managed by its own logic, but we must restore it if it was visible
+                // Actually, just let the next binary packet restore it or check if it should be visible.
+                // For simplicity, restore base and let fx be managed by indices logic
+                if (baseMeshRef.current) baseMeshRef.current.visible = true;
+            }
+            // Handle Strobe
+            if (strobeActiveRef.current) {
+                const strobeState = (Math.floor(now / 20) % 2); // ~25Hz strobe for tighter look
+                uniformsRef.current.u_strobe.value = strobeState;
+                if (strobeState === 0) {
+                     if (baseMeshRef.current) baseMeshRef.current.visible = false;
+                     if (fxMeshRef.current) fxMeshRef.current.visible = false;
+                }
+            } else {
+                uniformsRef.current.u_strobe.value = 0;
+            }
+
+            // Handle Spin & Zoom
+            const isSpinning = spinActiveRef.current;
+            const spinScaleBoost = isSpinning ? 1.45 : 1.0;
+            const targetScale = zoomTargetRef.current * spinScaleBoost;
+            currentScaleRef.current += (targetScale - currentScaleRef.current) * sf;
+            
+            if (isSpinning) {
+                spinAngleRef.current += dt * 2.0; // Steady rotation
+            } else {
+                // Return to 0 smoothly if not too far
+                if (spinAngleRef.current % (Math.PI * 2) !== 0) {
+                     spinAngleRef.current += (0 - (spinAngleRef.current % (Math.PI * 2))) * sf;
+                }
+            }
+            
+            // Handle Color FX
+            currentHueRef.current += (hueTargetRef.current - currentHueRef.current) * sf;
+            currentInvertRef.current += ((invertActiveRef.current ? 1.0 : 0.0) - currentInvertRef.current) * sf;
+            
+            const rotationZ = spinAngleRef.current;
+            uniformsRef.current.u_spin.value = isSpinning ? 1.0 : 0.0;
+            uniformsRef.current.u_spin_angle.value = rotationZ;
+            uniformsRef.current.u_zoom.value = zoomTargetRef.current;
+            uniformsRef.current.u_hue.value = currentHueRef.current;
+            uniformsRef.current.u_invert.value = currentInvertRef.current;
+
+            if (baseMeshRef.current) {
+                baseMeshRef.current.rotation.z = rotationZ;
+                baseMeshRef.current.scale.set(currentScaleRef.current, currentScaleRef.current, 1);
+            }
+            if (fxMeshRef.current) {
+                fxMeshRef.current.rotation.z = rotationZ;
+                fxMeshRef.current.scale.set(currentScaleRef.current, currentScaleRef.current, 1);
+            }
+            
+            // Apply global opacity based on eff_intensity (0..1 range expected for opacity)
+            const globalOpacity = Math.max(0, Math.min(1.0, masterAlpha));
+            if (baseMeshRef.current) (baseMeshRef.current.material as THREE.ShaderMaterial).opacity = globalOpacity;
+            if (fxMeshRef.current) (fxMeshRef.current.material as THREE.ShaderMaterial).opacity = globalOpacity;
 
             requestAnimationFrame(updateLoop);
         };
@@ -785,9 +1062,23 @@ export default function App() {
                         </div>
 
                         <div className="flex-1 overflow-auto p-4 gap-4 grid grid-cols-2 content-start custom-scrollbar">
-                            {libraryItems.filter(i => i.category === filterTab).map((item, idx) => (
-                                filterTab === 'image' ? (
-                                    <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-zinc-800 hover:border-indigo-400 cursor-pointer shadow-lg transition-all" onClick={() => loadFromLibrary(item)}>
+                            {((filterTab === 'image' && currentSpotifyArt) 
+                                ? [{ category: 'spotify', file: currentSpotifyArt, name: 'Spotify Art' }, ...libraryItems.filter(i => i.category === 'image')]
+                                : libraryItems.filter(i => i.category === filterTab)
+                            ).map((item, idx) => (
+                                item.category === 'spotify' ? (
+                                    <div key="spotify" className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer shadow-lg transition-all ${activeShaderId === 'spotify-art' ? 'border-emerald-500 shadow-emerald-500/20' : 'border-zinc-800 hover:border-emerald-400'}`} onClick={() => loadFromLibrary(item)}>
+                                        <img src={item.file} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="bg-emerald-500 text-black text-[8px] font-black px-2 py-0.5 rounded-full mb-1">LIVE</div>
+                                            <div className="text-[10px] font-bold text-white">SPOTIFY</div>
+                                        </div>
+                                        {activeShaderId === 'spotify-art' && (
+                                            <div className="absolute top-2 left-2 w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                                        )}
+                                    </div>
+                                ) : filterTab === 'image' ? (
+                                    <div key={idx} className={`relative group aspect-square rounded-xl overflow-hidden border cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-zinc-800 hover:border-indigo-400'}`} onClick={() => loadFromLibrary(item)}>
                                         <img src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" />
                                         <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-rose-500 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity backdrop-blur-md"><X size={14} /></button>
                                     </div>
@@ -928,6 +1219,33 @@ export default function App() {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* DEBUG OVERLAY - Enhanced for visibility, only shows when toolbar is active */}
+                {showToolbar && (
+                    <div className="fixed top-24 left-8 pointer-events-none font-mono text-[12px] space-y-2 z-[100] bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/5 shadow-2xl">
+                        <div className="text-zinc-500 mb-2 border-b border-white/10 pb-1 text-[10px] font-black uppercase tracking-wider">Visual FX Debug</div>
+                        <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${strobeActiveRef.current ? "bg-amber-400 animate-pulse shadow-[0_0_10px_#fbbf24]" : "bg-zinc-800"}`} />
+                            <span className={strobeActiveRef.current ? "text-amber-200" : "text-zinc-600"}>STROBE</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${spinActiveRef.current ? "bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]" : "bg-zinc-800"}`} />
+                            <span className={spinActiveRef.current ? "text-emerald-200" : "text-zinc-600"}>SPIN</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${(zoomTargetRef.current > 1.05 || zoomTargetRef.current < 0.95) ? "bg-indigo-400 shadow-[0_0_10px_#818cf8]" : "bg-zinc-800"}`} />
+                            <span className={(zoomTargetRef.current > 1.05 || zoomTargetRef.current < 0.95) ? "text-indigo-200" : "text-zinc-600"}>ZOOM: {zoomTargetRef.current.toFixed(2)}x</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${hueTargetRef.current > 0 ? "bg-rose-400 shadow-[0_0_10px_#fb7185]" : "bg-zinc-800"}`} />
+                            <span className={hueTargetRef.current > 0 ? "text-rose-200" : "text-zinc-600"}>HUE: {(hueTargetRef.current * 360).toFixed(0)}°</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${invertActiveRef.current ? "bg-white shadow-[0_0_10px_#fff]" : "bg-zinc-800"}`} />
+                            <span className={invertActiveRef.current ? "text-white" : "text-zinc-600"}>INVERT</span>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

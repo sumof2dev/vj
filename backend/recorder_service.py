@@ -9,6 +9,7 @@ import sounddevice as sd
 import wave
 import requests
 import subprocess
+import shutil
 from datetime import datetime
 
 class Recorder:
@@ -36,7 +37,7 @@ class Recorder:
         self.monitored_addresses = []
         self.last_dmx_log_time = 0 # Throttling for 1Hz logging
         
-    def start(self, name=None, addresses=None, samplerate=44100):
+    def start(self, name=None, addresses=None, roles=None, samplerate=44100):
         if self.is_recording:
             return False
             
@@ -46,6 +47,7 @@ class Recorder:
         os.makedirs(self.session_dir)
         
         self.monitored_addresses = addresses or []
+        self.address_roles = roles or {}
         self.dmx_log = []
         self.start_time = time.time()
         self.is_recording = True
@@ -80,7 +82,7 @@ class Recorder:
 
         # --- Video Setup ---
         try:
-            video_path = os.path.join(self.session_dir, "video.mp4")
+            video_path = os.path.join(self.session_dir, "video_raw.mp4")
             # We'll initialize VideoWriter on the first frame to get the correct resolution
             self.video_writer = None
             
@@ -120,13 +122,13 @@ class Recorder:
         print(f"🎬 Started Recording: {self.session_dir}")
         return True
 
-    def log_dmx(self, universe):
+    def log_dmx(self, universe, audio_state=None, active_presets=None):
         if not self.is_recording or not self.monitored_addresses:
             return
             
         now = time.time()
-        # Throttling: Only log once per second as requested
-        if now - self.last_dmx_log_time < 1.0:
+        # Throttling: Bumped to 20Hz (0.05s) for smooth timeline syncing
+        if now - self.last_dmx_log_time < 0.05:
             return
             
         self.last_dmx_log_time = now
@@ -134,6 +136,24 @@ class Recorder:
             "t": round(now - self.start_time, 3),
             "v": {addr: universe[addr] for addr in self.monitored_addresses if addr < len(universe)}
         }
+        
+        # Capture audio signature if provided by the main engine
+        if audio_state:
+            entry["a"] = {
+                "b": round(audio_state.get("bass", 0.0), 3),
+                "m": round(audio_state.get("mid", 0.0), 3),
+                "h": round(audio_state.get("high", 0.0), 3),
+                "f": round(audio_state.get("flux", 0.0), 3),
+                "vl": round(audio_state.get("vol", 0.0), 3),
+                "vb": audio_state.get("vibe", "mid"),
+                "tr": audio_state.get("transient", "steady"),
+                "bt": bool(audio_state.get("beat", False))
+            }
+        
+        # Capture active presets for timeline visualization
+        if active_presets:
+            entry["p"] = active_presets
+            
         self.dmx_log.append(entry)
 
     def stop(self, new_name=None):
@@ -169,7 +189,8 @@ class Recorder:
         meta = {
             "timestamp": datetime.now().isoformat(),
             "duration": round(time.time() - self.start_time, 2),
-            "addresses": self.monitored_addresses
+            "addresses": self.monitored_addresses,
+            "roles": self.address_roles
         }
         with open(meta_path, 'w') as f:
             json.dump(meta, f, indent=4)
@@ -194,54 +215,94 @@ class Recorder:
             except Exception as e:
                 print(f"🔴 Recorder Rename Error: {e}")
 
-        # --- Muxing Step (Background) ---
-        # Hand off the FINAL path so the thread never loses it
-        threading.Thread(target=self._mux_recording, args=(final_dir,), daemon=True).start()
-        
-        print(f"🏁 Stopped Recording: {final_dir}")
+        # --- Background Transcoding (Browser Playability) ---
+        # Hand off the FINAL path so the thread uses the renamed folder if applicable
+        threading.Thread(target=self._finalize_video, args=(final_dir,), daemon=True).start()
+
+        print(f"🏁 Stopped Recording: {final_dir} (Finalizing video in background...)")
         return final_dir
 
-    def _mux_recording(self, target_dir):
-        """Combines the audio.wav and video.mp4 into a final combined.mp4 using FFmpeg (Background Thread)."""
+    def _finalize_video(self, target_dir):
+        """Transcodes the raw OpenCV video into a browser-ready H.264 video."""
         if not target_dir:
             return
-
-        # Give the file handles a moment to fully flush and release
-        time.sleep(2.0)
-
-        audio_path = os.path.join(target_dir, "audio.wav")
-        video_path = os.path.join(target_dir, "video.mp4")
-        output_path = os.path.join(target_dir, "combined.mp4")
-        log_path = os.path.join(target_dir, "mux.log")
-
-        # Check if both files exist
-        if not (os.path.exists(audio_path) and os.path.exists(video_path)):
-            with open(log_path, "w") as f:
-                f.write(f"🔴 Muxing Failed: Source files missing.\nAudio: {os.path.exists(audio_path)}\nVideo: {os.path.exists(video_path)}")
+        
+        # Give files a moment to flush and release
+        time.sleep(1.0)
+        
+        raw_path = os.path.join(target_dir, "video_raw.mp4")
+        final_path = os.path.join(target_dir, "video.mp4")
+        log_path = os.path.join(target_dir, "transcode.log")
+        
+        if not os.path.exists(raw_path):
             return
 
-        print(f"🔄 Muxing Audio and Video in background for {target_dir}...")
-        # Use absolute path for FFmpeg and capture all output to mux.log
+        print(f"🔄 Transcoding Video to H.264 for browser compatibility: {target_dir}...")
+        # Use libx264 with ultrafast to minimize CPU impact after the session
         cmd = [
             "/usr/bin/ffmpeg", "-y",
-            "-i", video_path,
-            "-i", audio_path,
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-strict", "experimental",
-            "-map", "0:v:0",
-            "-map", "1:a:0",
-            output_path
+            "-i", raw_path,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-crf", "28",
+            "-pix_fmt", "yuv420p",
+            final_path
         ]
-
+        
         try:
             with open(log_path, "w") as log_file:
-                result = subprocess.run(cmd, stdout=log_file, stderr=subprocess.STDOUT, text=True, timeout=30)
+                result = subprocess.run(cmd, stdout=log_file, stderr=subprocess.STDOUT, text=True, timeout=60)
                 if result.returncode == 0:
-                    print(f"✅ Muxing Successful: {output_path}")
+                    print(f"✅ Transcoding Successful: {final_path}")
+                    if os.path.exists(raw_path):
+                        os.remove(raw_path)
                 else:
-                    print(f"🔴 Muxing Failed: Check {log_path} for details.")
+                    print(f"🔴 Transcoding Failed: Check {log_path} for details.")
         except Exception as e:
             with open(log_path, "a") as f:
-                f.write(f"🔴 Muxing Error: {e}\n")
-            print(f"🔴 Muxing Error: {e}")
+                f.write(f"🔴 Transcoding Error: {e}\n")
+            print(f"🔴 Transcoding Error: {e}")
+
+
+    def save_training_sample(self, session_id, start_t, end_t, correct_label):
+        """Copies an entire session folder to 'training_data' and adds a label.json."""
+        if not session_id:
+            return False
+            
+        source_dir = os.path.join(self.root_dir, session_id)
+        if not os.path.exists(source_dir):
+            # Try to find it if session_id is just the name
+            source_dir = os.path.join(self.root_dir, session_id)
+            if not os.path.exists(source_dir):
+                print(f"⚠️ Training Sample Error: Source session {session_id} not found.")
+                return False
+        
+        training_root = "training_data"
+        if not os.path.exists(training_root):
+            os.makedirs(training_root)
+            
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        target_dir = os.path.join(training_root, f"TRAIN_{timestamp}_{correct_label}")
+        
+        try:
+            # Copy entire session for full context
+            shutil.copytree(source_dir, target_dir)
+            
+            # Add label metadata
+            label_data = {
+                "source_session": session_id,
+                "start_t": start_t,
+                "end_t": end_t,
+                "correct_label": correct_label,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            with open(os.path.join(target_dir, "label.json"), 'w') as f:
+                json.dump(label_data, f, indent=4)
+                
+            print(f"📂 Saved Training Sample to: {target_dir}")
+            return True
+        except Exception as e:
+            print(f"❌ Error saving training sample: {e}")
+            return False
+

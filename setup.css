@@ -734,6 +734,61 @@
             margin-top: 20px;
         }
 
+        .active-presets-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+            padding: 10px 0;
+            min-height: 40px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 10px;
+            font-weight: 800;
+            padding: 6px 14px;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .preset-btn:hover {
+            background: rgba(var(--accent-rgb), 0.1);
+            border-color: rgba(var(--accent-rgb), 0.4);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .preset-btn.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.6);
+            transform: translateY(-1px);
+        }
+
+        .preset-btn.active:hover {
+            filter: brightness(1.15);
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .preset-btn.active:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+
         .test-channel-card {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -742,6 +797,90 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
+        }
+
+        /* Syntax Help Tooltip */
+        .syntax-help-trigger {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .help-icon {
+            width: 14px;
+            height: 14px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+            cursor: help;
+            transition: all 0.2s;
+        }
+        .syntax-help-trigger:hover .help-icon {
+            background: var(--accent);
+            color: #fff;
+            transform: scale(1.1);
+        }
+        .syntax-guide {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: rgba(20, 20, 30, 0.95);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--accent);
+            padding: 12px;
+            border-radius: 12px;
+            width: 220px;
+            z-index: 5000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+        .syntax-help-trigger:hover .syntax-guide {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-10px);
+        }
+        .syntax-guide strong {
+            display: block;
+            font-size: 11px;
+            color: var(--accent-alt);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .syntax-item {
+            font-size: 11px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            font-family: monospace;
+        }
+        .syntax-item span {
+            color: var(--text-dim);
+            font-family: sans-serif;
+            font-size: 10px;
+        }
+        .syntax-header {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--accent);
+            margin-top: 10px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 2px;
+        }
+        .syntax-header:first-of-type {
+            margin-top: 0;
         }
 
         .test-channel-card:hover {

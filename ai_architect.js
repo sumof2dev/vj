@@ -140,29 +140,38 @@ Context:
 - Available Sources: vol, bass, mid, high, flux, beat, bar, impact, bin_0, bin_1, bin_2, bin_3, bin_4, bin_5.
 - Available Behaviors: static, push, pull, sine, saw, square, noise, random, step.
 - Available Hold Types: none, floorfreeze, peakpause, beat, bar.
+- GLOBAL ACTORS:
+  - "target": "system" -> Modifies the entire room's physics (DMX and Shaders).
+    - Functions: "speed" (increments time), "intensity" (global master dimmer).
+    - Scaling: "100" = 100% (Normal), "200" = 200% (Double), "50" = 50% (Slow-Mo).
+  - "target": "visualdmx" -> Modifies Visualizer-specific shaders (u_strobe, u_blackout, u_spin, etc).
 
 SCHEMA RULES:
-1. MODIFIERS: All timing and sensitivity settings MUST live inside the "modifiers" object:
-   - "speed": 0.0 to 1.0 (frequency of movement)
-   - "react": 0.0 to 1.0 (audio sensitivity/smoothing)
-   - "hold_type": one of the Available Hold Types above.
+1. MODIFIERS: All timing and sensitivity settings MUST live inside the "modifiers" object.
 2. SOURCE: Frequency bins bin_0 (Sub) through bin_5 (Treble) are available for targeted reactivity.
-3. RANGE PRESERVATION: Keep changes within the 'cal' object bounds (min/center/max) unless explicitly asked to expand them.
-4. PHYSICAL GUARDRAIL: Never alter 'cal.min' or 'cal.max' unless requested, as these control hardware macros.
-5. NO STATIC FOR RANGES: Never use behavior 'static' if min != max. Use 'sine' or 'step' instead.
-6. CLEANUP: Do NOT include legacy keys like "lfo", "audio", or "bin_idx" at the root level of a rule.
+3. RANGE PRESERVATION: Keep changes within the 'cal' object bounds unless explicitly asked to expand them.
+4. COORDINATE SEQUENCER: The 'value' field now supports a powerful sequencer syntax:
+   - Ranges: "32-96" (Linear ramp)
+   - Chains: "32-96-32" (Ping-Pong / Triangle movement)
+   - Sequences: "30, 255, 30" (Comma-separated timed steps)
+   - Offsets: "+val" (e.g. "32-96 + 16" shifts phase by 1/4 cycle, "32-96 + 32" shifts by 1/2 cycle).
+5. CIRCULAR MATH: To create a circular orbit between 32 and 96:
+   - pos_x: "32-96-32"
+   - pos_y: "32-96-32 + 16" (Appending +16 creates a 90-degree phase shift).
+6. SQUARE MATH: To create a square path:
+   - pos_x: "32-96, 96, 96-32, 32"
+   - pos_y: "32, 32-96, 96, 96-32" (Note: offset the steps to form corner pathing).
+7. NO STATIC FOR RANGES: Never use behavior 'static' if min != max. Use 'sine' or 'step' instead.
 
-CHANNEL FUNCTION DICTIONARY (use when interpreting user prompts):
-- "pan" / "x position" = role: pos_x
-- "tilt" / "y position" = role: pos_y
-- "zoom" / "size" = role: zoom
-- "x rotation" / "rotate x" / "tilt roll" = role: rot_x
-- "y rotation" / "rotate y" / "pan roll" = role: rot_y  
-- "z rotation" / "rotation" / "roll" / "spin" = role: rot_z
-- "color" / "color wheel" = role: color_solid or color_multi
-- "pattern" / "gobo" = role: pattern
-- "strobe" / "shutter" = role: strobe
-- "dimmer" / "brightness" = role: dimmer
+CHANNEL ROLE DICTIONARY:
+- "pan" = role: pos_x
+- "tilt" = role: pos_y
+- "zoom" = role: zoom
+- "strobe" = role: strobe
+- "dimmer" = role: dimmer
+- GLOBAL "rate" / "global speed" / "time" -> Actor: system, Function: speed
+- GLOBAL "master" / "total intensity" -> Actor: system, Function: intensity
+- USER TAGS: If the user provides a tag like [ch:role] (e.g. [ch:dimmer] or [ch:pos_x]), they are explicitly targeting the channel with that role. Prioritize these tags over textual descriptions.
 When the user says "rotation" without axis, interpret as rot_z. Match these aliases to the correct channel by checking the Fixture Context roles.
 
 RELATIONAL PROMPTS: Understand cross-channel relationships.
@@ -228,14 +237,7 @@ Output: Valid raw JSON object only.
                 if (sendBtn) sendBtn.disabled = false;
                 if (masterInput) masterInput.focus();
 
-                // Update UI log
-                const logEl = document.getElementById('ai-response-log');
-                if (logEl) {
-                    logEl.innerText = logicLog;
-                    logEl.style.display = 'block';
-                }
-
-                // Append to chat history
+                // Update UI log removed - now contained in chat bubbles
                 if (logicLog) {
                     addAiChatMessage('ai', logicLog);
                 }
@@ -466,11 +468,99 @@ Output: Valid raw JSON object only.
         function closeAiModal() {
             document.getElementById('ai-refine-modal').classList.remove('active');
             document.body.classList.remove('ai-modal-open');
+            // Hide the channel picker if open
+            const picker = document.getElementById('ai-channel-picker');
+            if (picker) picker.style.display = 'none';
             // Hide the extra UI buttons if they were visible
             const diffBtn = document.getElementById('ai-chat-view-diff-btn');
             const applyBtn = document.getElementById('ai-apply-final-btn');
             if (diffBtn) diffBtn.style.display = 'none';
             if (applyBtn) applyBtn.style.display = 'none';
+        }
+
+        function clearAiChatHistory() {
+            if (!confirm("Clear AI chat history and reset?")) return;
+            window.aiConversationHistory = [];
+            window.pendingAiInstructions = {};
+            
+            // Add initial greeting back
+            addAiChatMessage('ai', "Hello! I've cleared the slate. How can I help you refine this profile now?");
+            
+            updateAiReviewBar();
+            
+            // Hide diff buttons if they were open
+            const diffBtn = document.getElementById('ai-chat-view-diff-btn');
+            const applyBtn = document.getElementById('ai-apply-final-btn');
+            if (diffBtn) diffBtn.style.display = 'none';
+            if (applyBtn) applyBtn.style.display = 'none';
+        }
+
+        function toggleChannelPicker() {
+            const picker = document.getElementById('ai-channel-picker');
+            if (!picker) return;
+            
+            if (picker.style.display === 'block') {
+                picker.style.display = 'none';
+            } else {
+                populateChannelPicker();
+                picker.style.display = 'block';
+            }
+        }
+
+        function populateChannelPicker() {
+            const picker = document.getElementById('ai-channel-picker');
+            if (!picker) return;
+            
+            const channels = currentProfileChannels || [];
+            if (channels.length === 0) {
+                picker.innerHTML = `<div style="padding:15px; text-align:center; color:var(--text-dim); font-size:12px;">No channels found for this profile.</div>`;
+                return;
+            }
+
+            // Get unique roles from channels, filtering out 'none' and 'unknown'
+            const usedRoles = [...new Set(channels.map(ch => ch.role))].filter(r => r && r !== 'none' && r !== 'unknown');
+            
+            if (usedRoles.length === 0) {
+                picker.innerHTML = `<div style="padding:15px; text-align:center; color:var(--text-dim); font-size:12px;">Assign roles to your channels first to use the picker.</div>`;
+                return;
+            }
+            
+            picker.innerHTML = usedRoles.map((role) => {
+                return `
+                    <div class="channel-picker-item" onclick="insertChannelTag('${role}')"
+                        style="padding:10px 15px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;">
+                        <div style="font-weight:bold; color:var(--accent); text-transform:uppercase; font-size:12px;">${role}</div>
+                        <div style="font-size:9px; color:var(--text-dim);">Function Role</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add hover effect style dynamically if not present
+            if (!document.getElementById('picker-hover-style')) {
+                const style = document.createElement('style');
+                style.id = 'picker-hover-style';
+                style.innerHTML = `.channel-picker-item:hover { background: rgba(255,255,255,0.1); }`;
+                document.head.appendChild(style);
+            }
+        }
+
+        function insertChannelTag(role) {
+            const textarea = document.getElementById('ai-master-textarea');
+            if (!textarea) return;
+            
+            const tag = `[ch:${role}]`;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            
+            textarea.value = text.substring(0, start) + tag + text.substring(end);
+            
+            // Put cursor after the tag
+            textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+            textarea.focus();
+            
+            // Close picker
+            document.getElementById('ai-channel-picker').style.display = 'none';
         }
 
         function addAiChatMessage(role, text) {
@@ -1050,8 +1140,17 @@ TRIGGER SCHEMA:
 
 OVERRIDE SCHEMA:
 Each override targets one fixture + one channel role:
-- Instance: {id: "<fixture_id>", target: "<fixture_id>", type: "instance", name: "<role>", role: "<role>", value: <0-255>, smoothing: 0, channels: [{name: "<role>", value: <0-255>}]}
-- Global: {id: "global", target: "global", type: "global", name: "<role>", role: "<role>", value: <0-255>, smoothing: 0, channels: [{name: "<role>", value: <0-255>}]}
+- Instance: {id: "<fixture_id>", target: "<fixture_id>", type: "instance", name: "<role>", role: "<role>", value: <string_or_num>, smoothing: 0, channels: [{name: "<role>", value: <string_or_num>}]}
+- Global: {id: "global", target: "global", type: "global", name: "<role>", role: "<role>", value: <string_or_num>, smoothing: 0, channels: [{name: "<role>", value: <string_or_num>}]}
+
+RANGE SEQUENCER SYNTAX (for 'value' fields):
+- Static: 255
+- Range: "32-96"
+- Ping-Pong: "32-96-32"
+- Step Sequence: "0, 255, 127"
+- Phase Offset: "+16" (e.g. "32-96-32 + 16")
+- CIRCULAR ORBIT (32 to 96): Set pos_x to "32-96-32" and pos_y to "32-96-32 + 16".
+- SQUARE PATH: Set pos_x to "32-96, 96, 96-32, 32" and pos_y to "32, 32-96, 96, 96-32".
 
 BEHAVIOR OVERRIDES (for movement/strobe/sweep):
 When the user describes dynamic behavior (strobe, sweep, oscillate, pulse), use mode:"behavior" on the channel:

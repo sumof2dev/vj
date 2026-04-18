@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-    <link rel="stylesheet" href="setup.css?v=415260742">
+    <link rel="stylesheet" href="setup.css?v=417262238">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
@@ -209,8 +209,27 @@
 
                 <div id="prof-mappings" style="margin-top: 10px;"></div>
                 
-                <div style="margin-top:20px; display:flex; justify-content:center;">
-                    <button class="btn" onclick="addProfileChannel()" style="width:100%; padding:12px; font-weight:bold; background:rgba(255,255,255,0.05); border:1px dashed var(--border);">➕ Add Channel</button>
+                <div style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:10px;">
+                    <button class="btn" onclick="addProfileChannel()" style="flex:1; padding:12px; font-weight:bold; background:rgba(255,255,255,0.05); border:1px dashed var(--border);">➕ Add Channel</button>
+                    <div class="syntax-help-trigger">
+                        <span class="help-icon" style="background:var(--accent); color:#000; border:none; width:30px; height:30px; font-size:16px;">?</span>
+                        <div class="syntax-guide" style="bottom: 45px; right: 0; left: auto;">
+                            <strong>Profile AI Standards</strong>
+                            <div class="syntax-header">Sequencing Values</div>
+                            <div class="syntax-item">"32-96" = Sweep (Linear)</div>
+                            <div class="syntax-item">"32-96-32" = Triangle Loop</div>
+                            <div class="syntax-item">"255, 0, 127" = 3-Step Loop</div>
+                            
+                            <div class="syntax-header">Behavior Macros</div>
+                            <div class="syntax-item"><span>B-Side:</span> Invert & Source Swap</div>
+                            <div class="syntax-item"><span>Liquid:</span> Flux driver, low react</div>
+                            <div class="syntax-item"><span>Rhythm:</span> Impact driver, high react</div>
+                            
+                            <div style="margin-top:8px; font-size:9px; color:var(--accent); border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
+                                Pro: Target System/Speed for room warps.
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
 
@@ -244,19 +263,22 @@
                         (e.g. "make it punchier", "smooth out the pan", "increase bass response").
                     </div>
                 </div>
-                <div id="ai-response-log" class="ai-response-log"
-                    style="display:none; margin-top:15px; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--accent-glow); border-radius:8px; font-family:var(--font-mono); font-size:0.75rem; color:var(--success); white-space:pre-wrap;">
-                </div>
             </div>
 
             <div class="ai-modal-footer chat-footer">
                 <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
                     <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
                         onclick="clearAiChatHistory()">🗑️
-                        Wipe</button>
+                        Clear</button>
+                    <button class="btn-suggestion" id="ai-ch-picker-btn" onclick="toggleChannelPicker()" style="border: 1px solid var(--accent); color: var(--accent);">CH</button>
                     <button class="btn-suggestion" onclick="appendAiSuggestion('bside')">B-Side</button>
                     <button class="btn-suggestion" onclick="appendAiSuggestion('rhythm')">Rhythm</button>
                     <button class="btn-suggestion" onclick="appendAiSuggestion('liquid')">Liquid</button>
+                </div>
+
+                <div id="ai-channel-picker" 
+                    style="display:none; position: absolute; bottom: 130px; left: 10px; right: 10px; background: #1a1a1a; border: 1px solid var(--accent); border-radius: 12px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                    <!-- Channel items injected here -->
                 </div>
 
                 <div style="display: flex; gap: 10px; position: relative;">
@@ -391,9 +413,9 @@
             </div>
         </div>
     </div>
-    <script src="shared_setup.js?v=415260742"></script>
-    <script src="profile_logic.js?v=415260742"></script>
-    <script src="ai_architect.js?v=415260742"></script>
+    <script src="shared_setup.js?v=417262238"></script>
+    <script src="profile_logic.js?v=417262238"></script>
+    <script src="ai_architect.js?v=417262238"></script>
     <script>window.onload = () => {
         console.log("🚀 VJ Profiles starting (v424)...");
         // renderProfileList is required on page load to populate the registry.

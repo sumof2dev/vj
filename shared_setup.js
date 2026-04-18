@@ -123,28 +123,69 @@ window.wsHost = window.isCustomTunnel ? 'ws-' + baseHost : host;
 window.host = host;
 
 var PROTO = (setupLocation.protocol === 'file:') ? 'http:' : setupLocation.protocol;
-var API_BASE_ROOT = window.isCustomSubdomain ? (PROTO + '//' + setupLocation.host) : (window.isCustomTunnel ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : ''))));
-var BACKEND_ROOT = window.isCustomSubdomain ? (PROTO + '//' + baseHost) : (window.isCustomTunnel ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : ''))));
+var API_BASE_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : '')));
+var BACKEND_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : '')));
 
 window.API_BASE_ROOT = API_BASE_ROOT;
 window.BACKEND_ROOT = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "415260742";
+window.APP_VERSION = "417262238";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
-// --- 2. DATABASE LOADING ---
-try {
-    const stored = localStorage.getItem('ravebox_v2_db');
-    if (stored) {
-        const parsed = JSON.parse(stored);
-        Object.assign(window.db, parsed);
+// --- 2. DATABASE INITIALIZATION & SYNC ---
+async function initDatabaseSync() {
+    console.log("🔄 Starting Database Sync from Server...");
+    try {
+        // 1. Initial Load from LocalStorage (Fallback/Speed)
+        const stored = localStorage.getItem('ravebox_v2_db');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            Object.assign(window.db, parsed);
+        }
+
+        // 2. Fetch Latest Core Configs from Server (Source of Truth)
+        // We fetch these in parallel to speed up initialization
+        const filesToSync = [
+            { key: 'presets', path: 'presets.json' },
+            { key: 'stage', path: 'stage_config.json' },
+            { key: 'liveConsole', path: 'live_console.json' },
+            { key: 'savedConsoles', path: 'live_consoles/index.json' } // (Optional index)
+        ];
+
+        const syncResults = await Promise.allSettled(
+            filesToSync.map(f => fetch(`${window.API_BASE}/${f.path}`).then(r => r.ok ? r.json() : null))
+        );
+
+        let syncCount = 0;
+        syncResults.forEach((res, i) => {
+            if (res.status === 'fulfilled' && res.value) {
+                const key = filesToSync[i].key;
+                window.db[key] = res.value;
+                syncCount++;
+            }
+        });
+
+        console.log(`✅ [SYNC] Successfully synchronized ${syncCount} core files from server.`);
+        
+        // 3. Persist merged state back to localStorage
+        window.saveDB();
+
+        // 4. Trigger UI Refresh if we are on a page that needs it
+        if (typeof window.refreshUI === 'function') window.refreshUI();
+        if (typeof window.renderLiveTab === 'function') window.renderLiveTab();
+        if (typeof window.renderPresets === 'function') window.renderPresets();
+
+    } catch (e) {
+        console.warn("⚠️ Database Sync failed, using LocalStorage fallback:", e);
     }
-} catch (e) {
-    console.warn("DB Load failed:", e);
+    
+    RAVEBOX_READY = true;
+    window.dispatchEvent(new CustomEvent('RAVEBOX_READY'));
 }
-if (!window.db.liveConsole) window.db.liveConsole = [];
-if (!window.db.savedConsoles) window.db.savedConsoles = [];
+
+// Kick off sync immediately
+initDatabaseSync();
 
 // --- 2.5 CROSS-TAB SYNCHRONIZATION ---
 window.addEventListener('storage', (event) => {
@@ -161,11 +202,27 @@ window.addEventListener('storage', (event) => {
 });
 
 // Shared Persistence
-var saveDB = window.saveDB = function() {
+var saveDB = window.saveDB = async function(skipServer = false) {
     if (window.db.stage && Array.isArray(window.db.stage)) {
         window.db.stage.forEach(s => { if (s.fixtureId) delete s.fixtureId; });
     }
     localStorage.setItem('ravebox_v2_db', JSON.stringify(window.db));
+
+    if (!skipServer) {
+        console.log("💾 [DB] Syncing presets, stage, and console to server...");
+        const syncPromises = [];
+        
+        if (window.db.presets) syncPromises.push(fetch(`${window.API_BASE}/presets.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.presets) }));
+        if (window.db.stage) syncPromises.push(fetch(`${window.API_BASE}/stage_config.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.stage) }));
+        if (window.db.liveConsole) syncPromises.push(fetch(`${window.API_BASE}/live_console.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.liveConsole) }));
+
+        try {
+            await Promise.allSettled(syncPromises);
+            console.log("✅ [DB] Global sync complete.");
+        } catch (e) {
+            console.warn("⚠️ [DB] Server sync failed:", e);
+        }
+    }
 };
 
 /**
@@ -259,7 +316,9 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function() {
     if (stageDrop) {
         const current = stageDrop.value;
         const options = (window.db.stage || []).map(inst => `<option value="${inst.id}">FIXTURE: ${inst.id}</option>`).join('');
-        stageDrop.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' + options;
+        stageDrop.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' + 
+                              '<option value="visualdmx">VISUALIZER (VisualDMX)</option>' +
+                              options;
         if (current) stageDrop.value = current;
     }
 };
@@ -349,11 +408,8 @@ var sendIt = window.sendIt = async function(event) {
 
 // --- BOOT COMPLETE ---
 window.RAVEBOX_READY = true;
-console.log("✅ RaveBox Core Ready (v421)");
-
-// --- HOOKS & EXPORTS ---
-window.RAVEBOX_READY = true;
 console.log("✅ RaveBox Core Ready (v424)");
+
 
 // --- CORE ROUTING (BULLETPROOF) ---
 (function() {

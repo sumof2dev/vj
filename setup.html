@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=415260742">
+<link rel="stylesheet" href="setup.css?v=417262238">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
@@ -178,10 +178,11 @@
                 <label>Function Type</label>
                 <select id="assign-type" onchange="updateAssignmentOptions()">
                     <option value="none">None</option>
-                    <option value="preset">Preset</option>
-                    <option value="slider">Slider (Single/XY)</option>
-                    <option value="live_feed">Live Feed Toggle</option>
-                </select>
+                     <option value="preset">Preset</option>
+                     <option value="slider">Slider (Single/XY)</option>
+                     <option value="live_feed">Live Feed Toggle</option>
+                     <option value="blackout">Blackout</option>
+                 </select>
 
                 <div id="assign-preset-wrap" style="display:none; margin-top:15px;">
                     <label>Select Preset</label>
@@ -266,8 +267,10 @@
                 <div class="form-row" style="grid-template-columns: 1.5fr 1.5fr auto; align-items: end;">
                     <div>
                         <label>Target Fixture</label>
-                        <select id="pres-add-stage-fix">
+                        <select id="pres-add-stage-fix" onchange="updatePresetFunctionDropdown()">
                             <option value="global">ALL FIXTURES (Global)</option>
+                            <option value="visualdmx">VISUALIZER (VisualDMX)</option>
+                            <option value="system">ENGINE (System)</option>
                         </select>
                     </div>
                     <div>
@@ -276,6 +279,28 @@
                             <option value="">-- Select Function --</option>
                         </select>
                     </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label>Value / Range (0-255)</label>
+                        <div class="syntax-help-trigger">
+                            <span class="help-icon">?</span>
+                            <div class="syntax-guide">
+                                <strong>AI Sync & Sequencer Guide</strong>
+                                <div class="syntax-header">Global Controls (Target: System)</div>
+                                <div class="syntax-item"><span>Speed:</span> 50=Slow, 100=1x, 200=Fast</div>
+                                <div class="syntax-item"><span>Intensity:</span> 0=Dark, 100=Full</div>
+                                
+                                <div class="syntax-header">Range Sequencer</div>
+                                <div class="syntax-item"><span>Chain:</span> 32-96-32 (Ping-Pong)</div>
+                                <div class="syntax-item"><span>Steps:</span> 30, 255, 127 (Timed)</div>
+                                <div class="syntax-item"><span>Offset:</span> 32-96+16 (+90° phase)</div>
+                                
+                                <div class="syntax-header">AI Pro Tips</div>
+                                <div class="syntax-item"><span>"Liquid":</span> Sine/Flux, React 0.2, Speed 0.1</div>
+                                <div class="syntax-item"><span>"Rhythmic":</span> Saw/Impact, React 1.0, Speed 0.8+</div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" id="pres-add-global-val" placeholder="e.g. 255 or 32-96-32" style="width:100%;">
                     <button class="btn btn-primary" onclick="addOverrideToCurrentPreset()">ADD ACTION</button>
                 </div>
             </div>
@@ -286,7 +311,7 @@
 
             <div style="margin-top: 20px; padding-top:15px; border-top:1px solid #333;">
                 <button class="btn btn-primary" onclick="savePreset()">💾 Save Preset</button>
-                <button class="btn btn-sm" style="margin-left:10px;" onclick="resetPresetForm()">Clear</button>
+                <button class="btn btn-sm" style="margin-left:10px;" onclick="resetPresetForm()">Cancel</button>
             </div>
         </div>
 
@@ -509,10 +534,12 @@
                             style="background:#222; border-color:#444; transition: all 0.2s;">🔕 Mute Others</button>
                     <button id="btn-record" class="btn btn-sm" onclick="toggleRecording()" style="background:#222; border-color:#444;">🔴 Record</button>
                     <button id="btn-toggle-feed" class="btn btn-sm" onclick="toggleTestFeed()">📷 Live Feed: OFF</button>
+                    <button class="btn btn-sm" onclick="openAudioTimelineModal()" style="background:#222; border-color:#444;">📈 Timeline</button>
+                    <button class="btn btn-sm" onclick="window.open('player.html', '_blank')" style="background:#222; border-color:#444;">🎬 Player</button>
                     <button class="btn btn-danger btn-sm" onclick="clearAllGlobalOverrides()">Release All</button>
                 </div>
             </div>
-            <!-- Active Presets Bar -->
+            <div id="active-presets-bar" class="active-presets-bar"></div>
         </div>
 
         <div id="test-live-feed-container">
@@ -551,11 +578,11 @@
 
     </div>
 
-<script src="shared_setup.js?v=415260742"></script>
-<script src="live_controller.js?v=415260742"></script>
-<script src="profile_logic.js?v=415260742"></script>
-<script src="ai_architect.js?v=415260742"></script>
-<script src="stage_logic.js?v=415260742"></script>
+<script src="shared_setup.js?v=417262238"></script>
+<script src="live_controller.js?v=417262238"></script>
+<script src="profile_logic.js?v=417262238"></script>
+<script src="ai_architect.js?v=417262238"></script>
+<script src="stage_logic.js?v=417262238"></script>
 <script>window.onload = () => { 
     console.log("🚀 VJ Manager starting (UI Refreshed)..."); 
     // All routing and landing logic (redirects, tab switching) 

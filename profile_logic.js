@@ -822,10 +822,12 @@ function renderPresetTriggers() {
 }
 
 function addOverrideToCurrentPreset() {
-    const fixId = document.getElementById('pres-add-stage-fix').value;
-    const funcId = document.getElementById('pres-add-global-func').value;
+    const fixId = document.getElementById('pres-add-stage-fix')?.value;
+    const funcId = document.getElementById('pres-add-global-func')?.value;
+    const valInput = document.getElementById('pres-add-global-val')?.value || "0";
 
     if (!funcId) return alert("Select a function to override.");
+    const val = valInput.includes('-') ? valInput : (parseInt(valInput) || 0);
 
     currentPresetOverrides.push({
         id: fixId,
@@ -833,11 +835,13 @@ function addOverrideToCurrentPreset() {
         type: (fixId === 'global') ? 'global' : 'instance',
         name: funcId,
         role: funcId,
-        value: 0,
+        value: val,
         smoothing: 0,
-        channels: [{ name: funcId, value: 0 }]
+        channels: [{ name: funcId, value: val }]
     });
     renderPresetOverrides();
+    // Clear input after adding
+    if (document.getElementById('pres-add-global-val')) document.getElementById('pres-add-global-val').value = '';
 }
 
 function renderPresetOverrides() {
@@ -853,8 +857,8 @@ function renderPresetOverrides() {
                 <div id="ov-channels-${ovIdx}">
                     <!-- Channel-specific settings for this override -->
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <label style="font-size:0.8rem;">Value Override:</label>
-                        <input type="number" min="0" max="255" value="${ov.value || 0}" onchange="updateOverrideVal(${ovIdx}, this.value)" style="width:85px;">
+                        <label style="font-size:0.8rem;">Value / Range:</label>
+                        <input type="text" value="${ov.value || 0}" onchange="updateOverrideVal(${ovIdx}, this.value)" style="width:120px;" placeholder="e.g. 128 or 0-255">
                         <label style="font-size:0.8rem;">Smoothing:</label>
                         <input type="number" min="0" max="1" step="0.1" value="${ov.smoothing || 0}" onchange="updateOverrideSmooth(${ovIdx}, this.value)" style="width:85px;">
                     </div>
@@ -865,7 +869,7 @@ function renderPresetOverrides() {
 }
 
 function updateOverrideVal(idx, val) {
-    const v = parseInt(val);
+    const v = val.toString().includes('-') ? val : (parseInt(val) || 0);
     currentPresetOverrides[idx].value = v;
     if (currentPresetOverrides[idx].channels && currentPresetOverrides[idx].channels[0]) {
         currentPresetOverrides[idx].channels[0].value = v;
@@ -982,7 +986,7 @@ window.addProfileChannel = addProfileChannel;
 window.updateProfileMapping = updateProfileMapping;
 
 // --- PRESET CRUD LOGIC (Consolidated from stage_logic.js) ---
-function savePreset(silent = false) {
+async function savePreset(silent = false) {
     const name = document.getElementById('pres-name').value;
     if (!name) return alert("Enter preset name");
 
@@ -1001,7 +1005,7 @@ function savePreset(silent = false) {
             overrides: JSON.parse(JSON.stringify(currentPresetOverrides))
         });
     }
-    saveDB();
+    await saveDB();
     refreshUI();
     if (!silent) resetPresetForm();
 }
@@ -1030,21 +1034,36 @@ function editPreset(id) {
     }
 }
 
-function deletePreset(id) {
+async function deletePreset(id) {
     if (!confirm("Delete preset?")) return;
     db.presets = db.presets.filter(p => p.id !== id);
-    saveDB();
+    await saveDB();
     refreshUI();
 }
 
 function updatePresetFunctionDropdown() {
     const stageId = document.getElementById('pres-add-stage-fix')?.value;
     const funcSel = document.getElementById('pres-add-global-func');
+    const valInput = document.getElementById('pres-add-global-val');
+    const valLabel = valInput?.parentElement?.querySelector('label');
     if (!funcSel) return;
+
+    // Reset Defaults
+    if (valLabel) valLabel.innerText = "Value / Range (0-255)";
+    if (valInput) valInput.placeholder = "e.g. 255 or 0-255";
 
     if (stageId === 'calibrated') {
         funcSel.innerHTML = '<option value="">-- Select Pattern --</option>' +
             ['Figure-8', 'Circle', 'Lissajous A', 'Lissajous B'].map(p => `<option value="${p}">${p}</option>`).join('');
+        if (valLabel) valLabel.innerText = "Pattern Speed (Optional)";
+    } else if (stageId === 'visualdmx') {
+        funcSel.innerHTML = '<option value="">-- Select Visual Function --</option>' +
+            ['strobe', 'blackout', 'spin', 'zoom', 'hue', 'invert', 'next_visual', 'next_fx', 'reset'].map(f => `<option value="${f}">${f}</option>`).join('');
+        if (valLabel) valLabel.innerText = "Trigger (1=On, 0=Off)";
+        if (valInput) {
+            valInput.placeholder = "1";
+            if (!valInput.value) valInput.value = "1";
+        }
     } else {
         funcSel.innerHTML = '<option value="">-- Select Function --</option>' +
             window.KNOWN_ROLES.map(f => `<option value="${f}">${f}</option>`).join('');
@@ -1058,31 +1077,38 @@ function renderActivePresets() {
     const allPresets = (db.presets || []);
     let indicatorHtml = '';
     
+    // Core engine states (Lissajous, Calibrated)
     if (window.latestAudioState) {
         if (latestAudioState.lissajous_active > 0.5) {
-            indicatorHtml += `<div style="background:var(--accent); color:#000; font-size:9px; font-weight:800; padding:2px 8px; border-radius:100px; margin-right:5px; box-shadow: 0 0 10px var(--accent);">LISSAJOUS</div>`;
+            indicatorHtml += `<div class="preset-btn active" style="box-shadow: 0 0 15px var(--accent);">LISSAJOUS</div>`;
         }
         if (latestAudioState.calibrated_preset_active) {
-            indicatorHtml += `<div style="background:var(--success); color:#000; font-size:9px; font-weight:800; padding:2px 8px; border-radius:100px; margin-right:5px; box-shadow: 0 0 10px var(--success);">CALIBRATED</div>`;
+            indicatorHtml += `<div class="preset-btn active" style="box-shadow: 0 0 15px var(--success); background:var(--success); border-color:var(--success);">CALIBRATED</div>`;
         }
     }
 
-    if (allPresets.length === 0 && !indicatorHtml) {
-        bar.innerHTML = '<span style="opacity:0.3; font-size:10px;">No presets loaded</span>';
+    // Filtered List: Only show if ever activated during this session OR currently active
+    const filteredPresets = allPresets.filter(p => {
+        const isActive = (window.activePresets || []).includes(p.id) || (window.activePresets || []).includes(p.name);
+        const everActive = window.everActivatedPresets && (window.everActivatedPresets.has(p.id) || window.everActivatedPresets.has(p.name));
+        return isActive || everActive;
+    });
+
+    if (filteredPresets.length === 0 && !indicatorHtml) {
+        bar.innerHTML = '<span style="opacity:0.3; font-size:10px; margin-left:10px;">Waiting for preset triggers...</span>';
         return;
     }
 
-    bar.innerHTML = indicatorHtml + allPresets.map(p => {
+    bar.innerHTML = indicatorHtml + filteredPresets.map(p => {
         const isActive = (window.activePresets || []).includes(p.id) || (window.activePresets || []).includes(p.name);
-        const color = isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)';
-        const textColor = isActive ? '#000' : 'rgba(255,255,255,0.4)';
-        const border = isActive ? 'none' : '1px solid rgba(255,255,255,0.1)';
+        const activeClass = isActive ? 'active' : '';
         
-        return `<div style="background:${color}; color:${textColor}; border:${border}; font-size:9px; font-weight:800; padding:2px 8px; border-radius:100px; display:flex; align-items:center; transition: all 0.2s ease;">
+        return `<div class="preset-btn ${activeClass}" onclick="togglePreset('${p.id}')">
                     ${p.name.toUpperCase()}
                 </div>`;
     }).join('');
 }
+
 
 // Ensure Preset CRUD handlers are global
 window.savePreset = savePreset;

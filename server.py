@@ -62,6 +62,11 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_list_fixtures()
             return
 
+        # API: List Recordings
+        if path == '/api/recordings':
+            self._handle_list_recordings()
+            return
+
         # API: List Images
         if path == '/api/images/list':
             self._handle_list_images()
@@ -452,6 +457,38 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             print(f"❌ Error renaming shader: {e}")
             self.send_error(500, str(e))
 
+    def _handle_list_recordings(self):
+        """List all recording session directories in recordings/"""
+        rec_root = os.path.join(BASE_DIR, 'recordings')
+        try:
+            if not os.path.exists(rec_root):
+                os.makedirs(rec_root)
+            results = []
+            for d in os.listdir(rec_root):
+                dpath = os.path.join(rec_root, d)
+                if os.path.isdir(dpath) and not d.startswith('.'):
+                    # Try to get metadata for a richer UI
+                    meta = {}
+                    meta_path = os.path.join(dpath, 'meta.json')
+                    if os.path.exists(meta_path):
+                        with open(meta_path, 'r') as f:
+                            try: meta = json.load(f)
+                            except: pass
+                    
+                    results.append({
+                        "id": d,
+                        "name": meta.get('name', d),
+                        "mtime": os.path.getmtime(dpath),
+                        "duration": meta.get('duration'),
+                        "channels": len(meta.get('addresses', []))
+                    })
+            # Sort by most recent
+            results.sort(key=lambda x: x['mtime'], reverse=True)
+            self._send_json(results)
+        except Exception as e:
+            print(f"❌ Error listing recordings: {e}")
+            self.send_error(500, str(e))
+
     def _handle_list_images(self):
         """List all saved image files in library/images/"""
         img_root = os.path.join(BASE_DIR, 'library', 'images')
@@ -778,7 +815,10 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             '/shapes.json': 'shapes.json',
             '/roles.json': 'roles.json',
             '/vj/roles.json': 'roles.json',
-            '/spotify_creds.json': 'spotify_creds.json'
+            '/spotify_creds.json': 'spotify_creds.json',
+            '/presets.json': 'presets.json',
+            '/stage_config.json': 'stage_config.json',
+            '/live_console.json': 'live_console.json'
         }
         
         target_file = valid_paths.get(parsed_path.path)
