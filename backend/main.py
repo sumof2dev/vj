@@ -637,16 +637,25 @@ def pack_binary_state(current_time):
     - master_time (f32, offset 0)
     - flux, bass, mid, high, vol, bpm (6x f32, offset 4-27)
     - bins (6x f32, offset 28-51)
-    - beat, b_onset, h_onset, pad (4x u8, offset 52-55)
+    - beat, b_onset, h_onset, intensity (4x u8, offset 52-55)
     - axis_a..e (5x f32, offset 56-75)
     - base, fx, fg layerIdx (3x u16, offset 76-81)
     - dmx (513x u8, offset 82-594)
     """
     global GLOBAL_CLOCK
+    
     # Use the dmx_engine effective speed for the global visual clock
     # This ensures backend/frontend synchronization of "Time Warp" effects
-    dt_val = (current_time - getattr(pack_binary_state, 'last_t', current_time))
-    pack_binary_state.last_t = current_time
+    now = time.time()
+    
+    if not hasattr(pack_binary_state, 'last_t'):
+        pack_binary_state.last_t = now
+        
+    dt_val = now - pack_binary_state.last_t
+    pack_binary_state.last_t = now
+    
+    # Sanity check for dt (prevent jumps after deep sleep or heavy load)
+    if dt_val > 1.0: dt_val = 0.016 
     
     speed_factor = dmx_engine.eff_speed if dmx_engine else 0.6
     GLOBAL_CLOCK += dt_val * speed_factor
@@ -685,7 +694,7 @@ def pack_binary_state(current_time):
         m_time,
         flux, bass, mid, high, vol, bpm,
         float(bins[0]), float(bins[1]), float(bins[2]), float(bins[3]), float(bins[4]), float(bins[5]),
-        beat, b_onset, h_onset, 0,
+        beat, b_onset, h_onset, max(0, min(255, int((dmx_engine.eff_intensity if dmx_engine else 1.0) * 255))),
         ax_a, ax_b, ax_c, ax_d, ax_e,
         int(base_l), int(fx_l), int(fg_l)
     )
@@ -813,6 +822,7 @@ async def fast_broadcast_loop():
                         "blackout": dmx_engine.blackout if dmx_engine else False,
                         "eff_speed": dmx_engine.eff_speed if dmx_engine else 0.6,
                         "eff_intensity": dmx_engine.eff_intensity if dmx_engine else 1.0,
+                        "lab_dmx_val": dmx_engine.lab_dmx_val if dmx_engine else 0,
                         "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
                         "spotify": audio_state.get('spotify')
                     }
@@ -847,20 +857,39 @@ async def spotify_poller():
             cache_handler=handler,
             open_browser=False # Important for headless Pi
         )
-        sp = spotipy.Spotify(auth_manager=auth_manager)
+        sp = spotipy.Spotify(auth_manager=auth_manager, retries=0, requests_timeout=5)
     except Exception as e:
         print(f"❌ Spotify Init Failed: {e}")
         return
 
     current_track_id = None
+    track_name = ""
+    artist_name = ""
+    spotify_images = {}
     loop = asyncio.get_running_loop()
+    inactive_since = None
 
     while True:
         try:
             # Run the network request in an executor so it doesn't freeze the DMX lasers
             current_playing = await loop.run_in_executor(None, sp.current_user_playing_track)
             
-            if current_playing is not None and current_playing.get('item') is not None:
+            is_active = current_playing is not None and current_playing.get('is_playing') is True and current_playing.get('item') is not None
+            
+            if not is_active:
+                if inactive_since is None:
+                    inactive_since = time.time()
+                elif time.time() - inactive_since > 600:
+                    print("🛑 Spotify has been inactive for 10 minutes. Disabling poller to conserve API limits until engine restart.")
+                    if 'spotify' in audio_state:
+                         del audio_state['spotify']
+                    return # Exit the poller task completely
+                
+                # Update frontend if it was just paused
+                if 'spotify' in audio_state:
+                    del audio_state['spotify']
+            else:
+                inactive_since = None
                 track = current_playing['item']
                 track_id = track['id']
                 
@@ -892,13 +921,14 @@ async def spotify_poller():
                     'image_high': spotify_images.get('high'),
                     'image_low': spotify_images.get('low')
                 }
-            else:
-                # Nothing playing
-                if 'spotify' in audio_state:
-                    del audio_state['spotify']
                 
         except spotipy.SpotifyException as se:
-            print(f"⚠️ Spotify API Error: {se}")
+            err_str = str(se).lower()
+            if "status: 429" in err_str or "429" in err_str:
+                print(f"⚠️ Spotify API Rate Limited (429). Backing off for 60 seconds...")
+                await asyncio.sleep(60)
+            else:
+                print(f"⚠️ Spotify API Error: {se}")
         except Exception as e:
             err_str = str(e)
             print(f"⚠️ Spotify Poller generic error: {err_str}")
@@ -1017,6 +1047,12 @@ async def ws_handler(websocket):
                             if dmx_engine:
                                 dmx_engine.clear_address_overrides(addresses)
                         
+                        elif msg_type == "set_lab_rule":
+                            if dmx_engine:
+                                dmx_engine.lab_probe_rule = data.get("rule")
+                                if not dmx_engine.lab_probe_rule:
+                                    dmx_engine.lab_probe_state = {}
+                                    
                         elif msg_type == "blackout":
                             # Toggle global blackout
                             state = data.get("state")

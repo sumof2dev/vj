@@ -64,10 +64,11 @@
         "id": "cycle_random",
         "label": "Random - On Beat",
         "behavior": "noise",
-        "source": "flux",
-        "speed": 0.95,
-        "react": 0.8,
-        "hold_type": "beat"
+        "source": "beat",
+        "speed": 0.3,
+        "react": 0.4,
+        "hold_type": "beat",
+        "rel_center": 0.498
     },
     {
         "id": "inverse_bass",
@@ -78,5 +79,15 @@
         "react": 0.8,
         "hold_type": "none",
         "rel_center": 0.5
+    },
+    {
+        "id": "kick_drum_step",
+        "label": "kick drum step",
+        "behavior": "random",
+        "source": "bin_0",
+        "speed": 0.4,
+        "react": 0.65,
+        "hold_type": "none",
+        "rel_center": 0.208
     }
 ]

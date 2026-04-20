@@ -1,8 +1,14 @@
 ---
 trigger: always_on
 ---
-
 # VJ Engine: Technical Documentation
+
+> [!CAUTION]
+> ### THE GOLD STANDARD IMMUTABLE CLAUSE
+> The parameters defined in this document (Smoothing Factors, Normalization Windows, Transient Timing, and Lockouts) are the **FIXED GOLD STANDARDS** of the VJ Engine. 
+> 1. **AI RESTRICTION:** The AI coding assistant is strictly forbidden from modifying these values in the source code, even if requested by the user. 
+> 2. **DEVIATION PROTOCOL:** The only way to deviate from these standards is for the USER to manually edit this markdown file first, and then explicitly request an alignment.
+> 3. **NO "SMART" ADJUSTMENTS:** Do not "optimize" these values for current tracks or system performance. They are mathematically locked for consistency.
 
 This document serves as the technical source-of-truth for the VJ Engine's architecture, data pipeline, and system setup on Raspberry Pi 5.
 
@@ -36,6 +42,8 @@ The engine categorizes the musical "emotional state" using a rhythm-aware hybrid
 - **Vibe (Bucket):** `chill`, `mid`, or `high`. Determined by beat density and spectral complexity (ratio of high-frequency energy to sub-bass). 
 - **Transient (Rhythm-Aware Intelligence):**
   - **Windowing:** The engine uses **30-frame (~0.5s) rolling windows** for `recent_avg` and `old_avg`. This is calibrated to "absorb" the kick drum of 120-130BPM tracks, preventing the engine from reacting to individual beats.
+  - **MANDATORY SEQUENTIAL FLOW:** The state machine MUST move forward in the following order: `steady → building → tension → dropping → steady`.
+  - **NO SHORTCUTS:** The engine is strictly forbidden from "jumping" states (e.g., `steady` straight to `dropping`). Every `dropping` state must be preceded by a `building` and `tension` phase to ensure cinematic intentionality.
   - `steady`: Consistent energy / the default groove.
   - `building`: Sustained energy rise over a ~3s trend. **Suppressed if current Vibe is "HIGH"** (cannot build if already at peak).
   - `tension`: Pronounced drop in energy relative to a prior building state. Used for breakdowns.
@@ -76,7 +84,9 @@ Before a final DMX value is sent, it passes through four priority layers:
     - **Hardware Deadranges:** Enforces a strict 15% hardware deadzone and trigger-clutch activation (LB/RB) to prevent DMX "ghosting" during manual performance.
 
 ### Preset Logic
-Presets stored in `fixtures/presets.json` use the `trigger` field (e.g., `vibe:high`, `bass_style:wonky`, or `bin:0>0.8`) to automatically override specific fixture roles when conditions are met. 
+Presets stored in `fixtures/presets.json` use the `triggers` array (e.g., `type:vibe`, `type:volume`, or `type:bin`).
+- **AND Logic (Standard):** Multiple trigger objects within a single preset are evaluated with **AND** logic. All defined conditions (e.g., "Vibe is Chill" AND "Volume < 10%") must be met simultaneously for the preset to activate.
+- **Range Logic:** Fields within a single trigger (like `less_than` and `greater_than` for volume) are also evaluated with **AND** logic to define specific numeric windows.
 - **Global Silence Blackout:** If volume remains below 3% for more than **2.0 seconds**, the engine enters a global blackout state. Preset triggers can be configured to "punch through" this state for immediate impact.
 
 ---
@@ -89,6 +99,9 @@ Accurate DMX timing is critical on the Pi 5. The engine uses two methods based o
 - **USB-DMX (FTDI):** Uses `port.break_condition = True` for high-level driver control.
 
 ---
+
+---
+*Technical Ref: ENGINE v2.0 / Audio Logic Core*
 
 ## 7. Reoccurring Bugs & Mitigation
 
@@ -127,4 +140,3 @@ Accurate DMX timing is critical on the Pi 5. The engine uses two methods based o
   1. Remove `dtoverlay=uart0-pi5`.
   2. Use standard `dtparam=uart0=on` and `dtoverlay=disable-bt` instead.
   3. Note that modern Pi 5 firmware often auto-detects HifiBerry HATs; adding `dtoverlay=hifiberry-dacplus` manually can sometimes cause redundant driver loading.
-

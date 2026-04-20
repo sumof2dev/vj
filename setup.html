@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=417262238">
+<link rel="stylesheet" href="setup.css?v=420260840">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
@@ -246,7 +246,7 @@
                 <div>
                     <label>Preset Name</label>
                     <input type="text" id="pres-name" placeholder="e.g., Massive Drop Lock">
-                    <button class="btn btn-primary btn-sm" onclick="openPresetAiChat()" style="margin-top:8px;">✨ Generate</button>
+                    <button class="btn btn-primary btn-sm" id="preset-ai-gen-btn" onclick="openPresetAiChat()" style="margin-top:8px;">✨ Generate</button>
                 </div>
                 <div
                     style="margin-top:15px; background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid #333;">
@@ -284,19 +284,26 @@
                         <div class="syntax-help-trigger">
                             <span class="help-icon">?</span>
                             <div class="syntax-guide">
-                                <strong>AI Sync & Sequencer Guide</strong>
-                                <div class="syntax-header">Global Controls (Target: System)</div>
-                                <div class="syntax-item"><span>Speed:</span> 50=Slow, 100=1x, 200=Fast</div>
-                                <div class="syntax-item"><span>Intensity:</span> 0=Dark, 100=Full</div>
+                                <div class="syntax-section">
+                                    <div class="syntax-header">ENGINE (System)</div>
+                                    <div class="syntax-item"><span>Rate:</span> 100=Normal, 50=Slow, 200=Fast</div>
+                                    <div class="syntax-item"><span>Intensity:</span> 0=Dark, 100=Normal, 150+=Boost</div>
+                                </div>
                                 
-                                <div class="syntax-header">Range Sequencer</div>
-                                <div class="syntax-item"><span>Chain:</span> 32-96-32 (Ping-Pong)</div>
-                                <div class="syntax-item"><span>Steps:</span> 30, 255, 127 (Timed)</div>
-                                <div class="syntax-item"><span>Offset:</span> 32-96+16 (+90° phase)</div>
+                                <div class="syntax-section">
+                                    <div class="syntax-header">VISUALIZER (VisualDMX)</div>
+                                    <div class="syntax-item"><span>Zoom:</span> 0.5 (Wide), 1.0 (Normal), 2.0+ (Macro)</div>
+                                    <div class="syntax-item"><span>Hue:</span> 0-255 (Color Wheel Rotation)</div>
+                                    <div class="syntax-item"><span>Binary:</span> 1 = On, 0 = Off (Strobe, Invert, Spin)</div>
+                                    <div class="syntax-item"><span>Next/FX:</span> Enter 1 to jump to next</div>
+                                </div>
                                 
-                                <div class="syntax-header">AI Pro Tips</div>
-                                <div class="syntax-item"><span>"Liquid":</span> Sine/Flux, React 0.2, Speed 0.1</div>
-                                <div class="syntax-item"><span>"Rhythmic":</span> Saw/Impact, React 1.0, Speed 0.8+</div>
+                                <div class="syntax-section">
+                                    <div class="syntax-header">SEQUENCERS (Any Target)</div>
+                                    <div class="syntax-item"><span>Smooth:</span> 32-96 (Linear Sweep)</div>
+                                    <div class="syntax-item"><span>Steps:</span> 30, 127, 255 (Rhythmic Jump)</div>
+                                    <div class="syntax-item"><span>Offset:</span> 32-96+16 (+90&deg; Phase)</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -353,9 +360,15 @@
                 <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
                     <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
                         onclick="clearPresetAiChatHistory()">🗑️ Wipe</button>
+                    <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">FIX</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
+                </div>
+
+                <div id="ai-fixture-picker" 
+                    style="display:none; position: absolute; bottom: 130px; left: 10px; right: 10px; background: #1a1a1a; border: 1px solid var(--accent); border-radius: 12px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                    <!-- Fixture items injected here -->
                 </div>
 
                 <div style="display: flex; gap: 10px; position: relative;">
@@ -578,11 +591,11 @@
 
     </div>
 
-<script src="shared_setup.js?v=417262238"></script>
-<script src="live_controller.js?v=417262238"></script>
-<script src="profile_logic.js?v=417262238"></script>
-<script src="ai_architect.js?v=417262238"></script>
-<script src="stage_logic.js?v=417262238"></script>
+<script src="shared_setup.js?v=420260840"></script>
+<script src="live_controller.js?v=420260840"></script>
+<script src="profile_logic.js?v=420260840"></script>
+<script src="ai_architect.js?v=420260840"></script>
+<script src="stage_logic.js?v=420260840"></script>
 <script>window.onload = () => { 
     console.log("🚀 VJ Manager starting (UI Refreshed)..."); 
     // All routing and landing logic (redirects, tab switching) 

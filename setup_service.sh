@@ -3,56 +3,79 @@
 # VJ Engine - System Service Setup
 # This makes the VJ Engine run automatically when the device boots.
 
+IS_EVT=false
+for arg in "$@"; do
+    if [ "$arg" == "--evt" ]; then
+        IS_EVT=true
+        echo "🧪 EVT Mode: Using isolated service names."
+    fi
+done
+
 SERVICE_NAME="vj-engine.service"
 SERVER_SERVICE="vj-server.service"
 LAUNCHER_SERVICE="vj-launcher.service"
 CAMERA_SERVICE="vj-camera.service"
-SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
-SERVER_PATH="/etc/systemd/system/$SERVER_SERVICE"
-LAUNCHER_PATH="/etc/systemd/system/$LAUNCHER_SERVICE"
-CAMERA_PATH="/etc/systemd/system/$CAMERA_SERVICE"
+
+if [ "$IS_EVT" = true ]; then
+    SERVICE_NAME="vj-engine-evt.service"
+    SERVER_SERVICE="vj-server-evt.service"
+    LAUNCHER_SERVICE="vj-launcher-evt.service"
+    CAMERA_SERVICE="vj-camera-evt.service"
+fi
+
 CURRENT_DIR=$(pwd)
 
-echo "🔧 Setting up VJ Engine as a System Service..."
+echo "🔧 Setting up VJ Engine as a System Service ($SERVICE_NAME)..."
 
-# 1. Update the service files with the correct path
-sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$SERVICE_NAME"
-sed -i "s|ExecStart=.*|ExecStart=$CURRENT_DIR/start.sh --engine-only|g" "$SERVICE_NAME"
-sed -i "s|User=.*|User=$USER|g" "$SERVICE_NAME"
+# 1. Prepare temporary service files
+TMP_DIR=$(mktemp -d)
+cp "vj-engine.service" "$TMP_DIR/$SERVICE_NAME"
+cp "vj-server.service" "$TMP_DIR/$SERVER_SERVICE"
+cp "vj-launcher.service" "$TMP_DIR/$LAUNCHER_SERVICE"
+cp "vj-camera.service" "$TMP_DIR/$CAMERA_SERVICE"
 
-sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$SERVER_SERVICE"
-sed -i "s|ExecStart=.*|ExecStart=$CURRENT_DIR/start.sh --server-only|g" "$SERVER_SERVICE"
-sed -i "s|User=.*|User=$USER|g" "$SERVER_SERVICE"
+# 2. Update the service files with the correct path
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$TMP_DIR/$SERVICE_NAME"
+sed -i "s|ExecStart=.*|ExecStart=$CURRENT_DIR/start.sh --engine-only|g" "$TMP_DIR/$SERVICE_NAME"
+sed -i "s|User=.*|User=$USER|g" "$TMP_DIR/$SERVICE_NAME"
 
-sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$LAUNCHER_SERVICE"
-sed -i "s|ExecStart=.*|ExecStart=/usr/bin/python3 $CURRENT_DIR/launcher.py|g" "$LAUNCHER_SERVICE"
-sed -i "s|User=.*|User=$USER|g" "$LAUNCHER_SERVICE"
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$TMP_DIR/$SERVER_SERVICE"
+sed -i "s|ExecStart=.*|ExecStart=$CURRENT_DIR/start.sh --server-only|g" "$TMP_DIR/$SERVER_SERVICE"
+sed -i "s|User=.*|User=$USER|g" "$TMP_DIR/$SERVER_SERVICE"
 
-sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$CAMERA_SERVICE"
-sed -i "s|ExecStart=.*|ExecStart=$CURRENT_DIR/venv/bin/python3 $CURRENT_DIR/scripts/calibration_server.py|g" "$CAMERA_SERVICE"
-sed -i "s|User=.*|User=$USER|g" "$CAMERA_SERVICE"
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$TMP_DIR/$LAUNCHER_SERVICE"
+sed -i "s|ExecStart=.*|ExecStart=/usr/bin/python3 $CURRENT_DIR/launcher.py|g" "$TMP_DIR/$LAUNCHER_SERVICE"
+sed -i "s|User=.*|User=$USER|g" "$TMP_DIR/$LAUNCHER_SERVICE"
+
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$TMP_DIR/$CAMERA_SERVICE"
+sed -i "s|ExecStart=.*|ExecStart=$CURRENT_DIR/venv/bin/python3 $CURRENT_DIR/scripts/calibration_server.py|g" "$TMP_DIR/$CAMERA_SERVICE"
+sed -i "s|User=.*|User=$USER|g" "$TMP_DIR/$CAMERA_SERVICE"
 
 echo "   - Configured paths for user: $USER"
 
-# 2. Copy to systemd
+# 3. Copy to systemd
 echo "   - Installing service files..."
-sudo cp "$SERVICE_NAME" /etc/systemd/system/
-sudo cp "$SERVER_SERVICE" /etc/systemd/system/
-sudo cp "$LAUNCHER_SERVICE" /etc/systemd/system/
-sudo cp "$CAMERA_SERVICE" /etc/systemd/system/
+sudo cp "$TMP_DIR/$SERVICE_NAME" /etc/systemd/system/
+sudo cp "$TMP_DIR/$SERVER_SERVICE" /etc/systemd/system/
+sudo cp "$TMP_DIR/$LAUNCHER_SERVICE" /etc/systemd/system/
+sudo cp "$TMP_DIR/$CAMERA_SERVICE" /etc/systemd/system/
+rm -rf "$TMP_DIR"
 
-# 2.5 Ensure user can run systemctl for these services without password
+# 4. Ensure user can run systemctl for these services without password
 echo "   - Setting up sudo permissions for remote management..."
 SUDOERS_FILE="/etc/sudoers.d/vj-launcher"
+if [ "$IS_EVT" = true ]; then
+    SUDOERS_FILE="/etc/sudoers.d/vj-launcher-evt"
+fi
 SUDO_CMD="$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start $SERVICE_NAME, /usr/bin/systemctl stop $SERVICE_NAME, /usr/bin/systemctl restart $SERVICE_NAME, /usr/bin/systemctl start $CAMERA_SERVICE, /usr/bin/systemctl stop $CAMERA_SERVICE, /usr/bin/systemctl restart $CAMERA_SERVICE"
 echo "$SUDO_CMD" | sudo tee "$SUDOERS_FILE" > /dev/null
 sudo chmod 440 "$SUDOERS_FILE"
 
-# 3. Reload and Enable
+# 5. Reload and Enable
 echo "   - Reloading systemd..."
 sudo systemctl daemon-reload
 echo "   - Enabling auto-start on boot..."
-sudo systemctl disable $SERVICE_NAME
+sudo systemctl disable $SERVICE_NAME 2>/dev/null || true
 sudo systemctl enable $SERVER_SERVICE
 sudo systemctl enable $LAUNCHER_SERVICE
 sudo systemctl enable $CAMERA_SERVICE

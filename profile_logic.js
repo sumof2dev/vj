@@ -142,12 +142,12 @@ function loadProfileChannels() {
         <div class="card channel-card ${isCollapsed ? 'collapsed' : ''}" style="margin-bottom: 8px; padding: 10px; border-left: 5px solid var(--accent); background:rgba(255,255,255,0.015); border-radius:10px;">
             <div class="channel-card-header" onclick="toggleChannelCollapse(${chIdx})" style="display:flex; flex-direction:column; cursor:pointer;">
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:8px;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span class="collapse-icon" style="transition: transform 0.2s; transform: rotate(${isCollapsed ? '-90deg' : '0deg'})">▼</span>
+                    <div style="display:flex; align-items:center; gap:10px; flex:1;">
                         <input type="text" value="${ch.name}" 
                                oninput="currentProfileChannels[${chIdx}].name=this.value; event.stopPropagation()" 
                                class="glass-input" style="font-weight:900; color:var(--text); font-size:15px; border:none; background:transparent; width:130px;"
                                onclick="event.stopPropagation()">
+                        <span class="collapse-icon" style="transition: transform 0.2s; transform: rotate(${isCollapsed ? '-90deg' : '0deg'})">▼</span>
                     </div>
                      <div style="display:flex; align-items:center; gap:8px;">
                          <button class="btn btn-sm btn-danger-soft" onclick="event.stopPropagation(); removeProfileChannel(${chIdx})" style="background:rgba(255,85,85,0.1); border:1px solid rgba(255,85,85,0.2); color:#ff5555; padding:3px 6px; border-radius:4px; font-size:10px;">Remove</button>
@@ -899,6 +899,11 @@ function resetPresetForm() {
     currentPresetOverrides = [];
     currentPresetTriggers = [{ type: '' }];
     document.getElementById('pres-overrides-container').innerHTML = '';
+    
+    // Reset AI Button label
+    const aiBtn = document.getElementById('preset-ai-gen-btn');
+    if (aiBtn) aiBtn.innerText = "✨ Generate";
+
     renderPresetTriggers();
     renderPresetOverrides();
 }
@@ -1022,6 +1027,9 @@ function editPreset(id) {
     renderPresetTriggers();
     renderPresetOverrides();
     
+    // Update AI Button label to indicate edit mode
+    const aiBtn = document.getElementById('preset-ai-gen-btn');
+    if (aiBtn) aiBtn.innerText = "✨ Edit";
     // Use window.switchTab if available (Stage page)
     if (window.switchTab && currentTab !== 'tab-presets') {
         window.switchTab('tab-presets');
@@ -1058,13 +1066,44 @@ function updatePresetFunctionDropdown() {
         if (valLabel) valLabel.innerText = "Pattern Speed (Optional)";
     } else if (stageId === 'visualdmx') {
         funcSel.innerHTML = '<option value="">-- Select Visual Function --</option>' +
-            ['strobe', 'blackout', 'spin', 'zoom', 'hue', 'invert', 'next_visual', 'next_fx', 'reset'].map(f => `<option value="${f}">${f}</option>`).join('');
-        if (valLabel) valLabel.innerText = "Trigger (1=On, 0=Off)";
-        if (valInput) {
-            valInput.placeholder = "1";
-            if (!valInput.value) valInput.value = "1";
-        }
+            ['strobe', 'blackout', 'spin', 'zoom', 'hue', 'invert', 'next_visual', 'next_fx', 'base_idx', 'fx_idx', 'reset'].map(f => `<option value="${f}">${f.toUpperCase()}</option>`).join('');
+        
+        funcSel.onchange = () => {
+            const fn = funcSel.value;
+            if (fn === 'zoom') {
+                if (valLabel) valLabel.innerText = "Scale (1.0 = Fit, 0.5 = Wide, 2.0 = Macro)";
+                if (valInput) valInput.placeholder = "e.g. 1.5";
+            } else if (fn === 'hue') {
+                if (valLabel) valLabel.innerText = "Color Wheel (0-255 Rotation)";
+                if (valInput) valInput.placeholder = "e.g. 128";
+            } else if (fn === 'invert' || fn === 'strobe' || fn === 'blackout' || fn === 'spin') {
+                if (valLabel) valLabel.innerText = "Trigger (1 = On, 0 = Off)";
+                if (valInput) valInput.placeholder = "1";
+            } else if (fn.includes('next_')) {
+                if (valLabel) valLabel.innerText = "Pulse (Enter 1 to jump)";
+                if (valInput) valInput.placeholder = "1";
+            } else if (fn.includes('_idx')) {
+                if (valLabel) valLabel.innerText = "Shader Index (0, 1, 2...)";
+                if (valInput) valInput.placeholder = "0";
+            } else {
+                if (valLabel) valLabel.innerText = "Value (Decimals supported)";
+            }
+        };
+        funcSel.onchange(); 
+    } else if (stageId === 'system') {
+        funcSel.innerHTML = '<option value="">-- Select System Function --</option>' +
+            ['rate', 'intensity'].map(f => `<option value="${f}">${f.toUpperCase()}</option>`).join('');
+        
+        funcSel.onchange = () => {
+             const fn = funcSel.value;
+             if (fn === 'rate') if (valLabel) valLabel.innerText = "Speed Multiplier (100 = Normal, 200 = 2x)";
+             else if (fn === 'intensity') if (valLabel) valLabel.innerText = "Global Output (100 = Normal, 0 = Blk)";
+             else if (valLabel) valLabel.innerText = "Multiplier (100 = 1.0x)";
+             if (valInput) valInput.placeholder = "100";
+        };
+        funcSel.onchange();
     } else {
+        funcSel.onchange = null;
         funcSel.innerHTML = '<option value="">-- Select Function --</option>' +
             window.KNOWN_ROLES.map(f => `<option value="${f}">${f}</option>`).join('');
     }

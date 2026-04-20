@@ -1,72 +1,51 @@
+---
+trigger: always_on
+---
+# RaveBox Networking & Connectivity Guide
 
-## 5. System Setup Guide
-
-### 1. Hardware Config (`/boot/firmware/config.txt`)
-Essential for unlocking WaveShare RS485 HATS and HifiBerry DACs.
-
-```ini
-[all]
-# Unlocks UART0 for DMX (RS485)
-dtparam=uart0=on
-dtoverlay=disable-bt
-enable_uart=1
-
-# NOTE: Avoid 'dtoverlay=uart0-pi5' on Pi 5. It conflicts with I2S (Pin 18).
-
-# Audio for HifiBerry
-# NOTE for Pi 5: Modern HATs are often auto-detected. 
-# Only add these if 'aplay -l' doesn't show the card.
-# dtoverlay=hifiberry-dacplus
-# dtparam=audio=off
-dtoverlay=vc4-kms-v3d,noaudio
-```
-
-### 2. OS Dependencies
-```bash
-sudo apt update && sudo apt install -y python3-venv libasound2-dev libpulse0 pulseaudio-utils gpiod libgpiod-dev openssl fuser
-```
-
-### 3. Permissions & Persistence
-- **Sudoers:** `/etc/sudoers.d/vj-launcher` must exist to allow the Web UI to issue `systemctl restart` commands without a password.
-- **Services:** Run `./setup_service.sh` to install the `vj-server`, `vj-launcher`, and `vj-engine` systemd units.
-- **SSL:** Run `./generate_cert.sh` to enable SSL (HTTPS/WSS), which is required for mobile PWA standalone support.
-
-### 4. Sanity Check & Calibration
-- **Engine Calibration:** Accessible via the "Sanity Check" tab in the Help UI. This test feeds a pre-compiled EDM signal into the engine core to verify BPM detection accuracy, spectral flux responsiveness, and state machine integrity (Transitions between chill, tension, and dropping).
+This document defines the infrastructure and remote access strategies for the RaveBox system.
 
 ---
 
-## 6. Hosting & Network Architecture
+## 1. Unified Ingress Architecture
 
-The RaveBox system uses a hybrid infrastructure model to balance local processing power with global accessibility and SSL-secured PWA support.
+RaveBox uses a single, subdomain-based routing model that supports both Global CDN entry and Direct Backend entry.
 
-### Global Connectivity & Tunnels
-Remote access is provided via **Cloudflare Zero Trust Tunnels** (`cloudflared`). This allows the Raspberry Pi 5 to be accessible via the internet without manual port forwarding or a public IP address.
+### Entry Points
+- **Global Entry (`ravebox.love`)**: GCS-hosted frontend. User enters a **Secret Code** to pair with the backend.
+- **Direct Entry (`[ID].ravebox.love`)**: Backend-hosted frontend. Connects straight to the local hardware; no code required.
 
-The tunnel configuration (`setup_tunnel.sh`) maps three logical entry points to the Pi's specialized ports:
-- **`{BOX_NAME}.ravebox.love` → Port 8000:** The primary **Production Server** (UI Assets & Configuration API).
-- **`api-{BOX_NAME}.ravebox.love` → Port 8001:** The **Launcher Service** (System Control & Admin API).
-- **`ws-{BOX_NAME}.ravebox.love` → Port 8765:** The **DMX Engine WebSocket** (High-speed audio metrics & state streaming).
-
-### Backend Component Roles
-1.  **VJ Engine (`backend/main.py`):**
-    - The "brain" of the system.
-    - Operates as a WebSocket server on **Port 8765**.
-    - Performance-critical; broadcasts the 6-bin EQ data and transient states to all connected visualizers at 60fps.
-2.  **VJ Server (`server.py`):**
-    - The application gateway on **Port 8000**.
-    - Serves the static HTML/JS frontend.
-    - Manages the persistence of `fixtures/` and the `library/` (UserGen Shaders).
-    - **The Proxy:** Acts as an internal proxy for port 8001. When a UI sends a command to `/api/restart`, the Server (8000) internally forwards it to the Launcher (8001) to keep the frontend logic simple.
-3.  **VJ Launcher (`launcher.py`):**
-    - The system administrator on **Port 8001**.
-    - Executes `systemctl` commands to start/stop the engine.
-    - Handles external integrations like **Spotify OAuth** and **TP-Link Kasa** smart plug control.
-
-### Hosting & SSL Strategy
-- **Frontend Assets:** Commonly deployed to **Google Cloud Storage (GCS)** or served locally via the Production Server. Hosting on GCS allows the heavy React/Visualizer assets to be cached globally while connecting back to the Pi for live data.
-- **SSL Termination:** Cloudflare provides the public-facing SSL certificates required for PWA "Add to Home Screen" support. Internally, the services use local certificates (`cert.pem`) to ensure data remains encrypted across the tunnel.
-- **Smart Redirection:** The `launcher.py` includes logic to automatically detect `.ravebox.love` domains and append the `api-` prefix, ensuring that internal redirects between services work seamlessly in both local and remote environments.
+### Routing Standard (The Golden Mapping)
+Regardless of the entry point, the system resolves services via subdomains:
+- `{ID}.ravebox.love` ➔ **Port 8000** (Server / File API)
+- `api-{ID}.ravebox.love` ➔ **Port 8001** (Launcher / System Admin)
+- `ws-{ID}.ravebox.love` ➔ **Port 8765** (DMX Engine WebSocket)
 
 ---
-*Technical Ref: INFRA v1.2 / Cloudflare Tunnel / GCS Integrated*
+
+## 2. Cloudflare Zero Trust Tunnels
+
+### Protocol Alignment (Critical)
+Internally, the tunnel protocol **MUST MATCH** the backend engine's local security state:
+- If Engine is in `wss` mode ➔ Tunnel service must be `https://localhost:{PORT}`.
+- **No TLS Verify**: Because certificates are self-signed, "No TLS Verify" MUST be enabled in the Cloudflare Dashboard for all hostnames.
+
+---
+
+## 3. Component Roles & Proxying
+
+1.  **VJ Server (Port 8000)**: Serves assets and Data APIs. Acts as a proxy for the Launcher.
+2.  **VJ Launcher (Port 8001)**: Handles system actions (restarts, camera, auth).
+3.  **VJ Engine (Port 8765)**: High-speed WebSocket for DMX and audio state.
+
+---
+
+## 4. SSL & IP Persistence
+
+### LAN IP Dependency
+Self-signed certificates (`cert.pem`) are bound to the Pi's LAN IP.
+- **IP Change**: If the Pi moves to a new network, you **MUST** re-run `./generate_cert.sh`.
+- **Symptoms**: TLS Handshake failures or connection hangs in the browser.
+
+---
+*Technical Ref: NET-SYNC v1.4 / Unified-Architecture*

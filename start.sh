@@ -37,12 +37,25 @@ else
     fuser -k -9 8004/tcp > /dev/null 2>&1
 fi
 
-# Wait for ports to actually free up
+# Wait for ports to actually free up (Mode-Aware)
 echo "⏳ Waiting for ports to clear..."
 for i in {1..10}; do
-    # Check 8000 (Server), 8765 (Backend), 8001 (Launcher), and 8004 (Camera)
-    if ! fuser 8000/tcp >/dev/null 2>&1 && ! fuser 8765/tcp >/dev/null 2>&1 && ! fuser 8001/tcp >/dev/null 2>&1 && ! fuser 8004/tcp >/dev/null 2>&1; then
-        break
+    # 1. Manual Mode: Wait for ALL ports
+    if [ "$IS_SERVICE" = false ]; then
+        if ! fuser 8000/tcp >/dev/null 2>&1 && ! fuser 8765/tcp >/dev/null 2>&1 && ! fuser 8001/tcp >/dev/null 2>&1 && ! fuser 8004/tcp >/dev/null 2>&1; then
+            break
+        fi
+    else
+        # 2. Service Mode: Only wait for the port we are about to use
+        # If --engine-only, only wait for 8765. If --server-only, only wait for 8000.
+        if [ "$START_ENGINE" = true ] && [ "$START_SERVER" = false ]; then
+            if ! fuser 8765/tcp >/dev/null 2>&1; then break; fi
+        elif [ "$START_SERVER" = true ] && [ "$START_ENGINE" = false ]; then
+            if ! fuser 8000/tcp >/dev/null 2>&1; then break; fi
+        else
+            # Default catch-all
+            break
+        fi
     fi
     sleep 0.5
 done

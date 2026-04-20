@@ -14,6 +14,18 @@ echo -e "${CYAN}====================================================${NC}"
 echo -e "${CYAN}   🚀 RaveBox Global Access - Tunnel Setup          ${NC}"
 echo -e "${CYAN}====================================================${NC}"
 
+# 0. Safety Guard - Cloud-Managed Detection
+if cloudflared tunnel list | grep -q "ravebox-backend"; then
+    echo -e "${RED}⚠️  CLOUD-MANAGED TUNNEL DETECTED (ravebox-backend)${NC}"
+    echo -e "This system is configured for a ${GREEN}Cloud-First Production Flow${NC}."
+    echo -e "Manual scripts are strictly forbidden from modifying this configuration."
+    echo -e ""
+    echo -e "To change ingress rules or hostnames, use the ${CYAN}Cloudflare Zero Trust Dashboard${NC}."
+    echo -e "Refer to ${YELLOW}setup.md${NC} for documentation on the Golden Architecture."
+    exit 1
+fi
+
+
 # Architecture Detection
 ARCH=$(uname -m)
 case "$ARCH" in
@@ -68,25 +80,27 @@ tunnel: $TUNNEL_ID
 credentials-file: $CRED_FILE
 
 ingress:
+  # 1. Main UI & Static Assets (Port 8000)
   - hostname: $BOX_NAME.ravebox.love
     service: https://localhost:8000
     originRequest:
       noTLSVerify: true
+  
+  # 2. System Admin / Launcher (Port 8001)
   - hostname: api-$BOX_NAME.ravebox.love
     service: https://localhost:8001
     originRequest:
       noTLSVerify: true
+
+  # 3. DMX Engine WebSocket (Port 8765)
   - hostname: ws-$BOX_NAME.ravebox.love
     service: https://localhost:8765
     originRequest:
       noTLSVerify: true
+
   - service: http_status:404
 EOF
 
-echo -e "${GREEN}✅ Tunnel Configured!${NC}"
-echo -e "\n${YELLOW}Next steps (Manual):${NC}"
-echo -e "1. Run DNS Route: ${CYAN}cloudflared tunnel route dns $BOX_NAME $BOX_NAME.ravebox.love${NC}"
-echo -e "2. Add CNAMEs: In Cloudflare Dash, add CNAMEs for ${CYAN}api-$BOX_NAME${NC} and ${CYAN}ws-$BOX_NAME${NC} pointing to ${CYAN}$TUNNEL_ID.cfargotunnel.com${NC}"
-echo -e "3. Finalize: ${CYAN}sudo cloudflared service install${NC} && ${CYAN}sudo systemctl start cloudflared${NC}"
+echo -e "\n${GREEN}LFG! Your Secret Code '$BOX_NAME' is ready for remote work.${NC}"
 
 echo -e "\n${GREEN}LFG! Your Secret Code '$BOX_NAME' is ready for remote work.${NC}"

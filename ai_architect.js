@@ -142,7 +142,7 @@ Context:
 - Available Hold Types: none, floorfreeze, peakpause, beat, bar.
 - GLOBAL ACTORS:
   - "target": "system" -> Modifies the entire room's physics (DMX and Shaders).
-    - Functions: "speed" (increments time), "intensity" (global master dimmer).
+    - Functions: "rate" (increments time), "intensity" (global master dimmer).
     - Scaling: "100" = 100% (Normal), "200" = 200% (Double), "50" = 50% (Slow-Mo).
   - "target": "visualdmx" -> Modifies Visualizer-specific shaders (u_strobe, u_blackout, u_spin, etc).
 
@@ -150,18 +150,13 @@ SCHEMA RULES:
 1. MODIFIERS: All timing and sensitivity settings MUST live inside the "modifiers" object.
 2. SOURCE: Frequency bins bin_0 (Sub) through bin_5 (Treble) are available for targeted reactivity.
 3. RANGE PRESERVATION: Keep changes within the 'cal' object bounds unless explicitly asked to expand them.
-4. COORDINATE SEQUENCER: The 'value' field now supports a powerful sequencer syntax:
-   - Ranges: "32-96" (Linear ramp)
-   - Chains: "32-96-32" (Ping-Pong / Triangle movement)
-   - Sequences: "30, 255, 30" (Comma-separated timed steps)
-   - Offsets: "+val" (e.g. "32-96 + 16" shifts phase by 1/4 cycle, "32-96 + 32" shifts by 1/2 cycle).
-5. CIRCULAR MATH: To create a circular orbit between 32 and 96:
-   - pos_x: "32-96-32"
-   - pos_y: "32-96-32 + 16" (Appending +16 creates a 90-degree phase shift).
-6. SQUARE MATH: To create a square path:
-   - pos_x: "32-96, 96, 96-32, 32"
-   - pos_y: "32, 32-96, 96, 96-32" (Note: offset the steps to form corner pathing).
-7. NO STATIC FOR RANGES: Never use behavior 'static' if min != max. Use 'sine' or 'step' instead.
+4. NO STATIC FOR RANGES: Never use behavior 'static' if min != max. Use 'sine' or 'step' instead.
+5. AUDIO-REACTIVE MOVEMENT (Base Profiles):
+   - To create movement, use behaviors like 'sine' (oscillation), 'push' (impact), or 'noise' (organic drift).
+   - The range of movement is governed by 'cal.min' and 'cal.max'.
+   - Speed and reactivity are controlled via the 'modifiers' object.
+   - Example (Oscillation): To move pan between 50 and 200, set behavior: 'sine', cal.min: 50, cal.max: 200.
+6. NO SEQUENCER STRINGS: The "32-96-32" sequencer syntax (dashes/commas) is EXCLUSIVELY for Presets. DO NOT use these strings in Base Profile rules.
 
 CHANNEL ROLE DICTIONARY:
 - "pan" = role: pos_x
@@ -194,10 +189,10 @@ THE PLAYBOOK (Style Macros):
 - "Liquid": Use 'sine' or 'noise' behaviors. Set source to 'flux' or 'vol'. Set 'react' to 0.2 (high smoothing) and 'speed' to 0.1-.
 
 Output: Return a JSON object with "logic_explanation" (compact summary of what you did) and "mappings" (the updated 2D array).
-Input Profile Mappings: ${JSON.stringify(currentProfileMappings)}
-Fixture Context: ${JSON.stringify(fixtureChannels)}
-User Instructions: ${JSON.stringify(pendingAiInstructions)}
-Instruction History: ${JSON.stringify(aiConversationHistory.slice(-5))}
+- CURRENT LIVE UI STATE (Source of Truth): ${JSON.stringify(currentProfileMappings)}
+- FIXTURE CONTEXT (Available Roles): ${JSON.stringify(fixtureChannels)}
+- NEW INSTRUCTIONS: ${JSON.stringify(pendingAiInstructions)}
+- CONVERSATION DIALOGUE (Instruction Context - Text Only): ${JSON.stringify(aiConversationHistory.slice(-5))}
 
 Output: Valid raw JSON object only.
 `;
@@ -1000,6 +995,16 @@ Output: Valid raw JSON object only.
             document.body.classList.add('ai-modal-open');
             modal.classList.add('active');
 
+            // Update title based on context
+            const titleEl = modal.querySelector('.ai-modal-header div');
+            if (titleEl) {
+                if (current_editing_preset_id) {
+                    titleEl.innerHTML = `<span style="font-size: 1.4rem;">🤖</span> AI Preset Refinement`;
+                } else {
+                    titleEl.innerHTML = `<span style="font-size: 1.4rem;">🤖</span> AI Preset Generator`;
+                }
+            }
+
             const textarea = document.getElementById('ai-preset-textarea');
             if (textarea) {
                 textarea.value = '';
@@ -1019,6 +1024,73 @@ Output: Valid raw JSON object only.
             const applyBtn = document.getElementById('ai-preset-apply-btn');
             if (diffBtn) diffBtn.style.display = 'none';
             if (applyBtn) applyBtn.style.display = 'none';
+
+            // Hide the fixture picker if open
+            const picker = document.getElementById('ai-fixture-picker');
+            if (picker) picker.style.display = 'none';
+        }
+
+        function toggleFixturePicker() {
+            const picker = document.getElementById('ai-fixture-picker');
+            if (!picker) return;
+            
+            if (picker.style.display === 'block') {
+                picker.style.display = 'none';
+            } else {
+                populateFixturePicker();
+                picker.style.display = 'block';
+            }
+        }
+
+        function populateFixturePicker() {
+            const picker = document.getElementById('ai-fixture-picker');
+            if (!picker) return;
+            
+            const fixtures = _buildStageContext();
+            if (fixtures.length === 0) {
+                picker.innerHTML = `<div style="padding:15px; text-align:center; color:var(--text-dim); font-size:12px;">No fixtures found on stage. Patch some lights first!</div>`;
+                return;
+            }
+
+            picker.innerHTML = fixtures.map((fix) => {
+                return `
+                    <div class="fixture-picker-item" onclick="insertFixtureTag('${fix.id}')"
+                        style="padding:10px 15px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;">
+                        <div>
+                            <div style="font-weight:bold; color:var(--accent); text-transform:uppercase; font-size:12px;">${fix.id}</div>
+                            <div style="font-size:9px; color:var(--text-dim);">${fix.profileName} [${fix.zone}]</div>
+                        </div>
+                        <div style="font-size:9px; color:var(--text-dim);">Fixture</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add hover effect style dynamically if not present
+            if (!document.getElementById('fix-picker-hover-style')) {
+                const style = document.createElement('style');
+                style.id = 'fix-picker-hover-style';
+                style.innerHTML = `.fixture-picker-item:hover { background: rgba(255,255,255,0.1); }`;
+                document.head.appendChild(style);
+            }
+        }
+
+        function insertFixtureTag(fixId) {
+            const textarea = document.getElementById('ai-preset-textarea');
+            if (!textarea) return;
+            
+            const tag = `[fix:${fixId}]`;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            
+            textarea.value = text.substring(0, start) + tag + text.substring(end);
+            
+            // Put cursor after the tag
+            textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+            textarea.focus();
+            
+            // Close picker
+            document.getElementById('ai-fixture-picker').style.display = 'none';
         }
 
         function addPresetAiChatMessage(role, text) {
@@ -1121,7 +1193,7 @@ Output: Valid raw JSON object only.
             }
 
             const systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox Preset System.
-Task: Generate or refine a preset based on the user's natural language description.
+Task: ${current_editing_preset_id ? 'Refine an existing' : 'Generate a new'} preset based on the user's natural language description.
 
 Context:
 - A Preset consists of TRIGGERS (when it activates) and OVERRIDES (what it does when active).
@@ -1136,45 +1208,65 @@ TRIGGER SCHEMA:
 - {type: "bin", target: "<name>", greater_than: N, less_than: N} — names: SUB..BRILLIANCE. ALWAYS provide both.
 - {type: "channel", target: <addr>, greater_than: N, less_than: N} — raw DMX. ALWAYS provide both.
 - {type: "manual"} — activated only by user click.
-- For all numeric triggers (volume, bin, channel), you MUST specify both "greater_than" and "less_than" to define a clear range.
+- For all numeric triggers (volume, bin, channel), you MUST specify both "greater_than" and "less_than" to define a range.
 
 OVERRIDE SCHEMA:
 Each override targets one fixture + one channel role:
 - Instance: {id: "<fixture_id>", target: "<fixture_id>", type: "instance", name: "<role>", role: "<role>", value: <string_or_num>, smoothing: 0, channels: [{name: "<role>", value: <string_or_num>}]}
 - Global: {id: "global", target: "global", type: "global", name: "<role>", role: "<role>", value: <string_or_num>, smoothing: 0, channels: [{name: "<role>", value: <string_or_num>}]}
 
-RANGE SEQUENCER SYNTAX (for 'value' fields):
-- Static: 255
-- Range: "32-96"
-- Ping-Pong: "32-96-32"
-- Step Sequence: "0, 255, 127"
-- Phase Offset: "+16" (e.g. "32-96-32 + 16")
-- CIRCULAR ORBIT (32 to 96): Set pos_x to "32-96-32" and pos_y to "32-96-32 + 16".
-- SQUARE PATH: Set pos_x to "32-96, 96, 96-32, 32" and pos_y to "32, 32-96, 96, 96-32".
+RANGE SEQUENCER SYNTAX (The "Tracer"):
+For creating movement/paths within a preset override 'value' field:
+- Basic: 255 (Static), "32-96" (Linear Range)
+- Chains: "32-96-32" (Ping-Pong / Triangle)
+- Sequences: "0, 255, 127" (Timed Steps)
+- Offsets: "+val" (e.g. "32-96-32 + 16" shifts phase by 1/4 cycle).
+
+SPATIAL FORMULA COOKBOOK (Templates for coordinated X/Y):
+Extract MIN and MAX from user prompt (or defaults). Use these templates exactly:
+1. CIRCLE:
+   pos_x: "min-max-min"
+   pos_y: "min-max-min + 16"
+2. FIGURE-8 / LISSAJOUS (Horizontal):
+   pos_x: "min-max-min-max-min"
+   pos_y: "min-max-min + 16"
+3. FIGURE-8 / LISSAJOUS (Vertical):
+   pos_x: "min-max-min"
+   pos_y: "min-max-min-max-min + 16"
+4. SQUARE PATH:
+   pos_x: "min-max, max, max-min, min"
+   pos_y: "min, min-max, max, max-min"
+5. TRIANGLE: 
+   pos_x: "center-max-min-center"
+   pos_y: "min-max-max-min"
+
+IMPORTANT: If the user says "center" without a range, use the fixture's calibrated center value. If the user request is ambiguous, you MUST ask clarifying questions.
 
 BEHAVIOR OVERRIDES (for movement/strobe/sweep):
-When the user describes dynamic behavior (strobe, sweep, oscillate, pulse), use mode:"behavior" on the channel:
-- {name: "<role>", mode: "behavior", behavior: "<type>", source: "<driver>", modifiers: {speed: 0.5, react: 0.5, hold_type: "none"}, cal: {min: 0, center: 127, max: 255}}
-- behavior types: sine, saw, square, triangle, push, pull, noise, step, forward, pingpong, random, adjacent, erratic, direct, static
+When the user describes dynamic behavior (strobe, sweep, oscillate, pulse), use mode:"behavior" on the channel.
+- {name: "<role>", mode: "behavior", behavior: "<type>", source: "<driver>", modifiers: {speed: 0.5, react: 0.5}, cal: {min: 0, center: 127, max: 255}}
+- behavior types: sine, saw, square, triangle, push, pull, noise, step, forward, pingpong, random, erratic, static
 - source drivers: volume, bass, flux, beat, bar, axis_a, axis_b, axis_c, axis_d, axis_e
-- speed: 0.0-1.0 (oscillation speed), react: 0.0-1.0 (audio reactivity)
-- hold_type: none, beat, bar, peakpause, floorfreeze
-- Example strobe: {name: "dimmer", mode: "behavior", behavior: "square", source: "volume", modifiers: {speed: 0.8, react: 0.7}, cal: {min: 0, center: 127, max: 215}}
-- Example sweep: {name: "pos_x", mode: "behavior", behavior: "sine", source: "bass", modifiers: {speed: 0.3, react: 0.5}, cal: {min: 0, center: 64, max: 127}}
-- For phase offset between channels (e.g. Y 50% ahead of X), use different speed values or add a phase note in modifiers
 
 AVAILABLE ROLES: pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, generic, dimmer, mode, clip, group
 
 FIXTURE ALIAS HINTS:
 - "all fixtures" / "everything" = use type "global"
-- Match user references to fixture IDs by name similarity (e.g. "rhythm fixtures" matches IDs containing "Ryth")
+- USER TAGS: If the user provides a tag like [fix:ID] (e.g. [fix:Left Beam]), they are explicitly targeting that SPECIFIC fixture ID. Prioritize these tags.
 - "blackout" = set dimmer to 0
 - "full brightness" / "max" = set dimmer to 255
 
+${current_editing_preset_id ? 'IMPORTANT: You are EDITING an existing preset. The user description intends to MODIFY the current state provided below. Only change what is requested.' : ''}
+
 Stage Instances (fixture IDs and their roles): ${JSON.stringify(stageContext)}
-${currentPresetContext ? 'Current Preset Being Edited: ' + JSON.stringify(currentPresetContext) : 'Creating new preset.'}
-User Prompt: ${text}
-Conversation History: ${JSON.stringify(presetConversationHistory.slice(-5))}
+
+- CURRENT LIVE UI STATE (Source of Truth):
+- Preset Label: "${document.getElementById('pres-name')?.value || 'Unnamed Preset'}"
+- Active Triggers: ${JSON.stringify(currentPresetTriggers)}
+- Active Overrides: ${JSON.stringify(currentPresetOverrides)}
+
+- NEW INSTRUCTION: ${text}
+- CONVERSATION DIALOGUE (Instruction Context - Text Only): ${JSON.stringify(presetConversationHistory.slice(-5))}
 
 Output: Return a valid JSON object with:
 - "presets": array of objects, each with {name: string, triggers: array, overrides: array}
@@ -1607,3 +1699,6 @@ Return raw JSON only, no markdown.`;
         window.loadStagedPreset = loadStagedPreset;
         window.saveStagedPresetToDb = saveStagedPresetToDb;
         window.saveAllStagedPresets = saveAllStagedPresets;
+        window.toggleFixturePicker = toggleFixturePicker;
+        window.populateFixturePicker = populateFixturePicker;
+        window.insertFixtureTag = insertFixtureTag;

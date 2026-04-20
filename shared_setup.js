@@ -67,8 +67,9 @@ window.EASY_DESCRIPTORS = [
     {"id": "pause_jitter", "label": "Pause-Jitter Sine", "behavior": "noise", "source": "beat", "speed": 0, "react": 0.95, "hold_type": "none"},
     {"id": "rapid_climb", "label": "Rapid Climb", "behavior": "square", "source": "vol", "speed": 0.5, "react": 0.85, "hold_type": "none"},
     {"id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5},
-    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "noise", "source": "flux", "speed": 0.95, "react": 0.8, "hold_type": "beat"},
-    {"id": "inverse_bass", "label": "Inverse Bass", "behavior": "pull", "source": "bass", "speed": 0.4, "react": 0.8, "hold_type": "none", "rel_center": 0.5}
+    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "noise", "source": "beat", "speed": 0.3, "react": 0.4, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "inverse_bass", "label": "Inverse Bass", "behavior": "pull", "source": "bass", "speed": 0.4, "react": 0.8, "hold_type": "none", "rel_center": 0.5},
+    {"id": "kick_drum_step", "label": "kick drum step", "behavior": "random", "source": "bin_0", "speed": 0.4, "react": 0.65, "hold_type": "none", "rel_center": 0.208},
     // PREMADE_ANCHOR
 ];
 
@@ -123,13 +124,13 @@ window.wsHost = window.isCustomTunnel ? 'ws-' + baseHost : host;
 window.host = host;
 
 var PROTO = (setupLocation.protocol === 'file:') ? 'http:' : setupLocation.protocol;
-var API_BASE_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : '')));
-var BACKEND_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : '')));
+var API_BASE_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : '')));
+var BACKEND_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : '')));
 
 window.API_BASE_ROOT = API_BASE_ROOT;
 window.BACKEND_ROOT = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "417262238";
+window.APP_VERSION = "420260840";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -306,6 +307,11 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function() {
         const sel = document.getElementById(id);
         if (sel) {
             const current = sel.value;
+            const stageDrop = document.getElementById('pres-add-stage-fix');
+            const isSpecialized = (id === 'pres-add-global-func') && stageDrop && ['system', 'visualdmx', 'calibrated'].includes(stageDrop.value);
+            
+            if (isSpecialized) return; // Don't wipe specialized lists (Rate, Intensity, etc)
+
             sel.innerHTML = (id === 'test-function-picker' ? '<option value="">-- All Channels --</option>' : '<option value="">-- Select Function --</option>') +
                 window.KNOWN_ROLES.slice().sort().map(f => `<option value="${f}">${f}</option>`).join('');
             if (current) sel.value = current;
@@ -318,6 +324,7 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function() {
         const options = (window.db.stage || []).map(inst => `<option value="${inst.id}">FIXTURE: ${inst.id}</option>`).join('');
         stageDrop.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' + 
                               '<option value="visualdmx">VISUALIZER (VisualDMX)</option>' +
+                              '<option value="system">ENGINE (System)</option>' +
                               options;
         if (current) stageDrop.value = current;
     }

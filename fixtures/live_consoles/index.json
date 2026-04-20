@@ -1,0 +1,5 @@
+[
+  { "_fileName": "live_consoles/console1.json", "name": "Console 1" },
+  { "_fileName": "live_consoles/my_console.json", "name": "My Console" },
+  { "_fileName": "live_consoles/presets.json", "name": "Presets" }
+]

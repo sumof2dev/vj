@@ -59,6 +59,48 @@ void main() {
     gl_FragColor = vec4(color, 1.0);
 }`;
 
+const KALEIDO_SHADER = `
+precision highp float;
+varying vec2 vUv;
+uniform float u_clock;
+uniform float u_bass;
+uniform float u_high;
+uniform float u_dual;
+uniform vec2 u_resolution;
+uniform sampler2D u_image;
+uniform sampler2D u_image2;
+
+void main() {
+    vec2 uv = vUv - 0.5;
+    uv.x *= u_resolution.x / u_resolution.y;
+    
+    float radius = length(uv);
+    float angle = atan(uv.y, uv.x);
+    
+    float segments = 4.0 + floor(u_bass * 4.0) * 2.0;
+    float segmentAngle = 6.28318 / segments;
+    
+    angle = mod(angle, segmentAngle);
+    angle = abs(angle - (segmentAngle / 2.0));
+    
+    vec2 polarUv = vec2(cos(angle), sin(angle)) * radius;
+    polarUv *= 0.8 - (u_bass * 0.2); 
+    polarUv += u_clock * 0.2; 
+    
+    vec3 tex1 = texture2D(u_image, fract(polarUv)).rgb;
+    vec3 tex2 = texture2D(u_image2, fract(polarUv)).rgb;
+    
+    // Luma-Punch: Reveal tex2 through the highlights of tex1
+    float luma = dot(tex1, vec3(0.299, 0.587, 0.114));
+    float threshold = 0.5 - (u_bass * 0.25);
+    float mask = smoothstep(threshold - 0.1, threshold + 0.1, luma);
+    
+    vec3 color = mix(tex1, tex2, mask * u_dual);
+    
+    color = clamp((color - 0.1) / 0.9, 0.0, 1.0);
+    gl_FragColor = vec4(color, 1.0);
+}`;
+
 const RGB_GLITCH_SHADER = `
 precision highp float;
 varying vec2 vUv;
@@ -232,21 +274,23 @@ const HEX_MIRROR_SHADER = `
 precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
+uniform float u_time;
 uniform float u_bass;
 uniform float u_flux;
 uniform float u_high;
+uniform float u_dual;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
+uniform sampler2D u_image2;
 
-// Hexagonal grid calculation
 vec4 hexCoords(vec2 uv) {
-    vec2 r = vec2(1.0, 1.7320508); // sqrt(3)
+    vec2 r = vec2(1.0, 1.7320508);
     vec2 h = r * 0.5;
     vec2 a = mod(uv, r) - h;
     vec2 b = mod(uv - h, r) - h;
     vec2 gv = dot(a, a) < dot(b, b) ? a : b;
     vec2 id = uv - gv;
-    return vec4(gv.x, gv.y, id.x, id.y); // xy = local UV, zw = cell ID
+    return vec4(gv.x, gv.y, id.x, id.y);
 }
 
 float rand(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
@@ -256,37 +300,139 @@ void main() {
     vec2 uv = vUv - 0.5;
     uv.x *= u_resolution.x / u_resolution.y;
     
-    // Scale the grid, u_bass zooms the camera into the mirrors
     float gridScale = 8.0 - (u_bass * 3.0);
     vec4 hex = hexCoords(uv * gridScale);
     
     vec2 localUv = hex.xy;
     vec2 cellId = hex.zw;
-    
-    // Generate a unique random number for every single mirror
     float cellRand = rand(cellId);
     
-    // Twist the mirror lens based on its random ID and the audio flux
     localUv *= rot(cellRand * 6.28 + u_clock + (u_flux * 2.0));
-    
-    // Scale the image inside the mirror based on hi-hats
     localUv *= 1.0 - (u_high * 0.5 * cellRand);
     
-    // Map back to texture coordinates and scroll the underlying image
     vec2 sampleUv = (localUv / gridScale) + 0.5;
     sampleUv += u_clock * 0.1; 
     
-    vec3 color = texture2D(u_image, fract(sampleUv)).rgb;
+    vec3 tex1 = texture2D(u_image, fract(sampleUv)).rgb;
+    vec3 tex2 = texture2D(u_image2, fract(sampleUv)).rgb;
     
-    // Create a dark border around each hexagonal mirror lens
+    // Luma-Punch with Random ID modulation
+    float luma = dot(tex1, vec3(0.299, 0.587, 0.114));
+    float threshold = 0.5 - (u_bass * 0.2) - (cellRand * 0.1);
+    float mask = smoothstep(threshold - 0.1, threshold + 0.1, luma);
+    
+    vec3 color = mix(tex1, tex2, mask * u_dual);
+    
     float hexEdge = max(abs(hex.x), abs(hex.x * 0.5 + hex.y * 0.866025));
     float border = smoothstep(0.4, 0.45, hexEdge);
-    
-    // u_high flashes random mirrors
     float flash = step(0.9, fract(cellRand + u_time * 5.0)) * u_high;
-    
     color = mix(color + flash, vec3(0.0), border);
     
+    gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
+}`;
+
+const CONCENTRIC_RINGS_SHADER = `
+precision highp float;
+varying vec2 vUv;
+uniform float u_clock;
+uniform float u_bass;
+uniform float u_flux;
+uniform float u_high;
+uniform float u_dual;
+uniform vec2 u_resolution;
+uniform sampler2D u_image;
+uniform sampler2D u_image2;
+
+void main() {
+    vec2 uv = vUv - 0.5;
+    uv.x *= u_resolution.x / u_resolution.y;
+
+    float radius = length(uv);
+    float angle = atan(uv.y, uv.x);
+
+    float ringCount = 6.0 + floor(u_bass * 3.0) * 2.0;
+    float scaledRadius = radius * ringCount;
+    float ringId = floor(scaledRadius);
+    
+    float dir = mod(ringId, 2.0) == 0.0 ? 1.0 : -1.0;
+    angle += dir * (u_clock * 0.3 + u_flux * 0.8) * (1.0 + ringId * 0.05);
+    
+    vec2 polarUv = vec2(cos(angle), sin(angle)) * radius;
+    vec2 sampleUv = polarUv + 0.5;
+    
+    vec3 tex1 = texture2D(u_image, fract(sampleUv)).rgb;
+    vec3 tex2 = texture2D(u_image2, fract(sampleUv)).rgb;
+    
+    // Luma-Punch: Ring Id alternates between bright-punch and dark-punch
+    float luma = dot(tex1, vec3(0.299, 0.587, 0.114));
+    float isInverse = mod(ringId, 2.0);
+    float threshold = mix(0.5 - (u_bass * 0.3), 0.5 + (u_bass * 0.3), isInverse);
+    float mask = smoothstep(threshold - 0.1, threshold + 0.1, luma);
+    if (isInverse > 0.5) mask = 1.0 - mask;
+    
+    vec3 color = mix(tex1, tex2, mask * u_dual);
+    
+    float ringFract = fract(scaledRadius);
+    float borderMask = smoothstep(0.0, 0.03, ringFract) * smoothstep(1.0, 0.97, ringFract);
+    vec3 gapColor = vec3(u_high * 0.8);
+    color = mix(gapColor, color, borderMask);
+    
+    gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
+}`;
+
+const CHECKERBOARD_DEPTH_SHADER = `
+precision highp float;
+varying vec2 vUv;
+uniform float u_clock;
+uniform float u_bass;
+uniform float u_flux;
+uniform float u_high;
+uniform vec2 u_resolution;
+uniform sampler2D u_image;
+
+mat2 rot(float a) { return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+
+void main() {
+    vec2 uv = vUv - 0.5;
+    uv.x *= u_resolution.x / u_resolution.y;
+    
+    // Slowly rotate the entire grid structure
+    uv *= rot(u_clock * 0.05);
+
+    // Dynamic grid size based on energy
+    float gridSize = 6.0 + floor(u_flux * 2.0) * 2.0; 
+    vec2 gridUv = uv * gridSize;
+    
+    // Get cell ID and local coordinates within the cell
+    vec2 id = floor(gridUv);
+    vec2 localUv = fract(gridUv) - 0.5;
+
+    // Checkerboard math (returns 0.0 or 1.0)
+    float check = mod(id.x + id.y, 2.0);
+
+    // u_bass drives how far the alternate tiles sink into the screen
+    float depth = check * (u_bass * 1.5 + (u_high * 0.5)); 
+
+    // Scale local UVs to create the faux-3D push away effect
+    localUv *= 1.0 + depth;
+
+    // Map back to global UV space
+    vec2 sampleUv = (id + localUv + 0.5) / gridSize;
+    
+    // Pan the image smoothly underneath the grid structure
+    sampleUv += u_clock * 0.15;
+
+    vec3 color = texture2D(u_image, fract(sampleUv)).rgb;
+
+    // Add faux 3D shadows so sunken tiles actually look darker
+    color *= 1.0 - (check * min(depth * 0.4, 0.8));
+
+    // Draw sharp black grid lines to frame the windows
+    vec2 box = abs(localUv) / (1.0 + depth);
+    float edge = max(box.x, box.y);
+    float border = smoothstep(0.46, 0.5, edge);
+    color = mix(color, vec3(0.0), border);
+
     gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
 }`;
 
@@ -298,7 +444,16 @@ void main() {
 }
 `;
 
-const PRESET_WARPS = [DEFAULT_FRAGMENT_SHADER, RGB_GLITCH_SHADER, FLUX_MELT_SHADER, DEEP_TUNNEL_SHADER, FRACTAL_CRYSTAL_SHADER, HEX_MIRROR_SHADER];
+const PRESET_WARPS = [
+    { name: 'KALEID', code: KALEIDO_SHADER },
+    { name: 'GLITCH', code: RGB_GLITCH_SHADER },
+    { name: 'MELT', code: FLUX_MELT_SHADER },
+    { name: 'TUNNEL', code: DEEP_TUNNEL_SHADER },
+    { name: 'CRYSTAL', code: FRACTAL_CRYSTAL_SHADER },
+    { name: 'HEX', code: HEX_MIRROR_SHADER },
+    { name: 'CHECKER', code: CHECKERBOARD_DEPTH_SHADER },
+    { name: 'RINGS', code: CONCENTRIC_RINGS_SHADER }
+];
 
 export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -313,8 +468,8 @@ export default function App() {
     const [libraryItems, setLibraryItems] = useState<any[]>([]);
     const libraryRef = useRef<any[]>([]);
     const [showHistory, setShowHistory] = useState(false);
-    const [filterTab, setFilterTab] = useState<'image' | 'base' | 'fx'>('image');
-    
+    const [filterTab, setFilterTab] = useState<'tex' | 'base' | 'fx'>('tex');
+
     // UI Toggles
     const [showAiInput, setShowAiInput] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -323,9 +478,10 @@ export default function App() {
 
     const [geminiPrompt, setGeminiPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [unsavedShader, setUnsavedShader] = useState<{code: string, prompt: string, category: string} | null>(null);
-    const [undoHistory, setUndoHistory] = useState<{base: string | null, fx: string | null}>({base: null, fx: null});
+    const [unsavedShader, setUnsavedShader] = useState<{ code: string, prompt: string, category: string } | null>(null);
+    const [undoHistory, setUndoHistory] = useState<{ base: string | null, fx: string | null }>({ base: null, fx: null });
     const [activeShaderId, setActiveShaderId] = useState<string | null>(null);
+    const [activeWarpIndex, setActiveWarpIndex] = useState<number | null>(null);
     const [currentSpotifyArt, setCurrentSpotifyArt] = useState<string | null>(null);
 
     // Audio Sync Vibe
@@ -336,16 +492,40 @@ export default function App() {
     const { wsUrl, apiBase } = useMemo(() => {
         const savedHost = localStorage.getItem('vj_backend_host') || window.location.hostname;
         const isLocal = savedHost === "localhost" || savedHost === "127.0.0.1";
+        
+        // Finalize the Box Name (e.g. 'ravebox.love' or '1234.ravebox.love')
         const boxName = (savedHost === 'ravebox') ? 'ravebox.love' : ((savedHost && !savedHost.includes('.') && !isLocal) ? `${savedHost}.ravebox.love` : savedHost);
-        const isCustomTunnel = boxName.endsWith('.ravebox.love') && boxName !== 'ravebox.love' && boxName !== 'api.ravebox.love';
-        const wsHost = isCustomTunnel ? `ws-${boxName}` : (boxName === 'ravebox.love' ? 'wss.ravebox.love' : boxName);
-        const apiHost = isCustomTunnel ? `api-${boxName}` : (boxName === 'ravebox.love' ? 'ravebox.love' : boxName);
-        const useSSL = window.location.protocol === "https:" || isCustomTunnel || boxName.includes('ravebox.love');
-        return { 
-            wsUrl: `${useSSL ? "wss:" : "ws:"}//${wsHost}${isCustomTunnel ? "" : ":8765"}/`,
-            apiBase: `${useSSL ? "https:" : "http:"}//${apiHost}${isCustomTunnel ? "" : ":8000"}`
-        };
-    }, []);
+        
+        // Detect if we are on a consolidated custom tunnel (e.g. 419.ravebox.love)
+        // Rule: If it starts with a number or contains '-evt', it's Flow B.
+        const isConsolidated = /^\d+\./.test(boxName) || boxName.includes('-evt');
+        
+        const useSSL = window.location.protocol === "https:" || boxName.includes('ravebox.love');
+        
+        if (isConsolidated) {
+            // Flow B: Consolidated Path-Based Routing (Trial Run / EVT)
+            return {
+                wsUrl: `${useSSL ? "wss:" : "ws:"}//${boxName}/ws`,
+                apiBase: `${useSSL ? "https:" : "http:"}//${boxName}`
+            };
+        } else if (boxName === 'ravebox.love') {
+            // Primary domain legacy logic
+            return {
+                wsUrl: "wss://wss.ravebox.love/",
+                apiBase: "https://ravebox.love"
+            };
+        } else {
+            // Flow A: Standard Dev Case (Corrected for setup.md)
+            // User is on {BOX}.ravebox.love (Port 8000)
+            // Data API is on same host (Port 8000 - Server)
+            // WebSocket is on ws-{BOX}.ravebox.love (Port 8765 - Engine)
+            const baseHost = boxName.replace(/^api-|^ws-/, '');
+            return {
+                wsUrl: `${useSSL ? "wss:" : "ws:"}//ws-${baseHost}`,
+                apiBase: `${useSSL ? "https:" : "http:"}//${baseHost}`
+            };
+        }
+    }, [window.location.hostname, window.location.protocol]);
 
     const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -356,17 +536,17 @@ export default function App() {
                 fetch(`${apiBase}/api/usergen2/list`),
                 fetch(`${apiBase}/api/usergen/list`)
             ]);
-            
+
             const imgs = imgRes.ok ? await imgRes.json() : [];
             const ais = aiRes.ok ? await aiRes.json() : [];
             const aisOld = aiResOld.ok ? await aiResOld.json() : [];
-            
+
             const combined = [
-                ...imgs.map((i: any) => ({ ...i, category: 'image' })),
+                ...imgs.map((i: any) => ({ ...i, category: 'tex' })),
                 ...ais.map((a: any) => ({ ...a, category: a.type || 'base', path: 'library2' })),
                 ...aisOld.map((a: any) => ({ ...a, category: a.type || 'base', path: 'library' }))
             ];
-            
+
             combined.sort((a, b) => b.mtime - a.mtime);
             setLibraryItems(combined);
             libraryRef.current = combined;
@@ -383,7 +563,7 @@ export default function App() {
                 body: JSON.stringify({ image: base64Data })
             });
             if (resp.ok) fetchLibraries();
-        } catch (err) {}
+        } catch (err) { }
     };
 
     const handleSaveUnsavedShader = async () => {
@@ -392,7 +572,7 @@ export default function App() {
             setStatus("💾 Saving Shader...");
             await fetch(`${apiBase}/api/usergen2/save`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code: unsavedShader.code, prompt: unsavedShader.prompt, layer_type: unsavedShader.category })
             });
             setUnsavedShader(null);
@@ -406,10 +586,10 @@ export default function App() {
     };
 
     const renameLibraryItem = async (item: any) => {
-        if (item.category === 'image') return;
+        if (item.category === 'tex') return;
         const newPrompt = window.prompt("Rename shader:", item.prompt);
         if (!newPrompt || newPrompt === item.prompt) return;
-        
+
         try {
             const endpoint = item.path === 'library' ? '/api/usergen/rename' : '/api/usergen2/rename';
             const res = await fetch(`${apiBase}${endpoint}`, {
@@ -418,7 +598,7 @@ export default function App() {
                 body: JSON.stringify({ file: item.file, new_prompt: newPrompt })
             });
             if (res.ok) fetchLibraries();
-        } catch (err) {}
+        } catch (err) { }
     };
 
     const handleTouchStart = (item: any) => {
@@ -438,7 +618,7 @@ export default function App() {
         if (!confirm(`Permanently delete this ${item.category}?`)) return;
         try {
             let res;
-            if (item.category === 'image') {
+            if (item.category === 'tex') {
                 res = await fetch(`${apiBase}/api/images/delete?file=${item.name}`, { method: 'DELETE' });
             } else if (item.path === 'library') {
                 res = await fetch(`${apiBase}/api/usergen/delete?file=${item.file}`, { method: 'DELETE' });
@@ -446,7 +626,7 @@ export default function App() {
                 res = await fetch(`${apiBase}/api/usergen2/delete?file=${item.file}`, { method: 'DELETE' });
             }
             if (res && res.ok) fetchLibraries();
-        } catch (err) {}
+        } catch (err) { }
     };
 
     const applyNewTexture = (texture: THREE.Texture) => {
@@ -464,10 +644,16 @@ export default function App() {
             if (spotifyTextureRef.current) {
                 applyNewTexture(spotifyTextureRef.current);
                 setActiveShaderId('spotify-art');
-                const warp = (styleIndex !== undefined) 
-                    ? PRESET_WARPS[styleIndex % PRESET_WARPS.length] 
-                    : PRESET_WARPS[Math.floor(Math.random() * PRESET_WARPS.length)];
-                applyNewShader(warp, 'image');
+
+                const warpIdx = (styleIndex !== undefined)
+                    ? (styleIndex % PRESET_WARPS.length)
+                    : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length));
+
+                if (styleIndex !== undefined || activeWarpIndex === null) {
+                    setActiveWarpIndex(warpIdx);
+                }
+
+                applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
                 setStatus("🎵 Spotify Art Live");
                 setStatusColor("text-emerald-400");
             }
@@ -478,13 +664,17 @@ export default function App() {
         setStatus(`📂 Loading Image...`);
         new THREE.TextureLoader().load(`${apiBase}/${item.file}`, (texture) => {
             applyNewTexture(texture);
-            // Cycle through PRESET_WARPS if styleIndex is provided, otherwise pick random
-            const warp = (styleIndex !== undefined) 
-                ? PRESET_WARPS[styleIndex % PRESET_WARPS.length] 
-                : PRESET_WARPS[Math.floor(Math.random() * PRESET_WARPS.length)];
-            
-            applyNewShader(warp, 'image');
-            setStatus("📸 Image Texture Live!");
+
+            const warpIdx = (styleIndex !== undefined)
+                ? (styleIndex % PRESET_WARPS.length)
+                : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length));
+
+            if (activeWarpIndex === null || styleIndex !== undefined) {
+                setActiveWarpIndex(warpIdx);
+            }
+
+            applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
+            setStatus("📸 Texture Live!");
             setStatusColor("text-emerald-400");
         });
     };
@@ -497,6 +687,7 @@ export default function App() {
             const res = await fetch(`${apiBase}/${libPath}/${item.file}`);
             if (res.ok) {
                 const code = await res.text();
+                if (item.category === 'base') setActiveWarpIndex(null);
                 applyNewShader(code, item.category);
             }
         } catch (e) {
@@ -509,23 +700,23 @@ export default function App() {
     // This is a safety net for AI-generated shaders.
     const ensureUniforms = (code: string): string => {
         const defs: Record<string, string> = {
-            u_time:       'uniform float u_time;',
-            u_clock:      'uniform float u_clock;',
-            u_bass:       'uniform float u_bass;',
-            u_flux:       'uniform float u_flux;',
-            u_high:       'uniform float u_high;',
-            u_vol:        'uniform float u_vol;',
+            u_time: 'uniform float u_time;',
+            u_clock: 'uniform float u_clock;',
+            u_bass: 'uniform float u_bass;',
+            u_flux: 'uniform float u_flux;',
+            u_high: 'uniform float u_high;',
+            u_vol: 'uniform float u_vol;',
             u_resolution: 'uniform vec2 u_resolution;',
-            u_image:      'uniform sampler2D u_image;',
-            u_image2:     'uniform sampler2D u_image2;',
-            u_strobe:     'uniform float u_strobe;',
-            u_blackout:   'uniform float u_blackout;',
-            u_spin:       'uniform float u_spin;',
+            u_image: 'uniform sampler2D u_image;',
+            u_image2: 'uniform sampler2D u_image2;',
+            u_strobe: 'uniform float u_strobe;',
+            u_blackout: 'uniform float u_blackout;',
+            u_spin: 'uniform float u_spin;',
             u_spin_angle: 'uniform float u_spin_angle;',
-            u_zoom:       'uniform float u_zoom;',
-            u_hue:        'uniform float u_hue;',
-            u_invert:     'uniform float u_invert;',
-            vUv:          'varying vec2 vUv;',
+            u_zoom: 'uniform float u_zoom;',
+            u_hue: 'uniform float u_hue;',
+            u_invert: 'uniform float u_invert;',
+            vUv: 'varying vec2 vUv;',
         };
         const toInject = Object.entries(defs)
             .filter(([name, decl]) => {
@@ -550,7 +741,7 @@ export default function App() {
         // GLOBAL FX INJECTION: Append to the end of main()
         const lastBrace = finalCode.lastIndexOf('}');
         if (lastBrace > 0 && finalCode.includes('gl_FragColor')) {
-             const fxLogic = `
+            const fxLogic = `
     // Global FX Phase 1
     if (u_invert > 0.0) gl_FragColor.rgb = mix(gl_FragColor.rgb, 1.0 - gl_FragColor.rgb, u_invert);
     if (u_hue > 0.0) {
@@ -560,7 +751,7 @@ export default function App() {
         gl_FragColor.rgb = c_fx * cosA_fx + cross(k_fx, c_fx) * sin(u_hue * 6.28318) + k_fx * dot(k_fx, c_fx) * (1.0 - cosA_fx);
     }
 `;
-             finalCode = finalCode.slice(0, lastBrace) + fxLogic + '\n}';
+            finalCode = finalCode.slice(0, lastBrace) + fxLogic + '\n}';
         }
         return finalCode;
     };
@@ -589,7 +780,7 @@ export default function App() {
                     baseMeshRef.current.material = newMat;
                 }
                 // Separating warped images from overlays
-                if (category === 'image' && fxMeshRef.current) {
+                if (category === 'tex' && fxMeshRef.current) {
                     fxMeshRef.current.visible = false;
                 }
             }
@@ -604,10 +795,10 @@ export default function App() {
 
     const handleGenerateAi = async (action: 'new' | 'refine') => {
         if (!geminiPrompt) return;
-        
-        let targetCategory = filterTab === 'image' ? 'base' : filterTab;
+
+        let targetCategory = filterTab;
         let prmpt = geminiPrompt.trim();
-        
+
         // Handle Undo Command
         if (action === 'refine' && (prmpt.toLowerCase() === 'undo' || prmpt.toLowerCase() === 'revert')) {
             const previousCode = targetCategory === 'base' ? undoHistory.base : undoHistory.fx;
@@ -623,18 +814,18 @@ export default function App() {
                 return;
             }
         }
-        
+
         const apiKey = geminiKey || localStorage.getItem('vj_gemini_key');
         if (!apiKey) {
             setShowSettings(true);
             setStatus("⚠️ Enter API Key in Settings");
             return;
         }
-        
+
         setIsGenerating(true);
         setStatus("🧠 AI Thinking...");
         setStatusColor("text-fuchsia-400");
-        
+
         try {
             // Grab Current Code for Refine and Undo
             let currentCode = '';
@@ -643,10 +834,10 @@ export default function App() {
             } else if (targetCategory === 'fx' && fxMeshRef.current) {
                 currentCode = (fxMeshRef.current.material as THREE.ShaderMaterial).fragmentShader;
             }
-            
+
             // Save Undo state
             setUndoHistory(prev => ({ ...prev, [targetCategory]: currentCode }));
-            
+
             let userMessage: string;
             if (action === 'refine' && currentCode) {
                 userMessage = `USER COMMAND: Refine the following shader.\n\n### EXISTING CODE ###\n${currentCode}\n\n### USER FEEDBACK ###\n${prmpt}`;
@@ -664,18 +855,18 @@ export default function App() {
             let code = text;
             if (text.includes("```glsl")) code = text.split("```glsl")[1].split("```")[0].trim();
             else if (text.includes("```")) code = text.split("```")[1].split("```")[0].trim();
-            
+
             applyNewShader(code);
-            
+
             setUnsavedShader({
                 code,
                 prompt: prmpt,
                 category: targetCategory
             });
-            
+
             setGeminiPrompt('');
             setShowAiInput(false);
-        } catch(e: any) {
+        } catch (e: any) {
             const msg = e?.message || String(e);
             console.error('AI generation error:', e);
             setStatus(`❌ ${msg.slice(0, 40)}`);
@@ -693,8 +884,9 @@ export default function App() {
                 const dataUrl = reader.result as string;
                 new THREE.TextureLoader().load(dataUrl, (texture) => {
                     applyNewTexture(texture);
-                    const randomWarp = PRESET_WARPS[Math.floor(Math.random() * PRESET_WARPS.length)];
-                    applyNewShader(randomWarp, 'image');
+                    const warpIdx = activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length);
+                    if (activeWarpIndex === null) setActiveWarpIndex(warpIdx);
+                    applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
                     setStatus("📸 Texture loaded!");
                     setStatusColor("text-emerald-400");
                 });
@@ -714,6 +906,7 @@ export default function App() {
         u_flux: { value: 0 },
         u_high: { value: 0 },
         u_vol: { value: 0 },
+        u_dual: { value: 0.0 }, // Toggle for 2nd image masking (0.0 or 1.0)
         u_image: { value: new THREE.Texture() },
         u_image2: { value: new THREE.Texture() },
         u_strobe: { value: 0 },
@@ -738,6 +931,8 @@ export default function App() {
     const currentInvertRef = useRef(0.0);
     const effSpeedRef = useRef(0.6);
     const effIntensityRef = useRef(1.0);
+    const mTimeRef = useRef(0.0);
+    const localFlutterRef = useRef(0.0);
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -800,10 +995,13 @@ export default function App() {
             socket.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
                     const view = new DataView(event.data);
+                    const mTime = view.getFloat32(0, true);
+                    mTimeRef.current = mTime;
                     targetMods.flux = view.getFloat32(4, true);
                     targetMods.bass = view.getFloat32(8, true);
                     targetMods.high = view.getFloat32(16, true);
                     targetMods.vol = view.getFloat32(20, true);
+                    effIntensityRef.current = view.getUint8(55) / 255.0;
 
                     const baseIdx = view.getUint16(76, true);
                     const fxIdx = view.getUint16(78, true);
@@ -821,11 +1019,16 @@ export default function App() {
                             lastBase = baseIdx;
                             if (allSources.length > 0) {
                                 const source = allSources[baseIdx % allSources.length];
-                                if (source.category === 'image') loadFromLibrary(source, baseIdx);
+                                
+                                // Randomly enable dual-image masking ~50% of the time on drops
+                                uniformsRef.current.u_dual.value = Math.random() > 0.5 ? 1.0 : 0.0;
+
+                                if (source.category === 'tex') loadFromLibrary(source, baseIdx);
                                 else if (source.category === 'spotify' && spotifyTextureRef.current) {
                                     applyNewTexture(spotifyTextureRef.current);
-                                    const randomWarp = PRESET_WARPS[Math.floor(Math.random() * PRESET_WARPS.length)];
-                                    applyNewShader(randomWarp, 'image');
+                                    const warpIdx = baseIdx % PRESET_WARPS.length;
+                                    setActiveWarpIndex(warpIdx);
+                                    applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
                                     setStatus("🎵 Spotify Art Live");
                                     setStatusColor("text-emerald-400");
                                 }
@@ -835,13 +1038,13 @@ export default function App() {
                         if (fxIdx !== lastFx) {
                             lastFx = fxIdx;
                             const fxs = libraryRef.current.filter(i => i.category === 'fx');
-                            
+
                             const currentSource = allSources.length > 0 ? allSources[Math.abs(lastBase) % allSources.length] : null;
                             const isImageActive = currentSource?.category === 'image' || currentSource?.category === 'spotify';
-                            
+
                             const fxRatio = isImageActive ? 0.5 : (bases.length > 0 ? (fxs.length / bases.length) : 0);
                             const seededRand = ((fxIdx * 9301 + 49297) % 233280) / 233280.0;
-                            
+
                             if (fxs.length > 0 && seededRand <= fxRatio) {
                                 loadAiShader(fxs[fxIdx % fxs.length]);
                             } else if (fxMeshRef.current) {
@@ -856,21 +1059,21 @@ export default function App() {
                             if (msg.vibe) vibeRef.current = msg.vibe;
                             if (msg.eff_speed !== undefined) effSpeedRef.current = msg.eff_speed;
                             if (msg.eff_intensity !== undefined) effIntensityRef.current = msg.eff_intensity;
-                            
+
                             // Handle DMX-Timed Visual Commands
                             if (msg.visual_commands) {
                                 strobeActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'strobe' && c.value > 0);
                                 blackoutActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'blackout' && c.value > 0);
                                 spinActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'spin' && c.value > 0);
-                                
+
                                 const zoomCmd = msg.visual_commands.find((c: any) => c.function === 'zoom');
                                 zoomTargetRef.current = zoomCmd ? (parseFloat(zoomCmd.value) || 1.0) : 1.0;
-                                
+
                                 const hueCmd = msg.visual_commands.find((c: any) => c.function === 'hue');
                                 hueTargetRef.current = hueCmd ? (parseFloat(hueCmd.value) / 255.0 || 0.0) : 0.0;
-                                
+
                                 invertActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'invert' && c.value > 0);
-                                
+
                                 if (msg.visual_commands.length > 0) {
                                     console.log("🎬 Visual Commands:", msg.visual_commands);
                                 }
@@ -891,8 +1094,10 @@ export default function App() {
                                         spotifyTextureRef.current = tex;
                                         // Trigger immediate update on song change
                                         applyNewTexture(tex);
-                                        const randomWarp = PRESET_WARPS[Math.floor(Math.random() * PRESET_WARPS.length)];
-                                        applyNewShader(randomWarp, 'image');
+                                        const warpIdx = Math.floor(Math.random() * PRESET_WARPS.length);
+                                        if (autoCycleRef.current) setActiveWarpIndex(warpIdx);
+                                        const finalWarpIdx = autoCycleRef.current ? warpIdx : (activeWarpIndex ?? warpIdx);
+                                        applyNewShader(PRESET_WARPS[finalWarpIdx].code, 'tex');
                                         setStatus("🎵 Spotify Art Detected");
                                         setStatusColor("text-indigo-400");
                                     });
@@ -903,7 +1108,7 @@ export default function App() {
                                 setCurrentSpotifyArt(null);
                             }
                         }
-                    } catch(e) {}
+                    } catch (e) { }
                 }
             };
             socket.onopen = () => { setStatus("Sync Active"); setStatusColor("text-emerald-400"); };
@@ -921,7 +1126,13 @@ export default function App() {
             smoothedMods.high += (targetMods.high - smoothedMods.high) * sf;
             smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * sf;
 
-            uniformsRef.current.u_clock.value += dt * (effSpeedRef.current + smoothedMods.flux * 1.5 + smoothedMods.bass * 0.4);
+            // Accumulate local high-frequency flutter (Bass/Flux pulses)
+            // We scale these by dt but NOT by effSpeedRef, as backend mTime already handles global warp
+            localFlutterRef.current += dt * (smoothedMods.flux * 1.5 + smoothedMods.bass * 0.4);
+            
+            // Sync u_clock to Backend Master Time + Local Flutter offset
+            // This eliminates drift while keeping local reactivity "liquid smooth"
+            uniformsRef.current.u_clock.value = mTimeRef.current + localFlutterRef.current;
             // Master intensity scalar for the whole visual system
             const masterAlpha = effIntensityRef.current;
             uniformsRef.current.u_flux.value = smoothedMods.flux;
@@ -947,8 +1158,8 @@ export default function App() {
                 const strobeState = (Math.floor(now / 20) % 2); // ~25Hz strobe for tighter look
                 uniformsRef.current.u_strobe.value = strobeState;
                 if (strobeState === 0) {
-                     if (baseMeshRef.current) baseMeshRef.current.visible = false;
-                     if (fxMeshRef.current) fxMeshRef.current.visible = false;
+                    if (baseMeshRef.current) baseMeshRef.current.visible = false;
+                    if (fxMeshRef.current) fxMeshRef.current.visible = false;
                 }
             } else {
                 uniformsRef.current.u_strobe.value = 0;
@@ -959,20 +1170,20 @@ export default function App() {
             const spinScaleBoost = isSpinning ? 1.45 : 1.0;
             const targetScale = zoomTargetRef.current * spinScaleBoost;
             currentScaleRef.current += (targetScale - currentScaleRef.current) * sf;
-            
+
             if (isSpinning) {
                 spinAngleRef.current += dt * 2.0; // Steady rotation
             } else {
                 // Return to 0 smoothly if not too far
                 if (spinAngleRef.current % (Math.PI * 2) !== 0) {
-                     spinAngleRef.current += (0 - (spinAngleRef.current % (Math.PI * 2))) * sf;
+                    spinAngleRef.current += (0 - (spinAngleRef.current % (Math.PI * 2))) * sf;
                 }
             }
-            
+
             // Handle Color FX
             currentHueRef.current += (hueTargetRef.current - currentHueRef.current) * sf;
             currentInvertRef.current += ((invertActiveRef.current ? 1.0 : 0.0) - currentInvertRef.current) * sf;
-            
+
             const rotationZ = spinAngleRef.current;
             uniformsRef.current.u_spin.value = isSpinning ? 1.0 : 0.0;
             uniformsRef.current.u_spin_angle.value = rotationZ;
@@ -988,7 +1199,7 @@ export default function App() {
                 fxMeshRef.current.rotation.z = rotationZ;
                 fxMeshRef.current.scale.set(currentScaleRef.current, currentScaleRef.current, 1);
             }
-            
+
             // Apply global opacity based on eff_intensity (0..1 range expected for opacity)
             const globalOpacity = Math.max(0, Math.min(1.0, masterAlpha));
             if (baseMeshRef.current) (baseMeshRef.current.material as THREE.ShaderMaterial).opacity = globalOpacity;
@@ -1002,17 +1213,17 @@ export default function App() {
     }, [wsUrl]);
 
     return (
-        <div className="relative w-full h-full bg-black text-white font-sans overflow-hidden" 
-             onClick={() => { setShowToolbar(!showToolbar); setShowHistory(false); setShowSettings(false); }}>
+        <div className="relative w-full h-full bg-black text-white font-sans overflow-hidden"
+            onClick={() => { setShowToolbar(!showToolbar); setShowHistory(false); setShowSettings(false); }}>
             <canvas ref={canvasRef} className="block w-full h-full" />
-            
+
             <AnimatePresence>
                 {showHistory && (
                     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onClick={e => e.stopPropagation()} className="absolute top-4 left-4 bottom-4 w-80 bg-zinc-900/95 border border-zinc-800 rounded-2xl flex flex-col z-50 overflow-hidden pointer-events-auto backdrop-blur-md shadow-2xl">
                         <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-black/40">
                             <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Unified Library</h3>
                             <div className="flex gap-2">
-                                {filterTab === 'image' ? (
+                                {filterTab === 'tex' ? (
                                     <div className="relative">
                                         <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                                         <button className="p-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white shadow-lg transition-colors">
@@ -1032,10 +1243,10 @@ export default function App() {
                             {showAiInput && (filterTab === 'base' || filterTab === 'fx') && (
                                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-black/60 border-b border-zinc-800">
                                     <div className="p-3 flex flex-col gap-2">
-                                        <textarea 
-                                            value={geminiPrompt} 
-                                            onChange={e => setGeminiPrompt(e.target.value)} 
-                                            placeholder={`Describe a ${filterTab} shader... (Type "undo" to revert edit)`} 
+                                        <textarea
+                                            value={geminiPrompt}
+                                            onChange={e => setGeminiPrompt(e.target.value)}
+                                            placeholder={`Describe a ${filterTab} shader... (Type "undo" to revert edit)`}
                                             className="w-full bg-zinc-900 text-white border border-zinc-700 rounded-lg p-2 text-[10px] focus:outline-none focus:border-fuchsia-500 placeholder:text-zinc-600 resize-none h-16"
                                         />
                                         <div className="flex gap-2">
@@ -1052,18 +1263,18 @@ export default function App() {
                                 </motion.div>
                             )}
                         </AnimatePresence>
-                        
+
                         <div className="flex bg-black">
-                            {['image', 'base', 'fx'].map(tab => (
+                            {['tex', 'base', 'fx'].map(tab => (
                                 <button key={tab} onClick={() => { setFilterTab(tab as any); setShowAiInput(false); }} className={`flex-1 py-3 text-[10px] font-black tracking-widest ${filterTab === tab ? 'text-white border-b-2 border-indigo-500 bg-indigo-900/20' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/50'}`}>
-                                    {tab.toUpperCase()}
+                                    {tab === 'tex' ? 'TEX' : tab.toUpperCase()}
                                 </button>
                             ))}
                         </div>
 
                         <div className="flex-1 overflow-auto p-4 gap-4 grid grid-cols-2 content-start custom-scrollbar">
-                            {((filterTab === 'image' && currentSpotifyArt) 
-                                ? [{ category: 'spotify', file: currentSpotifyArt, name: 'Spotify Art' }, ...libraryItems.filter(i => i.category === 'image')]
+                            {((filterTab === 'tex' && currentSpotifyArt)
+                                ? [{ category: 'spotify', file: currentSpotifyArt, name: 'Spotify Art' }, ...libraryItems.filter(i => i.category === 'tex')]
                                 : libraryItems.filter(i => i.category === filterTab)
                             ).map((item, idx) => (
                                 item.category === 'spotify' ? (
@@ -1077,15 +1288,15 @@ export default function App() {
                                             <div className="absolute top-2 left-2 w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                                         )}
                                     </div>
-                                ) : filterTab === 'image' ? (
+                                ) : filterTab === 'tex' ? (
                                     <div key={idx} className={`relative group aspect-square rounded-xl overflow-hidden border cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-zinc-800 hover:border-indigo-400'}`} onClick={() => loadFromLibrary(item)}>
                                         <img src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" />
                                         <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-rose-500 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity backdrop-blur-md"><X size={14} /></button>
                                     </div>
                                 ) : (
-                                    <div 
-                                        key={idx} 
-                                        className={`relative group aspect-square rounded-xl border flex flex-col items-center justify-center p-3 cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-fuchsia-500 bg-fuchsia-500/10' : 'border-zinc-800 bg-black hover:border-zinc-600 hover:bg-zinc-900'}`} 
+                                    <div
+                                        key={idx}
+                                        className={`relative group aspect-square rounded-xl border flex flex-col items-center justify-center p-3 cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-fuchsia-500 bg-fuchsia-500/10' : 'border-zinc-800 bg-black hover:border-zinc-600 hover:bg-zinc-900'}`}
                                         onClick={() => {
                                             if (activeShaderId === item.file) {
                                                 renameLibraryItem(item);
@@ -1098,7 +1309,7 @@ export default function App() {
                                         <div className="text-[9px] text-zinc-500 font-bold text-center line-clamp-3 leading-relaxed">{item.prompt || item.file}</div>
                                         <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black hover:bg-rose-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity"><X size={14} /></button>
                                         {activeShaderId === item.file && (
-                                            <button 
+                                            <button
                                                 onClick={async (e) => {
                                                     e.stopPropagation();
                                                     const libPath = item.path || 'library2';
@@ -1120,6 +1331,29 @@ export default function App() {
                                 )
                             ))}
                         </div>
+
+                        {filterTab === 'tex' && (
+                            <div className="flex-none p-4 border-t border-zinc-800 bg-black/60 backdrop-blur-md">
+                                <div className="text-[9px] font-black text-indigo-400 mb-3 tracking-widest uppercase flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" /> Modifiers
+                                </div>
+                                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar scrollbar-hide">
+                                    {PRESET_WARPS.map((warp, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveWarpIndex(i);
+                                                applyNewShader(warp.code, 'tex');
+                                            }}
+                                            className={`flex-none px-4 py-2 rounded-xl text-[9px] font-black tracking-widest transition-all border whitespace-nowrap ${activeWarpIndex === i ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'}`}
+                                        >
+                                            {warp.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 )}
 
@@ -1131,18 +1365,18 @@ export default function App() {
                             </h3>
                             <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-zinc-800 rounded-full"><X size={16} /></button>
                         </div>
-                        
+
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-zinc-500 tracking-wider flex items-center gap-2 px-1">
                                     <Key size={10} /> GEMINI API KEY
                                 </label>
                                 <form autoComplete="off" onSubmit={e => e.preventDefault()}>
-                                    <input type="text" name="username" autoComplete="username" style={{display:'none'}} readOnly />
-                                    <input 
-                                        type="password" 
-                                        value={geminiKey} 
-                                        onChange={e => { setGeminiKey(e.target.value); localStorage.setItem('vj_gemini_key', e.target.value); }} 
+                                    <input type="text" name="username" autoComplete="username" style={{ display: 'none' }} readOnly />
+                                    <input
+                                        type="password"
+                                        value={geminiKey}
+                                        onChange={e => { setGeminiKey(e.target.value); localStorage.setItem('vj_gemini_key', e.target.value); }}
                                         placeholder="Paste API Key..."
                                         autoComplete="current-password"
                                         className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-indigo-400 focus:outline-none focus:border-indigo-500/50"
@@ -1154,8 +1388,8 @@ export default function App() {
                                 <label className="text-[10px] font-black text-zinc-500 tracking-wider flex items-center gap-2 px-1">
                                     <Cpu size={10} /> AI MODEL
                                 </label>
-                                <select 
-                                    value={aiModel} 
+                                <select
+                                    value={aiModel}
                                     onChange={e => { setAiModel(e.target.value); localStorage.setItem('vj_ai_model', e.target.value); }}
                                     className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 appearance-none"
                                 >
@@ -1178,7 +1412,7 @@ export default function App() {
                 <AnimatePresence>
                     {showToolbar && (
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} onClick={e => e.stopPropagation()} className="pointer-events-auto flex flex-col gap-3 w-full max-w-xl px-4 sm:px-12">
-                            
+
                             <div className="bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/80 p-2.5 rounded-3xl flex items-center justify-between shadow-3xl overflow-hidden">
                                 <div className="flex gap-2">
                                     <button onClick={() => setShowHistory(!showHistory)} className={`p-3 rounded-2xl transition-all border ${showHistory ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-black/50 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}>
@@ -1193,11 +1427,11 @@ export default function App() {
                                     </button>
                                     <AnimatePresence>
                                         {unsavedShader && (
-                                            <motion.button 
-                                                initial={{ opacity: 0, scale: 0.8 }} 
-                                                animate={{ opacity: 1, scale: 1 }} 
-                                                exit={{ opacity: 0, scale: 0.8 }} 
-                                                onClick={handleSaveUnsavedShader} 
+                                            <motion.button
+                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                onClick={handleSaveUnsavedShader}
                                                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-white flex items-center justify-center gap-2 shadow-lg transition-colors border border-indigo-500 font-black tracking-widest text-[10px]"
                                             >
                                                 <Save size={14} /> SAVE
@@ -1205,8 +1439,8 @@ export default function App() {
                                         )}
                                     </AnimatePresence>
                                 </div>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => window.location.href = '/manager.html'}
                                     className="flex flex-col items-end px-4 gap-1 ml-auto group transition-all border-none bg-transparent cursor-pointer"
                                 >

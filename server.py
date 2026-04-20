@@ -41,7 +41,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path.rstrip('/')
         print(f"DEBUG: GET Request Path: {path} (Full: {self.path})")
 
-        # Handle root or default
+        # Handle root or default (Fallback)
         if path == '':
             self.send_response(302)
             self.send_header('Location', '/manager.html')
@@ -58,17 +58,17 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # API: List Fixtures
-        if path == '/api/fixtures':
+        if path == '/api/fixtures' or path == '/api/fixtures/':
             self._handle_list_fixtures()
             return
 
         # API: List Recordings
-        if path == '/api/recordings':
+        if path == '/api/recordings' or path == '/api/recordings/':
             self._handle_list_recordings()
             return
 
         # API: List Images
-        if path == '/api/images/list':
+        if path == '/api/images/list' or path == '/api/images/list/':
             self._handle_list_images()
             return
 
@@ -99,6 +99,18 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
              self._proxy_to_launcher('/restart')
              return
         
+        if path == '/api/camera/start':
+             self._proxy_to_launcher('/camera/start')
+             return
+
+        if path == '/api/camera/stop':
+             self._proxy_to_launcher('/camera/stop')
+             return
+
+        if path == '/api/camera/status':
+             self._proxy_to_launcher('/camera/status')
+             return
+
         if path == '/shell':
              self._proxy_to_launcher(self.path) # Forward the full query string
              return

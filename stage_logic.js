@@ -233,23 +233,38 @@ var switchTab = window.switchTab || function() { };
         let recordingStartTime = 0;
         let recordingTimerInterval = null;
 
-        function toggleTestFeed() {
+        async function toggleTestFeed() {
             const container = document.getElementById('test-live-feed-container');
             const btn = document.getElementById('btn-toggle-feed');
             const img = document.getElementById('test-live-feed-img');
 
             if (testFeedInterval) {
+                // STOPPING
+                btn.innerText = "⏳ STOPPING...";
+                await fetch(`${API_BASE_ROOT}/api/camera/stop`).catch(e => console.error(e));
+                
                 clearInterval(testFeedInterval);
                 testFeedInterval = null;
                 container.classList.remove('active');
                 btn.innerText = "📷 Live Feed: OFF";
                 btn.classList.remove('btn-primary');
             } else {
+                // STARTING
+                btn.innerText = "⏳ STARTING...";
+                btn.classList.add('btn-primary');
+                
+                try {
+                    await fetch(`${API_BASE_ROOT}/api/camera/start`);
+                    // Wait a bit for the camera to initialize and the server to start responding
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (e) {
+                    console.error("Failed to start camera service:", e);
+                }
+
                 container.classList.add('active');
                 btn.innerText = "📷 Live Feed: ON";
-                btn.classList.add('btn-primary');
+                
                 testFeedInterval = setInterval(() => {
-                    // Ported from calibration.html - high-efficiency polling
                     img.src = `${API_BASE_ROOT}/capture?t=${Date.now()}`;
                 }, 300);
             }
@@ -901,16 +916,26 @@ var switchTab = window.switchTab || function() { };
             // Pull simulated energy based on Source
             let energy = 0;
             const mods = latestAudioState.mods || {};
-            if (source === 'raw') {
-                if (binIdx === 0 && mods.bass !== undefined) energy = mods.bass;
-                else energy = (latestAudioState.bins || [0])[binIdx] || 0;
+            const bins = latestAudioState.bins || [0,0,0,0,0,0];
+
+            if (source === 'bass' || (source === 'raw' && binIdx === 0)) {
+                energy = latestAudioState.bass || bins[0] || 0;
+            } else if (source === 'mid') {
+                energy = latestAudioState.mid || bins[2] || 0;
+            } else if (source === 'high') {
+                energy = latestAudioState.high || bins[5] || 0;
+            } else if (source.startsWith('bin_')) {
+                const bIdx = parseInt(source.split('_')[1]);
+                energy = bins[bIdx] || 0;
+            } else if (source === 'raw') {
+                energy = bins[binIdx] || 0;
             } else if (source === 'ratio') {
-                energy = (latestAudioState.ratios || [0])[binIdx] || 0;
-            } else if (source === 'attack') {
-                energy = (latestAudioState.attacks || [0])[binIdx] || 0;
+                energy = (latestAudioState.ratios || [0,0,0,0,0,0])[binIdx] || 0;
+            } else if (source === 'attack' || source === 'impact') {
+                energy = (latestAudioState.attacks || [0,0,0,0,0,0])[binIdx] || 0;
             } else if (source === 'flux') {
                 energy = (mods.flux !== undefined) ? (mods.flux * 0.5) : (latestAudioState.flux || 0) * 0.3;
-            } else if (source === 'volume') {
+            } else if (source === 'volume' || source === 'vol') {
                 energy = mods.vol !== undefined ? mods.vol : (latestAudioState.vol || 0);
             }
 

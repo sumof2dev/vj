@@ -26,34 +26,44 @@ class CalibrationContext:
         self.dmx_queue = queue.Queue()
         self.ws = None 
 
-        # Auto-probe for camera
+    def probe_camera(self):
         print("📸 Probing for camera...")
-        found = False
-        for idx in [0, 1, 2, 3, 4, 20, 21]: # Try common indices including RPi5 offsets
+        for idx in [0, 1, 2, 3, 4, 20, 21]:
             try:
                 cap = cv2.VideoCapture(idx)
                 if cap.isOpened():
                     ret, frame = cap.read()
                     if ret:
                         print(f"✅ Camera found and delivering frames at index {idx}")
-                        self.cap = cap
-                        found = True
-                        break
+                        return cap
                     cap.release()
             except Exception as e:
                 print(f"⚠️ Index {idx} probe error: {e}")
-        
-        if not found:
-            print("❌ No working camera found during probe. Defaulting to index 0.")
-            self.cap = cv2.VideoCapture(0)
+        return None
 
     def start_camera(self):
+        if self.cap is None:
+            self.cap = self.probe_camera()
+
         def loop():
+            fail_count = 0
             while self.running:
+                if self.cap is None:
+                    time.sleep(2.0)
+                    self.cap = self.probe_camera()
+                    continue
+
                 ret, frame = self.cap.read()
                 if ret:
+                    fail_count = 0
                     with self.lock: self.frame = frame.copy()
-                else: time.sleep(0.5)
+                else:
+                    fail_count += 1
+                    if fail_count > 10: # ~5 seconds of failure
+                        print("⚠️ Camera feed lost. Re-probing...")
+                        self.cap.release()
+                        self.cap = None
+                    time.sleep(0.5)
         threading.Thread(target=loop, daemon=True).start()
 
     def get_frame(self):

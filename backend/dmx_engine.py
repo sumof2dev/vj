@@ -102,6 +102,9 @@ class LogicMatrix:
         return v0 + (v1 - v0) * u
 
     def update(self, dt, audio, transient, speed_mult=1.0, master_intensity=1.0, active_lfos=None, active_pattern="Figure-8"):
+        self.speed_mult = speed_mult
+        self.master_intensity = master_intensity
+        
         if audio.get('beat', False):
             self.beat_count += 1
             if audio.get('bar', False):
@@ -122,6 +125,7 @@ class LogicMatrix:
             'low': float(audio.get('bass', audio.get('low', 0.0))),       # Legacy support
             'flux': float(audio.get('flux', 0.0)),
             'impact': float(audio.get('impact', 0.0)),
+            'attack': float(audio.get('impact', 0.0)),                   # Alias support
             'beat': beat_phase,
             'bar': bar_phase,
             'static': 1.0,
@@ -132,11 +136,6 @@ class LogicMatrix:
         for i, val in enumerate(audio.get('bins', [0.0]*6)):
             if i < 6:
                 self.state[f'bin_{i}'] = float(val)
-
-        # State update for master intensity
-        self.state.update({
-            'intensity': master_intensity
-        })
 
 class DMXEngine:
     def __init__(self):
@@ -151,8 +150,6 @@ class DMXEngine:
         
         self.speed = 0.6 
         self.intensity = 1.0
-        self.eff_speed = 0.6
-        self.eff_intensity = 1.0
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
         self.active_presets = []
@@ -179,6 +176,9 @@ class DMXEngine:
             'chill': 0, 'mid': 0, 'high': 0, 'any': 0, 'build': 0, 'drop': 0
         }
         
+        self.lab_probe_rule = None
+        self.lab_probe_state = {} # Isolated state for Behavior Laboratory calculations
+
         # Removed legacy rhythm and bass style history
         
         # New V2 Arrays
@@ -332,14 +332,14 @@ class DMXEngine:
 
     def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
         self._dt = dt
+        self.eff_speed = self.speed
+        self.eff_intensity = self.intensity
+        self._eff_dt = dt
+
         self.prev_gamepad = self.gamepad
         self.gamepad = gamepad or {}
         self.transient = audio.get('transient', 'steady')
         current_vibe = audio.get('vibe', 'mid')
-
-        self.eff_speed = self.speed
-        self.eff_intensity = self.intensity
-        self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
         
         # Pre-calculate active presets (Global check once per frame)
         self.active_presets = []
@@ -438,7 +438,9 @@ class DMXEngine:
                     for ch in ov.get('channels', []):
                         fn = ch.get('name', 'none').lower()
                         ov_key = f"visual_{p_id}_{fn}"
-                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 0), self._dt)
+                        # Use the raw dt for preset sweeps; they handle their own time-warping via speed logic if needed
+                        # Wait, for consistency across the engine, we use raw dt here and apply eff_speed multiplier to the result
+                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 0), dt)
                         self.active_visual_commands.append({
                             "function": fn,
                             "value": resolved_val
@@ -449,23 +451,22 @@ class DMXEngine:
                     for ch in ov.get('channels', []):
                         fn = ch.get('name', 'none').lower()
                         ov_key = f"system_{p_id}_{fn}"
-                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 100), self._dt)
+                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 100), dt)
                         
-                        # Apply multiplier (resolved_val is 0-255, we treat 100 as 1.0x)
+                        # Apply multiplier directly to engine speed/intensity
                         multiplier = resolved_val / 100.0
-                        if fn == 'speed':
-                            self.eff_speed = self.speed * multiplier
+                        if fn in ['speed', 'rate', 'dt']:
+                            self.speed = 0.6 * multiplier # Restore base-speed awareness
                         elif fn == 'intensity':
-                            self.eff_intensity = self.intensity * multiplier
-
+                            self.intensity = 1.0 * multiplier
 
         if 'left' in audio and 'right' in audio:
-            self.logic_l.update(dt, audio['left'], self.transient, self.eff_speed, self.eff_intensity)
-            self.logic_r.update(dt, audio['right'], self.transient, self.eff_speed, self.eff_intensity)
+            self.logic_l.update(dt, audio['left'], self.transient, self.speed, self.intensity)
+            self.logic_r.update(dt, audio['right'], self.transient, self.speed, self.intensity)
         else:
             self.logic_l = self.logic
             self.logic_r = self.logic
-            self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
+            self.logic.update(dt, audio, self.transient, self.speed, self.intensity)
         
         # Removed legacy rhythm triggers
         
@@ -519,6 +520,12 @@ class DMXEngine:
 
         self._last_vibe = current_vibe
         self._last_transient = self.transient
+
+        # Update Probe if active
+        if self.lab_probe_rule:
+            self.lab_dmx_val = self._apply_rule_math(self.lab_probe_rule, self.lab_probe_state, audio, self.logic)
+        else:
+            self.lab_dmx_val = 0
 
         # Process All Instances
         for i, inst in enumerate(self.stage_instances):
@@ -615,7 +622,8 @@ class DMXEngine:
                             # Fallback to direct 'value' for legacy global presets
                             if matched_ov_ch is None and 'value' in ov:
                                 ov_key = f"dimmer_{p_id}_{ov_name}_{inst['id']}"
-                                preset_override_val = self._resolve_preset_value(ov_key, ov.get('value', 0), self._dt)
+                                # Use warped dt for global value sweeps
+                                preset_override_val = self._resolve_preset_value(ov_key, ov.get('value', 0), self._eff_dt)
                     
                     if matched_ov_ch is not None:
                         if matched_ov_ch.get('mode') == 'behavior':
@@ -626,12 +634,16 @@ class DMXEngine:
                             )
                         else:
                             ov_key = f"dmx_{p_id}_{target_role}_{inst['id']}"
-                            preset_override_val = self._resolve_preset_value(ov_key, matched_ov_ch.get('value', 0), self._dt)
+                            # Use warped dt for instance value sweeps
+                            preset_override_val = self._resolve_preset_value(ov_key, matched_ov_ch.get('value', 0), self._eff_dt)
             
             if preset_override_val is not None:
                 val = preset_override_val
                 
             self.universe[final_addr] = max(0, min(255, int(val)))
+
+        # Round to nearest integer for standard DMX hardware (0-255)
+        return max(0, min(255, int(round(final_dmx))))
 
     def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id, ch_def=None, sync_indices=None):
         current_vibe = audio.get('vibe', 'mid')
@@ -640,6 +652,12 @@ class DMXEngine:
         rule = cache.get_active_rule(current_vibe, current_transient, instance_key, sync_indices)
         if not rule: return cache.default_val
 
+        # State Maintenance for this specific rule instance
+        st = logic_matrix.states[instance_key]
+        return self._apply_rule_math(rule, st, audio, logic_matrix, ch_def)
+
+    def _apply_rule_math(self, rule, st, audio, logic_matrix, ch_def=None):
+        """Unified math engine for both live fixtures and the Behavior Lab probe."""
         # Mad Libs Schema extraction
         behavior = rule.get('behavior', 'static')
         source = rule.get('source', 'volume')
@@ -647,14 +665,12 @@ class DMXEngine:
         
         easy_id = rule.get('easy_id')
         if easy_id and easy_id in self.behavior_defaults:
-            # BRIDGE OVERRIDE: Prioritize global defaults for premade links
-            # We only override if it's NOT marked as 'custom' (which it isn't if easy_id exists)
             default = self.behavior_defaults[easy_id]
             behavior = default.get('behavior', behavior)
             source = default.get('source', source)
-            mods['speed'] = default.get('speed', mods['speed'])
-            mods['react'] = default.get('react', mods['react'])
-            mods['hold_type'] = default.get('hold_type', mods['hold_type'])
+            mods['speed'] = default.get('speed', mods.get('speed', 0.5))
+            mods['react'] = default.get('react', mods.get('react', 0.5))
+            mods['hold_type'] = default.get('hold_type', mods.get('hold_type', 'none'))
 
         speed = float(mods.get('speed', 0.5))
         react = float(mods.get('react', 0.5))
@@ -667,20 +683,16 @@ class DMXEngine:
         c_max = int(cal.get('max', fixture_cal.get('max', 255)))
         c_center = int(cal.get('center', fixture_cal.get('center', (c_min + c_max) // 2)))
 
-        # 3.5 Global Relative Center Override
-        # If the behavior has a fixed relative midpoint (from tuning), prioritize it
         r_center = rule.get('rel_center')
         if r_center is None and easy_id and easy_id in self.behavior_defaults:
             r_center = self.behavior_defaults[easy_id].get('rel_center')
-        
         if r_center is not None:
              c_center = c_min + (float(r_center) * (c_max - c_min))
 
         # 1. Resolve Driver Magnitude (E) from LogicMatrix state
         E = logic_matrix.state.get(source, 0.0)
 
-        # 2. State Maintenance for this specific rule instance
-        st = logic_matrix.states[instance_key]
+        # 2. State Maintenance
         if 'pos' not in st: 
             st.update({
                 'pos': 0.0, 'vel': 0.0, 'phase': 0.0, 't': 0.0, 
@@ -688,102 +700,78 @@ class DMXEngine:
                 'last_beat': False
             })
 
-        # 3. Hold Logic (CAPTURING trigger)
+        # 3. Hold Logic
         is_beat = audio.get('beat', False)
         is_bar = audio.get('bar', False)
         is_pulse_type = hold_type in ['beat', 'sync_beat', 'bar', 'sync_bar']
         trigger_hold = False
         
-        # Canonical Hold Types
         if hold_type in ['beat', 'sync_beat'] and is_beat: trigger_hold = True
         elif hold_type in ['bar', 'sync_bar'] and is_bar: trigger_hold = True
         elif hold_type == 'peakpause' and E > 0.85: trigger_hold = True
         elif hold_type == 'floorfreeze' and E < 0.15: trigger_hold = True
-        # Legacy support
         elif hold_type == 'quickly' and E > 0.8: trigger_hold = True
         elif hold_type == 'slowly' and E < 0.2: trigger_hold = True
 
-        # Special Kinematics Hold (Holds Input F, not Output Y)
         is_kinematics = behavior in ['push', 'pull', 'kinematic_push', 'kinematic_pull']
         
         if trigger_hold:
             if is_kinematics: 
                 st['held_force'] = E
             else: 
-                # For pulse triggers (beat/bar), we clear the old held value 
-                # so that a fresh one is captured on this specific frame.
-                if is_pulse_type:
-                    st.pop('held_dmx', None)
+                if is_pulse_type: st.pop('held_dmx', None)
                 st['hold_active'] = True 
         else:
-            # Release Logic
             if not is_pulse_type:
-                # Gated holds (peakpause, etc) or "None" release immediately when condition isn't met
                 st['hold_active'] = False
                 st.pop('held_force', None)
                 st.pop('held_dmx', None)
-            # Pulse types (beat/bar) RETAIN hold_active=True and their held_dmx here 
-            # so they remain frozen between beats.
 
         E_eff = st.get('held_force', E)
 
         # 4. Behavior Logic
-        y = 0.0 # Normalized output: usually [-1, 1], mapped to min..center..max
+        y = 0.0 
         dt = self._dt
 
         if behavior == 'static':
-            # Pure fixed-value hold, no audio reactivity or calibration mapping
             return max(0, min(255, int(rule.get('value', 0))))
         
         elif behavior in ['sine', 'saw', 'square', 'triangle', 'lfo_sine', 'lfo_saw', 'lfo_square', 'lfo_triangle']:
-            # NEW STANDARD: Volume modulates Frequency, Driver modulates Amplitude
-            # RHYTHMIC SYNC: If source is 'beat' or 'bar', lock phase to the driver
             vol_driver = float(audio.get('vol', 0.1)) 
-            
             if source in ['beat', 'bar']:
-                p = E_eff # Rhythmic phase lock
+                p = E_eff
             else:
                 f_base = speed * 1.0
                 freq = (f_base * 0.1) + (vol_driver * 5.0) 
                 st['phase'] = (st['phase'] + dt * freq) % 1.0
                 p = st['phase']
             
-            # Amplitude determined by driver (E_eff) multiplied by reactivity
             amp = E_eff * react
-            
             if behavior in ['sine', 'lfo_sine']: y = amp * math.sin(p * 2.0 * math.pi)
             elif behavior in ['saw', 'lfo_saw']: y = amp * ((p * 2.0) - 1.0)
             elif behavior in ['square', 'lfo_square']: y = amp if p < 0.5 else -amp
             elif behavior in ['triangle', 'lfo_triangle']: y = amp * (abs((p * 4.0) - 2.0) - 1.0)
 
         elif behavior in ['push', 'pull', 'kinematic_push', 'kinematic_pull']:
-            # Kinematics Pillar (Spring-Mass-Damper Simulation)
-            # speed -> stiffness (k), react -> damping (c)
-            # Scaling adjusted to keep output naturally within [-1, 1] for typical audio input
-            k = speed * 25.0 + 1.0 # Min stiffness to prevent runaway
-            c = (1.0 - react) * 8.0 + 2.0 # Min damping for stability
-            force_mult = 15.0 # Reduced force
+            k = speed * 25.0 + 1.0
+            c = (1.0 - react) * 8.0 + 2.0
+            force_mult = 15.0
             force = E_eff * force_mult if behavior in ['push', 'kinematic_push'] else -E_eff * force_mult
-            
             accel = force - (k * st['pos']) - (c * st['vel'])
             st['vel'] += accel * dt
             st['pos'] += st['vel'] * dt
             y = st['pos']
 
         elif behavior in ['noise', 'simplex', 'perlin', 'noise_simplex', 'noise_perlin']:
-            # Noise Pillar: speed -> base scroll speed, react -> audio jitter
             noise_rate = speed * 0.5 + (E_eff * react * 2.0)
             st['t'] += dt * noise_rate
             y = (logic_matrix._noise1d(st['t']) * 2.0) - 1.0
 
         elif behavior in ['step', 'forward', 'pingpong', 'step_forward', 'step_pingpong']:
-            # Step Pillar: Standard 4-step sequence (0, 85, 170, 255) for all roles
             seq = [0, 85, 170, 255]
-            
             rate = speed * 4.0
-            
             if source in ['beat', 'bar']:
-                st['phase'] = E_eff # Step on each beat cycle
+                st['phase'] = E_eff
             else:
                 st['phase'] += dt * rate * (1.0 + E_eff * 2.0)
 
@@ -791,49 +779,40 @@ class DMXEngine:
                 st['phase'] = 0.0
                 if behavior in ['forward', 'step_forward']:
                     st['step'] = (st['step'] + 1) % len(seq)
-                else: # pingpong, step_pingpong
+                else: 
                     if 'dir' not in st: st['dir'] = 1
                     st['step'] += st['dir']
                     if st['step'] >= len(seq)-1 or st['step'] <= 0: st['dir'] *= -1
-            
             y = (seq[st['step']] / 127.5) - 1.0
 
         elif behavior in ['random', 'adjacent', 'erratic', 'markov_adjacent', 'markov_erratic']:
-            # Markov Pillar: 5-level probability sampling
             is_beat_trig = audio.get('beat', False)
             if is_beat_trig and not st.get('last_beat'):
                 r = random.random()
                 curr = st['bucket']
                 if behavior in ['adjacent', 'markov_adjacent']:
-                    if r < 0.20: pass # 20% Stay
-                    elif r < 0.55: st['bucket'] = min(4, curr + 1) # 35% Up
-                    elif r < 0.90: st['bucket'] = max(0, curr - 1) # 35% Down
-                    elif r < 0.95: st['bucket'] = min(4, curr + 2) # 5% Jump Up
-                    else: st['bucket'] = max(0, curr - 2) # 5% Jump Down
-                else: # random, erratic, markov_erratic
-                    if r < 0.10: 
-                        st['bucket'] = min(4, max(0, curr + random.choice([-1, 0, 1])))
+                    if r < 0.20: pass
+                    elif r < 0.55: st['bucket'] = min(4, curr + 1)
+                    elif r < 0.90: st['bucket'] = max(0, curr - 1)
+                    elif r < 0.95: st['bucket'] = min(4, curr + 2)
+                    else: st['bucket'] = max(0, curr - 2)
+                else: 
+                    if r < 0.10: st['bucket'] = min(4, max(0, curr + random.choice([-1, 0, 1])))
                     else:
                         others = [i for i in range(5) if abs(i - curr) > 1]
                         if others: st['bucket'] = random.choice(others)
-            
             st['last_beat'] = is_beat_trig
             y = (st['bucket'] * 64.0 / 127.5) - 1.0
 
-        # final DMX mapping
-        # y is normalized where 0.0 is center.
         y = max(-1.0, min(1.0, y))
         if y >= 0: final_dmx = c_center + (y * (c_max - c_center))
         else: final_dmx = c_center + (y * (c_center - c_min))
         
-        # 5. Hold Persistence Logic (NON-KINEMATICS)
         if hold_type != 'none':
-            if st['hold_active']:
-                final_dmx = st.get('held_dmx', final_dmx)
-            else:
-                st['held_dmx'] = final_dmx
+            if st['hold_active']: final_dmx = st.get('held_dmx', final_dmx)
+            else: st['held_dmx'] = final_dmx
         
-        return final_dmx
+        return max(0, min(255, int(round(final_dmx))))
 
     def _resolve_preset_value(self, ov_key, val, dt):
         """
@@ -912,14 +891,14 @@ class DMXEngine:
                 t = sub_local_phase / sub_duration if sub_duration > 0 else 0.0
                 t = max(0.0, min(1.0, t))
                 
-                return int(v_start + t * (v_end - v_start))
+                return v_start + t * (v_end - v_start)
             except:
-                return 0
+                return 0.0
         
         try:
-            return int(float(part_str))
+            return float(part_str)
         except:
-            return 0
+            return 0.0
 
     def _evaluate_preset_behavior(self, ch_def, audio, logic_matrix, instance_key):
         """
@@ -991,9 +970,13 @@ class DMXEngine:
                 st.pop('held_dmx', None)
 
         E_eff = st.get('held_force', E)
-        dt = self._dt
+        # Use the RAW dt for all internal physics, apply speed multiplier linearly
         y = 0.0
-
+        
+        # Determine internal movement rate based on the engine's current physics speed
+        # If speed = 0.6 (default), the base frequency should match old "neutral".
+        # If speed = 1.2, it moves twice as fast.
+        
         # --- Behavior evaluation (same math as _calculate_channel) ---
         if behavior in ['sine', 'saw', 'square', 'triangle',
                         'lfo_sine', 'lfo_saw', 'lfo_square', 'lfo_triangle']:
@@ -1001,11 +984,12 @@ class DMXEngine:
             if source in ['beat', 'bar']:
                 p = E_eff
             else:
-                f_base = speed * 1.0
-                freq = (f_base * 0.1) + (vol_driver * 5.0)
-                st['phase'] = (st['phase'] + dt * freq) % 1.0
+                # LINEAR speed application: (dt * speed) * frequency_base
+                # freq_base determines the "feel" of the LFO (0.1 in old setup)
+                freq_base = 0.1
+                st['phase'] = (st['phase'] + dt * speed * freq_base + dt * vol_driver * 5.0) % 1.0
                 p = st['phase']
-
+                
             amp = E_eff * react
             if behavior in ['sine', 'lfo_sine']: y = amp * math.sin(p * 2.0 * math.pi)
             elif behavior in ['saw', 'lfo_saw']: y = amp * ((p * 2.0) - 1.0)
@@ -1013,27 +997,28 @@ class DMXEngine:
             elif behavior in ['triangle', 'lfo_triangle']: y = amp * (abs((p * 4.0) - 2.0) - 1.0)
 
         elif behavior in ['push', 'pull', 'kinematic_push', 'kinematic_pull']:
-            k = speed * 25.0 + 1.0
-            c = (1.0 - react) * 8.0 + 2.0
+            k = 25.0 + 1.0 # Spring constant
+            c = (1.0 - react) * 8.0 + 2.0 # Dampening
             force_mult = 15.0
             force = E_eff * force_mult if behavior in ['push', 'kinematic_push'] else -E_eff * force_mult
             accel = force - (k * st['pos']) - (c * st['vel'])
-            st['vel'] += accel * dt
-            st['pos'] += st['vel'] * dt
+            # Scale physics integration by global speed!
+            st['vel'] += accel * dt * (speed / 0.6)
+            st['pos'] += st['vel'] * dt * (speed / 0.6)
             y = st['pos']
 
         elif behavior in ['noise', 'simplex', 'perlin', 'noise_simplex', 'noise_perlin']:
-            noise_rate = speed * 0.5 + (E_eff * react * 2.0)
-            st['t'] += dt * noise_rate
+            noise_rate = 0.5 + (E_eff * react * 2.0) # Internal jitter
+            st['t'] += dt * speed * noise_rate # Apply global speed linearly
             y = (logic_matrix._noise1d(st['t']) * 2.0) - 1.0
 
         elif behavior in ['step', 'forward', 'pingpong', 'step_forward', 'step_pingpong']:
             seq = [0, 85, 170, 255]
-            rate = speed * 4.0
+            step_rate = 4.0
             if source in ['beat', 'bar']:
                 st['phase'] = E_eff
             else:
-                st['phase'] += dt * rate * (1.0 + E_eff * 2.0)
+                st['phase'] += dt * speed * step_rate * (1.0 + E_eff * 2.0)
             if st['phase'] >= 1.0:
                 st['phase'] = 0.0
                 if behavior in ['forward', 'step_forward']:

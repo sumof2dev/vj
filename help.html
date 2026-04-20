@@ -475,6 +475,31 @@
             color: var(--accent);
             text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
         }
+
+        /* Responsive overhaul for Laboratory and Grid */
+        @media (max-width: 850px) {
+            .lab-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1rem !important;
+            }
+            .lab-modal-content {
+                height: 95vh;
+                width: 98%;
+                overflow-y: auto;
+            }
+            .lab-body {
+                overflow-y: auto;
+                flex: none;
+                height: auto;
+            }
+            .lab-header h2 {
+                font-size: 1.1rem;
+            }
+            .btn-grid-responsive {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 
@@ -726,7 +751,7 @@ dtoverlay=hifiberry-dacplus</pre>
                 
                 <div id="calInitial" class="help-card" style="text-align: center;">
                     <p>Verify engine performance against a synthetic EDM track or audit the live configuration against Gold Standards.</p>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div class="btn-grid-responsive" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
                         <button class="btn btn-save" style="background: var(--accent); color: #000;" onclick="startCalibration()">Run Engine Calibration</button>
                         <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Run Gold Standard Audit</button>
                         <button class="btn btn-save" style="background: var(--primary); color: #000;" onclick="openBehaviorLab()">Live Behavior Laboratory</button>
@@ -1037,6 +1062,7 @@ dtoverlay=hifiberry-dacplus</pre>
                       const msg = JSON.parse(event.data);
                       if (msg.type && msg.type.startsWith('calibration_')) handleCalibrationMessage(msg);
                       if (msg.type === 'audit_report') handleAuditMessage(msg);
+                      if (msg.type === 'state') window.latestProbeValue = msg.lab_dmx_val || 0;
                  } catch(e) {
                      // Non-JSON or unsupported format
                  }
@@ -1385,185 +1411,80 @@ dtoverlay=hifiberry-dacplus</pre>
         function labLoop() {
             if (!window.labRunning) return;
             
-            const now = Date.now();
-            const dt = (now - labLastTick) / 1000.0;
-            labLastTick = now;
-
-            const id = document.getElementById('labBehaviorSelect').value;
-            const premade = window.EASY_DESCRIPTORS.find(x => x.id === id);
+            labBuffer.push(window.latestProbeValue || 0);
+            if (labBuffer.length > (30 * 5)) labBuffer.shift();
             
-            if (premade) {
-                // Use a merged rule based on manual dropdown overrides
-                const rule = {
-                    ...premade,
-                    source: document.getElementById('labSourceSelect').value,
-                    behavior: document.getElementById('labBehaviorSelectSpecific').value
-                };
-
-                // Read manual slider overrides
-                const manualSpeed = parseFloat(document.getElementById('labSpeed').value);
-                const manualReact = parseFloat(document.getElementById('labReact').value);
-
-                const val = simulateLogic(rule, dt, manualSpeed, manualReact);
-                
-                labBuffer.push(val);
-                if (labBuffer.length > (30 * 5)) labBuffer.shift();
-                
-                // Optimized update (only if index/data changed)
+            if (labChart) {
                 labChart.data.datasets[0].data = labBuffer;
-                labChart.update('none'); // No animation for high-frequency updates
+                labChart.update('none');
             }
-
-            // Sync with actual engine update rate
-            setTimeout(() => {
-                if (labRunning) requestAnimationFrame(labLoop);
-            }, 1000 / LAB_FPS);
+            requestAnimationFrame(labLoop);
         }
 
-        function simulateLogic(rule, dt, manualSpeed, manualReact) {
-            if (!latestAudioState) return 127;
+        function syncLabProbe() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-            const source = rule.source || 'vol';
-            const behavior = rule.behavior || 'sine';
-            const speed = manualSpeed !== undefined ? manualSpeed : parseFloat(rule.speed || 0.5);
-            const react = manualReact !== undefined ? manualReact : parseFloat(rule.react || 0.5);
-            const hold_type = rule.hold_type || 'none';
-
-            // 1. Resolve Driver Magnitude (E)
-            let E = 0.0;
-            if (source === 'beat') E = latestAudioState.beat_phase;
-            else if (source === 'bar') E = (((latestAudioState.beat_count % 4) + latestAudioState.beat_phase) / 4.0);
-            else if (source === 'vol') E = latestAudioState.vol;
-            else if (source === 'bass') E = latestAudioState.bass;
-            else if (source === 'mid') E = latestAudioState.mid;
-            else if (source === 'high') E = latestAudioState.high;
-            else if (source === 'flux') E = latestAudioState.flux;
-            else if (source === 'impact') E = latestAudioState.flux * 1.5; // Rough impact check
+            const id = document.getElementById('labBehaviorSelect').value;
+            const premade = window.EASY_DESCRIPTORS.find(x => x.id === id) || { modifiers: {} };
             
-            // 2. Hold Logic
-            let trigger_hold = false;
-            const is_beat = latestAudioState.beat;
-            const is_bar = (latestAudioState.beat_count % 4 === 0) && is_beat;
-
-            if (hold_type === 'beat' && is_beat) trigger_hold = true;
-            else if (hold_type === 'bar' && is_bar) trigger_hold = true;
-            else if (hold_type === 'peakpause' && E > 0.85) trigger_hold = true;
-            else if (hold_type === 'floorfreeze' && E < 0.15) trigger_hold = true;
-
-            const is_kinematics = ['push', 'pull'].includes(behavior);
-            const is_pulse_type = ['beat', 'bar'].includes(hold_type);
-            if (trigger_hold) {
-                if (is_kinematics) labState.held_force = E;
-                else {
-                    if (is_pulse_type) labState.held_dmx = null; // Clear to capture fresh on this frame
-                    labState.hold_active = true;
+            const rule = {
+                id: id,
+                behavior: document.getElementById('labBehaviorSelectSpecific').value,
+                source: document.getElementById('labSourceSelect').value,
+                modifiers: {
+                    speed: parseFloat(document.getElementById('labSpeed').value),
+                    react: parseFloat(document.getElementById('labReact').value),
+                    hold_type: premade.modifiers ? premade.modifiers.hold_type : (premade.hold_type || 'none')
+                },
+                cal: {
+                    min: parseInt(document.getElementById('labMin').value) || 0,
+                    center: parseInt(document.getElementById('labCenter').value) || 127,
+                    max: parseInt(document.getElementById('labMax').value) || 255
                 }
-            } else {
-                if (!is_pulse_type) {
-                    labState.hold_active = false;
-                    labState.held_force = null;
-                    labState.held_dmx = null;
-                } else if (labState.hold_active && !is_beat) {
-                    // This creates a "latched" hold that stays until the next beat
-                    // BUT for the laboratory to FEEL right we often want it to 
-                    // continue holding until the NEXT trigger.
-                    // The backend keeps it held, so we keep it held. 
-                    // The reason it was 'stuck' was lack of state reset on rule change.
-                }
-            }
+            };
 
-            const E_eff = labState.held_force !== null ? labState.held_force : E;
+            ws.send(JSON.stringify({ type: 'set_lab_rule', rule: rule }));
+        }
 
-            // 3. Behavior Logic (JS Port of LogicMatrix math)
-            let y = 0.0;
-            if (behavior === 'static') {
-                return parseInt(rule.value || 0);
-            } else if (['sine', 'saw', 'square', 'triangle', 'lfo_sine', 'lfo_saw', 'lfo_square', 'lfo_triangle'].includes(behavior)) {
-                // NEW STANDARD: Volume modulates Frequency, Driver modulates Amplitude
-                // RHYTHMIC SYNC: If source is 'beat' or 'bar', lock phase to the driver
-                const vol_driver = (latestAudioState.vol || 0.1);
+        async function addNewBehaviorFromLab() {
+            const label = prompt("Enter a label for this new behavior:", "Custom Laboratory Flow");
+            if (!label) return;
+
+            const id = document.getElementById('labBehaviorSelect').value;
+            const premade = window.EASY_DESCRIPTORS.find(x => x.id === id) || { modifiers: {} };
+
+            const c_min_now = parseInt(document.getElementById('labMin').value) || 0;
+            const c_max_now = parseInt(document.getElementById('labMax').value) || 255;
+            const c_center_now = parseInt(document.getElementById('labCenter').value) || 127;
+            const rel_center = (c_center_now - c_min_now) / Math.max(1, (c_max_now - c_min_now));
+
+            const payload = {
+                label: label,
+                source: document.getElementById('labSourceSelect').value,
+                behavior: document.getElementById('labBehaviorSelectSpecific').value,
+                speed: parseFloat(document.getElementById('labSpeed').value),
+                react: parseFloat(document.getElementById('labReact').value),
+                hold_type: premade.modifiers ? premade.modifiers.hold_type : (premade.hold_type || 'none'),
+                rel_center: parseFloat(rel_center.toFixed(3))
+            };
+
+            try {
+                const res = await fetch(`${window.API_BASE_ROOT}/api/descriptors`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 
-                let p;
-                if (source === 'beat' || source === 'bar') {
-                    p = E_eff; // Rhythmic phase lock
-                } else {
-                    const f_base = speed * 1.0;
-                    const freq = (f_base * 0.1) + (vol_driver * 5.0);
-                    labState.phase = (labState.phase + dt * freq) % 1.0;
-                    p = labState.phase;
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    if (window.EASY_DESCRIPTORS) window.EASY_DESCRIPTORS.push(data.descriptor);
+                    populateLabSelects();
+                    document.getElementById('labBehaviorSelect').value = data.descriptor.id;
+                    alert(`✅ Saved "${label}" to library!`);
                 }
-
-                // Amplitude determined by driver (E_eff) multiplied by reactivity
-                const amp = E_eff * react;
-
-                if (['sine', 'lfo_sine'].includes(behavior)) {
-                    y = amp * Math.sin(p * 2.0 * Math.PI);
-                } else if (['saw', 'lfo_saw'].includes(behavior)) {
-                    y = amp * ((p * 2.0) - 1.0);
-                } else if (['square', 'lfo_square'].includes(behavior)) {
-                    y = p < 0.5 ? amp : -amp;
-                } else if (['triangle', 'lfo_triangle'].includes(behavior)) {
-                    y = amp * (Math.abs((p * 4.0) - 2.0) - 1.0);
-                }
-            } else if (['push', 'pull'].includes(behavior)) {
-                const k = speed * 25.0 + 1.0;
-                const c = (1.0 - react) * 8.0 + 2.0;
-                const force = behavior === 'push' ? E_eff * 15.0 : -E_eff * 15.0;
-                const accel = force - (k * labState.pos) - (c * labState.vel);
-                labState.vel += accel * dt;
-                labState.pos += labState.vel * dt;
-                y = labState.pos;
-            } else if (['noise', 'simplex'].includes(behavior)) {
-                const noise_rate = speed * 0.5 + (E_eff * react * 2.0);
-                labState.t += dt * noise_rate;
-                y = (perlin1d(labState.t) * 2.0) - 1.0;
-            } else if (['step', 'forward'].includes(behavior)) {
-                const rate = speed * 4.0;
-                
-                if (source === 'beat' || source === 'bar') {
-                    labState.phase = E_eff; // Step on each beat cycle
-                } else {
-                    labState.phase += dt * rate * (1.0 + E_eff * 2.0);
-                }
-
-                if (labState.phase >= 1.0) {
-                    labState.phase = 0.0;
-                    labState.step = (labState.step + 1) % 4;
-                }
-                y = ([0, 85, 170, 255][labState.step] / 127.5) - 1.0;
-            } else if (['random', 'adjacent'].includes(behavior)) {
-                if (is_beat && !labState._lastBeatTrig) {
-                    labState.bucket = Math.floor(Math.random() * 5);
-                }
-                labState._lastBeatTrig = is_beat;
-                y = (labState.bucket * 64.0 / 127.5) - 1.0;
+            } catch (e) {
+                alert("Failed to save behavior.");
             }
-
-            // 4. Wrapping & Persistence (Mapping to C_min..C_center..C_max)
-            const c_min = parseInt(document.getElementById('labMin').value) || 0;
-            const c_max = parseInt(document.getElementById('labMax').value) || 255;
-            const c_center = parseInt(document.getElementById('labCenter').value) || 127;
-
-            y = Math.max(-1.0, Math.min(1.0, y));
-            
-            // 4. Use Global Relative Center if present, else fallback to UI Center
-            let active_center = c_center;
-            if (rule.rel_center !== undefined) {
-                active_center = c_min + (rule.rel_center * (c_max - c_min));
-            }
-
-            let final_dmx = active_center;
-            if (y >= 0) final_dmx = active_center + (y * (c_max - active_center));
-            else final_dmx = active_center + (y * (active_center - c_min));
-
-            if (!is_kinematics) {
-                if (labState.hold_active) {
-                    if (labState.held_dmx === null) labState.held_dmx = final_dmx;
-                    final_dmx = labState.held_dmx;
-                }
-            }
-
-            return Math.max(0, Math.min(255, Math.round(final_dmx)));
         }
 
         async function saveLabAsDefault() {
@@ -1588,12 +1509,12 @@ dtoverlay=hifiberry-dacplus</pre>
                 behavior: document.getElementById('labBehaviorSelectSpecific').value,
                 speed: parseFloat(document.getElementById('labSpeed').value),
                 react: parseFloat(document.getElementById('labReact').value),
-                hold_type: premade.hold_type || 'none',
+                hold_type: (premade.modifiers ? premade.modifiers.hold_type : premade.hold_type) || 'none',
                 rel_center: parseFloat(rel_center.toFixed(3))
             };
 
             try {
-                const response = await fetch('/api/descriptors/update', {
+                const response = await fetch(`${window.API_BASE_ROOT}/api/descriptors/update`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updatedData)
@@ -1602,8 +1523,8 @@ dtoverlay=hifiberry-dacplus</pre>
                 if (response.ok) {
                     btn.innerHTML = "✅ SAVED";
                     btn.style.background = "var(--success)";
-                    // Update local copy to stay in sync
                     Object.assign(premade, updatedData);
+                    syncLabProbe();
                 } else {
                     btn.innerHTML = "❌ ERROR";
                 }
@@ -1642,19 +1563,7 @@ dtoverlay=hifiberry-dacplus</pre>
         // boot() handles this now
         // initLabSelects();
 
-        // Standard 1D value noise
-        function perlin1d(t) {
-            const i = Math.floor(t);
-            const f = t - i;
-            const u = f * f * f * (f * (f * 6 - 15) + 10);
-            function hash(x) {
-                const h = Math.sin(x) * 43758.5453123;
-                return h - Math.floor(h);
-            }
-            const v0 = hash(i);
-            const v1 = hash(i + 1);
-            return v0 + (v1 - v0) * u;
-        }
+
 
     </script>
     
@@ -1675,24 +1584,27 @@ dtoverlay=hifiberry-dacplus</pre>
                     </div>
                     <div style="flex: 3; display: flex; flex-direction: column; gap: 4px;">
                         <label style="font-size: 0.55rem; color: var(--text-dim);">SOURCE & LOGIC</label>
-                        <div style="display: flex; gap: 6px;">
-                            <select id="labSourceSelect" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1;">
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <select id="labSourceSelect" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 80px;" onchange="syncLabProbe()">
                                 <!-- Populated via JS -->
                             </select>
-                            <select id="labBehaviorSelectSpecific" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1;">
+                            <select id="labBehaviorSelectSpecific" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 100px;" onchange="syncLabProbe()">
                                 <!-- Populated via JS -->
                             </select>
-                            <button class="btn btn-save" style="padding: 0 12px; font-size: 0.65rem; background: var(--accent); height: 32px;" onclick="saveLabAsDefault()">
+                            <button class="btn btn-save" style="padding: 0 12px; font-size: 0.65rem; background: var(--accent); height: 32px; width: auto; margin-right: 5px;" onclick="saveLabAsDefault()">
                                 SAVE
+                            </button>
+                            <button class="btn btn-save" style="padding: 0 12px; font-size: 0.65rem; background: var(--secondary); color:#fff; height: 32px; width: auto;" onclick="addNewBehaviorFromLab()">
+                                ADD NEW
                             </button>
                         </div>
                     </div>
                     <div style="flex: 2; display: flex; flex-direction: column; gap: 4px;">
                         <label style="font-size: 0.55rem; color: var(--text-dim);">DMX RANGE (MIN/CTR/MAX)</label>
                         <div style="display: flex; gap: 4px;">
-                            <input type="number" id="labMin" value="0" min="0" max="255" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
-                            <input type="number" id="labCenter" value="127" min="0" max="255" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
-                            <input type="number" id="labMax" value="255" min="0" max="255" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
+                            <input type="number" id="labMin" value="0" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
+                            <input type="number" id="labCenter" value="127" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
+                            <input type="number" id="labMax" value="255" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
                         </div>
                     </div>
                 </div>
@@ -1706,7 +1618,7 @@ dtoverlay=hifiberry-dacplus</pre>
                                 </div>
                                 <input type="range" id="labSpeed" min="0" max="1" step="0.05" value="0.5" 
                                     style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border: none; cursor: pointer; accent-color: var(--accent);"
-                                    oninput="document.getElementById('labSpeedVal').textContent = parseFloat(this.value).toFixed(2)">
+                                    oninput="document.getElementById('labSpeedVal').textContent = parseFloat(this.value).toFixed(2); syncLabProbe()">
                             </div>
                             <div style="flex: 1;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
@@ -1715,7 +1627,7 @@ dtoverlay=hifiberry-dacplus</pre>
                                 </div>
                                 <input type="range" id="labReact" min="0" max="1" step="0.05" value="0.8" 
                                     style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border: none; cursor: pointer; accent-color: var(--secondary);"
-                                    oninput="document.getElementById('labReactVal').textContent = parseFloat(this.value).toFixed(2)">
+                                    oninput="document.getElementById('labReactVal').textContent = parseFloat(this.value).toFixed(2); syncLabProbe()">
                             </div>
                         </div>
                     </div>

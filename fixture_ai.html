@@ -726,7 +726,7 @@
 
             <div id="mode-new-content">
                 <div
-                    style="display: grid; grid-template-columns: 1fr 1fr 0.8fr; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                    style="display: grid; grid-template-columns: 1fr 1fr 0.8fr 0.8fr; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
                     <div>
                         <label style="font-size:7px; font-weight:900;">Fixture Brand</label>
                         <input type="text" id="ai-brand" placeholder="BRAND" class="glass-input"
@@ -736,6 +736,14 @@
                         <label style="font-size:7px; font-weight:900;">Model Name</label>
                         <input type="text" id="ai-model" placeholder="MODEL" class="glass-input"
                             style="padding:4px 8px; font-size:11px;">
+                    </div>
+                    <div>
+                        <label style="font-size:7px; font-weight:900;">Fixture Type</label>
+                        <select id="ai-fixture-type" class="glass-select" style="padding:4px 8px; font-size:11px; height:24px;">
+                            <option value="generic">Generic / Wash</option>
+                            <option value="laser">Laser / Scanner</option>
+                            <option value="moving_head">Moving Head</option>
+                        </select>
                     </div>
                     <div>
                         <label style="font-size:7px; font-weight:900;">Channels</label>
@@ -941,7 +949,7 @@
     </script>
 
     <script type="module">
-        const APP_VERSION = "417262238"; // Stamped by deploy.sh
+        const APP_VERSION = "420260840"; // Stamped by deploy.sh
         import { GoogleGenerativeAI } from "google-genai-sdk";
 
         // Global State
@@ -1345,26 +1353,35 @@ OUTPUT JSON SCHEMA:
 
                 currentFixture.mappings = currentFixture.mappings.map((rules, chIdx) => {
                     const chRules = Array.isArray(rules) ? rules : [rules];
+                    const role = currentFixture.channels[chIdx]?.role || 'generic';
+                    
+                    // SORT BY MIN before hydration to ensure correct ordinal assignment
+                    const sorted = [...chRules].sort((a, b) => (parseInt(a.cal?.min) || 0) - (parseInt(b.cal?.min) || 0));
 
-                    return chRules.map(rule => {
+                    return sorted.map((rule, rIdx) => {
+                        const min = parseInt(rule.cal?.min) || 0;
+                        const max = parseInt(rule.cal?.max) || 255;
+                        // Use Ordinal Logic (.0, .1, .2-4)
+                        const logic = window.determineBehavior(role, min, max, rIdx, sorted.length, chIdx);
+
                         // HARDENED HYDRATION: Explicit cast and sanitation for all risky fields
                         const hydratedRule = {
                             ...rule,
-                            behavior: rule.behavior || 'static',
-                            source: rule.source || 'vol',
+                            behavior: rule.behavior || logic.behavior,
+                            source: rule.source || logic.source,
                             cal: {
-                                min: parseInt(rule.cal?.min) || 0,
-                                max: parseInt(rule.cal?.max) || 255,
-                                center: parseInt(rule.cal?.center) || 127
+                                min: min,
+                                max: max,
+                                center: parseInt(rule.cal?.center) || Math.floor((min + max) / 2)
                             },
                             modifiers: {
-                                speed: parseFloat(rule.speed ?? (rule.behavior === 'static' ? 0 : 0.5)) || 0,
+                                speed: parseFloat(rule.speed ?? logic.speed) || 0,
                                 react: 0.5,
                                 hold_type: rule.hold_type || 'none'
                             }
                         };
 
-                        if (isNaN(hydratedRule.modifiers.speed)) hydratedRule.modifiers.speed = 0.5;
+                        if (isNaN(hydratedRule.modifiers.speed)) hydratedRule.modifiers.speed = parseFloat(logic.speed.toFixed(3));
 
                         return hydratedRule;
                     });
@@ -1566,15 +1583,7 @@ OUTPUT JSON SCHEMA:
                              </div>
                         </div>
 
-                        <!-- LINE 3: [DRIVER] [SHAPE] [HOLD] -->
-                        <div style="display:flex; gap:4px; font-size:9px; color:var(--text-dim); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; opacity:0.8;">
-                            <span style="color:var(--accent);">${r.source}</span>
-                            <span>•</span>
-                            <span style="color:var(--accent-alt);">${r.behavior}</span>
-                            <span>•</span>
-                            <span style="color:var(--success);">${r.modifiers?.hold_type || 'none'}</span>
-                            <span style="margin-left:auto; color:var(--text-dim);">SPD ${r.modifiers?.speed || 0}</span>
-                        </div>
+                        <!-- LINE 3: [DRIVER] [SHAPE] [HOLD] - REMOVED PER USER REQUEST AS CONFUSING -->
                     </div>
                 `).join('');
 
@@ -1650,6 +1659,47 @@ OUTPUT JSON SCHEMA:
             renderResults();
         };
 
+        window.determineBehavior = (role, min, max, index, total, chIdx) => {
+            const fixType = document.getElementById('ai-fixture-type').value || 'generic';
+            const range = max - min;
+            
+            // 1. STATIC RULE: Pure point values are always static
+            if (range < 1) return { behavior: 'static', source: 'vol', speed: 0 };
+
+            // 2. CATEGORIZATION
+            const STANDARD = ['pos_x', 'pos_y', 'zoom', 'rot_x', 'rot_y', 'rot_z'];
+            const BASE = ['dimmer', 'speed', 'mode'];
+            // Everything else is EFFECT (color, pattern, strobe, beam_fx, grating, etc)
+
+            // 3. ORDINAL SLOT DETERMINATION
+            let slot = '.2-4'; // Default to middle
+            if (index === 0) slot = '.0'; // First or Single
+            else if (index === total - 1 && total > 1) slot = '.1'; // Absolute Last
+
+            // 4. VARIATION SEEDS (Prevent Robotic Sync)
+            const seed = (chIdx || 0) + (index || 0);
+            const speedJitter = 0.8 + ((seed % 5) * 0.1); // Multiplier between 0.8 and 1.2
+            const useAltSource = (seed % 2 === 0);
+
+            // 5. BEHAVIOR MAPPING MATRIX
+            if (STANDARD.includes(role)) {
+                if (slot === '.0') return { behavior: (useAltSource ? 'noise' : 'sine'), source: 'flux', speed: 0.1 * speedJitter };
+                if (slot === '.1') return { behavior: 'square', source: 'vol', speed: 0.05 * speedJitter };
+                return { behavior: (useAltSource ? 'saw' : 'noise'), source: 'flux', speed: 0.15 * speedJitter };
+            }
+
+            if (BASE.includes(role)) {
+                if (slot === '.0') return { behavior: 'push', source: 'vol', speed: 0.5 * speedJitter };
+                if (slot === '.1') return { behavior: 'saw', source: 'vol', speed: 1.0 * speedJitter };
+                return { behavior: 'step', source: 'bar', speed: 0.2 * speedJitter };
+            }
+
+            // DEFAULT: EFFECT GROUP
+            if (slot === '.0') return { behavior: 'step', source: 'beat', speed: 0.1 * speedJitter };
+            if (slot === '.1') return { behavior: 'random', source: 'high', speed: 0.4 * speedJitter };
+            return { behavior: (useAltSource ? 'noise' : 'random'), source: 'high', speed: 0.25 * speedJitter };
+        };
+
         window.updateRole = (idx, newRole) => {
             window.currentFixture.channels[idx].role = newRole;
             const template = WORKFLOW_ROLES[newRole];
@@ -1660,29 +1710,33 @@ OUTPUT JSON SCHEMA:
 
             const existingMappings = window.currentFixture.mappings[idx];
             if (existingMappings && existingMappings.length > 0) {
-                // DATA PERSISTENCE: Update the behavior/source but PRESERVE the cal (ranges)
-                window.currentFixture.mappings[idx] = existingMappings.map(rule => ({
-                    ...rule,
-                    behavior: template.behavior || 'static',
-                    source: template.source || 'vol',
-                    // Preserve value if static, otherwise default the template values
-                    ...(template.value !== undefined ? { behavior: 'static', value: template.value } : {})
-                }));
+                // SORT BY MIN before applying ordinal logic
+                const sorted = [...existingMappings].sort((a, b) => (a.cal?.min || 0) - (b.cal?.min || 0));
+                
+                window.currentFixture.mappings[idx] = sorted.map((rule, rIdx) => {
+                    const logic = window.determineBehavior(newRole, rule.cal.min, rule.cal.max, rIdx, sorted.length, idx);
+                    return {
+                        ...rule,
+                        behavior: logic.behavior,
+                        source: logic.source,
+                        modifiers: { 
+                            ...rule.modifiers, 
+                            speed: parseFloat(logic.speed.toFixed(3))
+                        }
+                    };
+                });
             } else {
-                // No existing mapping, apply full template
+                // No existing mapping, create a smart default range (.0 logic)
+                const logic = window.determineBehavior(newRole, 0, 255, 0, 1, idx);
                 const newRule = {
                     vibe: 'any',
                     mechanical_class: 'linear',
-                    aesthetic_id: 'custom',
-                    behavior: template.behavior || 'static',
-                    source: template.source || 'vol',
+                    description: template.name,
+                    behavior: logic.behavior,
+                    source: logic.source,
                     cal: { min: 0, center: 127, max: 255 },
-                    modifiers: { speed: 0.1, react: 0.5, hold_type: 'none' }
+                    modifiers: { speed: logic.speed, react: 0.5, hold_type: 'none' }
                 };
-                if (template.value !== undefined) {
-                    newRule.behavior = 'static';
-                    newRule.value = template.value;
-                }
                 window.currentFixture.mappings[idx] = [newRule];
             }
             renderResults();
@@ -1713,18 +1767,37 @@ OUTPUT JSON SCHEMA:
 
         window.addRule = (chIdx) => {
             if (!window.currentFixture.mappings[chIdx]) window.currentFixture.mappings[chIdx] = [];
+            
+            // Add a blank range
             window.currentFixture.mappings[chIdx].push({
                 vibe: 'any',
-                description: 'New Position',
+                description: 'New Range',
                 mechanical_class: 'linear',
-                aesthetic_id: 'smooth_wave',
-                behavior: 'direct',
-                source: 'raw',
-                cal: { min: 0, center: 127, max: 255 }
+                cal: { min: 0, center: 127, max: 255 },
+                modifiers: { speed: 0.1, react: 0.5, hold_type: 'none' }
+            });
+
+            // RE-APPLY ORDINAL LOGIC to the whole channel
+            let rules = window.currentFixture.mappings[chIdx];
+            const role = window.currentFixture.channels[chIdx].role || 'generic';
+            // Sort by min first
+            const sorted = [...rules].sort((a, b) => (a.cal?.min || 0) - (b.cal?.min || 0));
+            
+            window.currentFixture.mappings[chIdx] = sorted.map((rule, rIdx) => {
+                const logic = window.determineBehavior(role, rule.cal.min, rule.cal.max, rIdx, sorted.length, chIdx);
+                return {
+                    ...rule,
+                    behavior: logic.behavior,
+                    source: logic.source,
+                    modifiers: { 
+                        ...rule.modifiers, 
+                        speed: parseFloat(logic.speed.toFixed(3))
+                    }
+                };
             });
             
             // Re-apply vibe logic with sync group
-            const rules = window.currentFixture.mappings[chIdx];
+            rules = window.currentFixture.mappings[chIdx];
             const syncNum = (chIdx % 3) + 1;
             if (rules.length === 1) {
                 rules[0].vibe = 'any';

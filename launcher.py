@@ -19,14 +19,20 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         print(f"📥 Launcher GET: {self.path}")
-        if self.path == '/start':
+        if self.path in ['/start', '/api/start']:
             self.run_systemd('start')
-        elif self.path == '/stop':
+        elif self.path in ['/stop', '/api/stop']:
             self.run_systemd('stop')
-        elif self.path == '/restart':
+        elif self.path in ['/restart', '/api/restart']:
             self.run_systemd('restart')
-        elif self.path == '/status':
+        elif self.path in ['/status', '/api/status']:
             self.run_systemd('is-active', 'vj-engine.service')
+        elif self.path in ['/camera/start', '/api/camera/start']:
+            self.run_systemd('start', 'vj-camera.service')
+        elif self.path in ['/camera/stop', '/api/camera/stop']:
+            self.run_systemd('stop', 'vj-camera.service')
+        elif self.path in ['/camera/status', '/api/camera/status']:
+            self.run_systemd('is-active', 'vj-camera.service')
         elif self.path.startswith('/api/spotify/auth'):
             self.handle_spotify_auth()
         elif self.path.startswith('/api/smart/control'):
