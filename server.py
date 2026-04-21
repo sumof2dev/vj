@@ -144,6 +144,11 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         if path == '/api/images/save':
             self._handle_save_image()
             return
+            
+        # API: Save Training
+        if path == '/api/training/save':
+            self._handle_save_training()
+            return
 
         # NEW: Add Premade Descriptor
         if path == '/api/descriptors':
@@ -581,6 +586,30 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(500, str(e))
         else:
             self.send_error(404, f"File not found: {fname}")
+
+    def _handle_save_training(self):
+        """Save training annotation data to training_data/"""
+        length = int(self.headers['Content-Length'])
+        body = self.rfile.read(length)
+        import time
+        try:
+            data = json.loads(body)
+            train_dir = os.path.join(BASE_DIR, 'training_data')
+            if not os.path.exists(train_dir):
+                os.makedirs(train_dir)
+            
+            ts = int(time.time() * 1000)
+            fname = f"training_{ts}.json"
+            fpath = os.path.join(train_dir, fname)
+            
+            with open(fpath, 'w') as f:
+                json.dump(data, f)
+            
+            print(f"🧠 Saved Training Sample: {fname}")
+            self._send_json({"status": "ok", "file": fname})
+        except Exception as e:
+            print(f"❌ Error saving training data: {e}")
+            self.send_error(500, str(e))
 
     def _proxy_to_camera(self, subpath):
         """Proxy a request to the camera service on 8004"""

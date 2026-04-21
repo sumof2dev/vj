@@ -5,13 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RaveBox</title>
+    <link rel="stylesheet" href="setup.css?v=421260851">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="RaveBox">
-    <link rel="apple-touch-icon" href="icon.png">
     <style>
         :root {
             --bg: #0a0a0c;
@@ -700,43 +695,10 @@
             <a id="link-help" href="#">Help</a>
         </div>
     </div>
+    <script src="shared_setup.js?v=421260851"></script>
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const queryHost = urlParams.get('host');
-        if (queryHost) {
-            localStorage.setItem('vj_backend_host', queryHost.trim());
-            // Clean the URL
-            const newUrl = window.location.pathname + window.location.hash;
-            window.history.replaceState({}, '', newUrl);
-        }
-
-        let savedHost = localStorage.getItem('vj_backend_host');
-        const onHostedDomain = (window.location.hostname === 'ravebox.love' || window.location.hostname === 'api.ravebox.love' || window.location.hostname.includes('storage.googleapis.com'));
-        const isCustomSubdomain = window.location.hostname.endsWith('.ravebox.love') && !onHostedDomain;
-
-        // If on cloud and first load (no host set), prompt user for their unique backend IP/Tunnel
-        if (!savedHost && onHostedDomain && !isCustomSubdomain) {
-            savedHost = prompt("Enter your Ravebox secret code below. This saves to your device's storage for reentry. Save code to connect with other devices!");
-            if (savedHost) {
-                savedHost = savedHost.trim();
-                localStorage.setItem('vj_backend_host', savedHost);
-            }
-        }
-
-        const host = savedHost || (onHostedDomain ? '' : window.location.hostname);
-        const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
-
-        // Smart Tunnel: Resolve secret codes to *.ravebox.love
-        const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
-        const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
-
-        const baseHost = (isCustomTunnel ? boxName.replace(/^(api-|ws-)/, '') : boxName);
-        const apiHost = isCustomTunnel ? 'api-' + baseHost : host;
-        const wsHost = isCustomTunnel ? 'ws-' + baseHost : host;
-
-        // LAUNCHER API: Use prefixed host if custom tunnel, otherwise same-origin if custom subdomain
-        const launcherHost = isCustomTunnel ? baseHost : (isCustomSubdomain ? baseHost : host + ':8001');
-        const LAUNCHER_API = host ? (window.location.protocol + '//' + (isOriginalCloud ? 'api.ravebox.love' : launcherHost + (isCustomTunnel ? '' : ':8001'))) : null;
+        // Routing and globals are handled by shared_setup.js
+        console.log("📍 Host:", window.host, "| Launcher:", window.LAUNCHER_API);
 
         function changeHost() {
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
@@ -763,7 +725,7 @@
                 alert("Cloudflare Tunnel detected. Handshake authorization is handled by the edge; no manual signing required.");
                 return;
             }
-            const port = (LAUNCHER_API && LAUNCHER_API.includes(':')) ? LAUNCHER_API.split(':').pop().split('/')[0] : '8001';
+            const port = (window.LAUNCHER_API && window.LAUNCHER_API.includes(':')) ? window.LAUNCHER_API.split(':').pop().split('/')[0] : '8001';
             const target = (host && host.includes('.')) ? host : window.location.hostname;
             window.open(`https://${target}:${port}`, '_blank');
         }
@@ -782,13 +744,13 @@
             }
 
             try {
-                if (!LAUNCHER_API) {
+                if (!window.LAUNCHER_API) {
                     const badge = document.getElementById('status');
                     if (badge) badge.innerText = "Configure a RaveBox to begin";
                     setTimeout(updateStatus, 5000);
                     return;
                 }
-                const res = await fetch(`${LAUNCHER_API}/status`);
+                const res = await fetch(`${window.LAUNCHER_API}/status`);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const contentType = res.headers.get("content-type");
                 if (!contentType || !contentType.includes("application/json")) {
@@ -839,7 +801,7 @@
         }
 
         async function doAction(action) {
-            if (!LAUNCHER_API) {
+            if (!window.LAUNCHER_API) {
                 alert("Enter the code!");
                 return;
             }
@@ -851,7 +813,7 @@
             btn.innerText = action === 'start' ? "49260014" : "RAVEBOX Shutdown Sequence Initiated";
 
             try {
-                const res = await fetch(`${LAUNCHER_API}/${action}`);
+                const res = await fetch(`${window.LAUNCHER_API}/${action}`);
                 if (!res.ok) throw new Error(`HTTP ${res.status} from ${action}`);
                 const contentType = res.headers.get("content-type");
                 if (!contentType || !contentType.includes("application/json")) {

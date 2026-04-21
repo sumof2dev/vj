@@ -796,7 +796,7 @@ function openAudioTimelineModal() {
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="width:12px; height:12px; border-radius:3px; background:rgba(255,255,255,0.3);"></span>
-                        <span style="color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Flux</span>
+                        <span style="color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Spectral Flux</span>
                     </div>
                 </div>
             </div>
@@ -823,7 +823,7 @@ function openAudioTimelineModal() {
                         <span style="color:#ff3366">BASS:</span> <span>${data.bass.toFixed(3)}</span>
                         <span style="color:var(--accent)">MID:</span> <span>${data.mid.toFixed(3)}</span>
                         <span style="color:#ffaa00">HIGH:</span> <span>${data.high.toFixed(3)}</span>
-                        <span style="color:#fff; opacity:0.5">FLUX:</span> <span>${data.flux.toFixed(3)}</span>
+                        <span style="color:#fff; opacity:0.5">SPECTRAL FLUX:</span> <span>${data.flux.toFixed(3)}</span>
                     </div>
                 `;
                 // Keep tooltip inside bounds

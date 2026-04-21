@@ -87,11 +87,13 @@
                         Source: <span id="hostDisplay" style="color:#00f2ff; font-weight:bold;">Local</span>
                     </div>
                 </div>
-                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v420260840</span>
+                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v421260851</span>
             </div>
             <div class="playback-controls">
                 <button class="step-btn" title="Step Back (0.05s) - Arrow Left" onclick="stepFrame(-1)">❮</button>
                 <button class="step-btn" title="Step Forward (0.05s) - Arrow Right" onclick="stepFrame(1)">❯</button>
+                <button class="secondary" id="btn-undo-train" style="display:none;" onclick="undoCorrection()">↩️ Undo</button>
+                <button class="secondary" id="btn-save-train" style="background:#27ae60; display:none;" onclick="saveTraining()">💾 Save Training</button>
                 <button class="secondary" onclick="openSessionBrowser()">📂 Browse</button>
             </div>
         </div>
@@ -109,7 +111,7 @@
 
         <div class="legend" id="legend">
             <span id="leg-b" style="color:#ff4757;" onclick="toggleAudio('b')">— Audio Bass</span>
-            <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Audio Flux</span>
+            <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Spectral Flux</span>
             <span id="leg-h" style="color:#1e90ff;" onclick="toggleAudio('h')">— Audio High</span>
             <span id="leg-vl" style="color:#fff;" onclick="toggleAudio('vl')">— Master Vol</span>
             <span style="color:#fff; text-shadow: 0 0 5px #fff; cursor: default;">▬▬ DMX Output</span>
@@ -133,12 +135,21 @@
 <!-- Correction Modal -->
 <div id="correction-modal" class="correction-overlay" onclick="closeLabeler()">
     <div class="correction-modal" onclick="event.stopPropagation()">
-        <div style="font-weight:bold; margin-bottom: 15px; font-size: 14px; color: #aaa;">Correct Transient State:</div>
-        <div id="segment-info" style="font-size: 11px; margin-bottom: 12px; opacity: 0.6;">Segment: 0s - 0s</div>
-        <button class="label-btn steady" onclick="submitLabel('steady')">Steady (Groove)</button>
-        <button class="label-btn building" onclick="submitLabel('building')">Building (Energy Up)</button>
-        <button class="label-btn tension" onclick="submitLabel('tension')">Tension (Breakdown)</button>
-        <button class="label-btn dropping" onclick="submitLabel('dropping')">Dropping (The Drop)</button>
+        <div style="font-weight:bold; margin-bottom: 5px; font-size: 14px; color: #aaa;">Correct Transient State:</div>
+        <div id="segment-info" style="font-size: 11px; margin-bottom: 12px; opacity: 0.6; color:#00f2ff;">Click below to set training type</div>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <div style="flex:1;">
+                <button class="label-btn steady" onclick="submitLabel('transient', 'steady')">Steady</button>
+                <button class="label-btn building" onclick="submitLabel('transient', 'building')">Building</button>
+                <button class="label-btn tension" onclick="submitLabel('transient', 'tension')">Tension</button>
+                <button class="label-btn dropping" onclick="submitLabel('transient', 'dropping')">Dropping</button>
+            </div>
+            <div style="flex:1; border-left:1px solid #444; padding-left:10px;">
+                <button class="label-btn" style="border-left: 4px solid #8ad4ff;" onclick="submitLabel('vibe', 'chill')">Chill</button>
+                <button class="label-btn" style="border-left: 4px solid #ffe066;" onclick="submitLabel('vibe', 'mid')">Mid</button>
+                <button class="label-btn" style="border-left: 4px solid #ff8add;" onclick="submitLabel('vibe', 'high')">High</button>
+            </div>
+        </div>
         <button class="secondary" style="width:100%; margin-top: 15px;" onclick="closeLabeler()">Cancel</button>
     </div>
 </div>
@@ -154,36 +165,16 @@
     </div>
 </div>
 
-<script src="shared_setup.js?v=420260840"></script>
+<script src="shared_setup.js?v=421260851"></script>
 
 <script>
-    // --- ROBUST ENDPOINT RESOLUTION (Parity with App.tsx) ---
-    const currentSavedHost = localStorage.getItem('vj_backend_host'); // Re-checking because it might have changed
-    const effectiveHost = currentSavedHost || window.location.hostname;
-    const currentIsLocal = effectiveHost === "localhost" || effectiveHost === "127.0.0.1";
-    const currentSetupHostname = window.location.hostname;
-    const isHostedDomain = (currentSetupHostname === 'ravebox.love' || currentSetupHostname === 'api.ravebox.love' || currentSetupHostname.includes('storage.googleapis.com'));
-    
-    // Auto-prompt on Cloud if no host is set
-    if (!currentSavedHost && isHostedDomain) {
-        const newHost = prompt("Welcome to Recording Player. Enter your RaveBox Secret Code / Box ID to sync:");
-        if (newHost) {
-            localStorage.setItem('vj_backend_host', newHost.trim());
-            location.reload();
-        }
-    }
-
-    const p_currentBoxName = (effectiveHost === 'ravebox') ? 'ravebox.love' : ((effectiveHost && !effectiveHost.includes('.') && !currentIsLocal) ? `${effectiveHost}.ravebox.love` : effectiveHost);
-    const p_currentIsCustomTunnel = p_currentBoxName.endsWith('.ravebox.love') && p_currentBoxName !== 'ravebox.love' && p_currentBoxName !== 'api.ravebox.love';
-    const p_resolvedWsHost = p_currentIsCustomTunnel ? `ws-${p_currentBoxName}` : (p_currentBoxName === 'ravebox.love' ? 'wss.ravebox.love' : p_currentBoxName);
-    const p_resolvedApiHost = p_currentIsCustomTunnel ? `api-${p_currentBoxName}` : (p_currentBoxName === 'ravebox.love' ? 'ravebox.love' : p_currentBoxName);
-    const p_isSsl = window.location.protocol === "https:" || p_currentIsCustomTunnel || p_currentBoxName.includes('ravebox.love');
-
-    const P_API_BASE = `${p_isSsl ? "https:" : "http:"}//${p_resolvedApiHost}${p_currentIsCustomTunnel ? "" : ":8000"}`;
-    const P_WS_URL = `${p_isSsl ? "wss:" : "ws:"}//${p_resolvedWsHost}${p_currentIsCustomTunnel ? "" : ":8765"}/`;
+    // Routing and endpoints are managed by shared_setup.js
+    const P_API_BASE = API_BASE_ROOT;
+    const P_WS_URL = (isOriginalCloud ? 'wss://wss.ravebox.love' : (isCustomTunnel ? (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://' + wsHost : (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://' + host + ':8765/'));
 
     function changeHost() {
-        const next = prompt("Enter RaveBox Secret Code (e.g. 'mybox') or local IP:", effectiveHost);
+        const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
+        const next = prompt("Enter RaveBox Secret Code (e.g. 'mybox') or local IP:", current);
         if (next !== null) {
             if (next.trim() === "" || next === window.location.hostname) localStorage.removeItem('vj_backend_host');
             else localStorage.setItem('vj_backend_host', next.trim());
@@ -206,14 +197,22 @@
     const channelGrid = document.getElementById('channel-grid');
     const selectionCountEl = document.getElementById('grid-selection-count');
 
+    let activeMedia = vid;
+
     // --- Media Error Handling ---
     vid.onerror = () => {
-        console.error("Video Error:", vid.error);
-        statusEl.innerHTML = `<span style="color:#e74c3c;">🔴 Video Load Error: ${vid.error?.message || 'Code ' + vid.error?.code}</span>`;
+        console.warn("Video Load Error or Not Found (Headless). Switching to audio driver.");
+        vid.style.display = 'none';
+        aud.style.display = 'block';
+        aud.controls = true;
+        activeMedia = aud;
+        statusEl.innerHTML = `<span style="color:#f1c40f;">🎵 Audio-only recording loaded</span>`;
     };
     aud.onerror = () => {
         console.error("Audio Error:", aud.error);
-        statusEl.innerHTML = `<span style="color:#e74c3c;">🔴 Audio Load Error: ${aud.error?.message || 'Code ' + aud.error?.code}</span>`;
+        if (aud.error) {
+            statusEl.innerHTML = `<span style="color:#e74c3c;">🔴 Audio Load Error: ${aud.error?.message || 'Code ' + aud.error?.code}</span>`;
+        }
     };
 
     const FRAME_STEP = 0.05; // 20Hz step
@@ -229,6 +228,13 @@
     let maxTime = 0;
     let trackedAddrs = [];
     let channelRoles = {};
+    
+    // Training Workflow State
+    let trainingCorrections = [];
+    let isAwaitingEndClick = false;
+    let pendingStartT = 0;
+    let pendingLabel = '';
+    let pendingType = ''; // 'vibe' or 'transient'
 
     function initWS() {
         ws = new WebSocket(P_WS_URL);
@@ -276,10 +282,10 @@
     });
 
     function stepFrame(dir) {
-        if (!vid.src) return;
-        vid.pause();
-        const target = Math.max(0, Math.min(maxTime, vid.currentTime + (dir * FRAME_STEP)));
-        vid.currentTime = target;
+        if (!activeMedia.src) return;
+        activeMedia.pause();
+        const target = Math.max(0, Math.min(maxTime, activeMedia.currentTime + (dir * FRAME_STEP)));
+        activeMedia.currentTime = target;
         updateStatusDisplay();
     }
 
@@ -332,6 +338,12 @@
         selectedAddrs.clear();
         trackedAddrs = [];
         channelRoles = {};
+
+        // reset ui for fallback logic
+        vid.style.display = 'block';
+        aud.style.display = 'none';
+        aud.controls = false;
+        activeMedia = vid;
 
         // 1. Load native un-muxed files side-by-side
         vid.src = `${P_API_BASE}/recordings/${folder}/video.mp4`;
@@ -484,6 +496,32 @@
                 ctx.fillText(label, x1 + width/2, performanceHeight/2, width - 4);
             }
         });
+        
+        // Draw User Training Corrections Overlay
+        trainingCorrections.forEach((c, i) => {
+            const x1 = (c.s / maxTime) * w;
+            const x2 = (c.e / maxTime) * w;
+            const width = Math.max(2, x2 - x1);
+            
+            // Adjust height depending on Vibe vs Transient to allow overlapping view
+            const yOffset = c.type === 'vibe' ? 0 : performanceHeight / 2;
+            const hOffset = performanceHeight / 2;
+            
+            let fillColor = 'rgba(255, 255, 255, 0.4)'; // fallback
+            if (c.label === 'steady') fillColor = 'rgba(136, 136, 136, 0.5)';
+            else if (c.label === 'building') fillColor = 'rgba(241, 196, 15, 0.5)';
+            else if (c.label === 'tension') fillColor = 'rgba(155, 89, 182, 0.5)';
+            else if (c.label === 'dropping') fillColor = 'rgba(255, 255, 255, 0.5)';
+            else if (c.label === 'chill') fillColor = 'rgba(138, 212, 255, 0.5)';
+            else if (c.label === 'mid') fillColor = 'rgba(255, 224, 102, 0.5)';
+            else if (c.label === 'high') fillColor = 'rgba(255, 138, 221, 0.5)';
+            
+            ctx.fillStyle = fillColor;
+            ctx.fillRect(x1, yOffset, width, hOffset);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x1, yOffset, width, hOffset);
+        });
 
         // --- DRAW PRESETS ---
 
@@ -560,12 +598,12 @@
 
     function updateStatusDisplay() {
         if (maxTime > 0) {
-            const pct = vid.currentTime / maxTime;
+            const pct = activeMedia.currentTime / maxTime;
             playhead.style.left = `${Math.min(100, Math.max(0, pct * 100))}%`;
             
-            const frame = logData.find(f => f.t >= vid.currentTime);
+            const frame = logData.find(f => f.t >= activeMedia.currentTime);
             if (frame) {
-                let txt = `Time: ${vid.currentTime.toFixed(2)}s`;
+                let txt = `Time: ${activeMedia.currentTime.toFixed(2)}s`;
                 if (frame.a) {
                     const vb = (frame.a.vb || 'mid').toUpperCase();
                     const tr = (frame.a.tr || 'steady');
@@ -602,26 +640,47 @@
         aud.currentTime = vid.currentTime; 
         updateStatusDisplay(); 
     };
+    
+    // Audio standalone bindings (for headless mode)
+    aud.onplay = () => { if(activeMedia === aud) document.body.classList.remove('paused'); };
+    aud.onpause = () => { if(activeMedia === aud) document.body.classList.add('paused'); };
+    aud.ontimeupdate = () => { if(activeMedia === aud) updateStatusDisplay(); };
+    aud.onseeked = () => { if(activeMedia === aud) updateStatusDisplay(); };
 
     canvas.addEventListener('click', (e) => {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         const pct = x / canvas.width;
+        const t = pct * maxTime;
+
+        if (isAwaitingEndClick) {
+            // End point selected
+            let endT = t;
+            if (endT < pendingStartT) {
+                // Swap if drawn backwards
+                endT = pendingStartT;
+                pendingStartT = t;
+            }
+            trainingCorrections.push({ type: pendingType, label: pendingLabel, s: pendingStartT, e: endT });
+            isAwaitingEndClick = false;
+            drawTimeline();
+            
+            // Show save/undo buttons
+            document.getElementById('btn-undo-train').style.display = 'inline-block';
+            document.getElementById('btn-save-train').style.display = 'inline-block';
+            return;
+        }
         
         // Check if clicking Performance Row
         if (y < performanceHeight) {
-            const t = pct * maxTime;
-            const seg = perfSegments.find(s => t >= s.s && t <= s.e);
-            if (seg) {
-                activeLabelReq = seg;
-                document.getElementById('segment-info').innerText = `Segment: ${seg.s.toFixed(2)}s - ${seg.e.toFixed(2)}s (Original: ${seg.tr})`;
-                document.getElementById('correction-modal').style.display = 'flex';
-            }
+            pendingStartT = t;
+            document.getElementById('segment-info').innerText = `Start: ${t.toFixed(2)}s. Click a Type below.`;
+            document.getElementById('correction-modal').style.display = 'flex';
             return;
         }
 
-        vid.currentTime = pct * maxTime;
+        activeMedia.currentTime = t;
     });
 
     function closeLabeler() {
@@ -629,25 +688,67 @@
         activeLabelReq = null;
     }
 
-    function submitLabel(newLabel) {
-        if (!activeLabelReq || !currentSessionId) return;
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-            alert("Not connected to backend");
-            return;
+    function submitLabel(type, newLabel) {
+        pendingType = type;
+        pendingLabel = newLabel;
+        isAwaitingEndClick = true;
+        closeLabeler();
+        // Give UI hint
+        statusEl.innerHTML = `<span style="color:#27ae60;">Select end point on timeline for ${newLabel.toUpperCase()}...</span>`;
+    }
+
+    function undoCorrection() {
+        trainingCorrections.pop();
+        drawTimeline();
+        if (trainingCorrections.length === 0) {
+            document.getElementById('btn-undo-train').style.display = 'none';
+            document.getElementById('btn-save-train').style.display = 'none';
         }
+    }
+
+    async function saveTraining() {
+        if (!currentSessionId || logData.length === 0) return;
         
-        ws.send(JSON.stringify({
-            type: 'label_transient',
-            sessionId: currentSessionId,
-            start_t: activeLabelReq.s,
-            end_t: activeLabelReq.e,
-            label: newLabel
+        // Strip DMX and presets from logData
+        const cleanData = logData.map(f => ({
+            t: f.t,
+            a: f.a
         }));
+        
+        const payload = {
+            session: currentSessionId,
+            data: cleanData,
+            corrections: trainingCorrections
+        };
+        
+        document.getElementById('btn-save-train').innerText = 'Saving...';
+        
+        try {
+            const res = await fetch(`${P_API_BASE}/api/training/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                alert(`Training data saved successfully as ${data.file}!`);
+                trainingCorrections = [];
+                document.getElementById('btn-undo-train').style.display = 'none';
+                document.getElementById('btn-save-train').style.display = 'none';
+                document.getElementById('btn-save-train').innerText = '💾 Save Training';
+                drawTimeline();
+            } else {
+                alert("Error saving: " + data.message);
+                document.getElementById('btn-save-train').innerText = '💾 Save Training';
+            }
+        } catch (e) {
+            alert("Error: " + e.message);
+            document.getElementById('btn-save-train').innerText = '💾 Save Training';
+        }
     }
 
     // Auto-load if 'session' param is in URL
     window.onload = () => {
-        const urlParams = new URLSearchParams(window.location.search);
         const folder = urlParams.get('session');
         if (folder) loadRecording(folder);
         resizeCanvas();

@@ -1215,6 +1215,7 @@ async def ws_handler(websocket):
                             name = data.get("name")
                             addresses = data.get("addresses", [])
                             roles = data.get("roles", {})
+                            video_enabled = data.get("video_enabled", True)
                             
                             # BACKEND FALLBACK: If roles are empty (e.g. browser cache), auto-resolve from engine state
                             if not roles and dmx_engine:
@@ -1228,7 +1229,7 @@ async def ws_handler(websocket):
                                             roles[str(addr)] = (ch.get('role') or ch.get('name') or "unknown").lower()
                             
                             print(f"🎬 REC START: {len(addresses)} addresses, Roles: {len(roles)} keys captured", flush=True)
-                            success = recorder.start(name=name, addresses=addresses, roles=roles)
+                            success = recorder.start(name=name, addresses=addresses, roles=roles, video_enabled=video_enabled)
                             await websocket.send(json.dumps({"type": "recording_started", "success": success}))
 
                         elif msg_type == "stop_recording":

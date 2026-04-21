@@ -949,7 +949,7 @@
     </script>
 
     <script type="module">
-        const APP_VERSION = "420260840"; // Stamped by deploy.sh
+        const APP_VERSION = "421260851"; // Stamped by deploy.sh
         import { GoogleGenerativeAI } from "google-genai-sdk";
 
         // Global State
@@ -976,21 +976,21 @@
 
         // STANDARD ROLES & BEHAVIOR TEMPLATES
         const WORKFLOW_ROLES = {
-            "pos_x": { name: "Pan / X-Position", keywords: ["pan", "x pos", "x move", "horizontal", "x position"], behavior: "push", source: "flux" },
-            "pos_y": { name: "Tilt / Y-Position", keywords: ["tilt", "y pos", "y move", "vertical", "y position"], behavior: "push", source: "flux" },
-            "zoom": { name: "Zoom / Size", keywords: ["zoom", "zooming", "scale", "size"], behavior: "sine", source: "vol", speed: 0.05 },
-            "rot_z": { name: "Z-Rotation / Roll", keywords: ["rotation", "spin", "z-rot", "roll", "z rot", "z rotation", "z-rotation", "barrel roll"], behavior: "sine", source: "vol", speed: 0.04 },
-            "rot_x": { name: "X-Rotation (Tilt)", keywords: ["rot x", "tilt roll", "x rotation", "x-rotation", "x rot", "x-rot", "rotate x"], behavior: "sine", source: "vol", speed: 0.04 },
-            "rot_y": { name: "Y-Rotation (Pan)", keywords: ["rot y", "pan roll", "y rotation", "y-rotation", "y rot", "y-rot", "rotate y"], behavior: "sine", source: "vol", speed: 0.04 },
+            "pos_x": { name: "Pan / X-Position", keywords: ["pan", "x pos", "x move", "horizontal", "x position"], behavior: "direct", source: "spectral flux" },
+            "pos_y": { name: "Tilt / Y-Position", keywords: ["tilt", "y pos", "y move", "vertical", "y position"], behavior: "direct", source: "spectral flux" },
+            "zoom": { name: "Zoom / Size", keywords: ["zoom", "zooming", "scale", "size"], behavior: "sine", source: "volume", speed: 0.05 },
+            "rot_z": { name: "Z-Rotation / Roll", keywords: ["rotation", "spin", "z-rot", "roll", "z rot", "z rotation", "z-rotation", "barrel roll"], behavior: "sine", source: "volume", speed: 0.04 },
+            "rot_x": { name: "X-Rotation (Tilt)", keywords: ["rot x", "tilt roll", "x rotation", "x-rotation", "x rot", "x-rot", "rotate x"], behavior: "sine", source: "volume", speed: 0.04 },
+            "rot_y": { name: "Y-Rotation (Pan)", keywords: ["rot y", "pan roll", "y rotation", "y-rotation", "y rot", "y-rot", "rotate y"], behavior: "sine", source: "volume", speed: 0.04 },
             "color_solid": { name: "Color (Solid/Static)", keywords: ["red", "blue", "green", "white", "rgb", "color wheel", "color1"], behavior: "static" },
-            "color_multi": { name: "Color (Multi/Chase)", keywords: ["rainbow", "chase", "multi color", "color chase"], behavior: "square", source: "beat" },
-            "pattern": { name: "Pattern / Gobo", keywords: ["pattern", "gobo", "shape", "listing"], behavior: "square", source: "beat" },
+            "color_multi": { name: "Color (Multi/Chase)", keywords: ["rainbow", "chase", "multi color", "color chase"], behavior: "square", source: "beat phase" },
+            "pattern": { name: "Pattern / Gobo", keywords: ["pattern", "gobo", "shape", "listing"], behavior: "square", source: "beat phase" },
             "beam_fx": { name: "Beam Effect", keywords: ["beam", "fx", "sparkle", "shimmer"], behavior: "static" },
             "grating": { name: "Grating / Split", keywords: ["grating", "grate", "split"], behavior: "static" },
             "drawing": { name: "Drawing / Path", keywords: ["draw", "drawing", "writing"], behavior: "static" },
             "drawing_delay": { name: "Drawing Delay", keywords: ["delay", "draw delay"], behavior: "static" },
-            "strobe": { name: "Strobe / Flash", keywords: ["strobe", "flash", "dots", "shutter"], behavior: "push", source: "flux" },
-            "dimmer": { name: "Master Dimmer", keywords: ["dim", "dimmer", "intensity", "brightness"], behavior: "push", source: "vol" },
+            "strobe": { name: "Strobe / Flash", keywords: ["strobe", "flash", "dots", "shutter"], behavior: "direct", source: "spectral flux" },
+            "dimmer": { name: "Master Dimmer", keywords: ["dim", "dimmer", "intensity", "brightness"], behavior: "direct", source: "volume" },
             "mode": { name: "Functional Mode", keywords: ["mode", "function", "control"], behavior: "static" },
             "clip": { name: "Clip / Boundary", keywords: ["clip", "boundry", "out of bounds", "blanking"], behavior: "static" },
             "group": { name: "Pattern Group", keywords: ["group", "category", "library"], behavior: "static" },
@@ -1225,15 +1225,13 @@ ${limitText}
    RANGE RULE: 
    - ALWAYS bring in the range as the 2 numbers provided (min and max). 
    - NEVER use SHAPE: 'static' for a range (min != max). This freezes motion.
-   - Use 'sine', 'step', or another active shape for ranges.
-
-   Matrix Guidelines:
-    - POS_X, PAN, POS_Y, TILT: Linear Range? [DRIVER: flux, SHAPE: sine, SPEED: 0.5, HOLD: none]. Macro Range? [DRIVER: vol, SHAPE: step, SPEED: 0.1, HOLD: bar].
+   - Use 'sine', 'step', or another a    Matrix Guidelines:
+    - POS_X, PAN, POS_Y, TILT: Linear Range? [DRIVER: spectral flux, SHAPE: sine, SPEED: 0.5, HOLD: none]. Macro Range? [DRIVER: volume, SHAPE: square, SPEED: 0.1, HOLD: bar].
     - ZOOM, FOCUS, IRIS: Linear Range? [DRIVER: bass, SHAPE: sine, SPEED: 0.1, HOLD: none]. 
-    - STROBE, SHUTTER, DIMMER: [DRIVER: vol, SHAPE: saw, SPEED: 1.0, HOLD: none].
-    - COLOR_MULTI, CHASES: [DRIVER: beat, SHAPE: square, SPEED: 0.1, HOLD: peakpause].
-    - COLOR_SOLID, GOBO, INDEXED: Range? [DRIVER: vol, SHAPE: random, SPEED: 0.1, HOLD: floorfreeze]. Single Value? [DRIVER: vol, SHAPE: push, SPEED: 0, HOLD: none].
-    - BEAM_FX, SHIMMER: [DRIVER: high, SHAPE: noise, SPEED: 0.8, HOLD: none].
+    - STROBE, SHUTTER, DIMMER: [DRIVER: volume, SHAPE: saw, SPEED: 1.0, HOLD: none].
+    - COLOR_MULTI, CHASES: [DRIVER: beat phase, SHAPE: square, SPEED: 0.1, HOLD: beat].
+    - COLOR_SOLID, GOBO, INDEXED: Range? [DRIVER: volume, SHAPE: noise, SPEED: 0.1, HOLD: bar]. Single Value? [DRIVER: volume, SHAPE: static, SPEED: 0, HOLD: none].
+    - BEAM_FX, SHIMMER: [DRIVER: highs, SHAPE: noise, SPEED: 0.8, HOLD: none].
 
 5. CALIBRATION: EVERY sub-range rule MUST have a complete 'cal' object:
    - 'cal.min': Start value of range.
@@ -1241,19 +1239,19 @@ ${limitText}
    - 'cal.center': The mathematical middle.
 
 6. KEYWORD LOGIC (PHYSICAL ALIGNMENT):
-   - "STATIC" text in a RANGE (e.g. 0-100): Hardware is motionless. RaveBox MUST drive it. Set [SHAPE] to an active LFO and [HOLD] to 'none'.
-   - "DYNAMIC" or "MACRO" or "AUTO" text in a range: Hardware is moving. Set [SHAPE] to a slow 'step' or 'sine'. NEVER set to 'static'.
+   - "STATIC" text in a RANGE (e.g. 0-100): Hardware is motionless. RaveBox MUST drive it. Set [SHAPE] to an active logic (sine/saw/square/noise) and [HOLD] to 'none'.
+   - "DYNAMIC" or "MACRO" or "AUTO" text in a range: Hardware is moving. Set [SHAPE] to a slow 'noise' or 'sine'. NEVER set to 'static'.
    - "FAST": Speed 0.8-1.0. "SLOW": Speed 0.05-0.15.
 
-7. ENGINE SPECIFICATIONS:
-   - DRIVERS: bass, mid, high, vol, flux, impact, beat, bar.
-   - SHAPES: sine, saw, square, noise, step, random, push, pull. (RESERVE 'static' ONLY for explicit user overrides).
-   - HOLD TYPES: none, floorfreeze, peakpause, beat, bar.
+7. ENGINE SPECIFICATIONS (MANDATORY LOGIC SET):
+   - SOURCES: bass, mids, highs, volume, spectral flux, impact, beat phase, bar phase, 2 bar phase, 4 bar phase, bin 0, bin 1, bin 2, bin 3, bin 4, bin 5.
+   - LOGICS: static, direct, sine, square, saw, noise, beat phase, bar phase.
+   - HOLD TYPES: none, beat, bar, 2 bar, 4 bar.
 
 8. CHANNEL FUNCTION AWARENESS (for relational user prompts):
    - Understand channel relationships. "X rotation" = rot_x, "Y rotation" = rot_y, "Z rotation" = rot_z.
-   - Understand relational instructions like "if zoom is at 127, rotation should be below 127" — this means the rotation channel's cal.max should be less than 127 when zoom's center is 127.
    - Pan = pos_x, Tilt = pos_y, Zoom = zoom, Roll/Spin = rot_z.
+= zoom, Roll/Spin = rot_z.
 
 9. VIBE RULES & SYNC GROUPS:
    The "vibe" field controls WHEN a rule activates. It supports sync group numbers (1, 2, 3) for multi-fixture coordination.
@@ -1278,11 +1276,11 @@ OUTPUT JSON SCHEMA:
        { 
          "vibe": "any", 
          "description": "Short summary",
-         "source": "vol", 
-         "behavior": "sine", 
-         "speed": 0.5,
-         "hold_type": "none",
-         "cal": { "min": 0, "center": 64, "max": 127 } 
+          "source": "volume", 
+          "behavior": "sine", 
+          "speed": 0.5,
+          "hold_type": "none",
+          "cal": { "min": 0, "center": 127, "max": 255 } 
        }
      ] 
   ]
@@ -1664,7 +1662,7 @@ OUTPUT JSON SCHEMA:
             const range = max - min;
             
             // 1. STATIC RULE: Pure point values are always static
-            if (range < 1) return { behavior: 'static', source: 'vol', speed: 0 };
+            if (range < 1) return { behavior: 'static', source: 'volume', speed: 0 };
 
             // 2. CATEGORIZATION
             const STANDARD = ['pos_x', 'pos_y', 'zoom', 'rot_x', 'rot_y', 'rot_z'];
@@ -1683,21 +1681,21 @@ OUTPUT JSON SCHEMA:
 
             // 5. BEHAVIOR MAPPING MATRIX
             if (STANDARD.includes(role)) {
-                if (slot === '.0') return { behavior: (useAltSource ? 'noise' : 'sine'), source: 'flux', speed: 0.1 * speedJitter };
-                if (slot === '.1') return { behavior: 'square', source: 'vol', speed: 0.05 * speedJitter };
-                return { behavior: (useAltSource ? 'saw' : 'noise'), source: 'flux', speed: 0.15 * speedJitter };
+                if (slot === '.0') return { behavior: (useAltSource ? 'noise' : 'sine'), source: 'spectral flux', speed: 0.1 * speedJitter };
+                if (slot === '.1') return { behavior: 'square', source: 'volume', speed: 0.05 * speedJitter };
+                return { behavior: (useAltSource ? 'saw' : 'noise'), source: 'spectral flux', speed: 0.15 * speedJitter };
             }
 
             if (BASE.includes(role)) {
-                if (slot === '.0') return { behavior: 'push', source: 'vol', speed: 0.5 * speedJitter };
-                if (slot === '.1') return { behavior: 'saw', source: 'vol', speed: 1.0 * speedJitter };
-                return { behavior: 'step', source: 'bar', speed: 0.2 * speedJitter };
+                if (slot === '.0') return { behavior: 'direct', source: 'volume', speed: 0.5 * speedJitter };
+                if (slot === '.1') return { behavior: 'saw', source: 'volume', speed: 1.0 * speedJitter };
+                return { behavior: 'noise', source: 'bar phase', speed: 0.2 * speedJitter };
             }
 
             // DEFAULT: EFFECT GROUP
-            if (slot === '.0') return { behavior: 'step', source: 'beat', speed: 0.1 * speedJitter };
-            if (slot === '.1') return { behavior: 'random', source: 'high', speed: 0.4 * speedJitter };
-            return { behavior: (useAltSource ? 'noise' : 'random'), source: 'high', speed: 0.25 * speedJitter };
+            if (slot === '.0') return { behavior: 'square', source: 'beat phase', speed: 0.1 * speedJitter };
+            if (slot === '.1') return { behavior: 'noise', source: 'highs', speed: 0.4 * speedJitter };
+            return { behavior: (useAltSource ? 'noise' : 'sine'), source: 'highs', speed: 0.25 * speedJitter };
         };
 
         window.updateRole = (idx, newRole) => {

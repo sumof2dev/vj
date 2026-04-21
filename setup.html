@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=420260840">
+<link rel="stylesheet" href="setup.css?v=421260851">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
@@ -541,6 +541,18 @@
                     <div id="rec-status" class="rec-status">
                         <span class="rec-dot"></span> REC <span id="rec-timer" style="margin-left:8px; font-family:monospace;">00:00</span>
                     </div>
+                    <div id="test-vibe-badge" style="
+                        font-size: 10px;
+                        font-weight: 900;
+                        letter-spacing: 1px;
+                        text-transform: uppercase;
+                        padding: 3px 10px;
+                        border-radius: 20px;
+                        background: rgba(255,255,255,0.05);
+                        border: 1px solid #333;
+                        color: #666;
+                        transition: background 0.4s, color 0.4s, border-color 0.4s;
+                    ">VIBE —</div>
                 </div>
                 <div style="display:flex; gap:8px;">
                     <button id="btn-mute-others" class="btn btn-sm" onclick="toggleMuteOthers()" 
@@ -553,6 +565,18 @@
                 </div>
             </div>
             <div id="active-presets-bar" class="active-presets-bar"></div>
+        <div id="test-event-log" style="
+            max-height: 72px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 10px;
+            color: #666;
+            padding: 4px 8px;
+            border-top: 1px solid #1a1a1a;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 2px;
+        "></div>
         </div>
 
         <div id="test-live-feed-container">
@@ -591,11 +615,11 @@
 
     </div>
 
-<script src="shared_setup.js?v=420260840"></script>
-<script src="live_controller.js?v=420260840"></script>
-<script src="profile_logic.js?v=420260840"></script>
-<script src="ai_architect.js?v=420260840"></script>
-<script src="stage_logic.js?v=420260840"></script>
+<script src="shared_setup.js?v=421260851"></script>
+<script src="live_controller.js?v=421260851"></script>
+<script src="profile_logic.js?v=421260851"></script>
+<script src="ai_architect.js?v=421260851"></script>
+<script src="stage_logic.js?v=421260851"></script>
 <script>window.onload = () => { 
     console.log("🚀 VJ Manager starting (UI Refreshed)..."); 
     // All routing and landing logic (redirects, tab switching) 

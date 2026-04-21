@@ -137,12 +137,12 @@ var saveDB = window.saveDB || function() { };
 Task: Update a behavior profile based on specific user feedback for channels and rules.
 Context: 
 - Input: Current Mappings (2D array) and a Map of Instructions.
-- Available Sources: vol, bass, mid, high, flux, beat, bar, impact, bin_0, bin_1, bin_2, bin_3, bin_4, bin_5.
-- Available Behaviors: static, push, pull, sine, saw, square, noise, random, step.
-- Available Hold Types: none, floorfreeze, peakpause, beat, bar.
+- Available Sources: volume, bass, mids, highs, spectral flux, impact, beat phase, bar phase, 2 bar phase, 4 bar phase, bin 0, bin 1, bin 2, bin 3, bin 4, bin 5.
+- Available Behaviors: static, direct, sine, saw, square, noise, beat phase, bar phase.
+- Available Hold Types: none, beat, bar, 2 bar, 4 bar.
 - GLOBAL ACTORS:
-  - "target": "system" -> Modifies the entire room's physics (DMX and Shaders).
-    - Functions: "rate" (increments time), "intensity" (global master dimmer).
+  - "target": "system" -> Modifies the entire room's timing and intensity.
+    - Functions: "rate" (global speed multiplier), "intensity" (global master dimmer).
     - Scaling: "100" = 100% (Normal), "200" = 200% (Double), "50" = 50% (Slow-Mo).
   - "target": "visualdmx" -> Modifies Visualizer-specific shaders (u_strobe, u_blackout, u_spin, etc).
 
@@ -152,7 +152,7 @@ SCHEMA RULES:
 3. RANGE PRESERVATION: Keep changes within the 'cal' object bounds unless explicitly asked to expand them.
 4. NO STATIC FOR RANGES: Never use behavior 'static' if min != max. Use 'sine' or 'step' instead.
 5. AUDIO-REACTIVE MOVEMENT (Base Profiles):
-   - To create movement, use behaviors like 'sine' (oscillation), 'push' (impact), or 'noise' (organic drift).
+   - To create movement, use behaviors like 'sine' (oscillation), 'direct' (1:1 mapping), or 'noise' (organic drift).
    - The range of movement is governed by 'cal.min' and 'cal.max'.
    - Speed and reactivity are controlled via the 'modifiers' object.
    - Example (Oscillation): To move pan between 50 and 200, set behavior: 'sine', cal.min: 50, cal.max: 200.
@@ -184,9 +184,9 @@ Valid values: "any", "chill", "chill 1", "chill 2", "chill 3", "mid", "mid 1", "
 - When modifying vibes, RANDOMIZE the sync group numbers across different channels to prevent all channels from landing in the same group (which makes output "too busy"). Spread 1, 2, 3 across channels.
 
 THE PLAYBOOK (Style Macros):
-- "B-Side": Shift bin sources (e.g. bin_0 -> bin_1). Invert movement directions. Swap speeds between related axes (Pan/Tilt).
-- "Rhythm": Use 'square' or 'saw' behaviors. Set source to 'impact' or 'beat'. Set 'react' to 1.0 (high sensitivity) and 'speed' to 0.8+. 
-- "Liquid": Use 'sine' or 'noise' behaviors. Set source to 'flux' or 'vol'. Set 'react' to 0.2 (high smoothing) and 'speed' to 0.1-.
+- "B-Side": Shift bin sources (e.g. bin 0 -> bin 1). Invert movement directions. Swap speeds between related axes (Pan/Tilt).
+- "Rhythm": Use 'square' or 'saw' behaviors. Set source to 'impact' or 'beat phase'. Set 'react' to 1.0 (high sensitivity) and 'speed' to 0.8+. 
+- "Liquid": Use 'sine' or 'noise' behaviors. Set source to 'spectral flux' or 'volume'. Set 'react' to 0.2 (high smoothing) and 'speed' to 0.1-.
 
 Output: Return a JSON object with "logic_explanation" (compact summary of what you did) and "mappings" (the updated 2D array).
 - CURRENT LIVE UI STATE (Source of Truth): ${JSON.stringify(currentProfileMappings)}
@@ -772,19 +772,19 @@ Output: Valid raw JSON object only.
 
                         // 2. ROLE-SPECIFIC SURGERY
                         if (role === 'zoom' || role === 'beam_fx') {
-                            rule.behavior = 'push';
+                            rule.behavior = 'direct';
                             rule.source = 'bass';
                             rule.modifiers.speed = 1.0;
                         }
                         
                         if (role === 'pattern' || role === 'gobo') {
-                            rule.behavior = 'step';
-                            rule.source = (Math.random() > 0.7) ? 'beat' : 'bar';
+                            rule.behavior = 'noise';
+                            rule.source = (Math.random() > 0.7) ? 'beat phase' : 'bar phase';
                         }
 
                         if (role.startsWith('pos_') || role.includes('pan') || role.includes('tilt')) {
-                            rule.behavior = 'step';
-                            rule.source = 'beat';
+                            rule.behavior = 'noise';
+                            rule.source = 'beat phase';
                             // Tighten range towards center
                             if (rule.cal) {
                                 const center = rule.cal.center || 127;
@@ -1245,8 +1245,16 @@ IMPORTANT: If the user says "center" without a range, use the fixture's calibrat
 BEHAVIOR OVERRIDES (for movement/strobe/sweep):
 When the user describes dynamic behavior (strobe, sweep, oscillate, pulse), use mode:"behavior" on the channel.
 - {name: "<role>", mode: "behavior", behavior: "<type>", source: "<driver>", modifiers: {speed: 0.5, react: 0.5}, cal: {min: 0, center: 127, max: 255}}
-- behavior types: sine, saw, square, triangle, push, pull, noise, step, forward, pingpong, random, erratic, static
-- source drivers: volume, bass, flux, beat, bar, axis_a, axis_b, axis_c, axis_d, axis_e
+- behavior types: static, direct, sine, saw, square, noise, beat phase, bar phase
+- source drivers: volume, bass, mids, highs, spectral flux, impact, beat phase, bar phase
+- hold types: none, beat, bar, 2 bar, 4 bar
+
+# DRIVER SELECTION GUIDE:
+- "Impact/Percussive": Use 'impact' or 'spectral flux'.
+- "Groove/Steady": Use 'volume' or 'bass'.
+- "Liquid/Cinematic": Use 'sine' or 'noise'.
+- "1:1 Reactive": Use 'direct' logic.
+- "Rhythmic Jump": Use 'square' logic with 'beat phase' source.
 
 AVAILABLE ROLES: pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, generic, dimmer, mode, clip, group
 

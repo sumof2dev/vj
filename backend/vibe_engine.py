@@ -60,10 +60,10 @@ class VibeEngine:
         target = self.current_vibe
         
         # HIGH Thresholds: Enhanced to distinguish "Groove" from "Peak"
-        # 1. Extreme Beat Density (BPM > 180 or very active rhythm)
+        # 1. Extreme Beat Density (BPM > 160 or very active rhythm)
         # 2. Combination of Volume AND Spectral Complexity (The Shimmer)
         high_vol = 0.55 + (0.35 * self.mid_vibe_bias)
-        high_density = 6.5 + (6.0 * self.mid_vibe_bias)
+        high_density = 5.6 + (6.0 * self.mid_vibe_bias)
         # Spectral threshold is biased to protect the Mid core
         high_spectral = 0.38 + (0.15 * (1.0 - self.mid_vibe_bias)) 
         

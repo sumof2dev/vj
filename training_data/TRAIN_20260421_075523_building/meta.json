@@ -1,0 +1,42 @@
+{
+    "timestamp": "2026-04-21T07:45:15.105606",
+    "duration": 40.54,
+    "addresses": [
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34
+    ],
+    "roles": {
+        "18": "dimmer",
+        "19": "clip",
+        "20": "group",
+        "21": "pattern",
+        "22": "zoom",
+        "23": "rot_z",
+        "24": "pos_x",
+        "25": "pos_y",
+        "26": "rot_x",
+        "27": "rot_y",
+        "28": "color_multi",
+        "29": "color_solid",
+        "30": "beam_fx",
+        "31": "drawing",
+        "32": "drawing",
+        "33": "beam_fx",
+        "34": "grating"
+    }
+}

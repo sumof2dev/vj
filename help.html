@@ -10,7 +10,7 @@
         // Inject cache buster for shared_setup.js
         const v = new URLSearchParams(window.location.search).get('v') || Date.now();
         const script = document.createElement('script');
-        script.src = `shared_setup.js?v=${v}`;
+        script.src = `shared_setup.js?v=421260851${v}`;
         document.head.appendChild(script);
     </script>
 
@@ -559,18 +559,20 @@
 
                 <div class="help-card">
                     <h3>1. API Credentials</h3>
-                    <div class="form-group">
-                        <label for="clientId">Client ID</label>
-                        <input type="text" id="clientId" placeholder="Enter your Spotify Client ID">
-                    </div>
-                    <div class="form-group">
-                        <label for="clientSecret">Client Secret</label>
-                        <input type="password" id="clientSecret" placeholder="Enter your Spotify Client Secret">
-                    </div>
-                    <div class="form-group" style="display:none;">
-                        <input type="text" id="redirectUri" value="https://ravebox.love/callback">
-                    </div>
-                    <button class="btn btn-save" onclick="saveCreds()">Save Credentials</button>
+                    <form onsubmit="event.preventDefault(); saveCreds();">
+                        <div class="form-group">
+                            <label for="clientId">Client ID</label>
+                            <input type="text" id="clientId" placeholder="Enter your Spotify Client ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="clientSecret">Client Secret</label>
+                            <input type="password" id="clientSecret" placeholder="Enter your Spotify Client Secret" autocomplete="current-password">
+                        </div>
+                        <div class="form-group" style="display:none;">
+                            <input type="text" id="redirectUri" value="https://ravebox.love/callback">
+                        </div>
+                        <button type="submit" class="btn btn-save">Save Credentials</button>
+                    </form>
                 </div>
 
                 <div class="help-card">
@@ -607,22 +609,19 @@
                     <h3>⚡ The Audio Pipeline</h3>
                     <p>The engine captures system audio using PulseAudio and performs real-time analysis:</p>
                     <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
-                        <li><strong>6 Custom Frequency Bins:</strong> Categorized as <code>Sub+Bass</code>, <code>Low-Mid</code>, <code>Mid</code>, <code>High-Mid</code>, <code>Presence</code>, and <code>Air/High</code>.</li>
-                        <li><strong>Spectral Flux Tracking:</strong> Detects physical "impact" and transient energy shifts rather than just simple volume peaks.
-                        </li>
+                        <li><strong>Standardized Logic Core:</strong> Every DMX channel is driven by a 3-axis rule: <b>Source</b> (what drives it), <b>Logic</b> (how it moves), and <b>Hold</b> (musical timing).</li>
                         <li><strong>Normalization:</strong> A rolling 5-second window maps variable inputs to a perfect 0.0-1.0 range, ensuring the show stays "full" even during quiet track sections.</li>
+                        <li><strong>Spectral Awareness:</strong> 6 surgical bins (bin 0-5) covering Sub, Bass, Low-Mid, Mid, High-Mid, and Treble for precise frequency targeting.</li>
                     </ul>
                 </div>
 
                 <div class="help-card">
-                    <h3>🧠 EDM Intelligence</h3>
-                    <p>RaveBox understands track structure by tracking musical "Transients":</p>
+                    <h3>🧠 Musical Intelligence</h3>
+                    <p>RaveBox understands track structure by monitoring long-term energy trends:</p>
                     <ul style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
-                        <li><strong>Building:</strong> Detected when cumulative energy is rising fast.</li>
-                        <li><strong>Tension:</strong> The "Pre-Drop" state where volume/energy is high but bass
-                            vanishes.</li>
-                        <li><strong>Dropping:</strong> The massive impact state that triggers high-intensity patterns.
-                        </li>
+                        <li><strong>Building:</strong> Detected when cumulative energy is rising fast. Trigger-ranges can activate specifically during builds.</li>
+                        <li><strong>Tension:</strong> The "Pre-Drop" breakdown state where volume/energy is high but bass vanishes.</li>
+                        <li><strong>Dropping:</strong> The massive impact state that triggers high-intensity patterns for 6 seconds.</li>
                     </ul>
                 </div>
 
@@ -630,9 +629,9 @@
                     <h3>🎨 Layered DMX Logic</h3>
                     <p>Commands pass through a 4-layer priority stack before reaching the fixtures:</p>
                     <ol style="padding-left:1.2rem; color:var(--text-dim); font-size:0.9rem;">
-                        <li><strong>Spatial & Frequency Logic:</strong> LFOs (Sine, Tri, Saw) or <b>Direct Frequency Mapping</b> (pinpointing the most dominant EQ bin) mapped to your stage dimensions.</li>
+                        <li><strong>Standardized Behavior Logic:</strong> Selection of linear oscillators (Sine, Saw, Square), <b>Direct Mapping</b>, or musical Phase Ramps (Beat/Bar).</li>
                         <li><strong>Base Presets:</strong> Animated scenes like "Lissajous" or "Voxel Tunnel" provide the rhythmic foundation.</li>
-                        <li><strong>System Triggers (High Priority):</strong> Preset-driven overlays (e.g., "Machine Gun" or "Wonky" presets) that automatically punch through when specific vibe, transient, or EQ conditions are met. These can even override global blackouts.</li>
+                        <li><strong>System Triggers (High Priority):</strong> Preset-driven overlays (e.g., "Machine Gun" or "Wonky" presets) that automatically punch through when specific vibe, transient, or EQ conditions are met.</li>
                         <li><strong>Manual Overrides (Performance):</strong> Direct additive injections from the UI or physical Gamepads. Manual frequency control acts as a layer <i>on top</i> of the automated analysis.</li>
                     </ol>
                 </div>
@@ -812,16 +811,15 @@ dtoverlay=hifiberry-dacplus</pre>
     </div>
 
     <script>
-        // Global variables provided by shared_setup.js or defined here
+        // Global variables provided by shared_setup.js (do not re-declare with let/const)
         let logInterval = null;
-        let LAUNCHER_API = null;
 
         // Lab State (Global)
         window.labRunning = false;
         let labLastTick = Date.now();
         let labBuffer = [];
         let labChart = null;
-        let latestAudioState = {
+        let labAudioState = {
             vol: 0, bass: 0, mid: 0, high: 0, flux: 0, bpm: 120,
             bins: [0,0,0,0,0,0], beat: false, lastBeatAt: 0,
             beat_phase: 0, beat_count: 0
@@ -1038,7 +1036,7 @@ dtoverlay=hifiberry-dacplus</pre>
         }
 
         // --- CALIBRATION LOGIC ---
-        let ws = null;
+        // ws is defined globally in shared_setup.js
         let ws_retries = 0;
         function connectWS() {
              const savedPort = localStorage.getItem('vj_ws_port') || '8765';
@@ -1265,34 +1263,35 @@ dtoverlay=hifiberry-dacplus</pre>
         function parseBinaryState(buffer) {
             const dv = new DataView(buffer);
             // Layout (Total 595 bytes): m_time(f32), flux..bpm(6x f32), bins(6x f32), beat..pad(4x u8), axis..
-            latestAudioState.flux = dv.getFloat32(4, true);
-            latestAudioState.bass = dv.getFloat32(8, true);
-            latestAudioState.mid = dv.getFloat32(12, true);
-            latestAudioState.high = dv.getFloat32(16, true);
-            latestAudioState.vol = dv.getFloat32(20, true);
-            latestAudioState.bpm = dv.getFloat32(24, true);
+            labAudioState.flux = dv.getFloat32(4, true);
+            labAudioState.bass = dv.getFloat32(8, true);
+            labAudioState.mid = dv.getFloat32(12, true);
+            labAudioState.high = dv.getFloat32(16, true);
+            labAudioState.vol = dv.getFloat32(20, true);
+            labAudioState.bpm = dv.getFloat32(24, true);
             
-            latestAudioState.bins = [];
-            for (let i = 0; i < 6; i++) latestAudioState.bins.push(dv.getFloat32(28 + i * 4, true));
+            labAudioState.bins = [];
+            for (let i = 0; i < 6; i++) labAudioState.bins.push(dv.getFloat32(28 + i * 4, true));
 
             const beat = dv.getUint8(52) === 1;
-            if (beat && !latestAudioState._lastBeat) {
-                latestAudioState.lastBeatAt = Date.now();
-                latestAudioState.beat_count++;
+            if (beat && !labAudioState._lastBeat) {
+                labAudioState.lastBeatAt = Date.now();
+                labAudioState.beat_count++;
             }
-            latestAudioState._lastBeat = beat;
-            latestAudioState.beat = beat;
+            labAudioState._lastBeat = beat;
+            labAudioState.beat = beat;
 
             // Approximate beat_phase locally if not in binary payload yet
-            const msPerBeat = 60000 / (latestAudioState.bpm || 120);
-            const elapsed = Date.now() - latestAudioState.lastBeatAt;
-            latestAudioState.beat_phase = Math.min(1.0, elapsed / msPerBeat);
+            const msPerBeat = 60000 / (labAudioState.bpm || 120);
+            const elapsed = Date.now() - labAudioState.lastBeatAt;
+            labAudioState.beat_phase = Math.min(1.0, elapsed / msPerBeat);
         }
 
         function openBehaviorLab() {
             document.getElementById('behaviorLabModal').style.display = 'flex';
             const sel = document.getElementById('labBehaviorSelect');
-            sel.innerHTML = window.EASY_DESCRIPTORS.map(d => `<option value="${d.id}">${d.label}</option>`).join('');
+            const descriptors = window.EASY_DESCRIPTORS || [];
+            sel.innerHTML = descriptors.map(d => `<option value="${d.id}">${d.label}</option>`).join('');
             
             initLabChart();
             window.labRunning = true;
@@ -1321,20 +1320,29 @@ dtoverlay=hifiberry-dacplus</pre>
                 // Set dropdown values
                 const srcSelect = document.getElementById('labSourceSelect');
                 const behSelect = document.getElementById('labBehaviorSelectSpecific');
+                const holdSelect = document.getElementById('labHoldSelect');
                 
                 if (srcSelect && d.source) srcSelect.value = d.source;
                 if (behSelect && d.behavior) behSelect.value = d.behavior;
+                if (holdSelect) {
+                    holdSelect.value = (d.modifiers ? d.modifiers.hold_type : d.hold_type) || 'none';
+                }
 
                 // Sync sliders
                 const sSlider = document.getElementById('labSpeed');
                 const rSlider = document.getElementById('labReact');
                 if (sSlider) {
-                    sSlider.value = d.speed || 0.5;
+                    sSlider.value = d.modifiers ? d.modifiers.speed : (d.speed || 0.5);
                     document.getElementById('labSpeedVal').textContent = parseFloat(sSlider.value).toFixed(2);
                 }
                 if (rSlider) {
-                    rSlider.value = d.react || 0.8;
+                    rSlider.value = d.modifiers ? d.modifiers.react : (d.react || 0.8);
                     document.getElementById('labReactVal').textContent = parseFloat(rSlider.value).toFixed(2);
+                }
+
+                // Special case for Static Value
+                if (d.behavior === 'static' && d.value !== undefined) {
+                    document.getElementById('labCenter').value = d.value;
                 }
 
                 // Sync UI Center to Relative Midpoint
@@ -1352,6 +1360,7 @@ dtoverlay=hifiberry-dacplus</pre>
                     labChart.update('none');
                 }
             }
+            syncLabProbe();
         }
 
         function initLabChart() {
@@ -1382,6 +1391,33 @@ dtoverlay=hifiberry-dacplus</pre>
                             return gradient;
                         },
                         tension: 0.2, // Smooth interpolation
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Max',
+                        data: Array(count).fill(255),
+                        borderColor: 'rgba(255, 50, 50, 0.4)',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Min',
+                        data: Array(count).fill(0),
+                        borderColor: 'rgba(255, 50, 50, 0.4)',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Mid',
+                        data: Array(count).fill(127),
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        fill: false,
                         pointRadius: 0
                     }]
                 },
@@ -1416,6 +1452,16 @@ dtoverlay=hifiberry-dacplus</pre>
             
             if (labChart) {
                 labChart.data.datasets[0].data = labBuffer;
+                
+                // Update reference lines
+                const c_min = parseInt(document.getElementById('labMin').value) || 0;
+                const c_max = parseInt(document.getElementById('labMax').value) || 255;
+                const c_center = parseInt(document.getElementById('labCenter').value) || 127;
+                
+                labChart.data.datasets[1].data = Array(labChart.data.datasets[1].data.length).fill(c_max);
+                labChart.data.datasets[2].data = Array(labChart.data.datasets[2].data.length).fill(c_min);
+                labChart.data.datasets[3].data = Array(labChart.data.datasets[3].data.length).fill(c_center);
+                
                 labChart.update('none');
             }
             requestAnimationFrame(labLoop);
@@ -1434,7 +1480,7 @@ dtoverlay=hifiberry-dacplus</pre>
                 modifiers: {
                     speed: parseFloat(document.getElementById('labSpeed').value),
                     react: parseFloat(document.getElementById('labReact').value),
-                    hold_type: premade.modifiers ? premade.modifiers.hold_type : (premade.hold_type || 'none')
+                    hold_type: document.getElementById('labHoldSelect').value
                 },
                 cal: {
                     min: parseInt(document.getElementById('labMin').value) || 0,
@@ -1464,7 +1510,7 @@ dtoverlay=hifiberry-dacplus</pre>
                 behavior: document.getElementById('labBehaviorSelectSpecific').value,
                 speed: parseFloat(document.getElementById('labSpeed').value),
                 react: parseFloat(document.getElementById('labReact').value),
-                hold_type: premade.modifiers ? premade.modifiers.hold_type : (premade.hold_type || 'none'),
+                hold_type: document.getElementById('labHoldSelect').value,
                 rel_center: parseFloat(rel_center.toFixed(3))
             };
 
@@ -1509,7 +1555,7 @@ dtoverlay=hifiberry-dacplus</pre>
                 behavior: document.getElementById('labBehaviorSelectSpecific').value,
                 speed: parseFloat(document.getElementById('labSpeed').value),
                 react: parseFloat(document.getElementById('labReact').value),
-                hold_type: (premade.modifiers ? premade.modifiers.hold_type : premade.hold_type) || 'none',
+                hold_type: document.getElementById('labHoldSelect').value,
                 rel_center: parseFloat(rel_center.toFixed(3))
             };
 
@@ -1543,12 +1589,16 @@ dtoverlay=hifiberry-dacplus</pre>
         function populateLabSelects() {
             const srcSelect = document.getElementById('labSourceSelect');
             const behSelect = document.getElementById('labBehaviorSelectSpecific');
+            const holdSelect = document.getElementById('labHoldSelect');
             
             if (srcSelect && window.SOURCES) {
                 srcSelect.innerHTML = window.SOURCES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
             }
             if (behSelect && window.BEHAVIORS) {
                 behSelect.innerHTML = window.BEHAVIORS.map(b => `<option value="${b.id}">${b.label}</option>`).join('');
+            }
+            if (holdSelect && window.HOLD_TYPES) {
+                holdSelect.innerHTML = window.HOLD_TYPES.map(h => `<option value="${h.id}">${h.label.toUpperCase()}</option>`).join('');
             }
         }
 
@@ -1589,6 +1639,9 @@ dtoverlay=hifiberry-dacplus</pre>
                                 <!-- Populated via JS -->
                             </select>
                             <select id="labBehaviorSelectSpecific" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 100px;" onchange="syncLabProbe()">
+                                <!-- Populated via JS -->
+                            </select>
+                            <select id="labHoldSelect" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 80px; color: var(--success);" onchange="syncLabProbe()">
                                 <!-- Populated via JS -->
                             </select>
                             <button class="btn btn-save" style="padding: 0 12px; font-size: 0.65rem; background: var(--accent); height: 32px; width: auto; margin-right: 5px;" onclick="saveLabAsDefault()">

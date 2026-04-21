@@ -18,17 +18,24 @@ function normalizeProfileData(profile) {
         behaviors: { 
             'lfo': 'sine', 'lfo_sine': 'sine', 
             'lfo_saw': 'saw', 'lfo_square': 'square', 
-            'kinematic_push': 'push', 'kinematic_pull': 'pull',
-            'direct': 'push',
+            'push': 'direct', 'pull': 'direct',
+            'kinematic_push': 'direct', 'kinematic_pull': 'direct',
             'noise_simplex': 'noise', 'noise_perlin': 'noise',
-            'markov_adjacent': 'random', 'markov_erratic': 'random',
-            'step_forward': 'step', 'step_pingpong': 'step'
+            'random': 'noise', 'step': 'noise',
+            'markov_adjacent': 'noise', 'markov_erratic': 'noise',
+            'step_forward': 'noise', 'step_pingpong': 'noise'
         },
         sources: {
-            'low': 'bass', 'volume': 'vol', 'raw': 'vol', 'ratio': 'flux'
+            'low': 'bass', 'mid': 'mids', 'high': 'highs',
+            'vol': 'volume', 'raw': 'volume', 
+            'flux': 'spectral flux', 'ratio': 'spectral flux',
+            'beat': 'beat phase', 'bar': 'bar phase',
+            'bin_0': 'bin 0', 'bin_1': 'bin 1', 'bin_2': 'bin 2', 
+            'bin_3': 'bin 3', 'bin_4': 'bin 4', 'bin_5': 'bin 5'
         },
         holds: {
-            'slowly': 'floorfreeze', 'quickly': 'peakpause'
+            'slowly': 'none', 'quickly': 'none',
+            'floorfreeze': 'none', 'peakpause': 'none'
         }
     };
 
@@ -92,7 +99,7 @@ function loadProfileChannels() {
                 vibe: 'any',
                 description: '',
                 behavior: 'static',
-                source: 'vol',
+                source: 'volume',
                 cal: { min: 0, center: 127, max: 255 },
                 modifiers: { speed: 0.5, react: 0.5, hold_type: 'none' },
                 value: 0
@@ -247,7 +254,7 @@ async function saveCurrentRuleAsPremade(chIdx, ruleIdx) {
     const payload = {
         label: label,
         behavior: rule.behavior,
-        source: rule.source || 'vol',
+        source: rule.source || 'volume',
         speed: rule.modifiers ? rule.modifiers.speed : 0.1,
         react: rule.modifiers ? rule.modifiers.react : 0.5,
         hold_type: rule.modifiers ? rule.modifiers.hold_type : 'none',
@@ -364,11 +371,7 @@ function renderVibeRuleHtml(chIdx, ruleIdx, rule, rulesCount) {
                 </select>
                 <select onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'modifiers.hold_type', this.value); loadProfileChannels();" 
                         class="glass-select" style="color:var(--success); font-size:9px; padding:2px; min-width:65px; ${isStatic ? 'opacity:0.3; pointer-events:none;' : ''}">
-                    <option value="none" ${rule.modifiers.hold_type === 'none' ? 'selected' : ''}>NONE</option>
-                    <option value="floorfreeze" ${rule.modifiers.hold_type === 'floorfreeze' ? 'selected' : ''}>FLOORFREEZE</option>
-                    <option value="peakpause" ${rule.modifiers.hold_type === 'peakpause' ? 'selected' : ''}>PEAKPAUSE</option>
-                    <option value="beat" ${rule.modifiers.hold_type === 'beat' ? 'selected' : ''}>BEAT</option>
-                    <option value="bar" ${rule.modifiers.hold_type === 'bar' ? 'selected' : ''}>BAR</option>
+                    ${(window.HOLD_TYPES || []).map(h => `<option value="${h.id}" ${rule.modifiers.hold_type === h.id ? 'selected' : ''}>${h.label.toUpperCase()}</option>`).join('')}
                 </select>
 
                 <!-- SAVE AS PREMADE -->
@@ -432,11 +435,11 @@ function applyVariety() {
             rules.forEach(rule => {
                 // 1. Shift Audio Bin (Source Mapping)
                 // If source is a bin, increment it. If it's a generic source, move it to a bin.
-                if (rule.source.startsWith('bin_')) {
-                    const binNum = parseInt(rule.source.split('_')[1]);
-                    rule.source = `bin_${(binNum + (count - 1)) % 6}`;
-                } else if (['bass', 'vol', 'low'].includes(rule.source)) {
-                    rule.source = `bin_${(count - 1) % 6}`;
+                if (rule.source.startsWith('bin ')) {
+                    const binNum = parseInt(rule.source.split(' ')[1]);
+                    rule.source = `bin ${(binNum + (count - 1)) % 6}`;
+                } else if (['bass', 'volume', 'low'].includes(rule.source)) {
+                    rule.source = `bin ${(count - 1) % 6}`;
                 }
 
                 // 2. Micro-Desync via Speed / React
@@ -606,7 +609,7 @@ function addVibeRule(chIdx) {
         vibe: 'any',
         description: 'New Trigger State',
         behavior: 'static',
-        source: 'vol',
+        source: 'volume',
         cal: { min: 0, center: 127, max: 255 },
         modifiers: { speed: 0.5, react: 0.5, hold_type: 'none' },
         value: 127
@@ -781,8 +784,8 @@ function renderPresetTriggers() {
             inputs = `
                 <input type="number" value="${gt}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
                 <span>&le;</span>
-                <select onchange="updateTriggerVal(${idx}, 'target', this.value)">
-                    ${['SUB', 'BASS', 'KICK', 'LOW_MID', 'MID', 'HIGH_MID', 'PRESENCE', 'BRILLIANCE'].map(b => `<option value="${b}" ${target === b ? 'selected' : ''}>${b}</option>`).join('')}
+                <select onchange="updateTriggerVal(${idx}, 'target', this.value)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); color:var(--accent); font-weight:bold;">
+                    ${['BIN 0', 'BIN 1', 'BIN 2', 'BIN 3', 'BIN 4', 'BIN 5'].map(b => `<option value="${b}" ${target === b ? 'selected' : ''}>${b}</option>`).join('')}
                 </select>
                 <span>&le;</span>
                 <input type="number" value="${lt}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">

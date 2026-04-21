@@ -2,17 +2,18 @@
     {
         "id": "pulse_beat",
         "label": "Pulse with Beat",
-        "behavior": "square",
+        "behavior": "sine",
         "source": "impact",
-        "speed": 0,
-        "react": 0.6,
-        "hold_type": "none"
+        "speed": 1,
+        "react": 0.45,
+        "hold_type": "none",
+        "rel_center": 0.498
     },
     {
         "id": "smooth_drift",
         "label": "Smooth Drift",
         "behavior": "noise",
-        "source": "bar",
+        "source": "bar phase",
         "speed": 0.1,
         "react": 0.65,
         "hold_type": "none"
@@ -20,26 +21,27 @@
     {
         "id": "bass_pump",
         "label": "Bass Pump",
-        "behavior": "pull",
-        "source": "beat",
+        "behavior": "direct",
+        "source": "beat phase",
         "speed": 1,
         "react": 1,
-        "hold_type": "floorfreeze"
+        "hold_type": "none"
     },
     {
         "id": "snap_phrase",
         "label": "Snap Phrase",
-        "behavior": "step",
-        "source": "flux",
-        "speed": 0.1,
-        "react": 0.3,
-        "hold_type": "beat"
+        "behavior": "sine",
+        "source": "volume",
+        "speed": 0.7,
+        "react": 0.65,
+        "hold_type": "bar",
+        "rel_center": 0.498
     },
     {
         "id": "pause_jitter",
         "label": "Pause-Jitter Sine",
         "behavior": "noise",
-        "source": "beat",
+        "source": "beat phase",
         "speed": 0,
         "react": 0.95,
         "hold_type": "none"
@@ -47,11 +49,12 @@
     {
         "id": "rapid_climb",
         "label": "Rapid Climb",
-        "behavior": "square",
-        "source": "vol",
+        "behavior": "saw",
+        "source": "spectral flux",
         "speed": 0.5,
         "react": 0.85,
-        "hold_type": "none"
+        "hold_type": "none",
+        "rel_center": 0.498
     },
     {
         "id": "static_hold",
@@ -64,7 +67,7 @@
         "id": "cycle_random",
         "label": "Random - On Beat",
         "behavior": "noise",
-        "source": "beat",
+        "source": "beat phase",
         "speed": 0.3,
         "react": 0.4,
         "hold_type": "beat",
@@ -73,7 +76,7 @@
     {
         "id": "inverse_bass",
         "label": "Inverse Bass",
-        "behavior": "pull",
+        "behavior": "direct",
         "source": "bass",
         "speed": 0.4,
         "react": 0.8,
@@ -83,11 +86,32 @@
     {
         "id": "kick_drum_step",
         "label": "kick drum step",
-        "behavior": "random",
-        "source": "bin_0",
+        "behavior": "beat phase",
+        "source": "bin 0",
         "speed": 0.4,
         "react": 0.65,
         "hold_type": "none",
         "rel_center": 0.208
+    },
+    {
+        "id": "hi_hat",
+        "label": "hi hat",
+        "behavior": "beat phase",
+        "source": "highs",
+        "speed": 1,
+        "react": 1,
+        "hold_type": "none",
+        "rel_center": 0.498
+    },
+    {
+        "id": "hi_hat",
+        "label": "hi hat",
+        "behavior": "static",
+        "source": "bass",
+        "speed": 1,
+        "react": 1,
+        "hold_type": "none",
+        "rel_center": 0.498,
+        "value": 127
     }
 ]

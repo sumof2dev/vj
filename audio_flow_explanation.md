@@ -50,6 +50,15 @@ The engine categorizes the musical "emotional state" using a rhythm-aware hybrid
   - **Post-Drop Lockout:** After `dropping`, the engine enforces a **5.0s steady lockout**. It will not detect new builds or tension during this recovery period.
   - **Cinematic Holds:** Strict hold times (Building: 0.5s, Tension: 1.5s, Dropping: 6.0s) ensure visual transitions feel intentional.
 
+### 2.1 Vibe Logic Thresholds (Gold Standards)
+To maintain consistent "shimmer" and "groove" across all genres, the engine uses the following bias-adjusted formulas to determine the "High" vibe:
+- **High Density (BPM):** `5.6 + (6.0 * bias)`
+  - *Target: ~160 BPM (8.0 beats/3s) at default 0.4 bias.*
+- **High Volume:** `0.55 + (0.35 * bias)`
+- **High Spectral:** `0.38 + (0.15 * (1.0 - bias))`
+- **Chill Threshold:** `vol < 0.20 * (1.0 - bias)` AND `density < 2.0 * (1.0 - bias)`.
+
+
 ---
 
 ## 3. DMX Logic Engine (`dmx_engine.py`)

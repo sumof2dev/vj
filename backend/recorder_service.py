@@ -37,7 +37,7 @@ class Recorder:
         self.monitored_addresses = []
         self.last_dmx_log_time = 0 # Throttling for 1Hz logging
         
-    def start(self, name=None, addresses=None, roles=None, samplerate=44100):
+    def start(self, name=None, addresses=None, roles=None, samplerate=44100, video_enabled=True):
         if self.is_recording:
             return False
             
@@ -81,43 +81,46 @@ class Recorder:
             print(f"🔴 Recorder Audio Error: {e}")
 
         # --- Video Setup ---
-        try:
-            video_path = os.path.join(self.session_dir, "video_raw.mp4")
-            # We'll initialize VideoWriter on the first frame to get the correct resolution
-            self.video_writer = None
-            
-            def video_worker():
-                frame_interval = 1.0 / self.fps
-                while self.is_recording:
-                    loop_start = time.time()
-                    try:
-                        resp = requests.get("http://127.0.0.1:8004/capture", timeout=1)
-                        if resp.status_code == 200:
-                            nparr = np.frombuffer(resp.content, np.uint8)
-                            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                            if frame is not None:
-                                if self.video_writer is None:
-                                    h, w = frame.shape[:2]
-                                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                                    self.video_writer = cv2.VideoWriter(video_path, fourcc, self.fps, (w, h))
-                                
-                                self.video_writer.write(frame)
-                    except Exception as e:
-                        print(f"🔴 Recorder Video Fetch Error: {e}")
-                    
-                    # Precision sleep
-                    elapsed = time.time() - loop_start
-                    to_sleep = max(0, frame_interval - elapsed)
-                    time.sleep(to_sleep)
+        if video_enabled:
+            try:
+                video_path = os.path.join(self.session_dir, "video_raw.mp4")
+                # We'll initialize VideoWriter on the first frame to get the correct resolution
+                self.video_writer = None
                 
-                if self.video_writer:
-                    self.video_writer.release()
-                    self.video_writer = None
+                def video_worker():
+                    frame_interval = 1.0 / self.fps
+                    while self.is_recording:
+                        loop_start = time.time()
+                        try:
+                            resp = requests.get("http://127.0.0.1:8004/capture", timeout=1)
+                            if resp.status_code == 200:
+                                nparr = np.frombuffer(resp.content, np.uint8)
+                                frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                                if frame is not None:
+                                    if self.video_writer is None:
+                                        h, w = frame.shape[:2]
+                                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                                        self.video_writer = cv2.VideoWriter(video_path, fourcc, self.fps, (w, h))
+                                    
+                                    self.video_writer.write(frame)
+                        except Exception as e:
+                            print(f"🔴 Recorder Video Fetch Error: {e}")
+                        
+                        # Precision sleep
+                        elapsed = time.time() - loop_start
+                        to_sleep = max(0, frame_interval - elapsed)
+                        time.sleep(to_sleep)
                     
-            self.video_thread = threading.Thread(target=video_worker, daemon=True)
-            self.video_thread.start()
-        except Exception as e:
-            print(f"🔴 Recorder Video Error: {e}")
+                    if self.video_writer:
+                        self.video_writer.release()
+                        self.video_writer = None
+                        
+                self.video_thread = threading.Thread(target=video_worker, daemon=True)
+                self.video_thread.start()
+            except Exception as e:
+                print(f"🔴 Recorder Video Error: {e}")
+        else:
+            print("📷 Live Feed is off, skipping video recording.")
 
         print(f"🎬 Started Recording: {self.session_dir}")
         return True

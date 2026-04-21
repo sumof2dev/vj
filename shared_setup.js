@@ -30,14 +30,21 @@ var hiddenTestChannels = JSON.parse(localStorage.getItem('vj_hidden_test_channel
 var currentTab = localStorage.getItem('vj_active_tab') || 'tab-test';
 var muteOthersActive = false;
 var mutedTestAddresses = new Set();
+var tempChannels = [];
+var latestOverrides = new Set();
+var dmx_connected = false;
 
 // Routing Flags
-window.isCustomSubdomain = false;
-window.isCustomTunnel = false;
-window.isOriginalCloud = false;
-window.apiHost = "";
-window.wsHost = "";
-window.host = "";
+var isCustomSubdomain = false;
+var isCustomTunnel = false;
+var isOriginalCloud = false;
+var apiHost = "";
+var wsHost = "";
+var host = "";
+var LAUNCHER_API = "";
+var BACKEND_ROOT = "";
+var API_BASE_ROOT = "";
+var API_BASE = "";
 
 window.KNOWN_ROLES = [
     'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y',
@@ -48,46 +55,57 @@ window.KNOWN_ROLES = [
 ];
 
 window.BEHAVIORS = [
-    { id: 'static', label: 'Static Value' },
-    { id: 'push', label: 'Push (Kinetic)' },
-    { id: 'pull', label: 'Pull (Kinetic)' },
+    { id: 'static', label: 'Static' },
+    { id: 'direct', label: 'Direct' },
     { id: 'sine', label: 'Sine' },
     { id: 'saw', label: 'Saw' },
     { id: 'square', label: 'Square' },
-    { id: 'noise', label: 'Noise (Smooth)' },
-    { id: 'random', label: 'Random (Step)' },
-    { id: 'step', label: 'Step Forward' }
+    { id: 'noise', label: 'Noise' },
+    { id: 'beat phase', label: 'Beat Phase' },
+    { id: 'bar phase', label: 'Bar Phase' }
 ];
 
 window.EASY_DESCRIPTORS = [
-    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "square", "source": "impact", "speed": 0, "react": 0.6, "hold_type": "none"},
-    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "noise", "source": "bar", "speed": 0.1, "react": 0.65, "hold_type": "none"},
-    {"id": "bass_pump", "label": "Bass Pump", "behavior": "pull", "source": "beat", "speed": 1, "react": 1, "hold_type": "floorfreeze"},
-    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "step", "source": "flux", "speed": 0.1, "react": 0.3, "hold_type": "beat"},
-    {"id": "pause_jitter", "label": "Pause-Jitter Sine", "behavior": "noise", "source": "beat", "speed": 0, "react": 0.95, "hold_type": "none"},
-    {"id": "rapid_climb", "label": "Rapid Climb", "behavior": "square", "source": "vol", "speed": 0.5, "react": 0.85, "hold_type": "none"},
+    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "sine", "source": "impact", "speed": 1, "react": 0.45, "hold_type": "none", "rel_center": 0.498},
+    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "noise", "source": "bar phase", "speed": 0.1, "react": 0.65, "hold_type": "none"},
+    {"id": "bass_pump", "label": "Bass Pump", "behavior": "direct", "source": "beat phase", "speed": 1, "react": 1, "hold_type": "none"},
+    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "sine", "source": "volume", "speed": 0.7, "react": 0.65, "hold_type": "bar", "rel_center": 0.498},
+    {"id": "pause_jitter", "label": "Pause-Jitter Sine", "behavior": "noise", "source": "beat phase", "speed": 0, "react": 0.95, "hold_type": "none"},
+    {"id": "rapid_climb", "label": "Rapid Climb", "behavior": "saw", "source": "spectral flux", "speed": 0.5, "react": 0.85, "hold_type": "none", "rel_center": 0.498},
     {"id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5},
-    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "noise", "source": "beat", "speed": 0.3, "react": 0.4, "hold_type": "beat", "rel_center": 0.498},
-    {"id": "inverse_bass", "label": "Inverse Bass", "behavior": "pull", "source": "bass", "speed": 0.4, "react": 0.8, "hold_type": "none", "rel_center": 0.5},
-    {"id": "kick_drum_step", "label": "kick drum step", "behavior": "random", "source": "bin_0", "speed": 0.4, "react": 0.65, "hold_type": "none", "rel_center": 0.208},
+    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "noise", "source": "beat phase", "speed": 0.3, "react": 0.4, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "inverse_bass", "label": "Inverse Bass", "behavior": "direct", "source": "bass", "speed": 0.4, "react": 0.8, "hold_type": "none", "rel_center": 0.5},
+    {"id": "kick_drum_step", "label": "kick drum step", "behavior": "beat phase", "source": "bin 0", "speed": 0.4, "react": 0.65, "hold_type": "none", "rel_center": 0.208},
+    {"id": "hi_hat", "label": "hi hat", "behavior": "beat phase", "source": "highs", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "hi_hat", "label": "hi hat", "behavior": "static", "source": "bass", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498, "value": 127},
     // PREMADE_ANCHOR
 ];
 
 window.SOURCES = [
     { id: 'bass', label: 'Bass' },
-    { id: 'mid', label: 'Mid' },
-    { id: 'high', label: 'High' },
-    { id: 'vol', label: 'Volume' },
-    { id: 'flux', label: 'Spectral Flux' },
-    { id: 'impact', label: 'Impact (Attack)' },
-    { id: 'beat', label: 'Beat Phase' },
-    { id: 'bar', label: 'Bar Phase' },
-    { id: 'bin_0', label: 'Bin 0 (Sub)' },
-    { id: 'bin_1', label: 'Bin 1 (Bass)' },
-    { id: 'bin_2', label: 'Bin 2 (Low-Mid)' },
-    { id: 'bin_3', label: 'Bin 3 (Mid)' },
-    { id: 'bin_4', label: 'Bin 4 (High-Mid)' },
-    { id: 'bin_5', label: 'Bin 5 (Treble)' }
+    { id: 'mids', label: 'Mids' },
+    { id: 'highs', label: 'Highs' },
+    { id: 'volume', label: 'Volume' },
+    { id: 'spectral flux', label: 'Spectral Flux' },
+    { id: 'impact', label: 'Impact' },
+    { id: 'beat phase', label: 'Beat Phase' },
+    { id: 'bar phase', label: 'Bar Phase' },
+    { id: '2 bar phase', label: '2 Bar Phase' },
+    { id: '4 bar phase', label: '4 Bar Phase' },
+    { id: 'bin 0', label: 'Bin 0' },
+    { id: 'bin 1', label: 'Bin 1' },
+    { id: 'bin 2', label: 'Bin 2' },
+    { id: 'bin 3', label: 'Bin 3' },
+    { id: 'bin 4', label: 'Bin 4' },
+    { id: 'bin 5', label: 'Bin 5' }
+];
+
+window.HOLD_TYPES = [
+    { id: 'none', label: 'None' },
+    { id: 'beat', label: 'Beat' },
+    { id: 'bar', label: 'Bar' },
+    { id: '2 bar', label: '2 Bar' },
+    { id: '4 bar', label: '4 Bar' }
 ];
 
 
@@ -107,10 +125,13 @@ var urlParams = new URLSearchParams(setupLocation.search);
 var queryHost = urlParams.get('host');
 if (queryHost) {
     localStorage.setItem('vj_backend_host', queryHost.trim());
+    // 1.5 Clean the URL to avoid re-triggering or cluttered URL bars
+    const newUrl = setupLocation.pathname + setupLocation.hash;
+    window.history.replaceState({}, '', newUrl);
 }
 
 savedHost = localStorage.getItem('vj_backend_host');
-var host = savedHost || (onHostedDomain ? '' : setupHostname);
+host = savedHost || (onHostedDomain ? '' : setupHostname);
 
 window.isCustomSubdomain = setupHostname.endsWith('.ravebox.love') && !onHostedDomain;
 window.isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
@@ -124,13 +145,15 @@ window.wsHost = window.isCustomTunnel ? 'ws-' + baseHost : host;
 window.host = host;
 
 var PROTO = (setupLocation.protocol === 'file:') ? 'http:' : setupLocation.protocol;
-var API_BASE_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : '')));
-var BACKEND_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : '')));
+API_BASE_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : '')));
+BACKEND_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : '')));
 
 window.API_BASE_ROOT = API_BASE_ROOT;
 window.BACKEND_ROOT = BACKEND_ROOT;
+window.LAUNCHER_API = BACKEND_ROOT;
+LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "420260840";
+window.APP_VERSION = "421260851";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -415,7 +438,7 @@ var sendIt = window.sendIt = async function(event) {
 
 // --- BOOT COMPLETE ---
 window.RAVEBOX_READY = true;
-console.log("✅ RaveBox Core Ready (v424)");
+console.log("✅ RaveBox Core Ready (v426)");
 
 
 // --- CORE ROUTING (BULLETPROOF) ---

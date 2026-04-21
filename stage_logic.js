@@ -573,6 +573,66 @@ var switchTab = window.switchTab || function() { };
             sendCompactTestOverride(fixtureId, idx, Math.max(0, Math.min(255, current + delta)));
         }
 
+        /* --- VIBE DISPLAY & EVENT LOG --- */
+        const VIBE_STYLES = {
+            chill: { bg: 'rgba(0,100,180,0.25)', border: '#2a5a8a', color: '#8ad4ff' },
+            mid:   { bg: 'rgba(120,100,0,0.25)', border: '#8a7a00', color: '#ffe066' },
+            high:  { bg: 'rgba(160,0,80,0.25)',  border: '#8a2a5a', color: '#ff8add' },
+        };
+
+        function updateVibeDisplay(vibe, variant, transient, vibeChanged, transientChanged) {
+            const badge = document.getElementById('test-vibe-badge');
+            const log = document.getElementById('test-event-log');
+
+            if (badge && vibe) {
+                const style = VIBE_STYLES[vibe] || { bg: 'rgba(255,255,255,0.05)', border: '#333', color: '#666' };
+                badge.style.background = style.bg;
+                badge.style.borderColor = style.border;
+                badge.style.color = style.color;
+                const variantTag = (variant !== undefined && variant !== null) ? `<sup style="font-size:8px; opacity:0.8;">${variant}</sup>` : '';
+                badge.innerHTML = `VIBE ${vibe.toUpperCase()}${variantTag}`;
+            }
+
+            if (log) {
+                const now = new Date();
+                const ts = String(now.getHours()).padStart(2,'0') + ':' +
+                           String(now.getMinutes()).padStart(2,'0') + ':' +
+                           String(now.getSeconds()).padStart(2,'0');
+
+                if (vibeChanged && vibe) {
+                    const variantStr = (variant !== undefined && variant !== null) ? `·${variant}` : '';
+                    const style = VIBE_STYLES[vibe] || {};
+                    const entry = document.createElement('div');
+                    entry.style.color = style.color || '#aaa';
+                    entry.textContent = `${ts}  VIBE → ${vibe.toUpperCase()}${variantStr}`;
+                    log.prepend(entry);
+                }
+                if (transientChanged && transient) {
+                    const entry = document.createElement('div');
+                    entry.style.color = { steady: '#555', building: '#a29bfe', tension: '#f9ca24', dropping: '#eb4d4b' }[transient] || '#888';
+                    entry.textContent = `${ts}  STATE → ${transient.toUpperCase()}`;
+                    log.prepend(entry);
+                }
+
+                // Trim log to last 80 entries
+                while (log.children.length > 80) log.removeChild(log.lastChild);
+            }
+        }
+
+        function addTestLogEntry(text, color) {
+            const log = document.getElementById('test-event-log');
+            if (!log) return;
+            const now = new Date();
+            const ts = String(now.getHours()).padStart(2,'0') + ':' +
+                       String(now.getMinutes()).padStart(2,'0') + ':' +
+                       String(now.getSeconds()).padStart(2,'0');
+            const entry = document.createElement('div');
+            entry.style.color = color || '#666';
+            entry.textContent = `${ts}  ${text}`;
+            log.prepend(entry);
+            while (log.children.length > 80) log.removeChild(log.lastChild);
+        }
+
         /* --- RECORDING LOGIC --- */
         function toggleRecording() {
             if (isRecording) stopRecording();
@@ -616,8 +676,7 @@ var switchTab = window.switchTab || function() { };
             });
 
             if (addresses.size === 0) {
-                console.warn("Recording attempted with 0 addresses found in DOM.");
-                return alert("No active channels to record. Please ensure fixtures are loaded in the Test Hub.");
+                console.warn("Recording started with 0 test strips. Relying on backend full stage capture.");
             }
 
             console.log("🎬 Sending Start Recording:", { addrCount: addresses.size, roles: Object.keys(roles).length });
@@ -626,7 +685,8 @@ var switchTab = window.switchTab || function() { };
                 type: 'start_recording',
                 name: null,
                 addresses: Array.from(addresses),
-                roles: roles
+                roles: roles,
+                video_enabled: testFeedInterval !== null
             }));
         }
 
@@ -766,18 +826,30 @@ var switchTab = window.switchTab || function() { };
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.type === 'state') {
+                        const prevVibe = latestAudioState.vibe;
+                        const prevVariant = latestAudioState.vibe_variant;
+                        const prevTransient = latestAudioState.transient;
+
                         if (msg.vibe) latestAudioState.vibe = msg.vibe;
+                        if (msg.vibe_variant !== undefined) latestAudioState.vibe_variant = msg.vibe_variant;
                         if (msg.transient) latestAudioState.transient = msg.transient;
                         if (msg.blackout !== undefined) latestAudioState.blackout = msg.blackout;
                         if (msg.overrides) latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
                         if (msg.active_presets) {
                             activePresets = msg.active_presets;
                             latestAudioState.manual_active_presets = msg.active_presets;
-                            // Track that these have been activated at least once
                             msg.active_presets.forEach(p => everActivatedPresets.add(p));
                         }
                         if (msg.lissajous_active !== undefined) latestAudioState.lissajous_active = msg.lissajous_active;
                         if (msg.calibrated_preset_active !== undefined) latestAudioState.calibrated_preset_active = msg.calibrated_preset_active;
+
+                        // Update vibe badge + log on change
+                        const vibeChanged = msg.vibe && (msg.vibe !== prevVibe || msg.vibe_variant !== prevVariant);
+                        const transientChanged = msg.transient && msg.transient !== prevTransient;
+                        if (vibeChanged || transientChanged) {
+                            updateVibeDisplay(latestAudioState.vibe, latestAudioState.vibe_variant, latestAudioState.transient, vibeChanged, transientChanged);
+                        }
+
                         if (document.getElementById('tab-test')?.classList.contains('active')) {
                             updateTestNumericalValues();
                         }
@@ -812,6 +884,7 @@ var switchTab = window.switchTab || function() { };
                             document.getElementById('btn-record').innerText = "⏹ Stop Rec";
                             document.getElementById('btn-record').style.borderColor = "var(--danger)";
                             recordingTimerInterval = setInterval(updateRecordingTimer, 1000);
+                            addTestLogEntry('── REC START ──', '#eb4d4b');
                         }
                     } else if (msg.type === 'recording_stopped') {
                         isRecording = false;
@@ -819,6 +892,7 @@ var switchTab = window.switchTab || function() { };
                         document.getElementById('rec-status').classList.remove('active');
                         document.getElementById('btn-record').innerText = "🔴 Record";
                         document.getElementById('btn-record').style.borderColor = "#444";
+                        addTestLogEntry('── REC STOP ──', '#444');
                         
                         if (msg.path) {
                             const folder = msg.path.split('/').pop();
@@ -920,12 +994,12 @@ var switchTab = window.switchTab || function() { };
 
             if (source === 'bass' || (source === 'raw' && binIdx === 0)) {
                 energy = latestAudioState.bass || bins[0] || 0;
-            } else if (source === 'mid') {
+            } else if (source === 'mid' || source === 'mids') {
                 energy = latestAudioState.mid || bins[2] || 0;
-            } else if (source === 'high') {
+            } else if (source === 'high' || source === 'highs') {
                 energy = latestAudioState.high || bins[5] || 0;
-            } else if (source.startsWith('bin_')) {
-                const bIdx = parseInt(source.split('_')[1]);
+            } else if (source.startsWith('bin_') || source.startsWith('bin ')) {
+                const bIdx = parseInt(source.replace('bin_', '').replace('bin ', ''));
                 energy = bins[bIdx] || 0;
             } else if (source === 'raw') {
                 energy = bins[binIdx] || 0;
@@ -933,7 +1007,7 @@ var switchTab = window.switchTab || function() { };
                 energy = (latestAudioState.ratios || [0,0,0,0,0,0])[binIdx] || 0;
             } else if (source === 'attack' || source === 'impact') {
                 energy = (latestAudioState.attacks || [0,0,0,0,0,0])[binIdx] || 0;
-            } else if (source === 'flux') {
+            } else if (source === 'flux' || source === 'spectral flux') {
                 energy = (mods.flux !== undefined) ? (mods.flux * 0.5) : (latestAudioState.flux || 0) * 0.3;
             } else if (source === 'volume' || source === 'vol') {
                 energy = mods.vol !== undefined ? mods.vol : (latestAudioState.vol || 0);
@@ -1246,7 +1320,7 @@ var switchTab = window.switchTab || function() { };
             let energy = 0;
             const mods = latestAudioState.mods || {};
             if (source === 'raw') energy = (latestAudioState.bins || [0])[binIdx] || 0;
-            else if (source === 'flux') energy = (mods.flux !== undefined) ? (mods.flux * 0.5) : (latestAudioState.flux || 0) * 0.3;
+            else if (source === 'flux' || source === 'spectral flux') energy = (mods.flux !== undefined) ? (mods.flux * 0.5) : (latestAudioState.flux || 0) * 0.3;
             else if (source === 'volume') energy = mods.vol !== undefined ? mods.vol : (latestAudioState.vol || 0);
 
             if (behavior === 'lfo') {
