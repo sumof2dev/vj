@@ -1,5 +1,5 @@
 #!/bin/bash
-# VJ Tunnel Setup - Automates the Cloudflare Global Ingress (Option 1)
+# VJ Tunnel Setup - Pure Sandbox & Zero-Trust Installer
 # -----------------------------------------------------------------
 
 set -e
@@ -9,24 +9,46 @@ YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 DIM='\033[2m'
+MAGENTA='\033[0;35m'
 
 echo -e "${CYAN}====================================================${NC}"
-echo -e "${CYAN}   🚀 RaveBox Global Access - Tunnel Setup          ${NC}"
+echo -e "${CYAN}   🚀 RaveBox Zero-Trust Tunnel Installer          ${NC}"
 echo -e "${CYAN}====================================================${NC}"
 
-# 0. Safety Guard - Cloud-Managed Detection
-if cloudflared tunnel list | grep -q "ravebox-backend"; then
-    echo -e "${RED}⚠️  CLOUD-MANAGED TUNNEL DETECTED (ravebox-backend)${NC}"
-    echo -e "This system is configured for a ${GREEN}Cloud-First Production Flow${NC}."
-    echo -e "Manual scripts are strictly forbidden from modifying this configuration."
-    echo -e ""
-    echo -e "To change ingress rules or hostnames, use the ${CYAN}Cloudflare Zero Trust Dashboard${NC}."
-    echo -e "Refer to ${YELLOW}setup.md${NC} for documentation on the Golden Architecture."
-    exit 1
+# 0. Ghost Purge (SD Clone Protection)
+# Aggressively delete local configs to prevent split-brain routing from cloned devices
+echo -e "\n${YELLOW}[Step 1/3] Hunting for Ghost Configurations...${NC}"
+if systemctl is-active --quiet cloudflare-tunnel.service; then
+    echo -e "${RED}   - Stopping active cloudflare-tunnel.service${NC}"
+    sudo systemctl stop cloudflare-tunnel.service || true
 fi
 
+if systemctl is-enabled --quiet cloudflare-tunnel.service 2>/dev/null; then
+    echo -e "${RED}   - Disabling cloudflare-tunnel.service${NC}"
+    sudo systemctl disable cloudflare-tunnel.service || true
+fi
 
-# Architecture Detection
+GHOST_CLEARED=false
+if [ -d "$HOME/.cloudflared" ]; then
+    echo -e "${MAGENTA}   - Purging local ~/.cloudflared directory${NC}"
+    rm -rf "$HOME/.cloudflared"
+    GHOST_CLEARED=true
+fi
+
+if [ -d "/etc/cloudflared" ]; then
+    echo -e "${MAGENTA}   - Purging system /etc/cloudflared directory${NC}"
+    sudo rm -rf "/etc/cloudflared"
+    GHOST_CLEARED=true
+fi
+
+if [ "$GHOST_CLEARED" = true ]; then
+    echo -e "${GREEN}✅ Ghost Configurations Purged. Device is purely sandboxed.${NC}"
+else
+    echo -e "${GREEN}✅ No Ghost Configurations found. System is clean.${NC}"
+fi
+
+# 1. Architecture Detection
+echo -e "\n${YELLOW}[Step 2/3] Resolving Dependencies...${NC}"
 ARCH=$(uname -m)
 case "$ARCH" in
     aarch64)  CF_ARCH="arm64" ;;
@@ -35,72 +57,27 @@ case "$ARCH" in
     *)        CF_ARCH="amd64" ;;
 esac
 
-# Check for cloudflared
+# 2. Package Installation
 if ! command -v cloudflared &> /dev/null; then
     echo "📦 Downloading cloudflared for $ARCH..."
     curl -L --output cloudflared.deb "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$CF_ARCH.deb"
     sudo dpkg -i cloudflared.deb
     rm cloudflared.deb
+    echo -e "${GREEN}✅ cloudflared installed successfully.${NC}"
+else
+    echo -e "${GREEN}✅ cloudflared is already installed.${NC}"
 fi
 
-# 1. Login
-echo -e "\n${YELLOW}[Step 1/3] Cloudflare Authentication${NC}"
-echo "Opening browser for login (or follow the link displayed below)..."
-echo -e "${DIM}Note: You only need to do this once per device.${NC}"
-cloudflared tunnel login
-
-# 2. Name & Create Tunnel
-echo -e "\n${YELLOW}[Step 2/3] Define Your Secret Code${NC}"
-read -p "Enter your unique RaveBox Code (e.g. 'vibe-machine'): " BOX_NAME
-
-if [[ -z "$BOX_NAME" ]]; then
-    echo -e "${RED}❌ Error: Box Name cannot be empty.${NC}"
-    exit 1
-fi
-
-echo "Creating tunnel for $BOX_NAME..."
-cloudflared tunnel create "$BOX_NAME" || { echo -e "${YELLOW}⚠️ Tunnel already exists? Attempting to recover...${NC}"; }
-
-# 3. Auto-Configure Ingress
-echo -e "\n${YELLOW}[Step 3/3] Generating Ingress Rules${NC}"
-CONFIG_DIR="$HOME/.cloudflared"
-mkdir -p "$CONFIG_DIR"
-CONFIG_FILE="$CONFIG_DIR/config.yml"
-
-# Get Tunnel ID
-TUNNEL_ID=$(cloudflared tunnel list | grep "$BOX_NAME" | awk '{print $1}')
-if [[ -z "$TUNNEL_ID" ]]; then
-    echo -e "${RED}❌ Error: Could not find Tunnel ID for $BOX_NAME.${NC}"
-    exit 1
-fi
-CRED_FILE="$CONFIG_DIR/$TUNNEL_ID.json"
-
-cat <<EOF > "$CONFIG_FILE"
-tunnel: $TUNNEL_ID
-credentials-file: $CRED_FILE
-
-ingress:
-  # 1. Main UI & Static Assets (Port 8000)
-  - hostname: $BOX_NAME.ravebox.love
-    service: https://localhost:8000
-    originRequest:
-      noTLSVerify: true
-  
-  # 2. System Admin / Launcher (Port 8001)
-  - hostname: api-$BOX_NAME.ravebox.love
-    service: https://localhost:8001
-    originRequest:
-      noTLSVerify: true
-
-  # 3. DMX Engine WebSocket (Port 8765)
-  - hostname: ws-$BOX_NAME.ravebox.love
-    service: https://localhost:8765
-    originRequest:
-      noTLSVerify: true
-
-  - service: http_status:404
-EOF
-
-echo -e "\n${GREEN}LFG! Your Secret Code '$BOX_NAME' is ready for remote work.${NC}"
-
-echo -e "\n${GREEN}LFG! Your Secret Code '$BOX_NAME' is ready for remote work.${NC}"
+# 3. Halt and Provide Manual Instructions
+echo -e "\n${YELLOW}[Step 3/3] Readiness & Manual Mapping${NC}"
+echo -e "This installation script intentionally ${RED}DOES NOT${NC} connect to Cloudflare."
+echo -e "Your device remains completely sandboxed on its local network."
+echo -e ""
+echo -e "To access this device remotely, you must pair it via the Zero Trust Dashboard:"
+echo -e "1. Go to your Cloudflare Zero Trust Dashboard -> Access -> Tunnels"
+echo -e "2. Create a new tunnel (or select the specific one for this device)"
+echo -e "3. Copy the installation terminal command:"
+echo -e "   ${DIM}(e.g. sudo cloudflared service install eyJhb...)${NC}"
+echo -e "4. Paste and run that explicit command in this terminal."
+echo -e ""
+echo -e "${GREEN}LFG! Device is sandboxed and ready for your command.${NC}"

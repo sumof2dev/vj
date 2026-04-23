@@ -68,6 +68,8 @@ assets/
 
 # Logs
 *.log
+logs/
 
 # antigravity rules
 .agent/rules/setup
+vj_secondary_install.tar.gz

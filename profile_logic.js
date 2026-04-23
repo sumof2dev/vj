@@ -710,8 +710,18 @@ function updatePresetTriggerFields() {
     // No longer needed for single select, we use addTrigger instead
 }
 
-function addEmptyTrigger() {
-    currentPresetTriggers.push({ type: '' });
+function addConditionFromUI() {
+    const typeDrop = document.getElementById('pres-new-trigger-type');
+    const type = typeDrop ? typeDrop.value : 'vibe';
+    
+    let trigger = { type: type };
+    if (type === 'vibe') trigger = { ...trigger, value: 'chill' };
+    else if (type === 'state') trigger = { ...trigger, value: 'building' };
+    else if (type === 'volume') trigger = { ...trigger, less_than: 100, greater_than: 0 };
+    else if (type === 'bin') trigger = { ...trigger, target: 'BIN 0', less_than: 100, greater_than: 0 };
+    else if (type === 'channel') trigger = { ...trigger, target: 1, less_than: 255, greater_than: 0 };
+
+    currentPresetTriggers.push(trigger);
     renderPresetTriggers();
 }
 
@@ -1002,7 +1012,8 @@ async function savePreset(silent = false) {
         const idx = db.presets.findIndex(p => p.id === current_editing_preset_id);
         if (idx !== -1) {
             db.presets[idx].name = name;
-            db.presets[idx].triggers = JSON.parse(JSON.stringify(currentPresetTriggers));
+            // Filter out any accidental empty triggers
+            db.presets[idx].triggers = JSON.parse(JSON.stringify(currentPresetTriggers.filter(t => t.type && t.type !== '')));
             db.presets[idx].overrides = JSON.parse(JSON.stringify(currentPresetOverrides));
         }
     } else {
@@ -1158,6 +1169,6 @@ window.editPreset = editPreset;
 window.deletePreset = deletePreset;
 window.updatePresetFunctionDropdown = updatePresetFunctionDropdown;
 window.renderActivePresets = renderActivePresets;
-window.addEmptyTrigger = addEmptyTrigger;
+window.addConditionFromUI = addConditionFromUI;
 window.resetPresetForm = resetPresetForm;
 window.addOverrideToCurrentPreset = addOverrideToCurrentPreset;

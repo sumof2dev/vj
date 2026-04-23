@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <title>VJ Recording X-Ray Player</title>
     <style>
-        body { background: #0f0f13; color: #fff; font-family: sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
-        .container { width: 100%; max-width: 1200px; height: 100vh; display: flex; flex-direction: column; margin: 0 auto; overflow: hidden; }
+        body { background: #0f0f13; color: #fff; font-family: sans-serif; margin: 0; padding: 0; min-height: 100vh; }
+        .container { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; }
         
-        .sticky-viewer { padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #0f0f13; z-index: 10; border-bottom: 2px solid #222; }
-        .scrollable-content { flex-grow: 1; overflow-y: auto; padding: 20px; }
+        .sticky-viewer { padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #0f0f13; z-index: 10; border-bottom: 2px solid #222; position: sticky; top: 0; }
+        .scrollable-content { padding: 20px; }
 
         .controls { display: flex; gap: 10px; background: #1a1a24; padding: 15px; border-radius: 8px; border: 1px solid #333; justify-content: space-between; align-items: center; }
         .session-info { flex-grow: 1; font-family: monospace; font-size: 14px; color: #aaa; }
@@ -24,9 +24,9 @@
         .video-wrapper { background: #000; border-radius: 8px; overflow: hidden; border: 1px solid #333; display: flex; justify-content: center; align-items: center; min-height: 350px; position: relative; }
         video { max-width: 100%; height: 350px; outline: none; }
         
-        .timeline-wrapper { position: relative; width: 100%; height: 160px; background: #000; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 100%; cursor: text; }
-        .playhead { position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: rgba(255, 255, 255, 0.8); pointer-events: none; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .timeline-wrapper { position: relative; width: 100%; height: 160px; background: #000; border: 1px solid #333; border-radius: 8px; overflow-x: auto; overflow-y: hidden; }
+        canvas { display: block; height: 100%; cursor: crosshair; }
+        .status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; font-family: monospace; font-size: 12px; }
         
         .legend { display: flex; gap: 20px; font-size: 12px; font-weight: bold; justify-content: center; background: #1a1a24; padding: 8px; border-radius: 8px; border: 1px solid #333; }
         .legend span { cursor: pointer; transition: opacity 0.2s; }
@@ -87,7 +87,7 @@
                         Source: <span id="hostDisplay" style="color:#00f2ff; font-weight:bold;">Local</span>
                     </div>
                 </div>
-                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v421260851</span>
+                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v422262138</span>
             </div>
             <div class="playback-controls">
                 <button class="step-btn" title="Step Back (0.05s) - Arrow Left" onclick="stepFrame(-1)">❮</button>
@@ -106,16 +106,26 @@
 
         <div class="timeline-wrapper">
             <canvas id="timeline-canvas"></canvas>
-            <div id="playhead" class="playhead"></div>
         </div>
 
         <div class="legend" id="legend">
-            <span id="leg-b" style="color:#ff4757;" onclick="toggleAudio('b')">— Audio Bass</span>
-            <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Spectral Flux</span>
-            <span id="leg-h" style="color:#1e90ff;" onclick="toggleAudio('h')">— Audio High</span>
-            <span id="leg-vl" style="color:#fff;" onclick="toggleAudio('vl')">— Master Vol</span>
-            <span style="color:#fff; text-shadow: 0 0 5px #fff; cursor: default;">▬▬ DMX Output</span>
-            <span style="color:#fff; opacity:0.3; cursor: default;">| Beat Flash</span>
+            <div style="display:flex; gap:20px;">
+                <span id="leg-b" style="color:#ff4757;" onclick="toggleAudio('b')">— Audio Bass</span>
+                <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Spectral Flux</span>
+                <span id="leg-h" style="color:#1e90ff;" onclick="toggleAudio('h')">— Audio High</span>
+                <span id="leg-vl" style="color:#fff;" onclick="toggleAudio('vl')">— Master Vol</span>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; border-left: 1px solid #333; padding-left: 15px;">
+                <span style="opacity:0.5; font-size: 10px; text-transform: uppercase;">Timeline Zoom</span>
+                <button class="step-btn" onclick="adjustZoom(-1)">−</button>
+                <span id="zoom-val" style="width: 30px; text-align:center;">1x</span>
+                <button class="step-btn" onclick="adjustZoom(1)">+</button>
+                <button class="step-btn" style="width: 50px;" onclick="resetZoom()">Reset</button>
+            </div>
+            <div style="display:flex; gap:15px; opacity:0.6;">
+                <span style="color:#fff; text-shadow: 0 0 5px #fff; cursor: default;">▬▬ DMX Output</span>
+                <span style="color:#fff; cursor: default;">| Beat Flash</span>
+            </div>
         </div>
     </div>
 
@@ -165,7 +175,7 @@
     </div>
 </div>
 
-<script src="shared_setup.js?v=421260851"></script>
+<script src="shared_setup.js?v=422262138"></script>
 
 <script>
     // Routing and endpoints are managed by shared_setup.js
@@ -191,7 +201,6 @@
     const aud = document.getElementById('aud');
     const canvas = document.getElementById('timeline-canvas');
     const ctx = canvas.getContext('2d');
-    const playhead = document.getElementById('playhead');
     const statusEl = document.getElementById('vid-status');
     const sessionDisplay = document.getElementById('session-display');
     const channelGrid = document.getElementById('channel-grid');
@@ -233,8 +242,16 @@
     let trainingCorrections = [];
     let isAwaitingEndClick = false;
     let pendingStartT = 0;
+    let pendingEndT = 0;
     let pendingLabel = '';
     let pendingType = ''; // 'vibe' or 'transient'
+    
+    // Zoom & Scroll State
+    let zoomLevel = 1.0;
+    
+    // Sync Watchdog
+    let syncWatchdog = null;
+    let isSyncing = false;
 
     function initWS() {
         ws = new WebSocket(P_WS_URL);
@@ -266,13 +283,34 @@
     }
 
     function resizeCanvas() {
-        if (canvas.parentElement) {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
+        const wrapper = canvas.parentElement;
+        if (wrapper) {
+            const containerWidth = wrapper.clientWidth;
+            const virtualWidth = containerWidth * zoomLevel;
+            canvas.width = virtualWidth;
+            canvas.height = wrapper.clientHeight;
         }
         drawTimeline();
     }
     window.addEventListener('resize', resizeCanvas);
+
+    function adjustZoom(dir) {
+        const levels = [1.0, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0];
+        let idx = levels.indexOf(zoomLevel);
+        if (idx === -1) idx = 0;
+        
+        idx = Math.max(0, Math.min(levels.length - 1, idx + dir));
+        zoomLevel = levels[idx];
+        
+        document.getElementById('zoom-val').innerText = zoomLevel + 'x';
+        resizeCanvas();
+    }
+
+    function resetZoom() {
+        zoomLevel = 1.0;
+        document.getElementById('zoom-val').innerText = '1x';
+        resizeCanvas();
+    }
 
     // KEYBOARD SCRUBBING
     window.addEventListener('keydown', (e) => {
@@ -334,7 +372,6 @@
         if (!folder) return;
         
         statusEl.innerText = "Loading data...";
-        playhead.style.left = "0%";
         selectedAddrs.clear();
         trackedAddrs = [];
         channelRoles = {};
@@ -472,7 +509,7 @@
         perfSegments.forEach(seg => {
             const x1 = (seg.s / maxTime) * w;
             const x2 = (seg.e / maxTime) * w;
-            const width = x2 - x1;
+            const width = Math.max(1, x2 - x1);
             
             // Vibe Backgrounds
             if (seg.vb === 'high') ctx.fillStyle = 'rgba(255, 50, 50, 0.3)';
@@ -522,6 +559,29 @@
             ctx.lineWidth = 1;
             ctx.strokeRect(x1, yOffset, width, hOffset);
         });
+
+        // Draw Pending Selection Range (before label is assigned)
+        if (isAwaitingEndClick) {
+            const x1 = (pendingStartT / maxTime) * w;
+            const x2 = (pendingEndT / maxTime) * w;
+            const start = Math.min(x1, x2);
+            const width = Math.abs(x2 - x1);
+            
+            ctx.fillStyle = 'rgba(255, 242, 0, 0.4)';
+            ctx.fillRect(start, 0, width, performanceHeight);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(start, 0, width, performanceHeight);
+        }
+
+        // Draw Playhead
+        const playX = (activeMedia.currentTime / maxTime) * w;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.fillRect(playX - 1, 0, 2, h);
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 10;
+        ctx.fillRect(playX - 1, 0, 2, h);
+        ctx.shadowBlur = 0;
 
         // --- DRAW PRESETS ---
 
@@ -598,9 +658,6 @@
 
     function updateStatusDisplay() {
         if (maxTime > 0) {
-            const pct = activeMedia.currentTime / maxTime;
-            playhead.style.left = `${Math.min(100, Math.max(0, pct * 100))}%`;
-            
             const frame = logData.find(f => f.t >= activeMedia.currentTime);
             if (frame) {
                 let txt = `Time: ${activeMedia.currentTime.toFixed(2)}s`;
@@ -617,6 +674,7 @@
                     if (vEl) vEl.innerText = frame.v[addr] !== undefined ? frame.v[addr] : '-';
                 });
             }
+            drawTimeline();
         }
     }
 
@@ -637,9 +695,29 @@
     };
     vid.ontimeupdate = updateStatusDisplay;
     vid.onseeked = () => { 
+        if (isSyncing) return;
         aud.currentTime = vid.currentTime; 
         updateStatusDisplay(); 
     };
+    
+    function startSyncWatchdog() {
+        if (syncWatchdog) clearInterval(syncWatchdog);
+        syncWatchdog = setInterval(() => {
+            if (activeMedia !== vid || vid.paused) return;
+            
+            const diff = vid.currentTime - aud.currentTime;
+            // Catch repeats or large drifts
+            if (Math.abs(diff) > 0.1) {
+                console.log("⏱️ Watchdog Syncing A/V Drift:", diff.toFixed(3));
+                isSyncing = true;
+                aud.currentTime = vid.currentTime;
+                // Double check if audio somehow paused
+                if (!aud.paused && aud.readyState >= 2) aud.play().catch(()=>{});
+                setTimeout(() => isSyncing = false, 100);
+            }
+        }, 500);
+    }
+    startSyncWatchdog();
     
     // Audio standalone bindings (for headless mode)
     aud.onplay = () => { if(activeMedia === aud) document.body.classList.remove('paused'); };
@@ -647,41 +725,54 @@
     aud.ontimeupdate = () => { if(activeMedia === aud) updateStatusDisplay(); };
     aud.onseeked = () => { if(activeMedia === aud) updateStatusDisplay(); };
 
-    canvas.addEventListener('click', (e) => {
+    canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const pct = x / canvas.width;
-        const t = pct * maxTime;
+        const x = (e.clientX - rect.left) + canvas.parentElement.scrollLeft;
+        const t = (x / canvas.width) * maxTime;
 
-        if (isAwaitingEndClick) {
-            // End point selected
-            let endT = t;
-            if (endT < pendingStartT) {
-                // Swap if drawn backwards
-                endT = pendingStartT;
-                pendingStartT = t;
-            }
-            trainingCorrections.push({ type: pendingType, label: pendingLabel, s: pendingStartT, e: endT });
-            isAwaitingEndClick = false;
-            drawTimeline();
-            
-            // Show save/undo buttons
-            document.getElementById('btn-undo-train').style.display = 'inline-block';
-            document.getElementById('btn-save-train').style.display = 'inline-block';
-            return;
-        }
-        
-        // Check if clicking Performance Row
-        if (y < performanceHeight) {
+        if (!isAwaitingEndClick) {
+            // Click 1: Start
             pendingStartT = t;
-            document.getElementById('segment-info').innerText = `Start: ${t.toFixed(2)}s. Click a Type below.`;
+            pendingEndT = t; // initialize
+            isAwaitingEndClick = true;
+            statusEl.innerHTML = `<span style="color:#f1c40f;">Drag or click for END point...</span>`;
+        } else {
+            // Click 2: End
+            pendingEndT = t;
+            const s = Math.min(pendingStartT, pendingEndT);
+            const eT = Math.max(pendingStartT, pendingEndT);
+            
+            pendingStartT = s;
+            pendingEndT = eT;
+            
+            document.getElementById('segment-info').innerText = `Range: ${s.toFixed(2)}s - ${eT.toFixed(2)}s. select type:`;
             document.getElementById('correction-modal').style.display = 'flex';
-            return;
         }
-
-        activeMedia.currentTime = t;
+        drawTimeline();
     });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isAwaitingEndClick) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) + canvas.parentElement.scrollLeft;
+        pendingEndT = (x / canvas.width) * maxTime;
+        drawTimeline();
+    });
+
+    // Also allow seek by right click or if clicking outside performance row
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) + canvas.parentElement.scrollLeft;
+        activeMedia.currentTime = (x / canvas.width) * maxTime;
+    });
+
+    // Helper to find T from mouse for other features
+    function getTimeAtX(clientX) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (clientX - rect.left) + canvas.parentElement.scrollLeft;
+        return (x / canvas.width) * maxTime;
+    }
 
     function closeLabeler() {
         document.getElementById('correction-modal').style.display = 'none';
@@ -689,12 +780,14 @@
     }
 
     function submitLabel(type, newLabel) {
-        pendingType = type;
-        pendingLabel = newLabel;
-        isAwaitingEndClick = true;
+        trainingCorrections.push({ type: type, label: newLabel, s: pendingStartT, e: pendingEndT });
+        isAwaitingEndClick = false;
         closeLabeler();
-        // Give UI hint
-        statusEl.innerHTML = `<span style="color:#27ae60;">Select end point on timeline for ${newLabel.toUpperCase()}...</span>`;
+        drawTimeline();
+        
+        // Show save/undo buttons
+        document.getElementById('btn-undo-train').style.display = 'inline-block';
+        document.getElementById('btn-save-train').style.display = 'inline-block';
     }
 
     function undoCorrection() {

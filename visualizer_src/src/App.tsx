@@ -16,6 +16,8 @@ uniform float u_bass; // 0.0 to 1.5, synchronized to bass impact
 uniform float u_flux; // 0.0 to 1.5, synchronized to overall energy flux
 uniform float u_high; // 0.0 to 1.5, synchronized to high-frequency / hi-hat energy
 uniform float u_vol;  // 0.0 to 1.5, tied to overall volume
+uniform float u_beat_phase; // 0.0 to 1.0, sawtooth ramp synchronized to the beat
+uniform float u_beat_pulse; // 1.0 to 0.0, exponential decay pulse on every beat
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
 uniform sampler2D u_image2;
@@ -34,6 +36,7 @@ uniform float u_time;
 uniform float u_clock;
 uniform float u_bass;
 uniform float u_high;
+uniform float u_beat_pulse;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
 uniform float u_hue;
@@ -46,7 +49,8 @@ void main() {
     float radius = length(uv);
     float angle = atan(uv.y, uv.x);
     
-    float segments = 4.0 + floor(u_bass * 4.0) * 2.0;
+    // Beat pulse expands segments
+    float segments = 4.0 + floor((u_bass + u_beat_pulse * 0.2) * 4.0) * 2.0;
     angle = mod(angle, 6.28318 / segments);
     angle = abs(angle - (3.14159 / segments));
     
@@ -55,6 +59,8 @@ void main() {
     polarUv += u_clock * 0.2; 
     
     vec3 color = texture2D(u_image, fract(polarUv)).rgb;
+    // Beat pulse adds brightness spikes
+    color += u_beat_pulse * 0.1;
     color = clamp((color - 0.1) / 0.9, 0.0, 1.0);
     gl_FragColor = vec4(color, 1.0);
 }`;
@@ -108,6 +114,7 @@ uniform float u_clock;
 uniform float u_flux;
 uniform float u_high;
 uniform float u_bass;
+uniform float u_beat_pulse;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
 
@@ -117,27 +124,26 @@ void main() {
     vec2 uv = vUv - 0.5;
     uv.x *= u_resolution.x / u_resolution.y;
     
+    // Slices jitter aggressively on the beat pulse
     float sliceLine = floor(uv.y * (30.0 + u_bass * 20.0) + u_clock * 8.0);
     
-    // u_flux drives horizontal tearing
-    if (rand(sliceLine) < (u_flux * 0.5)) {
-        uv.x += (u_flux * 0.2) * sin(u_clock * 20.0 + sliceLine);
+    if (rand(sliceLine) < (u_flux * 0.5 + u_beat_pulse * 0.3)) {
+        uv.x += (u_flux * 0.2 + u_beat_pulse * 0.1) * sin(u_clock * 20.0 + sliceLine);
     }
     
-    // u_high drives sharp RGB chromatic aberration
-    float split = u_high * 0.08 * rand(sliceLine + 1.0);
+    float split = (u_high * 0.08 + u_beat_pulse * 0.05) * rand(sliceLine + 1.0);
     
     float r = texture2D(u_image, fract(vec2(uv.x + split, uv.y) + 0.5)).r;
     float g = texture2D(u_image, fract(uv + 0.5)).g;
     float b = texture2D(u_image, fract(vec2(uv.x - split, uv.y) + 0.5)).b;
     
     vec3 color = vec3(r, g, b);
-    
-    // Bass pulse brightness
-    color += u_bass * 0.15;
+    // Double pulse on the beat
+    color += (u_bass * 0.15) + (u_beat_pulse * 0.2);
     
     gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
-}`;
+}
+`;
 
 const FLUX_MELT_SHADER = `
 precision highp float;
@@ -190,6 +196,7 @@ uniform float u_clock;
 uniform float u_flux;
 uniform float u_bass;
 uniform float u_high;
+uniform float u_beat_pulse;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
 
@@ -200,25 +207,21 @@ void main() {
     float radius = length(uv); 
     float angle = atan(uv.y, uv.x);
     
-    // u_flux twists the tunnel dynamically
-    angle += u_flux * 1.5 * radius;
+    angle += (u_flux * 1.5 + u_beat_pulse * 0.5) * radius;
     
     vec2 tunnelUv;
     tunnelUv.x = (angle / 3.14159);
+    tunnelUv.y = (0.2 / (radius + 0.05)) + u_clock * 0.5 + u_bass * 0.2 + u_beat_pulse * 0.1;
     
-    // u_clock drives forward motion, u_bass pushes it forward aggressively
-    tunnelUv.y = (0.2 / (radius + 0.05)) + u_clock * 0.5 + u_bass * 0.2;
-    
-    // High hats make the tunnel walls jitter
-    tunnelUv.x += u_high * 0.05 * sin(tunnelUv.y * 50.0);
+    tunnelUv.x += (u_high * 0.05 + u_beat_pulse * 0.03) * sin(tunnelUv.y * 50.0);
     
     vec3 color = texture2D(u_image, fract(tunnelUv)).rgb;
-    
-    // Darken the deep center of the tunnel
-    color *= smoothstep(0.01, 0.4, radius);
+    // Tunnel walls flash with intensity on beat
+    color *= (smoothstep(0.01, 0.4, radius) + u_beat_pulse * 0.3);
     
     gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
-}`;
+}
+`;
 
 const FRACTAL_CRYSTAL_SHADER = `
 precision highp float;
@@ -706,6 +709,7 @@ export default function App() {
             u_flux: 'uniform float u_flux;',
             u_high: 'uniform float u_high;',
             u_vol: 'uniform float u_vol;',
+            u_beat_phase: 'uniform float u_beat_phase;',
             u_resolution: 'uniform vec2 u_resolution;',
             u_image: 'uniform sampler2D u_image;',
             u_image2: 'uniform sampler2D u_image2;',
@@ -906,6 +910,8 @@ export default function App() {
         u_flux: { value: 0 },
         u_high: { value: 0 },
         u_vol: { value: 0 },
+        u_beat_phase: { value: 0 },
+        u_beat_pulse: { value: 0 },
         u_dual: { value: 0.0 }, // Toggle for 2nd image masking (0.0 or 1.0)
         u_image: { value: new THREE.Texture() },
         u_image2: { value: new THREE.Texture() },
@@ -932,6 +938,7 @@ export default function App() {
     const effSpeedRef = useRef(0.6);
     const effIntensityRef = useRef(1.0);
     const mTimeRef = useRef(0.0);
+    const beatPhaseRef = useRef(0.0);
     const localFlutterRef = useRef(0.0);
 
     useEffect(() => {
@@ -985,8 +992,8 @@ export default function App() {
         let socket: WebSocket | null = null;
         let lastBase = -1;
         let lastFx = -1;
-        const targetMods = { flux: 0, bass: 0, high: 0, vol: 0 };
-        const smoothedMods = { flux: 0, bass: 0, high: 0, vol: 0 };
+        const targetMods = { flux: 0, bass: 0, high: 0, vol: 0, beat_phase: 0 };
+        const smoothedMods = { flux: 0, bass: 0, high: 0, vol: 0, beat_phase: 0 };
         let lastTime = performance.now();
 
         const connect = () => {
@@ -1001,10 +1008,11 @@ export default function App() {
                     targetMods.bass = view.getFloat32(8, true);
                     targetMods.high = view.getFloat32(16, true);
                     targetMods.vol = view.getFloat32(20, true);
-                    effIntensityRef.current = view.getUint8(55) / 255.0;
+                    targetMods.beat_phase = view.getFloat32(28, true);
+                    effIntensityRef.current = view.getUint8(59) / 255.0;
 
-                    const baseIdx = view.getUint16(76, true);
-                    const fxIdx = view.getUint16(78, true);
+                    const baseIdx = view.getUint16(80, true);
+                    const fxIdx = view.getUint16(82, true);
 
                     if (autoCycleRef.current && libraryRef.current.length > 0) {
                         const bases = libraryRef.current.filter(i => i.category === 'base');
@@ -1125,6 +1133,7 @@ export default function App() {
             smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * sf;
             smoothedMods.high += (targetMods.high - smoothedMods.high) * sf;
             smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * sf;
+            smoothedMods.beat_phase = targetMods.beat_phase; 
 
             // Accumulate local high-frequency flutter (Bass/Flux pulses)
             // We scale these by dt but NOT by effSpeedRef, as backend mTime already handles global warp
@@ -1139,6 +1148,11 @@ export default function App() {
             uniformsRef.current.u_bass.value = smoothedMods.bass;
             uniformsRef.current.u_high.value = smoothedMods.high;
             uniformsRef.current.u_vol.value = smoothedMods.vol;
+            uniformsRef.current.u_beat_phase.value = smoothedMods.beat_phase;
+            
+            // Calculate a snappy exponential pulse (1.0 -> 0.0) from the linear phase
+            const beatPulse = Math.exp(-5.0 * smoothedMods.beat_phase);
+            uniformsRef.current.u_beat_pulse.value = beatPulse;
 
             // Handle Blackout
             const isBlackout = blackoutActiveRef.current;
@@ -1193,11 +1207,14 @@ export default function App() {
 
             if (baseMeshRef.current) {
                 baseMeshRef.current.rotation.z = rotationZ;
-                baseMeshRef.current.scale.set(currentScaleRef.current, currentScaleRef.current, 1);
+                // Add a subtle 5% "pump" to the global scale based on the beat pulse
+                const beatScale = currentScaleRef.current * (1.0 + uniformsRef.current.u_beat_pulse.value * 0.05);
+                baseMeshRef.current.scale.set(beatScale, beatScale, 1);
             }
             if (fxMeshRef.current) {
                 fxMeshRef.current.rotation.z = rotationZ;
-                fxMeshRef.current.scale.set(currentScaleRef.current, currentScaleRef.current, 1);
+                const beatScale = currentScaleRef.current * (1.0 + uniformsRef.current.u_beat_pulse.value * 0.05);
+                fxMeshRef.current.scale.set(beatScale, beatScale, 1);
             }
 
             // Apply global opacity based on eff_intensity (0..1 range expected for opacity)

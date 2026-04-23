@@ -126,7 +126,7 @@ class Recorder:
         return True
 
     def log_dmx(self, universe, audio_state=None, active_presets=None):
-        if not self.is_recording or not self.monitored_addresses:
+        if not self.is_recording:
             return
             
         now = time.time()

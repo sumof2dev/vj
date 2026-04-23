@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RaveBox</title>
-    <link rel="stylesheet" href="setup.css?v=421260851">
+    <link rel="stylesheet" href="setup.css?v=422262138">
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
@@ -568,8 +568,7 @@
         <div id="hostBadge"
             style="font-size: 0.65rem; color: var(--text-dim); margin: -10px 0 20px; text-transform: uppercase; letter-spacing: 1px; cursor:pointer;"
             onclick="changeHost()">
-            Controller: <span id="hostDisplay" style="color:var(--primary); font-weight:bold;">Local</span> (Click to
-            Change)
+            Controller: <span id="hostDisplay" style="color:var(--primary); font-weight:bold;">Local</span> <span id="hostChangePrompt">(Click to Change)</span>
         </div>
 
 
@@ -695,12 +694,23 @@
             <a id="link-help" href="#">Help</a>
         </div>
     </div>
-    <script src="shared_setup.js?v=421260851"></script>
+    <script>
+        // Global Safeguards: Prevent crashes if shared_setup.js fails to load
+        window.isOriginalCloud = window.isOriginalCloud || false;
+        window.host = window.host || null;
+        window.isCustomTunnel = window.isCustomTunnel || false;
+        window.LAUNCHER_API = window.LAUNCHER_API || "";
+        window.API_BASE = window.API_BASE || "";
+    </script>
+    <script src="shared_setup.js?v=422262138"></script>
     <script>
         // Routing and globals are handled by shared_setup.js
         console.log("📍 Host:", window.host, "| Launcher:", window.LAUNCHER_API);
 
         function changeHost() {
+            if (window.isCustomTunnel || window.isCustomSubdomain) {
+                if (!confirm("Caution: You are on a direct tunnel connection. Changing the host may disconnect you from this hardware instance. Proceed?")) return;
+            }
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
             const next = prompt("Enter RaveBox Secret Code (e.g. 'mybox') or local IP:", current);
             if (next !== null) {
@@ -714,6 +724,13 @@
         }
 
         document.getElementById('hostDisplay').textContent = (localStorage.getItem('vj_backend_host') || "Local (" + host + ")");
+        
+        // Hide the prompt if we are already connected via a direct tunnel mapping
+        if (window.isCustomTunnel || window.isCustomSubdomain || (window.location.hostname.endsWith('ravebox.love') && !window.isOriginalCloud)) {
+            document.getElementById('hostBadge').style.cursor = 'default';
+            const changePrompt = document.getElementById('hostChangePrompt');
+            if (changePrompt) changePrompt.style.display = 'none';
+        }
 
         // Point links within the same origin (Port Independent)
         document.getElementById('link-visual').href = `./visualdmx.html`;
@@ -1103,10 +1120,10 @@
                 if (!lastBinaryData) return;
                 const view = new DataView(lastBinaryData);
 
-                // Parsing Schema: < f 6f 6f 4B 5f 3H 513s
+                // Parsing Schema: < f fffffff ffffff BBBB fffff HHH
                 const vol = view.getFloat32(20, true);
                 const bpm = view.getFloat32(24, true);
-                const beat = view.getUint8(52);
+                const beat = view.getUint8(56);
 
                 // Update Meters
                 document.getElementById('hubVol').style.width = Math.min(100, vol * 100) + '%';
@@ -1128,7 +1145,7 @@
                     const bar = hubBins.children[i];
                     if (!bar) continue;
 
-                    const energy = view.getFloat32(28 + (i * 4), true);
+                    const energy = view.getFloat32(32 + (i * 4), true);
                     bar.style.height = Math.max(2, energy * 42) + 'px';
 
                     const isActive = energy > 0.05;

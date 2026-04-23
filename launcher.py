@@ -55,23 +55,10 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             self.proxy_to_camera(self.path)
             return
             
-        elif self.path in ['/', '/manager', '/manager.html', '/setup.html', '/visualdmx.html', '/remote.html', '/usergen', '/usergen/']:
-            # Redirect frontend apps to the main engine port (8000)
-            # Smart Tunnel: use the api- prefix if it's a ravebox.love domain to avoid port 8000
-            host = self.headers.get('Host').split(':')[0]
-            target_path = '/manager.html' if self.path in ['/', '/manager'] else self.path
-            
-            if host.endswith('.ravebox.love') and not host.startswith('api-'):
-                redirect_host = 'api-' + host
-                schema = 'https'
-                port_str = ''
-            else:
-                redirect_host = host
-                schema = 'http'
-                port_str = ':8000'
-
+        # Universal Serving: Allow both 8000 and 8001 to serve the UI to prevent Dashboard port-swap 404s
+        elif self.path == '/robot_sim':
             self.send_response(302)
-            self.send_header('Location', f'{schema}://{redirect_host}{port_str}{target_path}')
+            self.send_header('Location', '/robot_sim.html')
             self.end_headers()
             return
         else:

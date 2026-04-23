@@ -113,5 +113,16 @@
         "hold_type": "none",
         "rel_center": 0.498,
         "value": 127
+    },
+    {
+        "id": "new_trigger_state",
+        "label": "New Trigger State",
+        "behavior": "static",
+        "source": "volume",
+        "speed": 0.5,
+        "react": 0.5,
+        "hold_type": "none",
+        "rel_center": 0.498,
+        "value": 127
     }
 ]

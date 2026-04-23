@@ -81,7 +81,13 @@ class ChannelConfig:
             else:
                 state['indices'][search_vibe] = 0
             
-        final_idx = matching_indices[state['indices'].get(search_vibe, 0)]
+        # 6. Bounds-safe retrieval
+        idx = state['indices'].get(search_vibe, 0)
+        if idx >= len(matching_indices):
+            idx = 0
+            state['indices'][search_vibe] = 0
+            
+        final_idx = matching_indices[idx]
         return self.rules[final_idx]
 
 class LogicMatrix:
@@ -376,6 +382,16 @@ class DMXEngine:
                 trig_matched = False
                 t_cat = trig.get('category') or trig.get('type')
                 
+                if not t_cat or t_cat == "":
+                    # Warn the user about the broken preset they planned to fix manually
+                    if not hasattr(self, '_warned_presets'): self._warned_presets = set()
+                    p_name = p_data.get('name', 'Unknown')
+                    if p_name not in self._warned_presets:
+                        print(f"⚠️  Preset '{p_name}' contains an empty/invalid trigger and will not activate. Please fix in UI.")
+                        self._warned_presets.add(p_name)
+                    is_active = False
+                    break
+                
                 # Numeric range helper
                 def check_range(val, t):
                     lt = t.get('less_than')
@@ -492,6 +508,34 @@ class DMXEngine:
         
         # Removed legacy rhythm triggers
         
+        # --- Vibe/Variant/Transient Change Detection ---
+        is_silent = audio.get('vol', 0.0) < 0.03
+        vibe_changed = current_vibe != self._last_vibe
+        silence_recovered = self._was_silent and not is_silent
+        transient_changed = self.transient != self._last_transient
+        variant_changed = False
+        
+        # Spectral Resolution (Determines synchronized 1, 2, or 3 variant)
+        if vibe_changed or silence_recovered or transient_changed:
+            old_variant = self.sync_indices.get(current_vibe, 0)
+            variant, dominant = self._resolve_spectral_variant(audio)
+            
+            if variant != old_variant:
+                variant_changed = True
+            
+            self.sync_indices[current_vibe] = variant
+            self.sync_indices['any'] = variant
+            
+            # Also update transient-specific indices
+            eff_transient_vibe = None
+            if self.transient == 'building': eff_transient_vibe = 'build'
+            elif self.transient == 'dropping': eff_transient_vibe = 'drop'
+            if eff_transient_vibe and transient_changed:
+                self.sync_indices[eff_transient_vibe] = variant
+
+            reason = 'vibe' if vibe_changed else ('silence recovery' if silence_recovered else f'transient → {self.transient}')
+            print(f"🎚️ Sync Variant [{reason}]: {current_vibe} → {variant + 1} (dominant bin: {dominant})")
+
         should_switch = False
         current_beat = audio.get('beat_count', 0)
         beats_passed = current_beat - self._last_scene_switch_beat
@@ -502,7 +546,11 @@ class DMXEngine:
         elif self.scene_freq == 1 and beats_passed >= 4: should_switch = True
         elif self.scene_freq == 2 and beats_passed >= 8: should_switch = True
         elif self.scene_freq == 3 and beats_passed >= 16: should_switch = True
-        elif self.scene_freq == 4 and self.transient != self._last_transient and self.transient in ['dropping', 'building']: should_switch = True
+        elif self.scene_freq == 4:
+            if vibe_changed or variant_changed:
+                should_switch = True
+            elif transient_changed and self.transient in ['dropping', 'building']:
+                should_switch = True
 
         if visual_states:
             if visual_states.get("bg", -1) != -1: self.current_base_layer = visual_states["bg"]
@@ -514,41 +562,19 @@ class DMXEngine:
                 # Pick a global index for the base layer (UserGen uses this to index library)
                 self.current_base_layer = (self.current_base_layer + 1) % 1000
             self._last_scene_switch_beat = current_beat
+            
+            # Debug log for visual evolution
+            reason = "manual" if force_next_visual else (f"freq {self.scene_freq}")
+            if self.scene_freq == 4:
+                reason = "vibe change" if vibe_changed else ("variant change" if variant_changed else "transient drop/build")
+            print(f"🎬 Scene Toggle Triggered [{reason}] -> Base Index: {self.current_base_layer}")
 
         if force_next_fx:
             if not visual_states or visual_states.get("fx", -1) == -1:
                 self.current_fx_layer = (self.current_fx_layer + 1) % 1000
-            
+
         self.logic.state['scene_trigger'] = 1.0 if should_switch else -1.0
             
-        # --- Spectral Variant Resolution ---
-        # Three triggers cause a recheck of the dominant bin → variant (1/2/3):
-        #   1. Vibe changes (primary)
-        #   2. Volume recovers from silence (< 3% threshold)
-        #   3. Any transient state changes (building, tension, dropping, steady)
-
-        is_silent = audio.get('vol', 0.0) < 0.03
-        vibe_changed = current_vibe != self._last_vibe
-        silence_recovered = self._was_silent and not is_silent
-        transient_changed = self.transient != self._last_transient
-
-        if vibe_changed or silence_recovered or transient_changed:
-            variant, dominant = self._resolve_spectral_variant(audio)
-            self.sync_indices[current_vibe] = variant
-            self.sync_indices['any'] = variant
-
-            reason = 'vibe' if vibe_changed else ('silence recovery' if silence_recovered else f'transient → {self.transient}')
-            print(f"🎚️ Sync Variant [{reason}]: {current_vibe} → {variant + 1} (dominant bin: {dominant})")
-
-        # Also update transient-specific indices (build/drop) on transient change
-        eff_transient_vibe = None
-        if self.transient == 'building': eff_transient_vibe = 'build'
-        elif self.transient == 'dropping': eff_transient_vibe = 'drop'
-
-        if eff_transient_vibe and transient_changed:
-            variant, dominant = self._resolve_spectral_variant(audio)
-            self.sync_indices[eff_transient_vibe] = variant
-
         self._was_silent = is_silent
         self._last_vibe = current_vibe
         self._last_transient = self.transient
@@ -837,7 +863,7 @@ class DMXEngine:
         eff_phase = (self._preset_sweep_phases[ov_key] + offset) % total_cycle
         
         # Determine which part of the sequence we are in
-        part_idx = int(eff_phase // part_duration)
+        part_idx = min(int(eff_phase // part_duration), num_parts - 1)
         local_phase = eff_phase % part_duration # 0.0 to 64.0
         
         part_str = seq_parts[part_idx]

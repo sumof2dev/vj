@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=421260851">
+<link rel="stylesheet" href="setup.css?v=422262138">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
@@ -253,8 +253,15 @@
                     <label>Active Triggers</label>
                     <div id="pres-active-triggers" style="margin-bottom:10px;"></div>
 
-                    <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; text-align:right;">
-                        <button class="btn btn-primary" onclick="addEmptyTrigger()">+ AND (Add Condition)</button>
+                    <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+                        <select id="pres-new-trigger-type" style="font-size:11px; background:#111; border:1px solid #444; color:#fff; border-radius:4px; padding:4px;">
+                            <option value="vibe">Vibe</option>
+                            <option value="state">State</option>
+                            <option value="volume">Volume</option>
+                            <option value="bin">Energy Bin</option>
+                            <option value="channel">DMX Channel</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="addConditionFromUI()">+ Add Condition</button>
                     </div>
                 </div> <!-- Closes line 637 Trigger Box -->
             </div> <!-- Closes line 632 form-row -->
@@ -615,11 +622,19 @@
 
     </div>
 
-<script src="shared_setup.js?v=421260851"></script>
-<script src="live_controller.js?v=421260851"></script>
-<script src="profile_logic.js?v=421260851"></script>
-<script src="ai_architect.js?v=421260851"></script>
-<script src="stage_logic.js?v=421260851"></script>
+    <script>
+        // Global Safeguards: Prevent crashes if shared_setup.js fails to load
+        window.isOriginalCloud = window.isOriginalCloud || false;
+        window.host = window.host || null;
+        window.isCustomTunnel = window.isCustomTunnel || false;
+        window.LAUNCHER_API = window.LAUNCHER_API || "";
+        window.API_BASE = window.API_BASE || "";
+    </script>
+    <script src="shared_setup.js?v=422262138"></script>
+<script src="live_controller.js?v=422262138"></script>
+<script src="profile_logic.js?v=422262138"></script>
+<script src="ai_architect.js?v=422262138"></script>
+<script src="stage_logic.js?v=422262138"></script>
 <script>window.onload = () => { 
     console.log("🚀 VJ Manager starting (UI Refreshed)..."); 
     // All routing and landing logic (redirects, tab switching) 

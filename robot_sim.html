@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AudioBot 3D Simulation</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #050505; 
+            color: #00ffcc; 
+            font-family: monospace; 
+        }
+        #overlay { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            z-index: 10; 
+            pointer-events: none; 
+        }
+        .stat { 
+            font-size: 10px; 
+            margin-bottom: 3px; 
+            text-transform: uppercase; 
+            font-weight: bold; 
+            letter-spacing: 1px;
+        }
+        .bar-bg { 
+            width: 150px; 
+            height: 6px; 
+            background: #222; 
+            margin-bottom: 12px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .bar-fg { 
+            height: 100%; 
+            background: #00ffcc; 
+            width: 0%; 
+            transition: width 0.05s linear; 
+        }
+        #status { font-size: 12px; margin-bottom: 20px; }
+        
+        #ui-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 20;
+        }
+        button {
+            background: #111;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            padding: 10px 20px;
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #00ffcc;
+            color: #000;
+        }
+        button.active {
+            background: #ff00ff;
+            color: #fff;
+            border-color: #ff00ff;
+        }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="overlay">
+        <div class="stat" id="status">● CONNECTING...</div>
+        <div id="meters">
+            <div class="stat">Bass Impact</div>
+            <div class="bar-bg"><div class="bar-fg" id="bar-bass"></div></div>
+            <div class="stat">Energy Flux</div>
+            <div class="bar-bg"><div class="bar-fg" id="bar-flux"></div></div>
+            <div class="stat">High Freq</div>
+            <div class="bar-bg"><div class="bar-fg" id="bar-high"></div></div>
+            <div class="stat">Beat Phase</div>
+            <div class="bar-bg"><div class="bar-fg" id="bar-beat"></div></div>
+        </div>
+    </div>
+
+    <div id="ui-controls">
+        <button id="btn-mode">Mode: Dance</button>
+        <button id="btn-cam">Cam: Locked</button>
+    </div>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+        // ------------------------------------------------------------------------------
+        // STATE MANAGEMENT
+        // ------------------------------------------------------------------------------
+        let isDesignMode = false;
+        let isOrbitEnabled = false;
+
+        const btnMode = document.getElementById('btn-mode');
+        const btnCam = document.getElementById('btn-cam');
+        const metersDiv = document.getElementById('meters');
+
+        // ------------------------------------------------------------------------------
+        // KINEMATIC HUMANOID RIG
+        // ------------------------------------------------------------------------------
+        class AudioBot {
+            constructor() {
+                this.group = new THREE.Group();
+                this.joints = {};
+                this.nodes = []; // Store interactive pivot nodes
+
+                const mat = new THREE.MeshBasicMaterial({ 
+                    color: 0x00ffcc, wireframe: true, transparent: true, opacity: 0.8 
+                });
+                
+                const nodeGeo = new THREE.SphereGeometry(0.06, 8, 8);
+                const nodeMat = new THREE.MeshBasicMaterial({ 
+                    color: 0xff00ff, depthTest: false, transparent: true, opacity: 0.8 
+                });
+
+                // Helper to create selectable pivot nodes
+                const addNode = (parentGroup, name) => {
+                    const node = new THREE.Mesh(nodeGeo, nodeMat);
+                    node.renderOrder = 999; 
+                    node.visible = false; 
+                    node.userData = { isNode: true, joint: parentGroup, name: name };
+                    parentGroup.add(node);
+                    this.nodes.push(node);
+                };
+
+                // 1. Torso
+                this.joints.torso = new THREE.Group();
+                this.joints.torso.position.y = 1.3; 
+                const torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), mat);
+                this.joints.torso.add(torsoMesh);
+                addNode(this.joints.torso, 'Torso');
+                this.group.add(this.joints.torso);
+
+                // 2. Head
+                this.joints.headBase = new THREE.Group();
+                this.joints.headBase.position.y = 0.4; 
+                const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 0.25), mat);
+                headMesh.position.y = 0.15; 
+                this.joints.headBase.add(headMesh);
+                addNode(this.joints.headBase, 'Neck');
+                this.joints.torso.add(this.joints.headBase);
+
+                // 3. Arms
+                const upperArmGeo = new THREE.BoxGeometry(0.12, 0.4, 0.12);
+                const forearmGeo = new THREE.BoxGeometry(0.1, 0.4, 0.1);
+
+                this.joints.shoulderL = new THREE.Group();
+                this.joints.shoulderL.position.set(-0.35, 0.25, 0); 
+                const uArmMeshL = new THREE.Mesh(upperArmGeo, mat);
+                uArmMeshL.position.y = -0.2; 
+                this.joints.shoulderL.add(uArmMeshL);
+                addNode(this.joints.shoulderL, 'Shoulder_L');
+                
+                this.joints.elbowL = new THREE.Group();
+                this.joints.elbowL.position.set(0, -0.4, 0);
+                const fArmMeshL = new THREE.Mesh(forearmGeo, mat);
+                fArmMeshL.position.y = -0.2;
+                this.joints.elbowL.add(fArmMeshL);
+                addNode(this.joints.elbowL, 'Elbow_L');
+                
+                this.joints.shoulderL.add(this.joints.elbowL);
+                this.joints.torso.add(this.joints.shoulderL);
+
+                this.joints.shoulderR = new THREE.Group();
+                this.joints.shoulderR.position.set(0.35, 0.25, 0); 
+                const uArmMeshR = new THREE.Mesh(upperArmGeo, mat);
+                uArmMeshR.position.y = -0.2; 
+                this.joints.shoulderR.add(uArmMeshR);
+                addNode(this.joints.shoulderR, 'Shoulder_R');
+                
+                this.joints.elbowR = new THREE.Group();
+                this.joints.elbowR.position.set(0, -0.4, 0);
+                const fArmMeshR = new THREE.Mesh(forearmGeo, mat);
+                fArmMeshR.position.y = -0.2;
+                this.joints.elbowR.add(fArmMeshR);
+                addNode(this.joints.elbowR, 'Elbow_R');
+                
+                this.joints.shoulderR.add(this.joints.elbowR);
+                this.joints.torso.add(this.joints.shoulderR);
+
+                // 4. Legs
+                const thighGeo = new THREE.BoxGeometry(0.18, 0.45, 0.18);
+                const calfGeo = new THREE.BoxGeometry(0.15, 0.45, 0.15);
+
+                this.joints.hipL = new THREE.Group();
+                this.joints.hipL.position.set(-0.15, -0.35, 0); 
+                const thighMeshL = new THREE.Mesh(thighGeo, mat);
+                thighMeshL.position.y = -0.225;
+                this.joints.hipL.add(thighMeshL);
+                addNode(this.joints.hipL, 'Hip_L');
+
+                this.joints.kneeL = new THREE.Group();
+                this.joints.kneeL.position.set(0, -0.45, 0);
+                const calfMeshL = new THREE.Mesh(calfGeo, mat);
+                calfMeshL.position.y = -0.225;
+                this.joints.kneeL.add(calfMeshL);
+                addNode(this.joints.kneeL, 'Knee_L');
+                
+                this.joints.hipL.add(this.joints.kneeL);
+                this.joints.torso.add(this.joints.hipL);
+
+                this.joints.hipR = new THREE.Group();
+                this.joints.hipR.position.set(0.15, -0.35, 0); 
+                const thighMeshR = new THREE.Mesh(thighGeo, mat);
+                thighMeshR.position.y = -0.225;
+                this.joints.hipR.add(thighMeshR);
+                addNode(this.joints.hipR, 'Hip_R');
+
+                this.joints.kneeR = new THREE.Group();
+                this.joints.kneeR.position.set(0, -0.45, 0);
+                const calfMeshR = new THREE.Mesh(calfGeo, mat);
+                calfMeshR.position.y = -0.225;
+                this.joints.kneeR.add(calfMeshR);
+                addNode(this.joints.kneeR, 'Knee_R');
+                
+                this.joints.hipR.add(this.joints.kneeR);
+                this.joints.torso.add(this.joints.hipR);
+
+                // 5. Visualizer Ring (Beat Phase)
+                const ringGeo = new THREE.TorusGeometry(0.2, 0.01, 8, 32);
+                this.beatRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.5 }));
+                this.beatRing.rotation.x = Math.PI / 2;
+                this.beatRing.position.y = 0.6;
+                this.joints.headBase.add(this.beatRing);
+            }
+
+            toggleNodes(visible) {
+                this.nodes.forEach(n => n.visible = visible);
+            }
+
+            resetPose() {
+                // Reset all rotations before audio takes over
+                Object.values(this.joints).forEach(j => {
+                    j.rotation.set(0,0,0);
+                });
+                this.joints.torso.position.set(0, 1.3, 0);
+            }
+
+            updateAudioReactive(mods, clock) {
+                const swayX = Math.sin(clock * 1.5) * 0.1;
+                const swayZ = Math.cos(clock * 0.8) * 0.1;
+                this.joints.torso.rotation.z = swayX;
+                this.joints.torso.rotation.x = swayZ * 0.5;
+
+                const bassBounce = mods.bass * 0.35;
+                this.joints.torso.position.y = 1.3 - bassBounce;
+                
+                const hipPitch = -bassBounce * 1.5; 
+                const kneePitch = bassBounce * 3.0; 
+
+                this.joints.hipL.rotation.x = hipPitch;
+                this.joints.kneeL.rotation.x = kneePitch;
+                this.joints.hipR.rotation.x = hipPitch;
+                this.joints.kneeR.rotation.x = kneePitch;
+
+                this.joints.hipL.rotation.z = bassBounce * 0.3;
+                this.joints.hipR.rotation.z = -bassBounce * 0.3;
+
+                const pumpEnergy = mods.flux * Math.PI; 
+                const targetShoulderL = -Math.abs(Math.sin(clock * 3.0)) * pumpEnergy;
+                const targetShoulderR = -Math.abs(Math.cos(clock * 3.0)) * pumpEnergy;
+                this.joints.shoulderL.rotation.x = THREE.MathUtils.clamp(targetShoulderL, -Math.PI, 0.2);
+                this.joints.shoulderR.rotation.x = THREE.MathUtils.clamp(targetShoulderR, -Math.PI, 0.2);
+
+                const elbowBendL = -0.2 - (mods.flux * 1.8 * Math.abs(Math.cos(clock * 1.5)));
+                const elbowBendR = -0.2 - (mods.flux * 1.8 * Math.abs(Math.sin(clock * 1.5)));
+                this.joints.elbowL.rotation.x = elbowBendL;
+                this.joints.elbowR.rotation.x = elbowBendR;
+
+                const headNod = THREE.MathUtils.mapLinear(mods.high, 0, 1, -0.1, 0.6);
+                this.joints.headBase.rotation.x = headNod;
+                this.joints.headBase.rotation.y = Math.sin(clock * 0.5) * 0.4;
+                
+                this.joints.elbowL.rotation.z = mods.high * 0.3 * Math.sin(clock * 10.0);
+                this.joints.elbowR.rotation.z = -mods.high * 0.3 * Math.cos(clock * 10.0);
+
+                // 5. Beat Sync (Phase): Ring pulse and color shift
+                const bp = mods.beat_phase || 0;
+                const scale = 1.0 + (1.0 - bp) * 0.5;
+                this.beatRing.scale.set(scale, scale, 1);
+                this.beatRing.material.opacity = (1.0 - bp) * 0.8;
+            }
+        }
+
+        // ------------------------------------------------------------------------------
+        // SCENE & CONTROLS INITIALIZATION
+        // ------------------------------------------------------------------------------
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.1);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 1.5, 5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const gridHelper = new THREE.GridHelper(10, 20, 0x00ffcc, 0x222222);
+        gridHelper.position.y = -0.5;
+        scene.add(gridHelper);
+
+        const robot = new AudioBot();
+        scene.add(robot.group);
+
+        // Add Camera Orbit Controls
+        const orbitControls = new OrbitControls(camera, renderer.domElement);
+        orbitControls.enabled = false;
+        orbitControls.target.set(0, 1.0, 0);
+
+        // Add Transform Controls for Posing
+        const transformControl = new TransformControls(camera, renderer.domElement);
+        transformControl.setMode('rotate'); // Lock to rotation for joint posing
+        scene.add(transformControl);
+
+        // Disable Orbit when actively dragging a joint to prevent fighting
+        transformControl.addEventListener('dragging-changed', function (event) {
+            if (isOrbitEnabled) orbitControls.enabled = !event.value;
+        });
+
+        // Setup Raycaster for Node Selection
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('mousedown', (event) => {
+            if (!isDesignMode) return;
+            
+            // Ignore UI clicks
+            if(event.target.tagName === 'BUTTON') return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(robot.nodes);
+            
+            if (intersects.length > 0) {
+                const node = intersects[0].object;
+                transformControl.attach(node.userData.joint);
+            } else if (!transformControl.dragging) {
+                // Clicked empty space
+                transformControl.detach();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ------------------------------------------------------------------------------
+        // UI EVENT LISTENERS
+        // ------------------------------------------------------------------------------
+        btnMode.addEventListener('click', () => {
+            isDesignMode = !isDesignMode;
+            if (isDesignMode) {
+                btnMode.innerText = "Mode: Design";
+                btnMode.classList.add('active');
+                metersDiv.style.opacity = 0.3;
+                robot.toggleNodes(true);
+                robot.resetPose();
+            } else {
+                btnMode.innerText = "Mode: Dance";
+                btnMode.classList.remove('active');
+                metersDiv.style.opacity = 1.0;
+                robot.toggleNodes(false);
+                transformControl.detach();
+            }
+        });
+
+        btnCam.addEventListener('click', () => {
+            isOrbitEnabled = !isOrbitEnabled;
+            orbitControls.enabled = isOrbitEnabled;
+            if (isOrbitEnabled) {
+                btnCam.innerText = "Cam: Orbit";
+                btnCam.classList.add('active');
+            } else {
+                btnCam.innerText = "Cam: Locked";
+                btnCam.classList.remove('active');
+                // Optional: Tween camera back to origin here if desired
+            }
+        });
+
+        // ------------------------------------------------------------------------------
+        // WEBSOCKET SYNC LOGIC
+        // ------------------------------------------------------------------------------
+        const savedHost = localStorage.getItem('vj_backend_host') || window.location.hostname;
+        const isLocal = savedHost === "localhost" || savedHost === "127.0.0.1";
+        const boxName = (savedHost === 'ravebox') ? 'ravebox.love' : ((savedHost && !savedHost.includes('.') && !isLocal) ? `${savedHost}.ravebox.love` : savedHost);
+        const isConsolidated = /^\d+\./.test(boxName) || boxName.includes('-evt');
+        const useSSL = window.location.protocol === "https:" || boxName.includes('ravebox.love');
+        
+        let wsUrl;
+        if (isConsolidated) {
+            wsUrl = `${useSSL ? "wss:" : "ws:"}//${boxName}/ws`;
+        } else if (boxName === 'ravebox.love') {
+            wsUrl = "wss://wss.ravebox.love/";
+        } else {
+            const baseHost = boxName.replace(/^api-|^ws-/, '');
+            wsUrl = `${useSSL ? "wss:" : "ws:"}//ws-${baseHost}`;
+        }
+
+        const targetMods = { flux: 0, bass: 0, high: 0, vol: 0, beat_phase: 0 };
+        const smoothedMods = { flux: 0, bass: 0, high: 0, vol: 0, beat_phase: 0 };
+        let mTime = 0;
+        let localFlutter = 0;
+        let lastTime = performance.now();
+
+        const statusEl = document.getElementById('status');
+        const barBass = document.getElementById('bar-bass');
+        const barFlux = document.getElementById('bar-flux');
+        const barHigh = document.getElementById('bar-high');
+        const barBeat = document.getElementById('bar-beat');
+
+        function connectWS() {
+            const socket = new WebSocket(wsUrl);
+            socket.binaryType = 'arraybuffer';
+            socket.onopen = () => { statusEl.innerText = "● LIVE SYNC"; statusEl.style.color = "#00ffcc"; };
+            socket.onclose = () => { statusEl.innerText = "● OFFLINE"; statusEl.style.color = "#ff3366"; setTimeout(connectWS, 3000); };
+            socket.onmessage = (event) => {
+                if (event.data instanceof ArrayBuffer) {
+                    const view = new DataView(event.data);
+                    mTime = view.getFloat32(0, true);
+                    targetMods.flux = view.getFloat32(4, true);
+                    targetMods.bass = view.getFloat32(8, true);
+                    targetMods.high = view.getFloat32(16, true);
+                    targetMods.vol = view.getFloat32(20, true);
+                    targetMods.beat_phase = view.getFloat32(28, true);
+                }
+            };
+        }
+
+        // ------------------------------------------------------------------------------
+        // ANIMATION LOOP
+        // ------------------------------------------------------------------------------
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const now = performance.now();
+            const dt = (now - lastTime) / 1000.0;
+            lastTime = now;
+
+            const sf = 1.0 - Math.pow(0.005, dt);
+
+            smoothedMods.flux += (targetMods.flux - smoothedMods.flux) * sf;
+            smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * sf;
+            smoothedMods.high += (targetMods.high - smoothedMods.high) * sf;
+            smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * sf;
+            smoothedMods.beat_phase = targetMods.beat_phase;
+
+            localFlutter += dt * (smoothedMods.flux * 1.5 + smoothedMods.bass * 0.4);
+            const syncedClock = mTime + localFlutter;
+
+            // Only apply slow orbit if Cam is locked (default visualizer behavior)
+            if (!isOrbitEnabled) {
+                scene.rotation.y = Math.sin(syncedClock * 0.1) * 0.3;
+            } else {
+                scene.rotation.y = 0; // Let OrbitControls handle rotation
+                orbitControls.update();
+            }
+
+            barBass.style.width = `${smoothedMods.bass * 100}%`;
+            barFlux.style.width = `${smoothedMods.flux * 100}%`;
+            barHigh.style.width = `${smoothedMods.high * 100}%`;
+            barBeat.style.width = `${smoothedMods.beat_phase * 100}%`;
+
+            // Only animate to audio if we are not posing it manually
+            if (!isDesignMode) {
+                robot.updateAudioReactive(smoothedMods, syncedClock);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        connectWS();
+        animate();
+    </script>
+</body>
+</html>

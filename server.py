@@ -39,12 +39,17 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip('/')
-        print(f"DEBUG: GET Request Path: {path} (Full: {self.path})")
 
         # Handle root or default (Fallback)
         if path == '':
             self.send_response(302)
             self.send_header('Location', '/manager.html')
+            self.end_headers()
+            return
+
+        if path == '/robot_sim':
+            self.send_response(302)
+            self.send_header('Location', '/robot_sim.html')
             self.end_headers()
             return
 
@@ -114,6 +119,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         if path == '/shell':
              self._proxy_to_launcher(self.path) # Forward the full query string
              return
+
 
         return super().do_GET()
 

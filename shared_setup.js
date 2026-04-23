@@ -78,6 +78,7 @@ window.EASY_DESCRIPTORS = [
     {"id": "kick_drum_step", "label": "kick drum step", "behavior": "beat phase", "source": "bin 0", "speed": 0.4, "react": 0.65, "hold_type": "none", "rel_center": 0.208},
     {"id": "hi_hat", "label": "hi hat", "behavior": "beat phase", "source": "highs", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     {"id": "hi_hat", "label": "hi hat", "behavior": "static", "source": "bass", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498, "value": 127},
+    {"id": "new_trigger_state", "label": "New Trigger State", "behavior": "static", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498, "value": 127},
     // PREMADE_ANCHOR
 ];
 
@@ -131,9 +132,19 @@ if (queryHost) {
 }
 
 savedHost = localStorage.getItem('vj_backend_host');
+window.isCustomSubdomain = setupHostname.endsWith('.ravebox.love') && !onHostedDomain;
+
+// If accessing directly via a custom tunnel (e.g. mybox.ravebox.love), the URL itself is the source of truth.
+// We must ignore any old "Secret Codes" from localStorage, otherwise it prompts or misroutes.
+if (window.isCustomSubdomain) {
+    savedHost = null;
+    if (localStorage.getItem('vj_backend_host')) {
+            localStorage.removeItem('vj_backend_host');
+    }
+}
+
 host = savedHost || (onHostedDomain ? '' : setupHostname);
 
-window.isCustomSubdomain = setupHostname.endsWith('.ravebox.love') && !onHostedDomain;
 window.isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
 
 var boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
@@ -153,7 +164,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "421260851";
+window.APP_VERSION = "422262138";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -192,8 +203,8 @@ async function initDatabaseSync() {
 
         console.log(`✅ [SYNC] Successfully synchronized ${syncCount} core files from server.`);
         
-        // 3. Persist merged state back to localStorage
-        window.saveDB();
+        // 3. Persist merged state back to localStorage ONLY (never overwrite server during init)
+        window.saveDB(true);
 
         // 4. Trigger UI Refresh if we are on a page that needs it
         if (typeof window.refreshUI === 'function') window.refreshUI();

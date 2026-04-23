@@ -633,14 +633,14 @@ def audio_worker_thread():
 def pack_binary_state(current_time):
     """
     Packs the system state into a compact little-endian ArrayBuffer.
-    Layout (Total 595 bytes):
+    Layout (Total 599 bytes):
     - master_time (f32, offset 0)
-    - flux, bass, mid, high, vol, bpm (6x f32, offset 4-27)
-    - bins (6x f32, offset 28-51)
-    - beat, b_onset, h_onset, intensity (4x u8, offset 52-55)
-    - axis_a..e (5x f32, offset 56-75)
-    - base, fx, fg layerIdx (3x u16, offset 76-81)
-    - dmx (513x u8, offset 82-594)
+    - flux, bass, mid, high, vol, bpm, beat_phase (7x f32, offset 4-31)
+    - bins (6x f32, offset 32-55)
+    - beat, b_onset, h_onset, intensity (4x u8, offset 56-59)
+    - axis_a..e (5x f32, offset 60-79)
+    - base, fx, fg layerIdx (3x u16, offset 80-85)
+    - dmx (513x u8, offset 86-598)
     """
     global GLOBAL_CLOCK
     
@@ -666,6 +666,7 @@ def pack_binary_state(current_time):
     high = audio_state.get('high', 0.0)
     vol = audio_state.get('vol', 0.0)
     bpm = audio_state.get('bpm', 120.0)
+    beat_phase = audio_state.get('beat_phase', 0.0)
     
     bins = audio_state.get('bins', [0]*6)
     while len(bins) < 6: bins.append(0)
@@ -689,17 +690,17 @@ def pack_binary_state(current_time):
     
     univ = dmx_engine.get_universe() if dmx_engine else bytearray(513)
     
-    # Pack header (82 bytes)
-    header = struct.pack('<f ffffff ffffff BBBB fffff HHH',
+    # Pack header (86 bytes)
+    header = struct.pack('<f fffffff ffffff BBBB fffff HHH',
         m_time,
-        flux, bass, mid, high, vol, bpm,
+        flux, bass, mid, high, vol, bpm, beat_phase,
         float(bins[0]), float(bins[1]), float(bins[2]), float(bins[3]), float(bins[4]), float(bins[5]),
         beat, b_onset, h_onset, max(0, min(255, int((dmx_engine.eff_intensity if dmx_engine else 1.0) * 255))),
         ax_a, ax_b, ax_c, ax_d, ax_e,
         int(base_l), int(fx_l), int(fg_l)
     )
     
-    # Return 82 + 513 = 595 bytes
+    # Return 86 + 513 = 599 bytes
     return header + bytes(univ)[:513].ljust(513, b'\x00')
 
 async def fast_broadcast_loop():
@@ -868,6 +869,7 @@ async def spotify_poller():
     spotify_images = {}
     loop = asyncio.get_running_loop()
     inactive_since = None
+    poll_interval = 5.0
 
     while True:
         try:
@@ -880,23 +882,22 @@ async def spotify_poller():
                 if inactive_since is None:
                     inactive_since = time.time()
                 elif time.time() - inactive_since > 600:
-                    print("🛑 Spotify has been inactive for 10 minutes. Disabling poller to conserve API limits until engine restart.")
-                    if 'spotify' in audio_state:
-                         del audio_state['spotify']
-                    return # Exit the poller task completely
+                    # Enter Sleep Mode instead of exiting
+                    poll_interval = 60.0 # Check once per minute
                 
                 # Update frontend if it was just paused
                 if 'spotify' in audio_state:
                     del audio_state['spotify']
             else:
                 inactive_since = None
+                poll_interval = 5.0 # Standard active polling
                 track = current_playing['item']
-                track_id = track['id']
+                track_id = track.get('id', 'unknown')
                 
                 if track_id != current_track_id:
                     current_track_id = track_id
-                    track_name = track['name']
-                    artist_name = track['artists'][0]['name']
+                    track_name = track.get('name', 'Unknown')
+                    artist_name = track['artists'][0]['name'] if track.get('artists') else "Unknown"
                     
                     # Extract Album Art (Spotify provides [High, Medium, Low] resolution)
                     images = track.get('album', {}).get('images', [])
@@ -933,10 +934,11 @@ async def spotify_poller():
             err_str = str(e)
             print(f"⚠️ Spotify Poller generic error: {err_str}")
             if "EOF" in err_str or isinstance(e, EOFError):
-                print("🛑 Spotify auth requires an interactive browser. Disabling poller for this session.")
-                return
+                print("🛑 Spotify auth requires an interactive browser. Re-checking in 10 minutes...")
+                await asyncio.sleep(600)
+                continue # Try again later instead of exiting
             
-        await asyncio.sleep(3.0) # Check every 3 seconds
+        await asyncio.sleep(poll_interval) 
 
 # --- 4. SERVER LOOP ---
 async def ws_handler(websocket):
@@ -1141,7 +1143,10 @@ async def ws_handler(websocket):
                             if "sceneFreq" in data and dmx_engine:
                                 dmx_engine.scene_freq = int(data["sceneFreq"])
                             if "audio_source" in data:
-                                restart_audio_stream(data["audio_source"])
+                                new_mode = str(data["audio_source"])
+                                if new_mode != current_audio_mode:
+                                    print(f"🔄 Audio Source change requested: {current_audio_mode} -> {new_mode}")
+                                    restart_audio_stream(new_mode)
                         
                         elif msg_type == "force_refresh":
                             # Broadcast refresh signal to all clients

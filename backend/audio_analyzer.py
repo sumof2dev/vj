@@ -44,7 +44,7 @@ class AudioAnalyzer:
         self.prev_raw_bins = [0.0] * 6
         self.beat_count = 0
         self.flux_sensitivity_percentage = 0.5 # Track raw slider percentage (0-1)
-        self.cumulative_max = 5.0 # LOW Initial Baseline (allows quick adaptation to quiet starts)
+        self.cumulative_max = 3.0 # LOW Initial Baseline (allows quick adaptation to quiet starts)
         
         # FIXED GOLD STANDARDS (Smoothing)
         # Low bins (0-2): 0.70, Mid bins (3-4): 0.85, High bin (5): 0.90
@@ -164,7 +164,7 @@ class AudioAnalyzer:
         # STABLE PEAK TRACKING (Intro-Aware):
         # We maintain a cumulative max that NEVER drops fast.
         # Sane Minimum 100.0 assumes a club-level signal is coming.
-        self.cumulative_max = max(100.0, self.cumulative_max * 0.999995, current_raw_max) 
+        self.cumulative_max = max(25.0, self.cumulative_max * 0.999995, current_raw_max) 
         
         # Reference peak is the maximum of recent history or the cumulative ceiling
         global_peak = max(self.cumulative_max, max(self.history_raw_max) if self.history_raw_max else self.cumulative_max)

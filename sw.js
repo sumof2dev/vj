@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ravebox-vj-1776786719';
+const CACHE_NAME = 'ravebox-vj-1776919109';
 
 self.addEventListener('install', (event) => {
     // Cache each asset individually — skip any that fail (e.g. missing on GCS)
@@ -8,8 +8,10 @@ self.addEventListener('install', (event) => {
                 'manager.html',
                 'visualdmx.html',
                 'setup.html',
-                'gamepad.html',
                 'help.html',
+                'profile.html',
+                'fixture_ai.html',
+                'robot_sim.html',
                 'manifest.json',
                 'icon.png',
                 'background.png'
@@ -52,8 +54,16 @@ self.addEventListener('fetch', (event) => {
     // For navigation requests, try network first, then cache
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match(event.request) || caches.match('manager.html');
+            fetch(event.request).then(response => {
+                // If Cloudflare returns a 404 or 502, force fallback to local offline cache
+                if (!response.ok && response.status !== 0) {
+                    throw new Error("Network returned " + response.status);
+                }
+                return response;
+            }).catch(() => {
+                return caches.match(event.request).then(cachedRes => {
+                    return cachedRes || caches.match('manager.html');
+                });
             })
         );
         return;

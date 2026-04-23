@@ -114,17 +114,23 @@ function standaloneLoop() {
     }
 
     // BROADCAST BINARY PACKET (SPOOFED)
-    // Structure: [0..3: magic?] [4..7: flux] [8..11: bass] [12..15: mid?] [16..19: high] [20..23: vol] ... [76..77: baseIdx] [78..79: fxIdx] [82..end: DMX]
-    const buffer = new ArrayBuffer(82 + 513);
+    // Layout (86-byte header): 
+    // [0..3: time] [4..7: flux] [8..11: bass] [16..19: high] [20..23: vol] [28..31: beat_phase] ... [80..81: baseIdx] [82..83: fxIdx] [86..end: DMX]
+    const buffer = new ArrayBuffer(86 + 513);
     const view = new DataView(buffer);
     view.setFloat32(4, flux, true);
     view.setFloat32(8, bins[1], true);
     view.setFloat32(16, bins[5], true);
     view.setFloat32(20, currentEnergy, true);
-    view.setUint16(76, baseIdx, true);
-    view.setUint16(78, fxIdx, true);
-    // Fill DMX part (optional, but keep it for consistency)
-    for (let i = 0; i < 513; i++) view.setUint8(82 + i, window.latestDmxUniverse[i]);
+    
+    // Mock beat phase (0.0 to 1.0 ramp based on time, approx 120bpm)
+    const beatPhase = (Date.now() % 500) / 500.0;
+    view.setFloat32(28, beatPhase, true);
+
+    view.setUint16(80, baseIdx, true);
+    view.setUint16(82, fxIdx, true);
+    // Fill DMX part
+    for (let i = 0; i < 513; i++) view.setUint8(86 + i, window.latestDmxUniverse[i]);
 
     broadcastToMocks(buffer);
 
