@@ -460,6 +460,8 @@ const PRESET_WARPS = [
 
 export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const isNodeMode = useMemo(() => new URLSearchParams(window.location.search).get('mode') === 'node', []);
+
     const [status, setStatus] = useState("Connecting...");
     const [statusColor, setStatusColor] = useState("text-amber-400");
     const [showToolbar, setShowToolbar] = useState(false);
@@ -1231,7 +1233,12 @@ export default function App() {
 
     return (
         <div className="relative w-full h-full bg-black text-white font-sans overflow-hidden"
-            onClick={() => { setShowToolbar(!showToolbar); setShowHistory(false); setShowSettings(false); }}>
+            onClick={() => { 
+                if (isNodeMode) return;
+                setShowToolbar(!showToolbar); 
+                setShowHistory(false); 
+                setShowSettings(false); 
+            }}>
             <canvas ref={canvasRef} className="block w-full h-full" />
 
             <AnimatePresence>

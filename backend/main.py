@@ -271,6 +271,7 @@ DMX_ENABLED = True
 active_clients = set()
 last_callback_time = time.time()
 dmx_port = None
+network_dmx_node = None
 audio_state = { "bass": 0.0, "mid": 0.0, "high": 0.0, "vol": 0.0, "flux": 0.0, "beat": False, "device_name": "None", "bpm": 120.0 }
 gamepad_state = {
     "ls_x": 0.5, "ls_y": 0.5, "rs_x": 0.5, "rs_y": 0.5,
@@ -307,6 +308,19 @@ visual_params_cache = {
     "effect": "auto",
     "triggers": {}
 }
+
+class DMXNetworkNode:
+    def __init__(self, ip, port=5002):
+        import socket
+        self.ip = ip
+        self.port = port
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def send(self, universe):
+        try:
+            self.sock.sendto(universe, (self.ip, self.port))
+        except Exception as e:
+            pass
 
 def save_training_snippet(snippet):
     """Save a captured training snippet as a 'playable' session in the recordings folder"""
@@ -363,7 +377,8 @@ def save_live_defaults():
                 "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
                 "speed": dmx_engine.speed if dmx_engine else 1.0,
                 "intensity": dmx_engine.intensity if dmx_engine else 1.0,
-                "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
+                "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
+                "node_ip": network_dmx_node.ip if network_dmx_node else ""
             },
             "laser": {
                 "speed": dmx_engine.speed if dmx_engine else 1.0,
@@ -397,6 +412,10 @@ def load_live_defaults():
             if "speed" in m_data and dmx_engine: dmx_engine.set_speed(m_data["speed"])
             if "intensity" in m_data and dmx_engine: dmx_engine.set_intensity(m_data["intensity"])
             if "sceneFreq" in m_data and dmx_engine: dmx_engine.scene_freq = m_data["sceneFreq"]
+            if "node_ip" in m_data and m_data["node_ip"]:
+                global network_dmx_node
+                network_dmx_node = DMXNetworkNode(m_data["node_ip"])
+                print(f"🌐 Loaded Network DMX Target: {m_data['node_ip']}")
 
             # 2. Laser Section
             l_data = data.get("laser", {})
@@ -782,7 +801,7 @@ async def fast_broadcast_loop():
                     last_dmx_update = current_time
                     
                     if current_time - last_log > 0.5:
-                        if dmx_port or dmx_engine:
+                        if dmx_port or network_dmx_node or dmx_engine:
                             universe = dmx_engine.get_universe()
                             monitored = {addr: universe[addr] for addr in [1, 7, 8, 175, 182] if addr < len(universe)}
                             health = analyzer.get_signal_health()
@@ -791,47 +810,52 @@ async def fast_broadcast_loop():
                             print(f"DMX_OUT: {monitored} | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Signal: {health['status']} ({health['peak']:.1f})")
                             last_log = current_time
 
-                    if dmx_port:
+                    if dmx_port or network_dmx_node:
                         full_u = dmx_engine.get_universe()
                         
+                        # NETWORK DMX STREAM
+                        if network_dmx_node:
+                            network_dmx_node.send(bytearray(full_u))
+                            if current_time - last_log > 1.0: print(f"📡 TX Network DMX: {len(full_u)} bytes to {network_dmx_node.target_ip}")
+                            
                         # LOG DATA TO RECORDER IF ACTIVE
-                        if recorder.is_recording:
-                            # Capture names of active presets for timeline visualization
-                            active_preset_names = dmx_engine.get_active_preset_names() if dmx_engine else []
-                            recorder.log_dmx(full_u, audio_state=audio_state, active_presets=active_preset_names)
-
-                        max_addr = 0
-                        for inst in dmx_engine.stage_instances:
-                            profile = dmx_engine.profiles.get(inst.get('profileId'))
-                            ch_count = 0
-                            if profile:
-                                ch_count = len(profile.get('channels', []))
-                                if ch_count == 0:
-                                    # Fallback legacy
-                                    fixture = dmx_engine.fixtures.get(inst.get('fixtureId'))
-                                    if fixture: ch_count = len(fixture.get('channels', []))
-                            
-                            if ch_count > 0:
-                                dev_max = int(inst.get('address', 1)) + int(inst.get('offset', 0)) + (ch_count - 1)
-                                if dev_max > max_addr: max_addr = dev_max
-                        
-                        global dmx_ready
-                        if dmx_port and dmx_ready:
-                            dmx_ready = False
-                            if dmx_engine and dmx_engine.overrides:
-                                max_o = max(dmx_engine.overrides.keys())
-                                if max_o > max_addr: max_addr = max_o
+                            if recorder.is_recording:
+                                # Capture names of active presets for timeline visualization
+                                active_preset_names = dmx_engine.get_active_preset_names() if dmx_engine else []
+                                recorder.log_dmx(full_u, audio_state=audio_state, active_presets=active_preset_names)
+    
+                            max_addr = 0
+                            for inst in dmx_engine.stage_instances:
+                                profile = dmx_engine.profiles.get(inst.get('profileId'))
+                                ch_count = 0
+                                if profile:
+                                    ch_count = len(profile.get('channels', []))
+                                    if ch_count == 0:
+                                        # Fallback legacy
+                                        fixture = dmx_engine.fixtures.get(inst.get('fixtureId'))
+                                        if fixture: ch_count = len(fixture.get('channels', []))
                                 
-                            send_len = max(32, min(513, max_addr + 1))
-                            universe = bytearray(full_u[:send_len])
+                                if ch_count > 0:
+                                    dev_max = int(inst.get('address', 1)) + int(inst.get('offset', 0)) + (ch_count - 1)
+                                    if dev_max > max_addr: max_addr = dev_max
                             
-                            loop = asyncio.get_running_loop()
-                            fut = loop.run_in_executor(dmx_executor, sync_send_dmx, dmx_port, universe)
-                            def dmx_done_cb(f):
-                                global dmx_ready
-                                dmx_ready = True
-                            fut.add_done_callback(dmx_done_cb)
-
+                            global dmx_ready
+                            if dmx_port and dmx_ready:
+                                dmx_ready = False
+                                if dmx_engine and dmx_engine.overrides:
+                                    max_o = max(dmx_engine.overrides.keys())
+                                    if max_o > max_addr: max_addr = max_o
+                                    
+                                send_len = max(32, min(513, max_addr + 1))
+                                universe = bytearray(full_u[:send_len])
+                                
+                                loop = asyncio.get_running_loop()
+                                fut = loop.run_in_executor(dmx_executor, sync_send_dmx, dmx_port, universe)
+                                def dmx_done_cb(f):
+                                    global dmx_ready
+                                    dmx_ready = True
+                                fut.add_done_callback(dmx_done_cb)
+    
                 except ValueError as ve:
                     if not critical_error_sent:
                         print(f"🛑 CRITICAL RUNTIME ERROR: {ve}")

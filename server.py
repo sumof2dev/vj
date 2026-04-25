@@ -83,6 +83,10 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_fixture(subpath)
             return
 
+        if path == '/api/remote_settings':
+            self._handle_get_remote_settings()
+            return
+
         # NEW: Global Proxy for Launcher Status (if hit on 8000)
         if path == '/status':
              self._proxy_to_launcher('/status')
@@ -90,6 +94,12 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
 
         if path == '/capture':
              self._proxy_to_camera(self.path) # Forward the full query string with t= timestamp
+             return
+
+        if path == '/node':
+             self.send_response(302)
+             self.send_header("Location", "/node_visualizer.html")
+             self.end_headers()
              return
 
         if path == '/start':
@@ -299,6 +309,21 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         fpath = os.path.join(BASE_DIR, 'fixtures', fname)
         if not os.path.exists(fpath):
             self.send_error(404, "Fixture not found")
+            return
+
+        try:
+            with open(fpath, 'r') as f:
+                data = json.load(f)
+            self._send_json(data)
+        except Exception as e:
+            self.send_error(500, str(e))
+
+    def _handle_get_remote_settings(self):
+        """Read vj_remote_settings.json from root"""
+        fpath = os.path.join(BASE_DIR, 'vj_remote_settings.json')
+        if not os.path.exists(fpath):
+            # Return empty defaults if not found
+            self._send_json({"master": {"node_ip": ""}})
             return
 
         try:
@@ -865,7 +890,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             '/spotify_creds.json': 'spotify_creds.json',
             '/presets.json': 'presets.json',
             '/stage_config.json': 'stage_config.json',
-            '/live_console.json': 'live_console.json'
+            '/live_console.json': 'live_console.json',
+            '/vj_remote_settings.json': 'vj_remote_settings.json'
         }
         
         target_file = valid_paths.get(parsed_path.path)

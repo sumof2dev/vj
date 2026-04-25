@@ -120,7 +120,15 @@
                     </datalist>
                 </div>
             </div>
-            <button class="btn btn-primary" onclick="patchToStage()">➕ Add to Stage</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn btn-primary" onclick="patchToStage()">➕ Add to Stage</button>
+                <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.3); padding:5px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                    <label style="font-size:10px; color:#666; text-transform:uppercase; white-space:nowrap;">📡 Node Mode (IP)</label>
+                    <input type="text" id="dmx-node-ip-input" placeholder="OFF" 
+                        style="width:110px; background:none; border:none; color:var(--accent); font-family:monospace; font-weight:800; font-size:12px; padding:0;" 
+                        onchange="saveNodeIp()">
+                </div>
+            </div>
         </div>
 
         <div class="card">

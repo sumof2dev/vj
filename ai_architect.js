@@ -620,7 +620,7 @@ Output: Valid raw JSON object only.
             });
 
             closeAiSettings();
-            alert("AI Settings Saved!");
+            alert("Settings Saved!");
         }
 
         async function refineProfileGlobal() {

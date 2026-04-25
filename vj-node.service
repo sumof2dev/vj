@@ -1,0 +1,15 @@
+[Unit]
+Description=RaveBox DMX Network Node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sumof2
+WorkingDirectory=/home/sumof2/vj
+ExecStart=/home/sumof2/vj/venv/bin/python3 /home/sumof2/vj/backend/dmx_node.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

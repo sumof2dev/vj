@@ -45,7 +45,15 @@ rsync -avz --progress \
     --exclude='scratch' \
     ./ "$REMOTE_USER@$TARGET:$REMOTE_PATH/"
 
-echo "🔄 Restarting services on $TARGET..."
-ssh -t "$REMOTE_USER@$TARGET" "cd $REMOTE_PATH && sudo systemctl restart vj-*"
+# Determine if we should set up as a node
+SETUP_FLAGS="--non-interactive"
+if [[ "$*" == *"--node"* ]]; then
+    echo "🌐 Configuring services as Node on $TARGET..."
+    SETUP_FLAGS="--node $SETUP_FLAGS"
+else
+    echo "👑 Configuring services as Master on $TARGET..."
+fi
+
+ssh -tt "$REMOTE_USER@$TARGET" "cd $REMOTE_PATH && ./setup_service.sh $SETUP_FLAGS"
 
 echo "✅ Update complete on $TARGET!"

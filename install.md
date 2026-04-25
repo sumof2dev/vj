@@ -83,3 +83,27 @@ Once installed, access the **"Sanity Check"** tab in the Help UI. This test feed
 
 ---
 *Technical Ref: INSTALL v1.0 / HW-SYNC*
+
+---
+
+## 6. Deploying a DMX Network Node
+
+To extend your DMX universe to a secondary device (headless) over WiFi/Ethernet:
+
+### On the Master (Sender)
+1. In the **Stage Tab**, enter the Node's IP address in the **Node IP** field.
+2. Ensure music is playing to start the broadcast.
+
+### On the Node (Receiver)
+1. Run the service setup with the node flag:
+   ```bash
+   ./setup_service.sh --node
+   ```
+2. This disables the analysis engine/UI and enables the specialized `vj-node.service`.
+3. Verify receiving data:
+   ```bash
+   journalctl -u vj-node -f
+   ```
+
+---
+*Technical Ref: INSTALL v1.2 / Network-Extension*

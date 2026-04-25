@@ -462,6 +462,7 @@ console.log("✅ RaveBox Core Ready (v426)");
     const isProfile = path.includes('profile.html');
 
     const initializeRouting = () => {
+        loadNodeIp();
         if (isSetup) {
             // Priority 1: Direct Redirect if no tab or explicit profile tab
             if (!tabParam || tabParam === 'profiles' || tabParam === 'profile') {
@@ -502,3 +503,34 @@ console.log("✅ RaveBox Core Ready (v426)");
         window.addEventListener('DOMContentLoaded', initializeRouting);
     }
 })();
+
+function loadNodeIp() {
+    const input = document.getElementById('dmx-node-ip-input');
+    if (!input) return;
+    fetch('/api/remote_settings')
+        .then(r => r.json())
+        .then(data => {
+            input.value = data.master?.node_ip || "";
+        })
+        .catch(e => console.warn("Failed to load node IP:", e));
+}
+
+function saveNodeIp() {
+    const input = document.getElementById('dmx-node-ip-input');
+    if (!input) return;
+    const nodeIp = input.value;
+    
+    fetch('/api/remote_settings')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.master) data.master = {};
+            data.master.node_ip = nodeIp;
+            return fetch('/vj_remote_settings.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+        })
+        .then(() => console.log("📡 Node IP saved to server:", nodeIp))
+        .catch(e => console.error("Failed to save node IP:", e));
+}

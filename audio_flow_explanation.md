@@ -147,3 +147,23 @@ Accurate DMX timing is critical on the Pi 5. The engine uses two methods based o
   2. Use standard `dtparam=uart0=on` and `dtoverlay=disable-bt` instead.
   3. Note that modern Pi 5 firmware often auto-detects HifiBerry HATs; adding `dtoverlay=hifiberry-dacplus` manually can sometimes cause redundant driver loading.
 
+
+---
+
+## 10. Network DMX Extension (Node Mode)
+
+The system supports a Master-Node architecture for distributing DMX data across a network without long XLR runs.
+
+### 10.1 Master Device (The Broadcaster)
+- **Role:** Performs all audio analysis, UI hosting, and DMX logic calculations.
+- **Streaming:** Encapsulates the entire 513-byte DMX universe into a single UDP packet and broadcasts it to a target IP on **UDP Port 5002**.
+- **Performance:** Streaming occurs in the `fast_broadcast_loop` (main.py) at ~30-40 FPS, ensuring no perceived latency between network nodes and local hardware.
+
+### 10.2 Node Device (The Receiver)
+- **Role:** A lightweight headless receiver (`dmx_node.py`) running as the `vj-node.service`.
+- **Auto-Discovery:** Probes for USB FTDI adapters first, falling back to GPIO UART (ttyAMA0).
+- **Timing Logic:** Replicates the Master's precise "Baud Rate Trick" or "Hardware Break" logic to ensure standard DMX timing on secondary hardware.
+- **Debugging:** Provides real-time heartbeat and packet-counter logs via `journalctl -u vj-node -f`.
+
+---
+*Technical Ref: ENGINE v2.2 / Network-DMX*
