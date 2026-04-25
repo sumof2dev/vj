@@ -15,6 +15,7 @@ from dmx_engine import DMXEngine
 from vibe_engine import VibeEngine
 from audio_analyzer import AudioAnalyzer
 from recorder_service import Recorder
+from datetime import datetime
 import wave
 
 try:
@@ -306,6 +307,50 @@ visual_params_cache = {
     "effect": "auto",
     "triggers": {}
 }
+
+def save_training_snippet(snippet):
+    """Save a captured training snippet as a 'playable' session in the recordings folder"""
+    try:
+        rec_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "recordings")
+        ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        label = snippet.get('label', 'unlabeled')
+        
+        # Create a folder name that indicates it's a training snippet
+        folder_name = f"SNIPPET_{ts_str}_{label}"
+        folder_path = os.path.join(rec_root, folder_name)
+        
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        
+        # 1. Save the frames as dmx.json (player.html expectation)
+        # We need to make sure 't' (time) starts at 0 for the player's timeline
+        frames = snippet.get('frames', [])
+        if frames:
+            start_t = frames[0]['t']
+            for f in frames:
+                f['t'] = round(f['t'] - start_t, 3)
+                # Ensure the player sees an empty 'v' (DMX) object to avoid key errors
+                f['v'] = {}
+        
+        with open(os.path.join(folder_path, "dmx.json"), 'w') as f:
+            json.dump(frames, f)
+            
+        # 2. Save meta.json for the browser list
+        meta = {
+            "name": f"Snippet: {label.upper()} ({ts_str})",
+            "timestamp": datetime.now().isoformat(),
+            "duration": frames[-1]['t'] if frames else 0,
+            "addresses": [],
+            "is_snippet": True,
+            "label": label
+        }
+        with open(os.path.join(folder_path, "meta.json"), 'w') as f:
+            json.dump(meta, f, indent=4)
+            
+        print(f"🧠 [Collector] Saved snippet to recordings/{folder_name}")
+    except Exception as e:
+        print(f"❌ Failed to save training snippet: {e}")
+
 
 def save_live_defaults():
     """Save current performance parameters to disk"""
@@ -625,7 +670,14 @@ def audio_worker_thread():
                 vibe_results = vibe_engine.update(audio_state)
                 audio_state.update(vibe_results) # 'vibe', 'mods', etc.
                 
+                # Check for completed snippet
+                snippet = vibe_results.get('snippet')
+                if snippet:
+                    thread = threading.Thread(target=save_training_snippet, args=(snippet,), daemon=True)
+                    thread.start()
+                
             audio_queue.task_done()
+
         except Exception as e:
             print(f"⚠️ Audio Worker Error: {e}")
             time.sleep(0.01)
@@ -1174,6 +1226,15 @@ async def ws_handler(websocket):
                             # Persist current state as power-on default
                             save_live_defaults()
                             await websocket.send(json.dumps({"type": "status", "message": "Defaults saved to disk"}))
+
+                        elif msg_type == "save_snippet":
+                            label = data.get("label", "unlabeled")
+                            if vibe_engine:
+                                print(f"📍 Snippet Capture Started: {label} (Will harvest in 10s)")
+                                vibe_engine.pending_snippet = {
+                                    "label": label,
+                                    "end_time": time.time() + 10.0
+                                }
 
                         elif msg_type == "get_params":
                             # Send current system state to new clients

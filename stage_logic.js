@@ -357,15 +357,20 @@ var switchTab = window.switchTab || function() { };
                     const val = latestDmxUniverse[addr] || 0;
                     const isBusy = latestOverrides.has(addr);
                     return `
-                                <div class="compact-slider-row ${isBusy ? 'busy' : ''}" data-addr="${addr}">
-                                    <div class="compact-role-label">${ch.role || ch.name}</div>
+                                <div class="compact-slider-row ${isBusy ? 'busy' : ''}" data-addr="${addr}" data-fixture-id="${id}" data-idx="${idx}">
+                                    <div class="compact-role-label" onclick="toggleHideTestChannel('${id}', ${idx})">${ch.role || ch.name}<span class="remove-x">✖</span></div>
                                     <div class="compact-addr-label">${addr}</div>
-                                    <input type="range" min="0" max="255" value="${val}" class="compact-slider-input"
-                                           oninput="sendCompactTestOverride('${id}', ${idx}, this.value)">
-                                    <div class="compact-val-display">${val}</div>
+                                    <div class="test-slider-container">
+                                        <button class="compact-adj-btn" onclick="adjustTestValue('${id}', ${idx}, -1)">-</button>
+                                        <input type="range" min="0" max="255" value="${val}" class="compact-slider-input"
+                                               oninput="sendCompactTestOverride('${id}', ${idx}, this.value, true)">
+                                        <button class="compact-adj-btn" onclick="adjustTestValue('${id}', ${idx}, 1)">+</button>
+                                    </div>
+                                    <input type="number" min="0" max="255" value="${val}" class="compact-val-display"
+                                           oninput="sendCompactTestOverride('${id}', ${idx}, this.value, true)"
+                                           onchange="sendCompactTestOverride('${id}', ${idx}, this.value, false)">
                                     <div style="display:flex; gap:4px; align-items:center;">
                                         <button class="compact-release-btn" onclick="clearOverride(${addr})">✖</button>
-                                        <button class="compact-hide-btn" onclick="toggleHideTestChannel('${id}', ${idx})" title="Hide Channel">✖</button>
                                     </div>
                                 </div>
                             `;
@@ -505,11 +510,12 @@ var switchTab = window.switchTab || function() { };
                     const val = latestDmxUniverse[addr] || 0;
                     const isBusy = latestOverrides.has(addr);
 
-                    const valDisplay = row.querySelector('.compact-val-display');
-                    if (valDisplay) valDisplay.innerText = val;
-
                     const slider = row.querySelector('.compact-slider-input');
-                    if (slider && document.activeElement !== slider) slider.value = val;
+                    const valDisplay = row.querySelector('.compact-val-display');
+                    const currentVal = (latestDmxUniverse[addr] ?? 0);
+                    
+                    if (slider && document.activeElement !== slider) slider.value = currentVal;
+                    if (valDisplay && document.activeElement !== valDisplay) valDisplay.value = currentVal;
 
                     if (isBusy) row.classList.add('busy');
                     else row.classList.remove('busy');
@@ -517,17 +523,34 @@ var switchTab = window.switchTab || function() { };
             });
         }
 
-        function sendCompactTestOverride(id, channelIdx, val) {
+        function sendCompactTestOverride(id, channelIdx, val, isLive = false) {
             const inst = db.stage.find(s => s.id === id);
+            if (!inst) return;
             const profile = db.profiles.find(p => p.id === inst.profileId);
+            if (!profile) return;
             const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
             const ch = (profile.channels || [])[channelIdx] || {};
             const addr = baseAddr + (parseInt(ch.addrOffset) || channelIdx);
 
+            const newVal = parseInt(val);
+            if (isNaN(newVal)) return;
+
+            // OPTIMISTIC UPDATE: Local DMX state update to prevent UI flickering
+            latestDmxUniverse[addr] = newVal;
+
+            // Immediate local UI feedback
+            const row = document.querySelector(`.compact-slider-row[data-fixture-id="${id}"][data-idx="${channelIdx}"]`);
+            if (row) {
+                const slider = row.querySelector('.compact-slider-input');
+                const num = row.querySelector('.compact-val-display');
+                if (slider && document.activeElement !== slider) slider.value = newVal;
+                if (num && document.activeElement !== num) num.value = newVal;
+            }
+
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'laser_override',
-                    overrides: [{ address: addr, value: parseInt(val) }]
+                    overrides: [{ address: addr, value: newVal }]
                 }));
             }
         }
@@ -565,12 +588,14 @@ var switchTab = window.switchTab || function() { };
 
         function adjustTestValue(id, idx, delta) {
             const inst = db.stage.find(s => s.id === id);
+            if (!inst) return;
             const profile = db.profiles.find(p => p.id === inst.profileId);
+            if (!profile) return;
             const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
             const ch = (profile.channels || [])[idx] || {};
             const addr = baseAddr + (parseInt(ch.addrOffset) || idx);
             const current = latestDmxUniverse[addr] || 0;
-            sendCompactTestOverride(fixtureId, idx, Math.max(0, Math.min(255, current + delta)));
+            sendCompactTestOverride(id, idx, Math.max(0, Math.min(255, current + delta)), false);
         }
 
         /* --- VIBE DISPLAY & EVENT LOG --- */
@@ -805,9 +830,9 @@ var switchTab = window.switchTab || function() { };
                         vol: latestAudioState.vol
                     };
 
-                    // 2. UPDATE DMX UNIVERSE (offset 82)
+                    // 2. UPDATE DMX UNIVERSE (offset 86)
                     for (let i = 0; i < 513; i++) {
-                        latestDmxUniverse[i] = view.getUint8(82 + i);
+                        latestDmxUniverse[i] = view.getUint8(86 + i);
                     }
 
                     // 3. TRIGGER THROTTLED UI UPDATES

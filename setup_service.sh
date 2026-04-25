@@ -51,6 +51,12 @@ sed -i "s|WorkingDirectory=.*|WorkingDirectory=$CURRENT_DIR|g" "$TMP_DIR/$CAMERA
 sed -i "s|ExecStart=.*|ExecStart=$CURRENT_DIR/venv/bin/python3 $CURRENT_DIR/scripts/calibration_server.py|g" "$TMP_DIR/$CAMERA_SERVICE"
 sed -i "s|User=.*|User=$USER|g" "$TMP_DIR/$CAMERA_SERVICE"
 
+# Dynamic UID for PulseAudio
+USER_ID=$(id -u $USER)
+for svc in "$SERVICE_NAME" "$SERVER_SERVICE" "$LAUNCHER_SERVICE" "$CAMERA_SERVICE"; do
+    sed -i "s|/run/user/1000|/run/user/$USER_ID|g" "$TMP_DIR/$svc"
+done
+
 echo "   - Configured paths for user: $USER"
 
 # 3. Copy to systemd
@@ -61,13 +67,17 @@ sudo cp "$TMP_DIR/$LAUNCHER_SERVICE" /etc/systemd/system/
 sudo cp "$TMP_DIR/$CAMERA_SERVICE" /etc/systemd/system/
 rm -rf "$TMP_DIR"
 
-# 4. Ensure user can run systemctl for these services without password
+# 4. Ensure user is in the audio group
+echo "   - Ensuring $USER is in the audio group..."
+sudo usermod -a -G audio $USER || true
+
+# 5. Ensure user can run systemctl for these services without password
 echo "   - Setting up sudo permissions for remote management..."
 SUDOERS_FILE="/etc/sudoers.d/vj-launcher"
 if [ "$IS_EVT" = true ]; then
     SUDOERS_FILE="/etc/sudoers.d/vj-launcher-evt"
 fi
-SUDO_CMD="$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start $SERVICE_NAME, /usr/bin/systemctl stop $SERVICE_NAME, /usr/bin/systemctl restart $SERVICE_NAME, /usr/bin/systemctl start $CAMERA_SERVICE, /usr/bin/systemctl stop $CAMERA_SERVICE, /usr/bin/systemctl restart $CAMERA_SERVICE"
+SUDO_CMD="$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start vj-*, /usr/bin/systemctl stop vj-*, /usr/bin/systemctl restart vj-*, /usr/bin/systemctl status vj-*, /usr/bin/systemctl is-active vj-*, /usr/bin/journalctl -u vj-*, /usr/bin/systemctl restart raspotify, /usr/bin/systemctl status raspotify"
 echo "$SUDO_CMD" | sudo tee "$SUDOERS_FILE" > /dev/null
 sudo chmod 440 "$SUDOERS_FILE"
 

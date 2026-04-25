@@ -17,13 +17,19 @@ class VibeEngine:
         self.smooth_vol = 0.0
 
         # Energy Trend Tracking (Build/Drop Detection)
-        self.energy_history = collections.deque(maxlen=300)  # ~5s at 60Hz
+        # History window (30s @ 60Hz = 1800 frames)
+        self.energy_history = collections.deque(maxlen=1800)
+        self.impact_history = collections.deque(maxlen=1800)
         self.transient = "steady"  # "building", "dropping", "tension", "steady"
         self._transient_hold_until = 0  # Hold timer to prevent single-frame flickers
         self._steady_since = 0 # Prevent re-triggering building too fast
         self.vibe_hysteresis = 5.0 # "Sticky Vibe" (prevent flickering)
-        self.impact_history = collections.deque(maxlen=180) # ~3s at 60Hz
         self._history_frame = 0  # Frame counter; transient logic is suppressed until history is warm
+
+        # Feature Collector: 40s Ring Buffer for Training Clips
+        self.metadata_history = collections.deque(maxlen=2400) # 40s @ 60Hz
+        self.pending_snippet = None  # { "label": "drop", "end_time": float }
+
 
     def update(self, audio_state, now=None):
         """
@@ -120,9 +126,18 @@ class VibeEngine:
             HOLD_TIMES = {"building": 0.5, "tension": 1.5, "dropping": 6.0}
             
             # Use a wide window (30 frames / ~0.5s) for rhythmic stability
-            recent_avg = float(sum(self.impact_history[i] for i in range(-30, 0)) / 30.0)
-            old_avg = float(sum(self.impact_history[i] for i in range(-90, -60)) / 30.0)
+            recent_avg = float(sum(list(self.impact_history)[-30:]) / 30.0)
+            old_avg = float(sum(list(self.impact_history)[-90:-60]) / 30.0)
+            
+            # Deep History Check (Compare to 25s ago if available)
+            if len(self.energy_history) >= 1500:
+                very_old_energy = float(sum(list(self.energy_history)[-1500:-1470]) / 30.0)
+                deep_trend = recent_energy - very_old_energy
+                # If we see a massive 25s rise, we lower the threshold for "Building"
+                if deep_trend > 0.4: trend_long += 0.1 
+            
             sustained_spike = recent_avg - old_avg
+
             
             # If we're still in a hold period, don't enter state transition logic
             if now < self._transient_hold_until:
@@ -167,6 +182,31 @@ class VibeEngine:
                     self.transient = "steady"
                     self._steady_since = now
 
+        # --- FEATURE COLLECTOR LOGIC ---
+        # Record current state into ring buffer
+        self.metadata_history.append({
+            "t": now,
+            "a": {
+                "b": round(bass, 3),
+                "h": round(high, 3),
+                "f": round(flux, 3),
+                "vl": round(vol, 3),
+                "sc": round(spectral, 3)
+            },
+            "s": self.current_vibe,
+            "tr": self.transient
+        })
+
+        snippet_result = None
+        if (self.pending_snippet and now >= self.pending_snippet['end_time']):
+            # The 10s "After" window is complete. Harvest the full 40s history.
+            snippet_result = {
+                "label": self.pending_snippet['label'],
+                "frames": list(self.metadata_history)
+            }
+            self.pending_snippet = None # Reset
+
+
         # Drop is over, return to steady
         
         return {
@@ -178,5 +218,6 @@ class VibeEngine:
                 "flux": self.smooth_flux,
                 "vol":  self.smooth_vol,
                 "beat_phase": audio_state.get('beat_phase', 0.0)  # 0-1 position in beat
-            }
+            },
+            "snippet": snippet_result
         }

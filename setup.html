@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=422262138">
+<link rel="stylesheet" href="setup.css?v=424260634">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
@@ -341,7 +341,8 @@
         <div class="ai-modal-content chat-optimized" onclick="event.stopPropagation()">
             <div class="ai-modal-header">
                 <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
-                    <span style="font-size: 1.4rem;">🤖</span> AI Preset Generator
+                    <span style="font-size: 1.4rem;">🤖</span>
+                    <span id="ai-preset-modal-title-text">AI Preset Generator</span>
                     <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -367,10 +368,16 @@
                 <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
                     <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
                         onclick="clearPresetAiChatHistory()">🗑️ Wipe</button>
-                    <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">FIX</button>
+                    <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">[FIX]</button>
+                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[X/Y]</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
+                </div>
+
+                <div id="ai-preset-xy-panel" 
+                    style="display:none; padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
+                    <!-- X/Y Calibration UI injected here -->
                 </div>
 
                 <div id="ai-fixture-picker" 
@@ -398,6 +405,15 @@
                     <div style="font-size:0.7rem; color:var(--text-dim); display:flex; align-items:center; gap:5px;">
                         Using <span class="active-model-name"
                             style="color:var(--accent-alt); font-weight:bold;">...</span>
+                        <div class="hover-opacity" onclick="openAiSettings()" title="AI Settings" style="cursor:pointer; display:flex; align-items:center;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                </path>
+                            </svg>
+                        </div>
                     </div>
                     <div style="display:flex; gap:8px;">
                         <button class="btn btn-secondary btn-sm" id="ai-preset-view-diff-btn" onclick="showPresetAiDiff()"
@@ -630,11 +646,11 @@
         window.LAUNCHER_API = window.LAUNCHER_API || "";
         window.API_BASE = window.API_BASE || "";
     </script>
-    <script src="shared_setup.js?v=422262138"></script>
-<script src="live_controller.js?v=422262138"></script>
-<script src="profile_logic.js?v=422262138"></script>
-<script src="ai_architect.js?v=422262138"></script>
-<script src="stage_logic.js?v=422262138"></script>
+    <script src="shared_setup.js?v=424260634"></script>
+<script src="live_controller.js?v=424260634"></script>
+<script src="profile_logic.js?v=424260634"></script>
+<script src="ai_architect.js?v=424260634"></script>
+<script src="stage_logic.js?v=424260634"></script>
 <script>window.onload = () => { 
     console.log("🚀 VJ Manager starting (UI Refreshed)..."); 
     // All routing and landing logic (redirects, tab switching) 

@@ -51,9 +51,9 @@ fi
 echo ""
 echo -e "${YELLOW}[Step 1/6] Installing System Dependencies...${NC}"
 sudo apt update
-sudo apt install -y python3-venv libasound2-dev libpulse0 pulseaudio-utils \
+sudo apt install -y python3-venv libasound2-dev libpulse0 pulseaudio-utils pulseaudio \
                     gpiod libgpiod-dev i2c-tools libportaudio2 libportaudiocpp0 \
-                    libgl1-mesa-glx libglib2.0-0
+                    libgl1 libglib2.0-0
 
 # 2. Hardware Mapping (/boot/firmware/config.txt)
 echo ""

@@ -4,3 +4,7 @@ pyserial
 websockets
 pulsectl
 python-kasa
+opencv-python-headless
+requests
+evdev
+spotipy

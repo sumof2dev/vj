@@ -35,7 +35,7 @@ dtparam=audio=on
 Run the following command to install the required system libraries for audio analysis, GPIO control, and certificate management:
 
 ```bash
-sudo apt update && sudo apt install -y python3-venv libasound2-dev libpulse0 pulseaudio-utils gpiod libgpiod-dev openssl fuser
+sudo apt update && sudo apt install -y python3-venv libasound2-dev libpulse0 pulseaudio-utils pulseaudio gpiod libgpiod-dev openssl fuser
 ```
 
 ---
@@ -45,7 +45,7 @@ sudo apt update && sudo apt install -y python3-venv libasound2-dev libpulse0 pul
 ### Sudoer Access
 The Web UI (Port 8000) requests system restarts via the Launcher (Port 8001). To enable this without password prompts, the following file must exist:
 - **Path**: `/etc/sudoers.d/vj-launcher`
-- **Content**: `ravebox ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart vj-*`
+- **Content**: `ravebox ALL=(ALL) NOPASSWD: /usr/bin/systemctl * vj-*, /usr/bin/journalctl -u vj-*, /usr/bin/systemctl * raspotify`
 
 ### Service Installation
 Run the following script to install the `vj-server`, `vj-launcher`, and `vj-engine` systemd units:

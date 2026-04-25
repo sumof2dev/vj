@@ -1016,8 +1016,8 @@ export default function App() {
 
                     if (autoCycleRef.current && libraryRef.current.length > 0) {
                         const bases = libraryRef.current.filter(i => i.category === 'base');
-                        const images = libraryRef.current.filter(i => i.category === 'image');
-                        const imagePool = [...images];
+                        const texItems = libraryRef.current.filter(i => i.category === 'tex');
+                        const imagePool = [...texItems];
                         if (spotifyTextureRef.current) {
                             imagePool.push({ category: 'spotify', file: 'spotify_art', prompt: 'Spotify Art' });
                         }
@@ -1048,7 +1048,7 @@ export default function App() {
                             const fxs = libraryRef.current.filter(i => i.category === 'fx');
 
                             const currentSource = allSources.length > 0 ? allSources[Math.abs(lastBase) % allSources.length] : null;
-                            const isImageActive = currentSource?.category === 'image' || currentSource?.category === 'spotify';
+                            const isImageActive = currentSource?.category === 'tex' || currentSource?.category === 'spotify';
 
                             const fxRatio = isImageActive ? 0.5 : (bases.length > 0 ? (fxs.length / bases.length) : 0);
                             const seededRand = ((fxIdx * 9301 + 49297) % 233280) / 233280.0;

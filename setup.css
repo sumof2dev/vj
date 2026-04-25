@@ -1060,6 +1060,7 @@
 
         .compact-role-label {
             width: 110px;
+            min-width: 110px; /* Fixed width prevents squashing */
             font-size: 11px;
             font-weight: 600;
             color: var(--text-dim);
@@ -1098,9 +1099,13 @@
         .compact-role-label:hover .remove-x {
             opacity: 1;
         }
-
-
-        /* DMX Address label removed as requested */
+        .test-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 150px; /* Prevent slider from disappearing */
+        }
 
 
         .compact-slider-input {
@@ -1110,12 +1115,24 @@
         }
 
         .compact-val-display {
-            width: 35px;
+            width: 45px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
             font-weight: bold;
             color: #fff;
             text-align: right;
+            background: transparent;
+            border: none;
+            outline: none;
+            padding: 0;
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+
+        .compact-val-display::-webkit-outer-spin-button,
+        .compact-val-display::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
         .compact-adj-btn {

@@ -647,17 +647,10 @@ Output: Valid raw JSON object only.
             let hasChannelPrompts = false;
             channelsList.forEach((ch, idx) => {
                 if (pendingAiInstructions[idx]) {
-                    aggregatedPrompt += `----------------------------------\n`;
                     aggregatedPrompt += `ch${idx + 1}: ${pendingAiInstructions[idx]}\n`;
                     hasChannelPrompts = true;
                 }
             });
-
-            if (!aggregatedPrompt.trim()) {
-                aggregatedPrompt = "----------------------------------\n";
-            } else if (!aggregatedPrompt.includes("----------------------------------")) {
-                aggregatedPrompt += "\n----------------------------------\n";
-            }
 
             textarea.value = aggregatedPrompt;
             modal.classList.add('active');
@@ -996,12 +989,12 @@ Output: Valid raw JSON object only.
             modal.classList.add('active');
 
             // Update title based on context
-            const titleEl = modal.querySelector('.ai-modal-header div');
-            if (titleEl) {
+            const titleTextEl = modal.querySelector('#ai-preset-modal-title-text');
+            if (titleTextEl) {
                 if (current_editing_preset_id) {
-                    titleEl.innerHTML = `<span style="font-size: 1.4rem;">🤖</span> AI Preset Refinement`;
+                    titleTextEl.innerText = ` AI Preset Refinement`;
                 } else {
-                    titleEl.innerHTML = `<span style="font-size: 1.4rem;">🤖</span> AI Preset Generator`;
+                    titleTextEl.innerText = ` AI Preset Generator`;
                 }
             }
 
@@ -1013,6 +1006,108 @@ Output: Valid raw JSON object only.
 
             // Update model label
             if (typeof updateModelLabelDisplay === 'function') updateModelLabelDisplay();
+            
+            // Set mode back to chat
+            const history = document.getElementById('ai-preset-chat-history');
+            const xyPanel = document.getElementById('ai-preset-xy-panel');
+            const xyBtn = document.getElementById('ai-xy-picker-btn');
+            if (history) history.style.display = 'flex';
+            if (xyPanel) xyPanel.style.display = 'none';
+            if (xyBtn) xyBtn.classList.remove('active');
+        }
+
+        function toggleAiXyMode() {
+            const history = document.getElementById('ai-preset-chat-history');
+            const xyPanel = document.getElementById('ai-preset-xy-panel');
+            const xyBtn = document.getElementById('ai-xy-picker-btn');
+            if (!history || !xyPanel || !xyBtn) return;
+
+            if (xyPanel.style.display === 'none') {
+                history.style.display = 'none';
+                xyPanel.style.display = 'block';
+                xyBtn.classList.add('active');
+                renderAiXyPanel();
+            } else {
+                history.style.display = 'flex';
+                xyPanel.style.display = 'none';
+                xyBtn.classList.remove('active');
+            }
+        }
+
+        function renderAiXyPanel() {
+            const panel = document.getElementById('ai-preset-xy-panel');
+            if (!panel) return;
+
+            // Get unique profiles used on stage
+            const stageInstances = db.stage || [];
+            const activeProfileIds = new Set(stageInstances.map(inst => inst.profileId));
+            const activeProfiles = (db.profiles || []).filter(p => activeProfileIds.has(p.id));
+
+            // Filter for X/Y roles
+            const xyProfiles = activeProfiles.filter(p => {
+                const roles = (p.channels || []).map(ch => ch.role);
+                return roles.some(r => r === 'pos_x') && roles.some(r => r === 'pos_y');
+            });
+
+            if (xyProfiles.length === 0) {
+                panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-dim);">No active profiles with X/Y functions found on stage.</div>`;
+                return;
+            }
+
+            panel.innerHTML = `
+                <div style="font-size:0.8rem; font-weight:bold; color:var(--accent-alt); margin-bottom:10px; text-transform:uppercase;">Positional Calibration</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    ${xyProfiles.map(p => {
+                        const cal = p.calibration || { x: { left: 0, right: 255 }, y: { top: 0, bottom: 255 } };
+                        return `
+                            <div class="card" style="margin:0; padding:10px; background:rgba(255,255,255,0.03);">
+                                <div style="font-weight:900; font-size:11px; margin-bottom:10px; color:var(--accent);">${p.name}</div>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                    <div>
+                                        <label style="font-size:8px; color:var(--text-dim);">X RANGE (LEFT - RIGHT)</label>
+                                        <div style="display:flex; align-items:center; gap:5px;">
+                                            <input type="number" value="${cal.x.left}" placeholder="Left" 
+                                                onchange="saveProfileCalibration('${p.id}', 'x', 'left', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px;">
+                                            <span style="opacity:0.3">-</span>
+                                            <input type="number" value="${cal.x.right}" placeholder="Right" 
+                                                onchange="saveProfileCalibration('${p.id}', 'x', 'right', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px;">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="font-size:8px; color:var(--text-dim);">Y RANGE (TOP - BOTTOM)</label>
+                                        <div style="display:flex; align-items:center; gap:5px;">
+                                            <input type="number" value="${cal.y.top}" placeholder="Top" 
+                                                onchange="saveProfileCalibration('${p.id}', 'y', 'top', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px;">
+                                            <span style="opacity:0.3">-</span>
+                                            <input type="number" value="${cal.y.bottom}" placeholder="Bottom" 
+                                                onchange="saveProfileCalibration('${p.id}', 'y', 'bottom', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div style="margin-top:15px; font-size:9px; color:var(--text-dim); line-height:1.4;">
+                    💡 These bounds tell the AI the physical limits of the fixture. If you ask for a square or circle, it will scale the movement within these ranges.
+                </div>
+            `;
+        }
+
+        window.saveProfileCalibration = function(profId, axis, side, val) {
+            const prof = db.profiles.find(p => p.id === profId);
+            if (!prof) return;
+            
+            if (!prof.calibration) {
+                prof.calibration = { x: { left: 0, right: 255 }, y: { top: 0, bottom: 255 } };
+            }
+            
+            prof.calibration[axis][side] = parseInt(val);
+            saveDB(); // Persist to local & server
         }
 
         function closePresetAiModal() {
@@ -1140,7 +1235,8 @@ Output: Valid raw JSON object only.
                     address: inst.address,
                     zone: inst.zone || 'center',
                     profileName: prof ? prof.name : 'Unknown',
-                    roles: channels.map(ch => ch.role || ch.name || 'unknown')
+                    roles: channels.map(ch => ch.role || ch.name || 'unknown'),
+                    calibration: (prof && prof.calibration) ? prof.calibration : null
                 };
             });
         }
@@ -1185,14 +1281,13 @@ Output: Valid raw JSON object only.
 
             const stageContext = _buildStageContext();
 
-            // Build the current preset context (for editing existing presets)
-            let currentPresetContext = null;
-            if (current_editing_preset_id) {
-                const existing = (db.presets || []).find(p => p.id === current_editing_preset_id);
-                if (existing) currentPresetContext = existing;
-            }
+            // ADD SPATIAL AWARENESS CONTEXT
+            const spatialContext = stageContext.filter(f => f.calibration).map(f => {
+                const c = f.calibration;
+                return `Fixture ${f.id} Bounds: X(${c.x.left} to ${c.x.right}), Y(${c.y.top} to ${c.y.bottom})`;
+            }).join('\n');
 
-            const systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox Preset System.
+            let systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox Preset System.
 Task: ${current_editing_preset_id ? 'Refine an existing' : 'Generate a new'} preset based on the user's natural language description.
 
 Context:
@@ -1200,6 +1295,8 @@ Context:
 - Triggers define conditions. ALL triggers must be true simultaneously (AND logic).
 - If user describes "X OR Y", return MULTIPLE presets with different triggers but same overrides.
 - Overrides target specific stage fixtures by ID, or "global" for all.
+
+${spatialContext ? `Positional Calibration (Safe Zones):\n${spatialContext}\nUse these bounds for movement shapes (circles, lines, squares) if asked for specific fixtures.` : ""}
 
 TRIGGER SCHEMA:
 - {type: "vibe", value: "<value>"} — values: chill, mid, high

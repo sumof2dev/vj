@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RaveBox</title>
-    <link rel="stylesheet" href="setup.css?v=422262138">
+    <link rel="stylesheet" href="setup.css?v=424260634">
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
@@ -375,6 +375,16 @@
             color: #eb4d4b;
             text-shadow: 0 0 10px rgba(235, 77, 75, 0.6);
         }
+        
+        .logic-state.flash {
+            animation: text-surge 0.5s ease-out;
+        }
+        
+        @keyframes text-surge {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.2); filter: brightness(2); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
 
         .bin-viz {
             display: flex;
@@ -554,9 +564,77 @@
                 left: 100%;
             }
         }
-    </style>
-</head>
 
+        /* --- TRIO BAR --- */
+        .launch-trio {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+            height: 54px;
+        }
+        .launch-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 !important;
+            font-size: 0.9rem !important;
+        }
+        .trio-side {
+            width: 54px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: var(--text-dim);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .trio-side:active {
+            transform: scale(0.9);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            padding: 20px;
+        }
+        .preset-btn {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            padding: 5px;
+        }
+        .preset-btn:active {
+            background: var(--primary);
+            color: #000;
+            transform: scale(0.95);
+        }
+        .preset-btn.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(0, 242, 255, 0.05);
+        }
+    </style>
+
+</head>
 <body>
 
     <div class="container">
@@ -570,7 +648,6 @@
             onclick="changeHost()">
             Controller: <span id="hostDisplay" style="color:var(--primary); font-weight:bold;">Local</span> <span id="hostChangePrompt">(Click to Change)</span>
         </div>
-
 
         <div class="action-btns">
             <button id="btnToggle" class="btn btn-start" onclick="toggleEngine()">Launch Engine</button>
@@ -686,11 +763,31 @@
                 </button>
             </div>
 
+            <!-- TRAINING HUB (Feature Collector) -->
+            <div id="trainingHub" class="dash-panel" style="margin-top: 10px; border-color: rgba(249, 202, 36, 0.3); display: none;">
+                <div class="dash-header">
+                    <span style="color:#f9ca24;">🧠 Feature Collector</span>
+                    <span style="font-size: 9px; opacity:0.6;">30s BEFORE / 10s AFTER</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button class="btn" style="background:rgba(42, 90, 138, 0.4); border-color:#2a5a8a;" onclick="captureSnippet('chill')">Chill</button>
+                    <button class="btn" style="background:rgba(90, 90, 42, 0.4); border-color:#5a5a2a;" onclick="captureSnippet('mid')">Mid</button>
+                    <button class="btn" style="background:rgba(162, 155, 230, 0.4); border-color:#a29be6;" onclick="captureSnippet('building')">Building</button>
+                    <button class="btn" style="background:rgba(249, 202, 36, 0.4); border-color:#f9ca24;" onclick="captureSnippet('tension')">Tension</button>
+                    <button class="btn" style="background:rgba(235, 77, 75, 0.4); border-color:#eb4d4b; font-weight:900;" onclick="captureSnippet('dropping')">THE DROP</button>
+                    <button class="btn" style="background:rgba(138, 42, 90, 0.4); border-color:#8a2a5a;" onclick="captureSnippet('high')">High Vibe</button>
+                </div>
+                <div id="snippet-feedback" style="font-size:10px; color:#888; text-align:center; margin-top:8px;">Tap when energy transitions occur</div>
+            </div>
+            
+        </div>
+
         </div>
 
         <div class="links">
             <a id="link-visual" href="#">Visualizer</a>
             <a id="link-setup" href="#">Setup</a>
+            <a id="link-train" href="javascript:toggleTrainer()" style="color:#f9ca24;">Train</a>
             <a id="link-help" href="#">Help</a>
         </div>
     </div>
@@ -702,7 +799,7 @@
         window.LAUNCHER_API = window.LAUNCHER_API || "";
         window.API_BASE = window.API_BASE || "";
     </script>
-    <script src="shared_setup.js?v=422262138"></script>
+    <script src="shared_setup.js?v=424260634"></script>
     <script>
         // Routing and globals are handled by shared_setup.js
         console.log("📍 Host:", window.host, "| Launcher:", window.LAUNCHER_API);
@@ -1157,7 +1254,45 @@
             }, 100);
         }
 
-        // Start live dashboard listener
+        function captureSnippet(label) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert("Engine not connected");
+                return;
+            }
+            
+            // Visual feedback
+            const feedback = document.getElementById('snippet-feedback');
+            const originalText = feedback.innerText;
+            const originalColor = feedback.style.color;
+            
+            feedback.innerText = `Capturing [${label.toUpperCase()}]... (10s)`;
+            feedback.style.color = "#f9ca24";
+            
+            ws.send(JSON.stringify({
+                "type": "save_snippet",
+                "label": label
+            }));
+
+            // Reset UI after 10s
+            setTimeout(() => {
+                feedback.innerText = "✅ Snippet Saved to recordings/";
+                feedback.style.color = "#00ff88";
+                setTimeout(() => {
+                    feedback.innerText = originalText;
+                    feedback.style.color = originalColor;
+                }, 3000);
+            }, 10500);
+        }
+
+        function toggleTrainer() {
+            const hub = document.getElementById('trainingHub');
+            hub.style.display = hub.style.display === 'none' ? 'block' : 'none';
+            if (hub.style.display === 'block') {
+                hub.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Connect live dashboard listener
         connectLiveDashboard();
 
         // Gesture Support: Swipe Left -> VisualDMX, Swipe Right -> Setup
