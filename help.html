@@ -10,7 +10,7 @@
         // Inject cache buster for shared_setup.js
         const v = new URLSearchParams(window.location.search).get('v') || Date.now();
         const script = document.createElement('script');
-        script.src = `shared_setup.js?v=424260634${v}`;
+        script.src = `shared_setup.js?v=429262154${v}`;
         document.head.appendChild(script);
     </script>
 
@@ -44,6 +44,8 @@
             justify-content: center;
             min-height: 100vh;
             padding: 20px;
+            overscroll-behavior-x: none;
+            touch-action: pan-y;
         }
 
         .container {
@@ -420,87 +422,7 @@
             }
         }
 
-        /* Calibration Specifics */
-        .cal-progress-wrap {
-            width: 100%;
-            height: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-            margin: 20px 0;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .cal-progress-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), var(--secondary));
-            transition: width 0.3s ease;
-        }
-        .cal-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            text-align: left;
-            margin-top: 15px;
-        }
-        .cal-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-        }
-        .cal-item h4 {
-            margin: 0 0 5px;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            font-size: 0.65rem;
-            letter-spacing: 0.5px;
-        }
-        .cal-status {
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .cal-pass { color: #00ff88; }
-        .cal-fail { color: #ff3366; }
-        .cal-bpm-val { font-family: monospace; font-size: 1.1rem; color: #fff; }
-
-        #calRunningBpm {
-            font-family: monospace;
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            text-align: center;
-            color: var(--accent);
-            text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
-        }
-
-        /* Responsive overhaul for Laboratory and Grid */
-        @media (max-width: 850px) {
-            .lab-controls {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 1rem !important;
-            }
-            .lab-modal-content {
-                height: 95vh;
-                width: 98%;
-                overflow-y: auto;
-            }
-            .lab-body {
-                overflow-y: auto;
-                flex: none;
-                height: auto;
-            }
-            .lab-header h2 {
-                font-size: 1.1rem;
-            }
-            .btn-grid-responsive {
-                grid-template-columns: 1fr !important;
-            }
-        }
-    </style>
+        </style>
 </head>
 
 <body>
@@ -514,8 +436,7 @@
                 <li class="nav-item" onclick="showSection('connectivity', this)">🌐 Global vs Local</li>
                 <li class="nav-item" onclick="showSection('spotify-setup', this)">🎵 Spotify Control</li>
                 <li class="nav-item" onclick="showSection('raves', this)">⚡ How it Raves</li>
-                <li class="nav-item" onclick="showSection('calibration', this)">🔬 Sanity Check</li>
-                <li class="nav-item" onclick="showSection('log', this)">📋 Log</li>
+                                <li class="nav-item" onclick="showSection('log', this)">📋 Log</li>
                 <li class="nav-item" onclick="showSection('debug', this)">🐞 Debug</li>
             </ul>
             <div class="sidebar-footer">
@@ -712,6 +633,12 @@ dtoverlay=hifiberry-dacplus</pre>
                         <input type="text" id="shellInput" placeholder="ls, df -h, tail..." onkeyup="if(event.key==='Enter') runShell()" style="font-family:monospace; font-size:0.85rem; height: 38px;">
                         <button class="btn btn-save" style="width: auto; padding: 0 25px; white-space:nowrap; height: 38px;" onclick="runShell()">Run</button>
                     </div>
+                    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap: wrap;">
+                        <button class="btn" style="background:rgba(255,255,255,0.05); color:var(--text-dim); font-size:0.65rem; padding: 5px 12px; width:auto; text-transform:none;" onclick="runDebug('./vjstatus.sh')">System Status</button>
+                        <button class="btn" style="background:rgba(255,255,255,0.05); color:var(--text-dim); font-size:0.65rem; padding: 5px 12px; width:auto; text-transform:none;" onclick="runDebug('sudo systemctl restart vj-launcher')">Restart Launcher</button>
+                        <button class="btn" style="background:rgba(255,255,255,0.05); color:var(--text-dim); font-size:0.65rem; padding: 5px 12px; width:auto; text-transform:none;" onclick="runDebug('rm *.log')">Clear Logs</button>
+                        <button class="btn" style="background:rgba(255,255,255,0.05); color:var(--text-dim); font-size:0.65rem; padding: 5px 12px; width:auto; text-transform:none;" onclick="runDebug('df -h')">Disk Space</button>
+                    </div>
                     <pre id="debugConsoleText" style="margin-top:20px; border-color:var(--accent); color:#0f0; font-size:0.75rem; white-space:pre-wrap; display:none; max-height: 200px; overflow: auto;"></pre>
                 </div>
 
@@ -720,6 +647,38 @@ dtoverlay=hifiberry-dacplus</pre>
                     <p>Force reload the audio stack if the capture device is busy or frozen.</p>
                     <button class="btn" style="background:rgba(255, 51, 102, 0.2); color:#ff3366; width:auto; padding: 10px 20px;"
                         onclick="runDebug('sudo alsa force-reload')">Force ALSA Reload</button>
+                </div>
+
+                <div class="help-card" style="border-color: var(--accent);">
+                    <h3>🌐 Node Mode (DMX Repeater)</h3>
+                    <p style="font-size:0.8rem;">Maintenance for remote repeater devices. Only use these on the <b>Node</b> hardware.</p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-size: 0.65rem; color: var(--text-dim);">Master Controller (IP or Code)</label>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="nodeMasterHost" placeholder="e.g. 192.168.1.50 or mybox" style="padding: 10px; font-size: 0.9rem; height: 38px;">
+                            <button class="btn btn-save" style="width: auto; padding: 0 20px; height: 38px;" onclick="saveNodeMaster()">Save</button>
+                        </div>
+                        <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 5px;">This tells the node's UI and visualizer where to find the Master signal.</p>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <button class="btn"
+                            style="background:rgba(0, 242, 255, 0.2); color:var(--accent); font-size:0.75rem;"
+                            onclick="runDebug('sudo systemctl restart vj-node')">Restart Node</button>
+                        <button class="btn"
+                            style="background:rgba(255,255,255,0.05); color:var(--text-dim); font-size:0.75rem;"
+                            onclick="runDebug('sudo systemctl status vj-node')">Check Status</button>
+                        <button class="btn"
+                            style="background:rgba(255, 255, 255, 0.05); color:var(--text-dim); font-size:0.75rem;"
+                            onclick="runDebug('sudo journalctl -u vj-node -n 50')">View Logs</button>
+                        <button class="btn"
+                            style="background:rgba(29, 185, 84, 0.1); color:var(--primary); font-size:0.75rem; border:1px solid rgba(29, 185, 84, 0.2);"
+                            onclick="updateNodeFromMaster()">⚡ UPDATE CODE</button>
+                        <button class="btn"
+                            style="background:rgba(255, 51, 102, 0.1); color:#ff3366; font-size:0.75rem;"
+                            onclick="runDebug('sudo reboot')">🚀 Reboot OS</button>
+                    </div>
                 </div>
             </div>
 
@@ -743,71 +702,7 @@ dtoverlay=hifiberry-dacplus</pre>
                 </div>
             </div>
 
-            <!-- SECTION: CALIBRATION (Sanity Check) -->
-            <div id="section-calibration" class="section">
-                <h1>Sanity Check</h1>
-                <p>Verify audio engine logic integrity against a factory source of truth.</p>
-                
-                <div id="calInitial" class="help-card" style="text-align: center;">
-                    <p>Verify engine performance against a synthetic EDM track or audit the live configuration against Gold Standards.</p>
-                    <div class="btn-grid-responsive" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
-                        <button class="btn btn-save" style="background: var(--accent); color: #000;" onclick="startCalibration()">Run Engine Calibration</button>
-                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Run Gold Standard Audit</button>
-                        <button class="btn btn-save" style="background: var(--primary); color: #000;" onclick="openBehaviorLab()">Live Behavior Laboratory</button>
-                    </div>
-
-                </div>
-
-                <div id="calRunning" class="help-card" style="display:none; text-align: center;">
-                    <h3>Analysis in Progress...</h3>
-                    <div id="calRunningBpm">---</div>
-                    <div class="cal-progress-wrap">
-                        <div id="calProgressBar" class="cal-progress-bar"></div>
-                    </div>
-                </div>
-
-                <div id="calResults" class="help-card" style="display:none;">
-                    <h3>Calibration Summary</h3>
-                    <div class="cal-grid">
-                        <div class="cal-item">
-                            <h4>Beats (Recall)</h4>
-                            <div id="calRecall">--</div>
-                        </div>
-                        <div class="cal-item">
-                            <h4>BPM Accuracy</h4>
-                            <div id="calBpmAcc">--</div>
-                        </div>
-                        <div id="calHealthWrap" class="cal-item" style="grid-column: span 2; display:none; border-color: rgba(0, 242, 255, 0.3); background: rgba(0, 242, 255, 0.05);">
-                            <h4>Environmental Audit</h4>
-                            <div id="calSignalHealth" style="font-weight: bold; font-size: 0.85rem; margin-bottom: 4px;">--</div>
-                            <div id="calSettingsSummary" style="color: var(--text-dim); font-size: 0.7rem; line-height: 1.4;">--</div>
-                        </div>
-                    </div>
-                    
-                    <h4 style="margin: 15px 0 10px; color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Engine Logic Checks</h4>
-                    <div id="calChecksList" style="display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Items injected here -->
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
-                        <button class="btn btn-save" style="background: rgba(255,255,255,0.1); color: #fff;" onclick="startCalibration()">Re-Run Calibration</button>
-                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Run Audit</button>
-                    </div>
-                </div>
-
-                <div id="auditResults" class="help-card" style="display:none;">
-                    <h3>Gold Standard Audit</h3>
-                    <p id="auditOverall" style="font-weight: bold; margin-bottom: 15px;"></p>
-                    <div id="auditChecksList" style="display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Items injected here -->
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
-                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Re-Run Audit</button>
-                        <button class="btn btn-save" style="background: var(--accent); color: #000;" onclick="startCalibration()">Run Calibration</button>
-                    </div>
-                </div>
-            </div>
-        </main>
+            </main>
     </div>
 
     <script>
@@ -830,6 +725,13 @@ dtoverlay=hifiberry-dacplus</pre>
             bucket: 0, step: 0, hold_active: false,
             last_beat: false, held_dmx: null, held_force: null
         };
+
+        // Long Term Analysis State
+        window.longTermRecording = false;
+        window.longTermData = [];
+        window.longTermStartTime = 0;
+        window.lastLongTermSampleAt = 0;
+        let longTermTimerInterval = null;
 
         // Routing Cleanup: Use the globally available urlParams from shared_setup.js
         if (typeof urlParams !== 'undefined' && urlParams.get('host')) {
@@ -1035,6 +937,100 @@ dtoverlay=hifiberry-dacplus</pre>
             }
         }
 
+        function saveNodeMaster() {
+            const host = document.getElementById('nodeMasterHost').value;
+            if (host) {
+                localStorage.setItem('vj_backend_host', host);
+                // Also notify the server to save it globally for this node
+                fetch('/api/remote_settings')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.node) data.node = {};
+                        data.node.master_host = host;
+                        return fetch('/vj_remote_settings.json', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                    })
+                    .then(() => {
+                        alert("✅ Master Controller Saved!");
+                        location.reload();
+                    })
+                    .catch(e => console.error("Failed to save master host:", e));
+            }
+        }
+
+        function loadNodeMaster() {
+            const input = document.getElementById('nodeMasterHost');
+            if (!input) return;
+            
+            // Try local storage first
+            const saved = localStorage.getItem('vj_backend_host');
+            if (saved && !saved.includes('ravebox.love')) {
+                input.value = saved;
+            }
+
+            // Fallback to server config
+            fetch('/api/remote_settings')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.node && data.node.master_host) {
+                        input.value = data.node.master_host;
+                    }
+                })
+                .catch(() => {});
+        }
+
+        async function updateNodeFromMaster() {
+            const master = document.getElementById('nodeMasterHost').value;
+            if (!master) {
+                alert("Please set a Master Controller IP/Host first.");
+                return;
+            }
+            
+            const btn = event.currentTarget;
+            const originalText = btn.innerText;
+            btn.innerText = "REQUESTING...";
+            btn.disabled = true;
+
+            try {
+                // Determine our own IP (best guess is current hostname)
+                const myIp = window.location.hostname;
+                
+                // Construct the Master's Launcher API URL
+                let masterLauncher = "";
+                if (master.includes('.') || master === 'localhost') {
+                    masterLauncher = `http://${master}:8001`;
+                } else {
+                    masterLauncher = `https://api-${master}.ravebox.love`;
+                }
+                
+                const cmd = `./push_update.sh ${myIp} --node`;
+                const url = `${masterLauncher}/shell?cmd=${encodeURIComponent(cmd)}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (data.exit_code === 0) {
+                    btn.innerText = "SUCCESS";
+                    btn.style.background = "var(--primary)";
+                } else {
+                    alert("Update Failed: " + (data.stderr || "Check Master console"));
+                    btn.innerText = "FAILED";
+                }
+            } catch (e) {
+                alert("Error reaching Master: " + e.message);
+                btn.innerText = "ERROR";
+            } finally {
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.background = "";
+                }, 3000);
+            }
+        }
+
         // --- CALIBRATION LOGIC ---
         // ws is defined globally in shared_setup.js
         let ws_retries = 0;
@@ -1055,7 +1051,7 @@ dtoverlay=hifiberry-dacplus</pre>
              };
              ws.binaryType = 'arraybuffer';
              ws.onmessage = (event) => {
-                 if (event.data instanceof ArrayBuffer) { if (window.labRunning) parseBinaryState(event.data); return; }
+                 if (event.data instanceof ArrayBuffer) { if (window.labRunning || window.longTermRecording) parseBinaryState(event.data); return; }
                  try {
                       const msg = JSON.parse(event.data);
                       if (msg.type && msg.type.startsWith('calibration_')) handleCalibrationMessage(msg);
@@ -1070,123 +1066,6 @@ dtoverlay=hifiberry-dacplus</pre>
                  ws_retries++;
              };
              ws.onclose = () => setTimeout(connectWS, 3000);
-        }
-
-        function startCalibration() {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                alert(`Cannot connect to engine at ${host}:${localStorage.getItem('vj_ws_port') || '8765'}.\n\nIf you are using SSL (HTTPS), click "Authorize" in the Debug tab first to accept the self-signed certificate for the engine port.`);
-                return;
-            }
-            document.getElementById('calInitial').style.display = 'none';
-            document.getElementById('calRunning').style.display = 'block';
-            document.getElementById('calResults').style.display = 'none';
-            document.getElementById('auditResults').style.display = 'none';
-            document.getElementById('calProgressBar').style.width = '0%';
-            ws.send(JSON.stringify({ type: 'run_calibration' }));
-        }
-
-        function startAudit() {
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                alert("WebSocket not connected.");
-                return;
-            }
-            document.getElementById('calInitial').style.display = 'none';
-            document.getElementById('calRunning').style.display = 'block';
-            document.getElementById('calRunningBpm').textContent = "---";
-            document.querySelector('#calRunning h3').textContent = "Auditing Engine...";
-            document.getElementById('calProgressBar').style.width = '50%'; // Indeterminate look
-            
-            document.getElementById('calResults').style.display = 'none';
-            document.getElementById('auditResults').style.display = 'none';
-            console.log("📤 Requesting Gold Standard Audit...");
-            ws.send(JSON.stringify({ type: 'run_audit' }));
-        }
-
-        function handleCalibrationMessage(msg) {
-            if (msg.type === 'calibration_progress') {
-                document.getElementById('calProgressBar').style.width = (msg.progress * 100) + '%';
-                document.getElementById('calRunningBpm').textContent = Math.round(msg.bpm) + " BPM";
-            }
-            if (msg.type === 'calibration_report') {
-                document.getElementById('calRunning').style.display = 'none';
-                document.getElementById('calResults').style.display = 'block';
-
-                // Recall
-                const recallPc = Math.round(msg.recall * 100);
-                document.getElementById('calRecall').innerHTML = `<span class="${recallPc > 80 ? 'cal-pass' : 'cal-fail'}">${recallPc}%</span>`;
-                
-                // BPM
-                const bpmErr = msg.bpm_accuracy.error;
-                document.getElementById('calBpmAcc').innerHTML = `<span class="cal-bpm-val">${Math.round(msg.bpm_accuracy.actual)}</span> <span class="${bpmErr < 5 ? 'cal-pass' : 'cal-fail'}" style="font-size:0.6rem;">(±${bpmErr.toFixed(1)})</span>`;
-
-                // Detailed Checks
-                const list = document.getElementById('calChecksList');
-                list.innerHTML = '';
-                
-                [...msg.vibe_checks, ...msg.transient_checks].forEach(check => {
-                    const item = document.createElement('div');
-                    item.className = 'cal-item';
-                    item.style.display = 'flex';
-                    item.style.justifyContent = 'space-between';
-                    item.style.padding = '10px 15px';
-                    item.innerHTML = `
-                        <span style="color:var(--text-dim); font-weight:600;">${check.name}</span>
-                        <span class="${check.pass ? 'cal-pass' : 'cal-fail'}" style="font-weight:bold;">${check.pass ? '✅ PASS' : '❌ ' + check.actual.toUpperCase()}</span>
-                    `;
-                    list.appendChild(item);
-                });
-
-                // Signal Health Audit
-                if (msg.signal_health) {
-                    const hw = document.getElementById('calHealthWrap');
-                    if (hw) {
-                        hw.style.display = 'block';
-                        const sh = document.getElementById('calSignalHealth');
-                        const st = msg.signal_health.status;
-                        sh.textContent = st + ": " + (msg.signal_health.message || "");
-                        sh.className = 'cal-status ' + (st === 'HEALTHY' ? 'cal-pass' : 'cal-fail');
-
-                        const ss = document.getElementById('calSettingsSummary');
-                        if (msg.settings) {
-                            ss.innerHTML = `Tested with <b>Gain: ${msg.settings.gain.toFixed(2)}</b> and <b>Reactivity: ${msg.settings.reactivity.toFixed(2)}</b>.<br>` + 
-                                          `Peak Input Signal (last 5s): ${msg.signal_health.peak}`;
-                        }
-                    }
-                }
-            }
-            if (msg.type === 'calibration_error') {
-                alert("Calibration Error: " + msg.message);
-                document.getElementById('calInitial').style.display = 'block';
-                document.getElementById('calRunning').style.display = 'none';
-            }
-        }
-
-        function handleAuditMessage(msg) {
-            document.getElementById('calRunning').style.display = 'none';
-            document.getElementById('auditResults').style.display = 'block';
-            const overall = document.getElementById('auditOverall');
-            overall.textContent = msg.overall_pass ? "✅ ALL SYSTEMS GO: Gold Standard Compliance Verified" : "❌ AUDIT FAILED: Non-Standard parameters detected";
-            overall.className = msg.overall_pass ? "cal-pass" : "cal-fail";
-
-            const list = document.getElementById('auditChecksList');
-            list.innerHTML = '';
-            
-            msg.checks.forEach(check => {
-                const item = document.createElement('div');
-                item.className = 'cal-item';
-                item.style.padding = '12px 15px';
-                item.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                        <span style="color:var(--accent); font-weight:700;">${check.name}</span>
-                        <span class="${check.pass ? 'cal-pass' : 'cal-fail'}" style="font-weight:bold;">${check.pass ? 'PASS' : 'FAIL'}</span>
-                    </div>
-                    <div style="font-size:0.7rem; color:var(--text-dim);">
-                        Target: <span style="color:#fff">${check.expected}</span> | 
-                        Actual: <span style="color:${check.pass ? '#fff' : '#f55'}">${check.actual}</span>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
         }
 
         // --- LOG LOGIC ---
@@ -1250,453 +1129,17 @@ dtoverlay=hifiberry-dacplus</pre>
             LAUNCHER_API = window.BACKEND_ROOT;
             connectWS();
             loadCreds();
+            loadNodeMaster();
             showSection('setup', document.querySelector('.nav-item'));
             
             // Start checking for selects
-            initLabSelects();
+            
         }
         boot();
 
-        // --- LIVE BEHAVIOR LABORATORY (DIAGNOSTIC VISUALIZATION) ---
-        // (Variables declared at top of script)
-
-        function parseBinaryState(buffer) {
-            const dv = new DataView(buffer);
-            // Layout (Total 595 bytes): m_time(f32), flux..bpm(6x f32), bins(6x f32), beat..pad(4x u8), axis..
-            labAudioState.flux = dv.getFloat32(4, true);
-            labAudioState.bass = dv.getFloat32(8, true);
-            labAudioState.mid = dv.getFloat32(12, true);
-            labAudioState.high = dv.getFloat32(16, true);
-            labAudioState.vol = dv.getFloat32(20, true);
-            labAudioState.bpm = dv.getFloat32(24, true);
-            
-            labAudioState.bins = [];
-            for (let i = 0; i < 6; i++) labAudioState.bins.push(dv.getFloat32(28 + i * 4, true));
-
-            const beat = dv.getUint8(52) === 1;
-            if (beat && !labAudioState._lastBeat) {
-                labAudioState.lastBeatAt = Date.now();
-                labAudioState.beat_count++;
-            }
-            labAudioState._lastBeat = beat;
-            labAudioState.beat = beat;
-
-            // Approximate beat_phase locally if not in binary payload yet
-            const msPerBeat = 60000 / (labAudioState.bpm || 120);
-            const elapsed = Date.now() - labAudioState.lastBeatAt;
-            labAudioState.beat_phase = Math.min(1.0, elapsed / msPerBeat);
-        }
-
-        function openBehaviorLab() {
-            document.getElementById('behaviorLabModal').style.display = 'flex';
-            const sel = document.getElementById('labBehaviorSelect');
-            const descriptors = window.EASY_DESCRIPTORS || [];
-            sel.innerHTML = descriptors.map(d => `<option value="${d.id}">${d.label}</option>`).join('');
-            
-            initLabChart();
-            window.labRunning = true;
-            resetLab();
-            requestAnimationFrame(labLoop);
-            
-            // Auto-refresh in background if not already connected
-            if (!ws || ws.readyState !== WebSocket.OPEN) connectWS();
-        }
-
-        function closeBehaviorLab() {
-            document.getElementById('behaviorLabModal').style.display = 'none';
-            window.labRunning = false;
-        }
-
-        function resetLab() {
-            labBuffer = [];
-            labState = {
-                pos: 0, vel: 0, phase: 0, t: 0, 
-                bucket: 0, step: 0, hold_active: false,
-                last_beat: false, held_dmx: null, held_force: null
-            };
-            const id = document.getElementById('labBehaviorSelect').value;
-            const d = window.EASY_DESCRIPTORS.find(x => x.id === id);
-            if (d) {
-                // Set dropdown values
-                const srcSelect = document.getElementById('labSourceSelect');
-                const behSelect = document.getElementById('labBehaviorSelectSpecific');
-                const holdSelect = document.getElementById('labHoldSelect');
-                
-                if (srcSelect && d.source) srcSelect.value = d.source;
-                if (behSelect && d.behavior) behSelect.value = d.behavior;
-                if (holdSelect) {
-                    holdSelect.value = (d.modifiers ? d.modifiers.hold_type : d.hold_type) || 'none';
-                }
-
-                // Sync sliders
-                const sSlider = document.getElementById('labSpeed');
-                const rSlider = document.getElementById('labReact');
-                if (sSlider) {
-                    sSlider.value = d.modifiers ? d.modifiers.speed : (d.speed || 0.5);
-                    document.getElementById('labSpeedVal').textContent = parseFloat(sSlider.value).toFixed(2);
-                }
-                if (rSlider) {
-                    rSlider.value = d.modifiers ? d.modifiers.react : (d.react || 0.8);
-                    document.getElementById('labReactVal').textContent = parseFloat(rSlider.value).toFixed(2);
-                }
-
-                // Special case for Static Value
-                if (d.behavior === 'static' && d.value !== undefined) {
-                    document.getElementById('labCenter').value = d.value;
-                }
-
-                // Sync UI Center to Relative Midpoint
-                if (d.rel_center !== undefined) {
-                    const c_min = parseInt(document.getElementById('labMin').value) || 0;
-                    const c_max = parseInt(document.getElementById('labMax').value) || 255;
-                    const c_center = Math.round(c_min + (d.rel_center * (c_max - c_min)));
-                    const centerInput = document.getElementById('labCenter');
-                    if (centerInput) centerInput.value = c_center;
-                }
-
-                // Clear the chart but keep labels
-                if (labChart) {
-                    labChart.data.datasets[0].data = [];
-                    labChart.update('none');
-                }
-            }
-            syncLabProbe();
-        }
-
-        function initLabChart() {
-            if (labChart) labChart.destroy();
-            const ctx = document.getElementById('behaviorChart').getContext('2d');
-            
-            // Set chart point count (5 seconds @ 30fps)
-            const count = 30 * 5;
-            const emptyData = Array(count).fill(null);
-            
-            labChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array(count).fill(''),
-                    datasets: [{
-                        label: 'DMX Signal (0-255)',
-                        data: emptyData,
-                        borderColor: '#00f2ff',
-                        borderWidth: 2,
-                        fill: true,
-                        backgroundColor: function(context) {
-                            const chart = context.chart;
-                            const {ctx, chartArea} = chart;
-                            if (!chartArea) return null;
-                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                            gradient.addColorStop(0, 'rgba(0, 242, 255, 0)');
-                            gradient.addColorStop(1, 'rgba(0, 242, 255, 0.2)');
-                            return gradient;
-                        },
-                        tension: 0.2, // Smooth interpolation
-                        pointRadius: 0
-                    },
-                    {
-                        label: 'Max',
-                        data: Array(count).fill(255),
-                        borderColor: 'rgba(255, 50, 50, 0.4)',
-                        borderWidth: 1,
-                        borderDash: [5, 5],
-                        fill: false,
-                        pointRadius: 0
-                    },
-                    {
-                        label: 'Min',
-                        data: Array(count).fill(0),
-                        borderColor: 'rgba(255, 50, 50, 0.4)',
-                        borderWidth: 1,
-                        borderDash: [5, 5],
-                        fill: false,
-                        pointRadius: 0
-                    },
-                    {
-                        label: 'Mid',
-                        data: Array(count).fill(127),
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: 1,
-                        borderDash: [2, 2],
-                        fill: false,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false,
-                    scales: {
-                        y: { 
-                            min: 0, max: 255, 
-                            grid: { color: 'rgba(255,255,255,0.05)' }, 
-                            ticks: { 
-                                stepSize: 64, color: '#666',
-                                font: { size: 10 }
-                            } 
-                        },
-                        x: { display: false }
-                    },
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: { enabled: false }
-                    }
-                }
-            });
-        }
-
-        function labLoop() {
-            if (!window.labRunning) return;
-            
-            labBuffer.push(window.latestProbeValue || 0);
-            if (labBuffer.length > (30 * 5)) labBuffer.shift();
-            
-            if (labChart) {
-                labChart.data.datasets[0].data = labBuffer;
-                
-                // Update reference lines
-                const c_min = parseInt(document.getElementById('labMin').value) || 0;
-                const c_max = parseInt(document.getElementById('labMax').value) || 255;
-                const c_center = parseInt(document.getElementById('labCenter').value) || 127;
-                
-                labChart.data.datasets[1].data = Array(labChart.data.datasets[1].data.length).fill(c_max);
-                labChart.data.datasets[2].data = Array(labChart.data.datasets[2].data.length).fill(c_min);
-                labChart.data.datasets[3].data = Array(labChart.data.datasets[3].data.length).fill(c_center);
-                
-                labChart.update('none');
-            }
-            requestAnimationFrame(labLoop);
-        }
-
-        function syncLabProbe() {
-            if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-            const id = document.getElementById('labBehaviorSelect').value;
-            const premade = window.EASY_DESCRIPTORS.find(x => x.id === id) || { modifiers: {} };
-            
-            const rule = {
-                id: id,
-                behavior: document.getElementById('labBehaviorSelectSpecific').value,
-                source: document.getElementById('labSourceSelect').value,
-                modifiers: {
-                    speed: parseFloat(document.getElementById('labSpeed').value),
-                    react: parseFloat(document.getElementById('labReact').value),
-                    hold_type: document.getElementById('labHoldSelect').value
-                },
-                cal: {
-                    min: parseInt(document.getElementById('labMin').value) || 0,
-                    center: parseInt(document.getElementById('labCenter').value) || 127,
-                    max: parseInt(document.getElementById('labMax').value) || 255
-                }
-            };
-
-            ws.send(JSON.stringify({ type: 'set_lab_rule', rule: rule }));
-        }
-
-        async function addNewBehaviorFromLab() {
-            const label = prompt("Enter a label for this new behavior:", "Custom Laboratory Flow");
-            if (!label) return;
-
-            const id = document.getElementById('labBehaviorSelect').value;
-            const premade = window.EASY_DESCRIPTORS.find(x => x.id === id) || { modifiers: {} };
-
-            const c_min_now = parseInt(document.getElementById('labMin').value) || 0;
-            const c_max_now = parseInt(document.getElementById('labMax').value) || 255;
-            const c_center_now = parseInt(document.getElementById('labCenter').value) || 127;
-            const rel_center = (c_center_now - c_min_now) / Math.max(1, (c_max_now - c_min_now));
-
-            const payload = {
-                label: label,
-                source: document.getElementById('labSourceSelect').value,
-                behavior: document.getElementById('labBehaviorSelectSpecific').value,
-                speed: parseFloat(document.getElementById('labSpeed').value),
-                react: parseFloat(document.getElementById('labReact').value),
-                hold_type: document.getElementById('labHoldSelect').value,
-                rel_center: parseFloat(rel_center.toFixed(3))
-            };
-
-            try {
-                const res = await fetch(`${window.API_BASE_ROOT}/api/descriptors`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const data = await res.json();
-                if (data.status === 'ok') {
-                    if (window.EASY_DESCRIPTORS) window.EASY_DESCRIPTORS.push(data.descriptor);
-                    populateLabSelects();
-                    document.getElementById('labBehaviorSelect').value = data.descriptor.id;
-                    alert(`✅ Saved "${label}" to library!`);
-                }
-            } catch (e) {
-                alert("Failed to save behavior.");
-            }
-        }
-
-        async function saveLabAsDefault() {
-            const id = document.getElementById('labBehaviorSelect').value;
-            const premade = window.EASY_DESCRIPTORS.find(x => x.id === id);
-            if (!premade) return;
-
-            const btn = event.currentTarget;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = "Saving...";
-            btn.disabled = true;
-
-            const c_min_now = parseInt(document.getElementById('labMin').value) || 0;
-            const c_max_now = parseInt(document.getElementById('labMax').value) || 255;
-            const c_center_now = parseInt(document.getElementById('labCenter').value) || 127;
-            const rel_center = (c_center_now - c_min_now) / Math.max(1, (c_max_now - c_min_now));
-
-            const updatedData = {
-                id: id,
-                label: premade.label,
-                source: document.getElementById('labSourceSelect').value,
-                behavior: document.getElementById('labBehaviorSelectSpecific').value,
-                speed: parseFloat(document.getElementById('labSpeed').value),
-                react: parseFloat(document.getElementById('labReact').value),
-                hold_type: document.getElementById('labHoldSelect').value,
-                rel_center: parseFloat(rel_center.toFixed(3))
-            };
-
-            try {
-                const response = await fetch(`${window.API_BASE_ROOT}/api/descriptors/update`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updatedData)
-                });
-
-                if (response.ok) {
-                    btn.innerHTML = "✅ SAVED";
-                    btn.style.background = "var(--success)";
-                    Object.assign(premade, updatedData);
-                    syncLabProbe();
-                } else {
-                    btn.innerHTML = "❌ ERROR";
-                }
-            } catch (e) {
-                console.error(e);
-                btn.innerHTML = "❌ FAILED";
-            } finally {
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    btn.style.background = "";
-                }, 2000);
-            }
-        }
-
-        function populateLabSelects() {
-            const srcSelect = document.getElementById('labSourceSelect');
-            const behSelect = document.getElementById('labBehaviorSelectSpecific');
-            const holdSelect = document.getElementById('labHoldSelect');
-            
-            if (srcSelect && window.SOURCES) {
-                srcSelect.innerHTML = window.SOURCES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
-            }
-            if (behSelect && window.BEHAVIORS) {
-                behSelect.innerHTML = window.BEHAVIORS.map(b => `<option value="${b.id}">${b.label}</option>`).join('');
-            }
-            if (holdSelect && window.HOLD_TYPES) {
-                holdSelect.innerHTML = window.HOLD_TYPES.map(h => `<option value="${h.id}">${h.label.toUpperCase()}</option>`).join('');
-            }
-        }
-
-        // Initialize selects on script load (or when window.SOURCES is ready)
-        function initLabSelects() {
-            if (window.SOURCES && window.BEHAVIORS) {
-                populateLabSelects();
-            } else {
-                setTimeout(initLabSelects, 100);
-            }
-        }
-        // boot() handles this now
-        // initLabSelects();
-
-
-
-    </script>
+</script>
     
-    <!-- BEHAVIOR LABORATORY MODAL -->
-    <div id="behaviorLabModal">
-        <div class="lab-modal-content">
-            <div class="lab-header">
-                <h2>🔬 Live Behavior Laboratory</h2>
-                <button class="close-lab" onclick="closeBehaviorLab()">&times;</button>
-            </div>
-            <div class="lab-body">
-                <div class="lab-controls" style="gap: 1.5rem;">
-                    <div style="flex: 2; display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 0.55rem; color: var(--accent);">BEHAVIOR PRESET</label>
-                        <select id="labBehaviorSelect" class="lab-select" style="padding: 6px 10px; font-size: 0.85rem;" onchange="resetLab()">
-                            <!-- Populated via JS -->
-                        </select>
-                    </div>
-                    <div style="flex: 3; display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 0.55rem; color: var(--text-dim);">SOURCE & LOGIC</label>
-                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                            <select id="labSourceSelect" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 80px;" onchange="syncLabProbe()">
-                                <!-- Populated via JS -->
-                            </select>
-                            <select id="labBehaviorSelectSpecific" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 100px;" onchange="syncLabProbe()">
-                                <!-- Populated via JS -->
-                            </select>
-                            <select id="labHoldSelect" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 80px; color: var(--success);" onchange="syncLabProbe()">
-                                <!-- Populated via JS -->
-                            </select>
-                            <button class="btn btn-save" style="padding: 0 12px; font-size: 0.65rem; background: var(--accent); height: 32px; width: auto; margin-right: 5px;" onclick="saveLabAsDefault()">
-                                SAVE
-                            </button>
-                            <button class="btn btn-save" style="padding: 0 12px; font-size: 0.65rem; background: var(--secondary); color:#fff; height: 32px; width: auto;" onclick="addNewBehaviorFromLab()">
-                                ADD NEW
-                            </button>
-                        </div>
-                    </div>
-                    <div style="flex: 2; display: flex; flex-direction: column; gap: 4px;">
-                        <label style="font-size: 0.55rem; color: var(--text-dim);">DMX RANGE (MIN/CTR/MAX)</label>
-                        <div style="display: flex; gap: 4px;">
-                            <input type="number" id="labMin" value="0" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
-                            <input type="number" id="labCenter" value="127" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
-                            <input type="number" id="labMax" value="255" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(0,0,0,0.5); flex: 1; text-align: center;">
-                        </div>
-                    </div>
-                </div>
-                <div class="lab-controls" style="background: rgba(255, 255, 255, 0.04); padding: 0.8rem; border-radius: 8px;">
-                    <div style="display: flex; flex-direction: column; gap: 0.8rem; width: 100%;">
-                        <div style="display: flex; gap: 1.5rem;">
-                            <div style="flex: 1;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                                    <label style="font-size: 0.6rem; color: var(--accent); letter-spacing: 1px;">SPEED</label>
-                                    <span id="labSpeedVal" style="font-family: monospace; color: #fff; font-size: 0.8rem;">0.50</span>
-                                </div>
-                                <input type="range" id="labSpeed" min="0" max="1" step="0.05" value="0.5" 
-                                    style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border: none; cursor: pointer; accent-color: var(--accent);"
-                                    oninput="document.getElementById('labSpeedVal').textContent = parseFloat(this.value).toFixed(2); syncLabProbe()">
-                            </div>
-                            <div style="flex: 1;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                                    <label style="font-size: 0.6rem; color: var(--secondary); letter-spacing: 1px;">REACTIVITY</label>
-                                    <span id="labReactVal" style="font-family: monospace; color: #fff; font-size: 0.8rem;">0.80</span>
-                                </div>
-                                <input type="range" id="labReact" min="0" max="1" step="0.05" value="0.8" 
-                                    style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border: none; cursor: pointer; accent-color: var(--secondary);"
-                                    oninput="document.getElementById('labReactVal').textContent = parseFloat(this.value).toFixed(2); syncLabProbe()">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="lab-chart-wrap">
-                    <canvas id="behaviorChart"></canvas>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-dim);">
-                    <div>🔴 REAL AUDIO INPUT (BROADCAST_IMAGE)</div>
-                    <div>Y-AXIS: 0 - 255 | X-AXIS: ROLLING 5s (30Hz)</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
+    </body>
 
 
 </html>

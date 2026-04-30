@@ -21,35 +21,107 @@ var switchTab = window.switchTab || function() { };
 
 // (savePreset, editPreset, deletePreset moved to profile_logic.js)
 
-        function updateStageProfileList() {
-            const profDrop = document.getElementById('stage-profile');
-            if (profDrop) {
-                const uniqueAllProfs = getUniqueProfiles();
-                profDrop.innerHTML = uniqueAllProfs.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        window.toggleAllProfilesCollapse = function() {
+            const card = document.getElementById('all-profiles-card');
+            const content = document.getElementById('all-profiles-content');
+            const arrow = document.getElementById('all-profiles-arrow');
+            const isCollapsed = card.classList.contains('collapsed');
+
+            if (isCollapsed) {
+                card.classList.remove('collapsed');
+                content.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+                renderAllProfilesList();
+            } else {
+                card.classList.add('collapsed');
+                content.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
             }
+        };
+
+        function renderAllProfilesList() {
+            const list = document.getElementById('all-profiles-list');
+            if (!list) return;
+
+            const uniqueAllProfs = getUniqueProfiles();
+            const countEl = document.getElementById('all-profiles-count');
+            if (countEl) countEl.innerText = `${uniqueAllProfs.length} SAVED`;
+
+            list.innerHTML = uniqueAllProfs.map(p => `
+                <div class="item-row" style="padding:10px 16px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); border-bottom:1px solid rgba(255,255,255,0.02);">
+                    <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="goToProfile('${p.id}')">
+                        <div style="width:6px; height:6px; border-radius:50%; background:var(--accent); opacity:0.4;"></div>
+                        <div style="display:flex; flex-direction:column;">
+                            <span style="font-weight:700; font-size:13px; color:#fff;">${p.name}</span>
+                            <span style="font-size:9px; color:#666; font-family:monospace;">${p.id}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn btn-sm" style="font-size:10px; background:rgba(0, 242, 255, 0.1); border-color:rgba(0, 242, 255, 0.2); color:var(--accent);" onclick="addProfileToStage('${p.id}')">Add to Stage</button>
+                        <button class="btn btn-sm" style="font-size:10px;" onclick="goToProfile('${p.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" style="padding:4px 8px; font-size:9px; opacity:0.4; transition:opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.4" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('') || '<div style="padding:15px; color:#444; font-size:12px; text-align:center;">No profiles found. Add one to get started.</div>';
+        }
+
+        window.addProfileToStage = function(profileId) {
+            const prof = db.profiles.find(p => p.id === profileId);
+            if (!prof) return;
+
+            db.stage.unshift({
+                id: window.generateFriendlyId('s', db.stage.map(x => x.id)),
+                profileId: profileId,
+                profileName: prof.name,
+                address: 1, 
+                offset: 0,  
+                zone: ''     
+            });
+
+            saveDB();
+            renderStageList();
+            
+            // Visual feedback on the button?
+            console.log(`✅ Added ${prof.name} to Stage`);
+        };
+
+        window.loadProfiles = function(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            let loadedCount = 0;
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const profileData = JSON.parse(e.target.result);
+                        if (profileData.name && profileData.channels) {
+                            if (db.profiles.find(p => p.id === profileData.id)) {
+                                profileData.id = window.generateFriendlyId('p', db.profiles.map(p => p.id));
+                            }
+                            await window.saveProfileToServer(profileData);
+                            loadedCount++;
+                            if (loadedCount === files.length) {
+                                refreshUI();
+                                renderAllProfilesList();
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Error loading profile:", err);
+                    }
+                };
+                reader.readAsText(file);
+            });
+            event.target.value = '';
+        };
+
+        function updateStageProfileList() {
+            // Deprecated in favor of All Profiles list
+            renderAllProfilesList();
         }
 
         async function patchToStage() {
-            const profId = document.getElementById('stage-profile').value;
-            const addr = parseInt(document.getElementById('stage-addr').value);
-            const offset = parseInt(document.getElementById('stage-offset').value) || 0;
-            const zone = document.getElementById('stage-zone').value;
-
-            if (!profId) return alert("Select a Profile first");
-
-            const prof = db.profiles.find(p => p.id === profId);
-            if (!prof) return alert("Profile not found in memory. Save it first!");
-
-            db.stage.push({
-                id: 'inst_' + Date.now(),
-                profileId: profId,
-                profileName: prof.name,
-                address: addr,
-                offset: offset,
-                zone
-            });
-            await saveDB();
-            refreshUI();
+            // Deprecated in favor of addProfileToStage
         }
 
         async function updateInstanceProfile(instId, newProfId) {
@@ -59,7 +131,6 @@ var switchTab = window.switchTab || function() { };
                 inst.profileId = newProfId;
                 inst.profileName = prof.name;
                 await saveDB();
-                // refreshUI naturally called by any upstream trigger, but let's be safe
                 renderStageList(); 
             }
         }
@@ -75,7 +146,6 @@ var switchTab = window.switchTab || function() { };
             const inst = db.stage.find(s => s.id === oldId);
             if (inst) {
                 inst.id = newId;
-                // Update any preset references
                 if (db.presets) {
                     db.presets.forEach(p => {
                         if (p.overrides) {
@@ -97,21 +167,24 @@ var switchTab = window.switchTab || function() { };
             if (inst) {
                 inst.zone = newZone.trim();
                 await saveDB();
+                // We don't refreshUI here to avoid losing focus, but we might need to re-sort soon
             }
         }
 
         async function updateInstanceAddress(instId, newAddr) {
             const inst = db.stage.find(s => s.id === instId);
-            if (inst && !isNaN(newAddr) && newAddr >= 1 && newAddr <= 512) {
-                inst.address = newAddr;
+            if (inst) {
+                const val = parseInt(newAddr);
+                inst.address = isNaN(val) ? 1 : val;
                 await saveDB();
             }
         }
 
         function updateInstanceOffset(instId, newOffset) {
             const inst = db.stage.find(s => s.id === instId);
-            if (inst && !isNaN(newOffset) && newOffset >= 0 && newOffset <= 512) {
-                inst.offset = newOffset;
+            if (inst) {
+                const val = parseInt(newOffset);
+                inst.offset = isNaN(val) ? 0 : val;
                 saveDB();
             }
         }
@@ -124,12 +197,12 @@ var switchTab = window.switchTab || function() { };
             if (list.style.display === 'none') {
                 list.style.display = 'block';
                 jsonContainer.style.display = 'none';
-                btn.classList.remove('active');
+                if (btn) btn.classList.remove('active');
             } else {
                 list.style.display = 'none';
                 jsonContainer.style.display = 'block';
                 editor.value = JSON.stringify(db.stage, null, 4);
-                btn.classList.add('active');
+                if (btn) btn.classList.add('active');
             }
         }
 
@@ -151,44 +224,58 @@ var switchTab = window.switchTab || function() { };
             if (!list) return;
 
             const uniqueAllProfs = getUniqueProfiles();
-            list.innerHTML = (db.stage || []).map(s => {
-                const profile = uniqueAllProfs.find(p => p.id === s.profileId);
-                const profName = profile ? profile.name : (s.profileName || 'Unknown Profile');
-                const profOptions = uniqueAllProfs.map(p => `<option value="${p.id}" ${p.id === s.profileId ? 'selected' : ''}>${p.name}</option>`).join('');
+            
+            // Group by Zone
+            const grouped = {};
+            (db.stage || []).forEach(s => {
+                const zone = (s.zone || 'UNZONED').toUpperCase();
+                if (!grouped[zone]) grouped[zone] = [];
+                grouped[zone].push(s);
+            });
 
-                return `<div class="item-row" onclick="goToProfile('${s.profileId}')" style="cursor:pointer; display:flex; flex-direction:column; align-items:stretch; gap:12px; padding:16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:1.1rem; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${profName}">${profName}</div>
-                            <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
-                                <div class="live-badge"><span class="live-dot"></span> LIVE</div>
-                                <div class="channel-count">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                                    ${profile ? (profile.channels || []).length : 0} Channels
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn btn-danger btn-sm" style="width:24px; height:24px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; min-width:24px; flex-shrink:0; opacity:0.6;" onclick="event.stopPropagation(); deleteStageInstance('${s.id}')" title="Delete">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-                    </div>
+            const sortedZones = Object.keys(grouped).sort((a, b) => {
+                if (a === 'UNZONED') return -1;
+                if (b === 'UNZONED') return 1;
+                return a.localeCompare(b);
+            });
 
-                    <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);" onclick="event.stopPropagation()">
-                         <div style="display:flex; align-items:center; gap:4px;">
-                            <span style="color:#666; font-size:9px; font-weight:bold;">ADDR</span>
-                            <input type="number" value="${s.address}" min="1" max="512" style="width:42px; background:none; border:none; color:white; font-weight:900; font-size:14px; padding:0; outline:none; text-align:center;" onchange="updateInstanceAddress('${s.id}', parseInt(this.value))">
-                         </div>
-                         <div style="color:#444; margin:0 4px;">|</div>
-                         <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
-                             <input type="text" value="${s.id}" style="font-size:11px; color:#fff; font-weight:600; background:transparent; border:none; width:100%; outline:none; padding:0;" onchange="updateInstanceId('${s.id}', this.value)" title="Instance ID">
-                             <input type="text" value="${s.zone}" list="zone-options" style="color:var(--accent-alt); font-size:9px; font-weight:bold; background:transparent; border:none; outline:none; padding:0; height:auto; line-height:1; text-transform:uppercase;" onchange="updateInstanceZone('${s.id}', this.value)" title="Zone (Editable)">
-                         </div>
-                         <select class="btn-sm" style="width:90px; background:#222; border:1px solid #444; border-radius:6px; color:#fff; font-size:10px; height:28px; padding:0 4px;" onchange="updateInstanceProfile('${s.id}', this.value)">
-                            ${profOptions}
-                         </select>
-                    </div>
+            let html = '';
+            sortedZones.forEach(zone => {
+                html += `<div class="zone-header" style="padding:8px 12px; background:rgba(255,255,255,0.05); font-weight:900; font-size:10px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-top:10px; border-radius:8px 8px 0 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                    ${zone}
+                    <span style="opacity:0.4; font-size:9px;">${grouped[zone].length} FIXTURES</span>
                 </div>`;
-            }).join('') || '<div style="padding:10px; color:#666;">No behaviors currently active on stage.</div>';
+                
+                html += grouped[zone].map(s => {
+                    const profile = uniqueAllProfs.find(p => p.id === s.profileId);
+                    const profName = profile ? profile.name : (s.profileName || 'Unknown Profile');
+
+                    return `<div class="item-row condensed" style="padding:6px 12px; display:flex; align-items:center; gap:10px; border-top:1px solid rgba(255,255,255,0.02); background:rgba(0,0,0,0.2);">
+                        <div style="display:flex; align-items:center; gap:0; font-family:monospace; font-weight:900; background:rgba(0,0,0,0.3); padding:2px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); min-width:70px;">
+                            <input type="number" value="${s.address}" min="1" max="512" style="width:30px; background:none; border:none; color:white; font-size:12px; padding:0; text-align:right; outline:none; font-weight:900;" onchange="updateInstanceAddress('${s.id}', this.value)" title="DMX Address">
+                            <span style="opacity:0.3; margin:0 2px; color:white;">|</span>
+                            <input type="number" value="${s.offset || 0}" min="0" max="512" style="width:30px; background:none; border:none; color:var(--accent); font-size:12px; padding:0; text-align:left; outline:none; font-weight:900;" onchange="updateInstanceOffset('${s.id}', this.value)" title="Channel Offset">
+                        </div>
+                        <div style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:4px;">
+                            <select style="background:none; border:none; color:#fff; font-weight:700; font-size:13px; outline:none; cursor:pointer; max-width:180px; padding:0; flex-shrink:1;" onchange="updateInstanceProfile('${s.id}', this.value)">
+                                ${uniqueAllProfs.map(p => `<option value="${p.id}" ${p.id === s.profileId ? 'selected' : ''} style="background:#222; color:#fff;">${p.name}</option>`).join('')}
+                            </select>
+                            <span style="opacity:0.2; color:#fff; flex-shrink:0;">|</span>
+                            <input type="text" value="${s.id}" style="background:none; border:none; color:#555; font-size:10px; font-weight:bold; letter-spacing:0.5px; outline:none; padding:0; width:auto; min-width:30px; flex:1;" onchange="updateInstanceId('${s.id}', this.value)" title="Fixture ID / Name">
+                        </div>
+                        <div style="display:flex; gap:4px;">
+                            <button class="btn btn-sm" style="width:22px; height:22px; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.3;" onclick="goToProfile('${s.profileId}')" title="Edit Profile">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            </button>
+                            <button class="btn btn-danger btn-sm" style="width:22px; height:22px; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.3; flex-shrink:0;" onclick="deleteStageInstance('${s.id}')">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
+            });
+
+            list.innerHTML = html || '<div style="padding:20px; color:#666; text-align:center;">No fixtures currently active on stage.</div>';
 
             const presList = document.getElementById('saved-presets-list');
             if (presList) {
@@ -606,42 +693,17 @@ var switchTab = window.switchTab || function() { };
         };
 
         function updateVibeDisplay(vibe, variant, transient, vibeChanged, transientChanged) {
-            const badge = document.getElementById('test-vibe-badge');
-            const log = document.getElementById('test-event-log');
-
-            if (badge && vibe) {
-                const style = VIBE_STYLES[vibe] || { bg: 'rgba(255,255,255,0.05)', border: '#333', color: '#666' };
-                badge.style.background = style.bg;
-                badge.style.borderColor = style.border;
-                badge.style.color = style.color;
-                const variantTag = (variant !== undefined && variant !== null) ? `<sup style="font-size:8px; opacity:0.8;">${variant}</sup>` : '';
-                badge.innerHTML = `VIBE ${vibe.toUpperCase()}${variantTag}`;
-            }
-
-            if (log) {
+            if (vibeChanged && vibe) {
                 const now = new Date();
-                const ts = String(now.getHours()).padStart(2,'0') + ':' +
-                           String(now.getMinutes()).padStart(2,'0') + ':' +
-                           String(now.getSeconds()).padStart(2,'0');
-
-                if (vibeChanged && vibe) {
-                    const variantStr = (variant !== undefined && variant !== null) ? `·${variant}` : '';
-                    const style = VIBE_STYLES[vibe] || {};
-                    const entry = document.createElement('div');
-                    entry.style.color = style.color || '#aaa';
-                    entry.textContent = `${ts}  VIBE → ${vibe.toUpperCase()}${variantStr}`;
-                    log.prepend(entry);
-                }
-                if (transientChanged && transient) {
-                    const entry = document.createElement('div');
-                    entry.style.color = { steady: '#555', building: '#a29bfe', tension: '#f9ca24', dropping: '#eb4d4b' }[transient] || '#888';
-                    entry.textContent = `${ts}  STATE → ${transient.toUpperCase()}`;
-                    log.prepend(entry);
-                }
-
-                // Trim log to last 80 entries
-                while (log.children.length > 80) log.removeChild(log.lastChild);
+                const ts = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+                const vol = Math.round((window.latestAudioState.vol || 0) * 100);
+                
+                window.vibeHistory.unshift({ ts, vibe, variant, vol });
+                if (window.vibeHistory.length > 2) window.vibeHistory.pop();
             }
+            
+            // Always update HUD to reflect latest vibe state / transient colors if needed
+            if (typeof window.updateUniversalHUD === 'function') window.updateUniversalHUD();
         }
 
         function addTestLogEntry(text, color) {
@@ -805,6 +867,9 @@ var switchTab = window.switchTab || function() { };
             newWs.binaryType = 'arraybuffer';
             newWs.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
+                    if (window.labRunning || window.longTermRecording) {
+                        if (typeof parseBinaryState === 'function') parseBinaryState(event.data);
+                    }
                     const view = new DataView(event.data);
                     window.lastDmxUpdate = Date.now();
 
@@ -836,7 +901,7 @@ var switchTab = window.switchTab || function() { };
                     }
 
                     // 3. TRIGGER THROTTLED UI UPDATES
-                    if (document.getElementById('tab-test').classList.contains('active')) {
+                    if (document.getElementById('tab-test')?.classList.contains('active')) {
                         updateTestNumericalValues();
                     }
 
@@ -850,6 +915,9 @@ var switchTab = window.switchTab || function() { };
 
                 try {
                     const msg = JSON.parse(event.data);
+                    if (msg.type && msg.type.startsWith("calibration_") && typeof handleCalibrationMessage === "function") handleCalibrationMessage(msg);
+                    if (msg.type === "audit_report" && typeof handleAuditMessage === "function") handleAuditMessage(msg);
+                    if (msg.type === "state") window.latestProbeValue = msg.lab_dmx_val || 0;
                     if (msg.type === 'state') {
                         const prevVibe = latestAudioState.vibe;
                         const prevVariant = latestAudioState.vibe_variant;
@@ -864,6 +932,7 @@ var switchTab = window.switchTab || function() { };
                             activePresets = msg.active_presets;
                             latestAudioState.manual_active_presets = msg.active_presets;
                             msg.active_presets.forEach(p => everActivatedPresets.add(p));
+                            if (typeof window.updateUniversalHUD === 'function') window.updateUniversalHUD();
                         }
                         if (msg.lissajous_active !== undefined) latestAudioState.lissajous_active = msg.lissajous_active;
                         if (msg.calibrated_preset_active !== undefined) latestAudioState.calibrated_preset_active = msg.calibrated_preset_active;
@@ -892,7 +961,7 @@ var switchTab = window.switchTab || function() { };
                         }
                         
                         // Periodic full UI sync if needed
-                        if (document.getElementById('tab-test').classList.contains('active')) {
+                        if (document.getElementById('tab-test')?.classList.contains('active')) {
                              updateTestNumericalValues();
                         }
                     } else if (msg.type === 'current_params') {
@@ -905,7 +974,7 @@ var switchTab = window.switchTab || function() { };
                         if (msg.success) {
                             isRecording = true;
                             recordingStartTime = Date.now();
-                            document.getElementById('rec-status').classList.add('active');
+                            document.getElementById('rec-status')?.classList.add('active');
                             document.getElementById('btn-record').innerText = "⏹ Stop Rec";
                             document.getElementById('btn-record').style.borderColor = "var(--danger)";
                             recordingTimerInterval = setInterval(updateRecordingTimer, 1000);
@@ -914,7 +983,7 @@ var switchTab = window.switchTab || function() { };
                     } else if (msg.type === 'recording_stopped') {
                         isRecording = false;
                         clearInterval(recordingTimerInterval);
-                        document.getElementById('rec-status').classList.remove('active');
+                        document.getElementById('rec-status')?.classList.remove('active');
                         document.getElementById('btn-record').innerText = "🔴 Record";
                         document.getElementById('btn-record').style.borderColor = "#444";
                         addTestLogEntry('── REC STOP ──', '#444');

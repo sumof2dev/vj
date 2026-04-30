@@ -18,20 +18,30 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        print(f"📥 Launcher GET: {self.path}")
-        if self.path in ['/start', '/api/start']:
-            self.run_systemd('start')
-        elif self.path in ['/stop', '/api/stop']:
-            self.run_systemd('stop')
-        elif self.path in ['/restart', '/api/restart']:
-            self.run_systemd('restart')
-        elif self.path in ['/status', '/api/status']:
-            self.run_systemd('is-active', 'vj-engine.service')
-        elif self.path in ['/camera/start', '/api/camera/start']:
+        parsed_path = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(parsed_path.query)
+        path = parsed_path.path
+
+        if path in ['/start', '/api/start']:
+            use_node = query.get('node', ['false'])[0] == 'true'
+            svc = 'vj-node.service' if use_node else 'vj-engine.service'
+            self.run_systemd('start', svc)
+        elif path in ['/stop', '/api/stop']:
+            use_node = query.get('node', ['false'])[0] == 'true'
+            svc = 'vj-node.service' if use_node else 'vj-engine.service'
+            self.run_systemd('stop', svc)
+        elif path in ['/restart', '/api/restart']:
+            use_node = query.get('node', ['false'])[0] == 'true'
+            svc = 'vj-node.service' if use_node else 'vj-engine.service'
+            self.run_systemd('restart', svc)
+        elif path in ['/status', '/api/status']:
+            # Return status for BOTH engine and node
+            self.get_full_status()
+        elif path in ['/camera/start', '/api/camera/start']:
             self.run_systemd('start', 'vj-camera.service')
-        elif self.path in ['/camera/stop', '/api/camera/stop']:
+        elif path in ['/camera/stop', '/api/camera/stop']:
             self.run_systemd('stop', 'vj-camera.service')
-        elif self.path in ['/camera/status', '/api/camera/status']:
+        elif path in ['/camera/status', '/api/camera/status']:
             self.run_systemd('is-active', 'vj-camera.service')
         elif self.path.startswith('/api/spotify/auth'):
             self.handle_spotify_auth()
@@ -82,6 +92,46 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+    def get_full_status(self):
+        """Returns the status of both engine and node services."""
+        engine = self._get_svc_status('vj-engine.service')
+        node = self._get_svc_status('vj-node.service')
+        
+        # Legacy compatibility: 'active' and 'status' reflect the primary engine
+        # but the UI will now look for 'node' specifically
+        response = {
+            "status": engine['status'],
+            "active": engine['active'],
+            "engine": engine,
+            "node": node
+        }
+        
+        payload = json.dumps(response).encode()
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Content-Length', str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def _get_svc_status(self, service):
+        try:
+            cmd = ['sudo', 'systemctl', 'is-active', service]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            status = result.stdout.strip() if result.returncode == 0 else "inactive"
+            is_active = (status == 'active')
+            
+            if not is_active:
+                # Fallback check
+                pattern = 'backend/main.py' if 'engine' in service else 'backend/dmx_node.py'
+                manual_check = subprocess.run(['pgrep', '-f', pattern], capture_output=True)
+                if manual_check.returncode == 0:
+                    status = 'active (manual)'
+                    is_active = True
+            
+            return {"status": status, "active": is_active}
+        except:
+            return {"status": "unknown", "active": False}
+
     def run_systemd(self, action, service='vj-engine.service'):
         try:
             # We use sudo for systemctl. 
@@ -90,13 +140,17 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             
             # --- FALLBACK FOR MANUAL RESTART/STOP ---
             if result.returncode != 0 and action in ['restart', 'stop', 'start', 'status']:
+                pattern = 'backend/main.py' if 'engine' in service else 'backend/dmx_node.py'
+                
                 if action == 'stop' or action == 'restart':
-                    subprocess.run(['pkill', '-f', 'backend/main.py'])
+                    subprocess.run(['pkill', '-f', pattern])
                 
                 if action == 'start' or action == 'restart':
                     # Start manual process in background
-                    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'backend.log')
-                    cmd_manual = f"nohup venv/bin/python3 -u backend/main.py > {log_file} 2>&1 &"
+                    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', f'{service}.log')
+                    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+                    
+                    cmd_manual = f"nohup venv/bin/python3 -u {pattern} > {log_file} 2>&1 &"
                     subprocess.Popen(cmd_manual, shell=True, preexec_fn=os.setpgrp)
                 
                 if action != 'status' and action != 'is-active':
@@ -116,20 +170,10 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
                     return
 
             if action == 'is-active' or action == 'status':
-                # Status Check: Check systemd AND manual process
-                status = result.stdout.strip() if result.returncode == 0 else "inactive"
-                is_active = (status == 'active')
-                
-                if not is_active:
-                    # Fallback: check for manual python process
-                    manual_check = subprocess.run(['pgrep', '-f', 'backend/main.py'], capture_output=True)
-                    if manual_check.returncode == 0:
-                        status = 'active (manual)'
-                        is_active = True
-                
+                svc_status = self._get_svc_status(service)
                 response = {
-                    "status": status,
-                    "active": is_active,
+                    "status": svc_status['status'],
+                    "active": svc_status['active'],
                     "service": service
                 }
             else:

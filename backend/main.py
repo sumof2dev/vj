@@ -319,8 +319,18 @@ class DMXNetworkNode:
     def send(self, universe):
         try:
             self.sock.sendto(universe, (self.ip, self.port))
+            # Independent logging tracker for network
+            if not hasattr(self, '_last_tx_log'): self._last_tx_log = 0
+            now = time.time()
+            if now - self._last_tx_log > 1.0:
+                print(f"📡 TX Network DMX: {len(universe)} bytes to {self.ip}:{self.port}")
+                self._last_tx_log = now
         except Exception as e:
-            pass
+            if not hasattr(self, '_last_err_log'): self._last_err_log = 0
+            now = time.time()
+            if now - self._last_err_log > 5.0:
+                print(f"⚠️ Network DMX Send Error to {self.ip}: {e}")
+                self._last_err_log = now
 
 def save_training_snippet(snippet):
     """Save a captured training snippet as a 'playable' session in the recordings folder"""
@@ -375,15 +385,15 @@ def save_live_defaults():
                 "flux_sensitivity": analyzer.flux_sensitivity_percentage,
                 "audio_source": current_audio_mode,
                 "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
-                "speed": dmx_engine.speed if dmx_engine else 1.0,
-                "intensity": dmx_engine.intensity if dmx_engine else 1.0,
+                "speed": dmx_engine.base_speed if dmx_engine else 1.0,
+                "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
                 "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
                 "node_ip": network_dmx_node.ip if network_dmx_node else ""
             },
             "laser": {
-                "speed": dmx_engine.speed if dmx_engine else 1.0,
+                "speed": dmx_engine.base_speed if dmx_engine else 1.0,
                 "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0,
-                "amplitude": dmx_engine.intensity if dmx_engine else 1.0
+                "amplitude": dmx_engine.base_intensity if dmx_engine else 1.0
             },
             "visual": visual_params_cache
         }
@@ -802,12 +812,9 @@ async def fast_broadcast_loop():
                     
                     if current_time - last_log > 0.5:
                         if dmx_port or network_dmx_node or dmx_engine:
-                            universe = dmx_engine.get_universe()
-                            monitored = {addr: universe[addr] for addr in [1, 7, 8, 175, 182] if addr < len(universe)}
                             health = analyzer.get_signal_health()
                             vibe_name = audio_state.get('vibe', 'mid')
-                            q_size = audio_queue.qsize()
-                            print(f"DMX_OUT: {monitored} | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Signal: {health['status']} ({health['peak']:.1f})")
+                            print(f"DMX_OUT: Healthy | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Signal: {health['status']} ({health['peak']:.1f})")
                             last_log = current_time
 
                     if dmx_port or network_dmx_node:
@@ -816,45 +823,49 @@ async def fast_broadcast_loop():
                         # NETWORK DMX STREAM
                         if network_dmx_node:
                             network_dmx_node.send(bytearray(full_u))
-                            if current_time - last_log > 1.0: print(f"📡 TX Network DMX: {len(full_u)} bytes to {network_dmx_node.target_ip}")
                             
                         # LOG DATA TO RECORDER IF ACTIVE
-                            if recorder.is_recording:
-                                # Capture names of active presets for timeline visualization
-                                active_preset_names = dmx_engine.get_active_preset_names() if dmx_engine else []
-                                recorder.log_dmx(full_u, audio_state=audio_state, active_presets=active_preset_names)
-    
-                            max_addr = 0
-                            for inst in dmx_engine.stage_instances:
-                                profile = dmx_engine.profiles.get(inst.get('profileId'))
-                                ch_count = 0
-                                if profile:
-                                    ch_count = len(profile.get('channels', []))
-                                    if ch_count == 0:
-                                        # Fallback legacy
-                                        fixture = dmx_engine.fixtures.get(inst.get('fixtureId'))
-                                        if fixture: ch_count = len(fixture.get('channels', []))
-                                
-                                if ch_count > 0:
-                                    dev_max = int(inst.get('address', 1)) + int(inst.get('offset', 0)) + (ch_count - 1)
-                                    if dev_max > max_addr: max_addr = dev_max
+                        if recorder.is_recording:
+                            # Capture names of active presets for timeline visualization
+                            active_preset_names = dmx_engine.get_active_preset_names() if dmx_engine else []
+                            recorder.log_dmx(full_u, audio_state=audio_state, active_presets=active_preset_names)
+
+                        max_addr = 0
+                        for inst in dmx_engine.stage_instances:
+                            profile = dmx_engine.profiles.get(inst.get('profileId'))
+                            ch_count = 0
+                            if profile:
+                                ch_count = len(profile.get('channels', []))
+                                if ch_count == 0:
+                                    # Fallback legacy
+                                    fixture = dmx_engine.fixtures.get(inst.get('fixtureId'))
+                                    if fixture: ch_count = len(fixture.get('channels', []))
                             
-                            global dmx_ready
-                            if dmx_port and dmx_ready:
-                                dmx_ready = False
-                                if dmx_engine and dmx_engine.overrides:
-                                    max_o = max(dmx_engine.overrides.keys())
-                                    if max_o > max_addr: max_addr = max_o
-                                    
-                                send_len = max(32, min(513, max_addr + 1))
-                                universe = bytearray(full_u[:send_len])
+                            if ch_count > 0:
+                                try:
+                                    addr = int(inst.get('address', 1)) if inst.get('address') != "" else 1
+                                    off = int(inst.get('offset', 0)) if inst.get('offset') != "" else 0
+                                    dev_max = addr + off + (ch_count - 1)
+                                    if dev_max > max_addr: max_addr = dev_max
+                                except (ValueError, TypeError):
+                                    continue
+                        
+                        global dmx_ready
+                        if dmx_port and dmx_ready:
+                            dmx_ready = False
+                            if dmx_engine and dmx_engine.overrides:
+                                max_o = max(dmx_engine.overrides.keys())
+                                if max_o > max_addr: max_addr = max_o
                                 
-                                loop = asyncio.get_running_loop()
-                                fut = loop.run_in_executor(dmx_executor, sync_send_dmx, dmx_port, universe)
-                                def dmx_done_cb(f):
-                                    global dmx_ready
-                                    dmx_ready = True
-                                fut.add_done_callback(dmx_done_cb)
+                            send_len = max(32, min(513, max_addr + 1))
+                            universe = bytearray(full_u[:send_len])
+                            
+                            loop = asyncio.get_running_loop()
+                            fut = loop.run_in_executor(dmx_executor, sync_send_dmx, dmx_port, universe)
+                            def dmx_done_cb(f):
+                                global dmx_ready
+                                dmx_ready = True
+                            fut.add_done_callback(dmx_done_cb)
     
                 except ValueError as ve:
                     if not critical_error_sent:
@@ -1127,8 +1138,11 @@ async def ws_handler(websocket):
                         
                         elif msg_type == "set_lab_rule":
                             if dmx_engine:
-                                dmx_engine.lab_probe_rule = data.get("rule")
-                                if not dmx_engine.lab_probe_rule:
+                                rule = data.get("rule")
+                                dmx_engine.lab_probe_rule = rule
+                                if rule:
+                                    print(f"🔬 Lab Rule Synced: {rule.get('behavior')} on {rule.get('source')}")
+                                else:
                                     dmx_engine.lab_probe_state = {}
                                     
                         elif msg_type == "blackout":
@@ -1265,16 +1279,16 @@ async def ws_handler(websocket):
                             params = {
                                 "type": "current_params",
                                 "master": {
-                                    "speed": dmx_engine.speed if dmx_engine else 1.0,
+                                    "speed": dmx_engine.base_speed if dmx_engine else 1.0,
                                     "sensitivity": analyzer.gain,
                                     "flux_sensitivity": analyzer.flux_sensitivity_percentage,
                                     "audio_source": current_audio_mode,
                                     "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
-                                    "intensity": dmx_engine.intensity if dmx_engine else 1.0,
+                                    "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
                                     "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
                                 },
                                 "laser": {
-                                    "speed": dmx_engine.speed if dmx_engine else 1.0,
+                                    "speed": dmx_engine.base_speed if dmx_engine else 1.0,
                                     "audioSensitivity": dmx_engine.audio_sensitivity if dmx_engine else 1.0
                                 },
                                 "visual": visual_params_cache
@@ -1593,13 +1607,27 @@ async def main():
     worker = threading.Thread(target=audio_worker_thread, daemon=True)
     worker.start()
 
-    async with websockets.serve(ws_handler, "0.0.0.0", WS_PORT, ssl=ssl_context):
-        await asyncio.gather(
-            fast_broadcast_loop(),
-            audio_watchdog(),
-            spotify_poller(),
-            gamepad_task()
-        )
+    # Robust server bind with retry logic for EADDRINUSE
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            async with websockets.serve(ws_handler, "0.0.0.0", WS_PORT, ssl=ssl_context):
+                await asyncio.gather(
+                    fast_broadcast_loop(),
+                    audio_watchdog(),
+                    spotify_poller(),
+                    gamepad_task()
+                )
+            break # Success
+        except OSError as e:
+            if e.errno == 98: # Address already in use
+                print(f"⚠️  Port {WS_PORT} in use (Attempt {attempt+1}/{max_retries}). Waiting 2s...")
+                await asyncio.sleep(2.0)
+            else:
+                raise e
+        except Exception as e:
+            print(f"❌ WebSocket Server Error: {e}")
+            break
 
 # Global stream variable
 audio_stream = None

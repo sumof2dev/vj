@@ -59,21 +59,25 @@ def send_dmx_break(port, is_usb):
         port.baudrate = original_baud
 
 def run_node():
-    ser, is_usb = find_dmx_port()
-    if not ser:
-        log("❌ CRITICAL: No DMX Hardware found (USB or GPIO).")
-        # We will keep running the UDP loop anyway in case hardware is plugged in later
+    ser, is_usb = None, False
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((UDP_IP, UDP_PORT))
-    
     log(f"📡 DMX Node active. Listening on UDP {UDP_PORT}")
     
     last_log = time.time()
+    last_hw_check = 0
     packet_count = 0
     
     try:
         while True:
+            # 1. AUTO-RECOVERY: Try to find hardware if we don't have it
+            if not ser and time.time() - last_hw_check > 5.0:
+                ser, is_usb = find_dmx_port()
+                last_hw_check = time.time()
+                if not ser:
+                    log("💓 Hardware Discovery: Still waiting for DMX adapter...")
+
             try:
                 sock.settimeout(2.0)
                 data, addr = sock.recvfrom(513)
@@ -84,14 +88,17 @@ def run_node():
                         ser.write(data)
                         ser.flush()
                     except Exception as e:
-                        log(f"⚠️ Write Error: {e}")
-                        ser.close()
-                        ser = None # Trigger re-discovery logic if we wanted, but for now just fail
+                        log(f"⚠️ Write Error (hardware lost): {e}")
+                        try: ser.close()
+                        except: pass
+                        ser = None # Trigger re-discovery logic on next loop
                 
                 packet_count += 1
-                if time.time() - last_log > 1.0:
-                    log(f"📥 RX: {len(data)} bytes from {addr[0]} | Total: {packet_count}")
+                if time.time() - last_log > 2.0:
+                    status = "CONNECTED" if ser else "VIRTUAL (No HW)"
+                    log(f"📥 RX: {len(data)} bytes | HW: {status} | Total: {packet_count}")
                     last_log = time.time()
+
             except socket.timeout:
                 log(f"💓 NODE HEARTBEAT: Waiting for Master on port {UDP_PORT}...")
                 last_log = time.time()

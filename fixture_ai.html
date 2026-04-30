@@ -40,6 +40,8 @@
             flex-direction: column;
             align-items: center;
             overflow-x: hidden;
+            overscroll-behavior-x: none;
+            touch-action: pan-y;
         }
 
         /* --- HEADER --- */
@@ -949,7 +951,7 @@
     </script>
 
     <script type="module">
-        const APP_VERSION = "424260634"; // Stamped by deploy.sh
+        const APP_VERSION = "429262154"; // Stamped by deploy.sh
         import { GoogleGenerativeAI } from "google-genai-sdk";
 
         // Global State
@@ -997,6 +999,23 @@
             "generic": { name: "Generic Offset", keywords: ["custom", "effect", "reset", "unknown"], behavior: "static" }
         };
 
+
+        window.generateFriendlyId = function(type, existingIds = []) {
+            const words = ['rave', 'box', 'cave', 'theone', 'beaver', 'slimy', 'hasty', 'baggage', 'rock', 'toy', 'tease', 'mildly', 'fat', 'twist', 'good', 'miami', 'grab', 'cash', 'money', 'bills', 'yeet', 'nocap', 'uhhuh', 'kiss', 'climb', 'drop', 'grandma', 'love', 'roses', 'cinch', 'knot', 'xray', 'rip', 'tit', 'wish', 'head', 'rash', 'play', 'unload', 'brave', 'daddy'];
+            const now = new Date();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const word = words[Math.floor(Math.random() * words.length)];
+            const baseId = `${mm}${dd}.${type}.${word}`;
+            
+            let finalId = baseId;
+            let counter = 1;
+            while (existingIds.includes(finalId)) {
+                finalId = `${baseId}(${counter})`;
+                counter++;
+            }
+            return finalId;
+        };
 
         // Initialize UI
         function init() {
@@ -1212,75 +1231,44 @@
 
 ${limitText}
 
-3. MULTI-RANGE EXTRACTION (CRITICAL): Examine the DMX tables in the images carefully. For EACH channel, you MUST extract ALL logical sub-ranges found (e.g., 0-10: Off, 11-127: Dimmer, 128-255: Strobe). Create a separate rule object for each range in the 'mappings' array for that channel. Do NOT collapse them into a single range.
+3. MULTI-RANGE EXTRACTION (STRICT): For EACH channel, you MUST extract EVERY logical sub-range row found. Create a separate rule object for each range in the 'mappings' array. DO NOT summarize, collapse, or skip any rows. Accuracy is paramount.
 
 4. MECHANICAL CLASS mapping:
-   - "LINEAR" (Software Drives Motion): Use for "Fixed Angles", "Step Positions", "Fixed Color", "Degree/Angle Selection", "Dimmer 0-100%", "Patterns". 
-   - "INDEX" (Discrete Steps): Use for "Select Gobo", "Select Color Wheeler", "Step Colors".
-   - "MACRO" (Software Tracks): Use for "Auto Programs", "Hardware Macros", "Dynamic Programs", "Moving Patterns", "Hardware Auto". 
+   - "LINEAR": Fixed Angles, Angle Selection, Dimmer 0-100%, Patterns. 
+   - "INDEX": Select Gobo, Select Color Wheeler, Step Colors.
+   - "MACRO": Auto Programs, Hardware Macros, Dynamic Programs, Hardware Auto. 
 
-4. SEMANTIC DECODER (RaveBox Decoupled Paradigm):
-   For every rule, identify the [DRIVER] (source), [SHAPE] (behavior), and [HOLD TYPE].
-   
-   RANGE RULE: 
-   - ALWAYS bring in the range as the 2 numbers provided (min and max). 
-   - NEVER use SHAPE: 'static' for a range (min != max). This freezes motion.
-   - Use 'sine', 'step', or another a    Matrix Guidelines:
-    - POS_X, PAN, POS_Y, TILT: Linear Range? [DRIVER: spectral flux, SHAPE: sine, SPEED: 0.5, HOLD: none]. Macro Range? [DRIVER: volume, SHAPE: square, SPEED: 0.1, HOLD: bar].
-    - ZOOM, FOCUS, IRIS: Linear Range? [DRIVER: bass, SHAPE: sine, SPEED: 0.1, HOLD: none]. 
-    - STROBE, SHUTTER, DIMMER: [DRIVER: volume, SHAPE: saw, SPEED: 1.0, HOLD: none].
-    - COLOR_MULTI, CHASES: [DRIVER: beat phase, SHAPE: square, SPEED: 0.1, HOLD: beat].
-    - COLOR_SOLID, GOBO, INDEXED: Range? [DRIVER: volume, SHAPE: noise, SPEED: 0.1, HOLD: bar]. Single Value? [DRIVER: volume, SHAPE: static, SPEED: 0, HOLD: none].
-    - BEAM_FX, SHIMMER: [DRIVER: highs, SHAPE: noise, SPEED: 0.8, HOLD: none].
+5. SEMANTIC DECODER (RaveBox Decoupled Paradigm):
+   For every rule, identify the [DRIVER] (source), [SHAPE] (behavior), and [MODIFIERS] (speed, react, hold_type).
+   - POS_X, PAN, POS_Y, TILT: [DRIVER: spectral flux, SHAPE: sine, SPEED: 0.5, REACT: 0.5, HOLD: none]. 
+   - ZOOM, FOCUS, IRIS: [DRIVER: bass, SHAPE: sine, SPEED: 0.1, REACT: 0.2, HOLD: none]. 
+   - STROBE, SHUTTER, DIMMER: [DRIVER: volume, SHAPE: saw, SPEED: 1.0, REACT: 0.9, HOLD: none].
+   - COLOR_MULTI, CHASES: [DRIVER: beat phase, SHAPE: square, SPEED: 0.1, REACT: 0.5, HOLD: beat].
+   - COLOR_SOLID, GOBO: [DRIVER: volume, SHAPE: noise, SPEED: 0.1, REACT: 0.1, HOLD: bar].
 
-5. CALIBRATION: EVERY sub-range rule MUST have a complete 'cal' object:
-   - 'cal.min': Start value of range.
-   - 'cal.max': End value of range.
-   - 'cal.center': The mathematical middle.
+6. CALIBRATION & MODIFIERS:
+   - Every rule MUST have a 'cal' object: {min: start, center: middle, max: end}.
+   - Every rule MUST have a 'modifiers' object: {speed: 0-1.0, react: 0-1.0, hold_type: "none/beat/bar/etc"}.
+   - VIBE: Default to "any". If a fixture has multiple heads or segments, spread "any 1", "any 2", and "any 3" across them to provide coordination variety.
 
-6. KEYWORD LOGIC (PHYSICAL ALIGNMENT):
-   - "STATIC" text in a RANGE (e.g. 0-100): Hardware is motionless. RaveBox MUST drive it. Set [SHAPE] to an active logic (sine/saw/square/noise) and [HOLD] to 'none'.
-   - "DYNAMIC" or "MACRO" or "AUTO" text in a range: Hardware is moving. Set [SHAPE] to a slow 'noise' or 'sine'. NEVER set to 'static'.
-   - "FAST": Speed 0.8-1.0. "SLOW": Speed 0.05-0.15.
+7. ROLE DICTIONARY:
+   pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, dimmer, mode, clip, group, generic.
 
-7. ENGINE SPECIFICATIONS (MANDATORY LOGIC SET):
-   - SOURCES: bass, mids, highs, volume, spectral flux, impact, beat phase, bar phase, 2 bar phase, 4 bar phase, bin 0, bin 1, bin 2, bin 3, bin 4, bin 5.
-   - LOGICS: static, direct, sine, square, saw, noise, beat phase, bar phase.
-   - HOLD TYPES: none, beat, bar, 2 bar, 4 bar.
-
-8. CHANNEL FUNCTION AWARENESS (for relational user prompts):
-   - Understand channel relationships. "X rotation" = rot_x, "Y rotation" = rot_y, "Z rotation" = rot_z.
-   - Pan = pos_x, Tilt = pos_y, Zoom = zoom, Roll/Spin = rot_z.
-= zoom, Roll/Spin = rot_z.
-
-9. VIBE RULES & SYNC GROUPS:
-   The "vibe" field controls WHEN a rule activates. It supports sync group numbers (1, 2, 3) for multi-fixture coordination.
-   
-   VALID VIBE VALUES: "any", "chill", "chill 1", "chill 2", "chill 3", "mid", "mid 1", "mid 2", "mid 3", "high", "high 1", "high 2", "high 3", "build", "drop", "never".
-   
-   DISTRIBUTION RULES:
-   - Single-range channel: Set vibe to "any" (no number).
-   - Multi-range channels: FIRST range = "any" (no number). LAST range = "high" (may include number 1, 2, or 3). Middle ranges = "mid" (may include number).
-   - The sync group number (1, 2, 3) is for multi-fixture coordination. When auto-generating, omit the number from vibes. The post-processor will assign randomized numbers.
-   - INTENSITY DECODER: Highly descriptive text (e.g. "clockwise then counterclockwise", "zoom with strobe") indicates intensity. Assign these to "high" or "drop" vibe.
-
-OUTPUT JSON SCHEMA:
+8. OUTPUT JSON SCHEMA:
 {
   "id": "prof_generated", 
   "name": "${brand} ${fixModel}", 
-  "channels": [ 
-    { "name": "Function Name", "role": "dimmer", "default": 0 } 
-  ],
+  "question": "Optional clarifying question",
+  "channels": [ { "name": "Function", "role": "dimmer", "default": 0 } ],
   "mappings": [ 
      [ 
        { 
          "vibe": "any", 
-         "description": "Short summary",
-          "source": "volume", 
-          "behavior": "sine", 
-          "speed": 0.5,
-          "hold_type": "none",
-          "cal": { "min": 0, "center": 127, "max": 255 } 
+         "description": "Range Description", 
+         "source": "volume", 
+         "behavior": "sine", 
+         "cal": { "min": 0, "center": 127, "max": 255 },
+         "modifiers": { "speed": 0.5, "react": 0.5, "hold_type": "none" }
        }
      ] 
   ]
@@ -1339,6 +1327,16 @@ OUTPUT JSON SCHEMA:
             // NEW: Structured output mode returns valid JSON directly
             try {
                 const data = JSON.parse(text);
+                
+                // Check for clarifying question
+                if (data.question && (!data.mappings || data.mappings.length === 0)) {
+                    console.log("❓ AI requested clarification:", data.question);
+                    chatHistory.push({ role: 'model', parts: [{ text: data.question }] });
+                    updateChatUI();
+                    setStep('chat');
+                    return;
+                }
+
                 currentFixture = data; // Now a Profile object
 
                 // Final verification
@@ -1346,7 +1344,7 @@ OUTPUT JSON SCHEMA:
                 if (!currentFixture.mappings || !currentFixture.channels) throw new Error("Invalid schema");
 
                 if (!currentFixture.id || currentFixture.id === 'prof_generated') {
-                    currentFixture.id = "prof_" + ts;
+                    currentFixture.id = window.generateFriendlyId('p', db.profiles.map(p => p.id));
                 }
 
                 currentFixture.mappings = currentFixture.mappings.map((rules, chIdx) => {
@@ -1380,35 +1378,11 @@ OUTPUT JSON SCHEMA:
                         };
 
                         if (isNaN(hydratedRule.modifiers.speed)) hydratedRule.modifiers.speed = parseFloat(logic.speed.toFixed(3));
+                        
+                        hydratedRule.vibe = 'any';
 
                         return hydratedRule;
                     });
-                });
-
-                // ENFORCE VIBE RULES (Distribution Pattern with Randomized Sync Groups)
-                // Randomize sync group numbers across channels to prevent "too busy" output
-                // Each channel gets a different number so not everything fires in the same group
-                const totalChannels = currentFixture.mappings.length;
-                currentFixture.mappings.forEach((rules, chIdx) => {
-                    // Assign a rotating sync group number based on channel index
-                    // This ensures adjacent channels get different numbers (1, 2, 3, 1, 2, 3...)
-                    const syncNum = (chIdx % 3) + 1;
-
-                    if (rules.length === 1) {
-                        rules[0].vibe = 'any';
-                    } else if (rules.length > 1) {
-                        // First range: always "any" with no number
-                        rules[0].vibe = 'any';
-                        // Last range: "high" with randomized sync group number
-                        const lastVibeOptions = ['high', 'high 1', 'high 2', 'high 3'];
-                        rules[rules.length - 1].vibe = lastVibeOptions[syncNum]; // syncNum is 1-3
-                        // Middle ranges: "mid" with randomized sync group number
-                        for (let i = 1; i < rules.length - 1; i++) {
-                            if (rules[i].vibe === 'any' || rules[i].vibe === 'high' || rules[i].vibe === 'mid') {
-                                rules[i].vibe = 'mid ' + syncNum;
-                            }
-                        }
-                    }
                 });
 
                 window.sessionOverrides = {}; // Reset overrides for new extraction
@@ -1436,7 +1410,7 @@ OUTPUT JSON SCHEMA:
 
             const ts = Date.now();
             currentFixture = {
-                id: "prof_" + ts,
+                id: window.generateFriendlyId('p', db.profiles.map(p => p.id)),
                 name: `${brand} ${fixModel}`,
                 channels: Array.from({ length: chCount }, (_, i) => ({
                     name: `Function ${i + 1}`,
@@ -1536,54 +1510,42 @@ OUTPUT JSON SCHEMA:
 
             list.innerHTML = prof.channels.map((ch, idx) => {
                 const rules = prof.mappings[idx] || [];
-                const ruleSummary = rules.map((r, rIdx) => `
-                    <div class="rule-item" style="transition: border-color 0.2s; position:relative; overflow:hidden; padding:6px; border:1px solid rgba(255,255,255,0.05); background:rgba(255,255,255,0.02); border-radius:8px; margin-bottom:4px;">
-                        <button onclick="window.deleteRule(${idx}, ${rIdx})" 
-                                style="position:absolute; top:2px; right:2px; background:none; border:none; color:rgba(255,255,255,0.3); cursor:pointer; font-size:12px;">×</button>
-                        
-                        <!-- LINE 1: DESCRIPTION -->
-                        <div style="margin-bottom:4px;">
+                const ruleSummary = rules.map((r, rIdx) => {
+                    const vibeStr = r.vibe || 'any';
+                    return `
+                    <div class="rule-item" style="transition: border-color 0.2s; padding:4px; border:1px solid rgba(255,255,255,0.05); background:rgba(255,255,255,0.02); border-radius:4px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                        <!-- DESCRIPTION -->
+                        <div style="flex:1;">
                             <input type="text" value="${r.description || r.mechanical_class || 'Range'}" 
                                    oninput="window.updateRuleDescription(${idx}, ${rIdx}, this.value)"
-                                   style="background:none; border:none; color:#fff; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; width:calc(100% - 20px); padding:0; outline:none; text-align:left;">
+                                   style="background:none; border:none; color:#fff; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; width:100%; padding:0; outline:none;">
                         </div>
 
-                        <!-- LINE 2: VIBE & DMX RANGE -->
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px;">
+                        <!-- VIBE / SYNC GROUP -->
+                        <div>
                              <select onchange="window.currentFixture.mappings[${idx}][${rIdx}].vibe = this.value" 
-                                     style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:4px; color:var(--accent-alt); font-size:9px; font-weight:bold; height:20px; flex:1; padding:0 4px; text-transform:uppercase;">
-                                 <option value="any" ${r.vibe === 'any' ? 'selected' : ''}>ANY</option>
-                                 <option value="any 1" ${r.vibe === 'any 1' ? 'selected' : ''}>ANY 1</option>
-                                 <option value="any 2" ${r.vibe === 'any 2' ? 'selected' : ''}>ANY 2</option>
-                                 <option value="any 3" ${r.vibe === 'any 3' ? 'selected' : ''}>ANY 3</option>
-                                 <option value="chill" ${r.vibe === 'chill' ? 'selected' : ''}>CHILL</option>
-                                 <option value="chill 1" ${r.vibe === 'chill 1' ? 'selected' : ''}>CHILL 1</option>
-                                 <option value="chill 2" ${r.vibe === 'chill 2' ? 'selected' : ''}>CHILL 2</option>
-                                 <option value="chill 3" ${r.vibe === 'chill 3' ? 'selected' : ''}>CHILL 3</option>
-                                 <option value="mid" ${r.vibe === 'mid' ? 'selected' : ''}>MID</option>
-                                 <option value="mid 1" ${r.vibe === 'mid 1' ? 'selected' : ''}>MID 1</option>
-                                 <option value="mid 2" ${r.vibe === 'mid 2' ? 'selected' : ''}>MID 2</option>
-                                 <option value="mid 3" ${r.vibe === 'mid 3' ? 'selected' : ''}>MID 3</option>
-                                 <option value="high" ${r.vibe === 'high' ? 'selected' : ''}>HIGH</option>
-                                 <option value="high 1" ${r.vibe === 'high 1' ? 'selected' : ''}>HIGH 1</option>
-                                 <option value="high 2" ${r.vibe === 'high 2' ? 'selected' : ''}>HIGH 2</option>
-                                 <option value="high 3" ${r.vibe === 'high 3' ? 'selected' : ''}>HIGH 3</option>
-                                 <option value="build" ${r.vibe === 'build' ? 'selected' : ''}>BUILD</option>
-                                 <option value="drop" ${r.vibe === 'drop' ? 'selected' : ''}>DROP</option>
-                                 <option value="never" ${r.vibe === 'never' ? 'selected' : ''}>NEVER</option>
+                                     style="background:#1a1a1a; border:1px solid #333; border-radius:4px; color:var(--accent); font-size:9px; font-weight:bold; height:22px; padding:0 4px;">
+                                 <option value="any" ${vibeStr === 'any' ? 'selected' : ''}>ANY</option>
+                                 <option value="any 1" ${vibeStr === 'any 1' ? 'selected' : ''}>1</option>
+                                 <option value="any 2" ${vibeStr === 'any 2' ? 'selected' : ''}>2</option>
+                                 <option value="any 3" ${vibeStr === 'any 3' ? 'selected' : ''}>3</option>
                              </select>
-                             <div style="display:flex; align-items:center; gap:2px; color:white; font-size:9px; font-family:monospace; background:rgba(0,0,0,0.2); padding:2px 4px; border-radius:4px; width:75px; justify-content:center;">
-                                <input type="number" value="${r.cal.min}" oninput="window.updateRuleCal(${idx}, ${rIdx}, 'min', this.value)" 
-                                       style="background:none; border:none; color:#fff; width:34px; text-align:center; padding:0; outline:none;" min="0" max="255">
-                                <span style="opacity:0.3">-</span>
-                                <input type="number" value="${r.cal.max}" oninput="window.updateRuleCal(${idx}, ${rIdx}, 'max', this.value)" 
-                                       style="background:none; border:none; color:#fff; width:34px; text-align:center; padding:0; outline:none;" min="0" max="255">
-                             </div>
                         </div>
 
-                        <!-- LINE 3: [DRIVER] [SHAPE] [HOLD] - REMOVED PER USER REQUEST AS CONFUSING -->
+                        <!-- DMX RANGE -->
+                        <div style="display:flex; align-items:center; gap:2px; font-size:9px; font-family:monospace;">
+                            <input type="number" value="${r.cal.min}" oninput="window.updateRuleCal(${idx}, ${rIdx}, 'min', this.value)" 
+                                   style="width:56px; background:rgba(45,212,191,0.05); color:#2dd4bf; border:1px solid #2dd4bf; border-radius:4px; text-align:center; padding:0; outline:none;" min="0" max="255">
+                            <span style="opacity:0.3; color:white;">-</span>
+                            <input type="number" value="${r.cal.max}" oninput="window.updateRuleCal(${idx}, ${rIdx}, 'max', this.value)" 
+                                   style="width:56px; background:rgba(139,92,246,0.05); color:#8b5cf6; border:1px solid #8b5cf6; border-radius:4px; text-align:center; padding:0; outline:none;" min="0" max="255">
+                        </div>
+
+                        <!-- DELETE BUTTON -->
+                        <button onclick="window.deleteRule(${idx}, ${rIdx})" 
+                                style="background:none; border:none; color:#ff4757; cursor:pointer; font-size:12px; font-weight:bold; padding:0 4px;">×</button>
                     </div>
-                `).join('');
+                `}).join('');
 
                 const roleOptions = Object.entries(WORKFLOW_ROLES).map(([key, info]) => `
                     <option value="${key}" ${ch.role === key ? 'selected' : ''}>${info.name}</option>
@@ -1787,6 +1749,7 @@ OUTPUT JSON SCHEMA:
                     ...rule,
                     behavior: logic.behavior,
                     source: logic.source,
+                    vibe: 'any',
                     modifiers: { 
                         ...rule.modifiers, 
                         speed: parseFloat(logic.speed.toFixed(3))
@@ -1794,22 +1757,6 @@ OUTPUT JSON SCHEMA:
                 };
             });
             
-            // Re-apply vibe logic with sync group
-            rules = window.currentFixture.mappings[chIdx];
-            const syncNum = (chIdx % 3) + 1;
-            if (rules.length === 1) {
-                rules[0].vibe = 'any';
-            } else if (rules.length > 1) {
-                rules[0].vibe = 'any';
-                const lastVibeOptions = ['high', 'high 1', 'high 2', 'high 3'];
-                rules[rules.length - 1].vibe = lastVibeOptions[syncNum];
-                for (let i = 1; i < rules.length - 1; i++) {
-                    if (rules[i].vibe === 'any' || rules[i].vibe === 'high' || rules[i].vibe === 'mid' || /^(high|mid) \d$/.test(rules[i].vibe)) {
-                        rules[i].vibe = 'mid ' + syncNum;
-                    }
-                }
-            }
-
             renderResults();
         };
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ravebox-vj-1777037704';
+const CACHE_NAME = 'ravebox-vj-1777524884';
 
 self.addEventListener('install', (event) => {
     // Cache each asset individually — skip any that fail (e.g. missing on GCS)

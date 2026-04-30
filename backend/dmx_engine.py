@@ -9,15 +9,15 @@ import threading
 
 class ChannelConfig:
     """Pre-resolved channel mapping rules for hot-loop performance."""
-    __slots__ = ['mod_name', 'rules', 'states', 'default_val', 'is_controller', 'smoothing', 'threshold']
-    def __init__(self, rules, states, default_val, smoothing=0.0, threshold=0.0, mod_name='static'):
+    __slots__ = ['mod_name', 'rules', 'states', 'default_val', 'is_controller', 'threshold', 'vibe_splits']
+    def __init__(self, rules, states, default_val, threshold=0.0, mod_name='static', vibe_splits=None):
         self.rules = rules # List of dicts: layer, mod, vibe, cal: [min, center, max], lfo, state_map, etc.
         self.states = states
         self.default_val = default_val
         self.is_controller = False
-        self.smoothing = smoothing
         self.threshold = threshold
         self.mod_name = mod_name
+        self.vibe_splits = vibe_splits or {"chillMid": 33, "midHigh": 66}
 
     def get_active_rule(self, current_vibe, current_transient=None, instance_key=None, global_sync_indices=None):
         """Returns the specific vibe rule if it exists, cycling through multiple matches when the vibe re-activates."""
@@ -50,7 +50,7 @@ class ChannelConfig:
         # Handle fallback to 'any' for non-transient vibes
         if not matching_indices and not is_transient:
             is_fallback = True
-            search_vibe = 'any_fallback' # Unique key for state tracking
+            search_vibe = f'any:{current_vibe}' # Re-rolls on base vibe change, stable during variant changes
             
             # Check for synchronized fallback (e.g. "any 1")
             if global_sync_indices:
@@ -158,8 +158,10 @@ class DMXEngine:
         self.logic_l = LogicMatrix()
         self.logic_r = LogicMatrix()
         
-        self.speed = 0.6 
-        self.intensity = 1.0
+        self.base_speed = 0.6 
+        self.base_intensity = 1.0
+        self.preset_speed = 1.0
+        self.preset_intensity = 1.0
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
         self.active_presets = []
@@ -224,13 +226,22 @@ class DMXEngine:
         """Returns (variant_index 0-2, dominant_bin 0-5) based on most energetic bin pair."""
         raw_bins = audio.get('bins', [0.0] * 6)
         bins = [float(b) for b in raw_bins] if raw_bins else [0.0] * 6
-        dominant = bins.index(max(bins)) if bins and max(bins) > 0 else 0
-        if dominant <= 1:
-            return 0, dominant   # variant 1: sub/bass
-        elif dominant <= 3:
-            return 1, dominant   # variant 2: kick/low-mid
-        else:
-            return 2, dominant   # variant 3: mid/high
+        
+        # Targeted Competition Logic (v3 - Analysis Driven)
+        # 1: bin 1 only (Punch/Low-Mid)
+        # 2: bin 2 only (Mid)
+        # 3: bin 3-5 (Highs)
+        v1 = bins[1]
+        v2 = bins[2]
+        v3 = max(bins[3], bins[4], bins[5])
+        
+        energies = [v1, v2, v3]
+        variant = energies.index(max(energies)) if max(energies) > 0.001 else 0
+        
+        # Dominant bin index still reported for logging/debugging
+        dominant = bins.index(max(bins)) if max(bins) > 0 else 0
+        
+        return variant, dominant
 
     def _load_profiles(self):
         print("🔄 DMX Engine Loading Modular Config...")
@@ -310,24 +321,53 @@ class DMXEngine:
             except Exception as e:
                 print(f"⚠️ Error loading descriptors: {e}")
 
+    def _find_fixture_role_address(self, fixture_id, role_name):
+        # Find stage instance with resilient matching (ID, ProfileName, or Zone)
+        inst = next((i for i in self.stage_instances if 
+                    i['id'] == fixture_id or 
+                    i.get('profileName') == fixture_id or 
+                    str(i.get('zone', '')).lower() == fixture_id.lower()), None)
+        
+        if not inst: return -1
+        
+        base_addr = inst.get('address', 1)
+        prof_id = inst.get('profileId')
+        if not prof_id: return -1
+        
+        prof = self.profiles.get(prof_id)
+        if not prof: return -1
+        
+        # Find channel with this role
+        channels = prof.get('channels', [])
+        for ch_idx, ch in enumerate(channels):
+            if ch.get('role') == role_name or ch.get('name') == role_name:
+                return base_addr + ch_idx
+        
+        return -1
+
     def _build_fast_cache(self):
-        self._fast_cache = {}
+        new_cache = {}
         for p_id, profile in self.profiles.items():
-            self._fast_cache[p_id] = {}
+            new_cache[p_id] = {}
             channels = profile.get('channels', [])
             if not channels: continue
             
             mappings = profile.get('mappings', [])
+            vibe_splits_map = profile.get('vibeSplits', {})
+            
             for ch_idx, ch in enumerate(channels):
                 rules = mappings[ch_idx] if ch_idx < len(mappings) else []
                 default_val = ch.get('default', 127)
-                self._fast_cache[p_id][ch_idx] = ChannelConfig(
+                vibe_splits = vibe_splits_map.get(str(ch_idx), {"chillMid": 33, "midHigh": 66})
+                
+                new_cache[p_id][ch_idx] = ChannelConfig(
                     rules=rules,
                     states={}, 
                     default_val=default_val,
-                    smoothing=0.0,
-                    threshold=0.0
+                    threshold=0.0,
+                    vibe_splits=vibe_splits
                 )
+        self._fast_cache = new_cache
 
     def _hot_reload_loop(self):
         while True:
@@ -355,9 +395,17 @@ class DMXEngine:
 
     def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
         self._dt = dt
-        self.eff_speed = self.speed
-        self.eff_intensity = self.intensity
-        self._eff_dt = dt
+        
+        # Reset Preset Layer (Volatile)
+        self.preset_speed = 1.0
+        self.preset_intensity = 1.0
+        
+        # Determine Effective Totals (Manual * Automated)
+        self.eff_speed = self.base_speed * self.preset_speed
+        self.eff_intensity = self.base_intensity * self.preset_intensity
+        
+        # Warp the internal clock by system speed for both presets and physics
+        self._eff_dt = dt * self.eff_speed
 
         self.prev_gamepad = self.gamepad
         self.gamepad = gamepad or {}
@@ -433,7 +481,14 @@ class DMXEngine:
                         if check_range(val, trig): trig_matched = True
 
                 elif t_cat == 'channel':
-                    addr = int(trig.get('target', 0))
+                    fixture_id = trig.get('fixture')
+                    role = trig.get('role')
+                    
+                    if fixture_id and role:
+                        addr = self._find_fixture_role_address(fixture_id, role)
+                    else:
+                        addr = int(trig.get('target', 0)) # Fallback to legacy raw addr
+
                     if 0 < addr < len(self.universe):
                         val = self.universe[addr]
                         if check_range(val, trig): trig_matched = True
@@ -494,17 +549,22 @@ class DMXEngine:
                         # Apply multiplier directly to engine speed/intensity
                         multiplier = resolved_val / 100.0
                         if fn in ['speed', 'rate', 'dt']:
-                            self.speed = 0.6 * multiplier # Restore base-speed awareness
+                            self.preset_speed = multiplier
                         elif fn == 'intensity':
-                            self.intensity = 1.0 * multiplier
+                            self.preset_intensity = multiplier
+
+        # Recalculate effective totals after preset evaluation
+        self.eff_speed = self.base_speed * self.preset_speed
+        self.eff_intensity = self.base_intensity * self.preset_intensity
+        self._eff_dt = dt * self.eff_speed
 
         if 'left' in audio and 'right' in audio:
-            self.logic_l.update(dt, audio['left'], self.transient, self.speed, self.intensity)
-            self.logic_r.update(dt, audio['right'], self.transient, self.speed, self.intensity)
+            self.logic_l.update(dt, audio['left'], self.transient, self.eff_speed, self.eff_intensity)
+            self.logic_r.update(dt, audio['right'], self.transient, self.eff_speed, self.eff_intensity)
         else:
             self.logic_l = self.logic
             self.logic_r = self.logic
-            self.logic.update(dt, audio, self.transient, self.speed, self.intensity)
+            self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
         
         # Removed legacy rhythm triggers
         
@@ -581,7 +641,7 @@ class DMXEngine:
 
         # Update Probe if active
         if self.lab_probe_rule:
-            self.lab_dmx_val = self._apply_rule_math(self.lab_probe_rule, self.lab_probe_state, audio, self.logic)
+            self.lab_dmx_val = self._apply_rule_math(self.lab_probe_rule, self.lab_probe_state, self.logic, dt * self.eff_speed, audio=audio, use_intensity=False)
         else:
             self.lab_dmx_val = 0
 
@@ -662,24 +722,29 @@ class DMXEngine:
                 p_id = p_data.get('id', p_data.get('name', 'unknown'))
                 for ov in overrides:
                     ov_type = ov.get('type')
-                    ov_name = ov.get('name', '')
+                    target_id = ov.get('target', ov.get('id'))
                     target_role = ch_def.get('role', ch_def.get('name'))
-                    
                     matched_ov_ch = None
                     
-                    if ov_type == 'instance' and ov.get('id') == inst['id']:
-                        for ov_ch in ov.get('channels', []):
-                            if ov_ch.get('name') == target_role:
-                                matched_ov_ch = ov_ch
+                    if ov_type == 'instance':
+                        # Resilient matching: ID, ProfileName, or Zone
+                        is_match = (target_id == inst['id'] or 
+                                   target_id == inst.get('profileName') or 
+                                   (inst.get('zone') and str(inst.get('zone')).lower() == str(target_id).lower()))
+                        
+                        if is_match:
+                            for ov_ch in ov.get('channels', []):
+                                if ov_ch.get('name') == target_role:
+                                    matched_ov_ch = ov_ch
                     elif ov_type == 'global':
-                        if ov_name == target_role or ov_name == f"Global: {target_role}":
+                        if target_id == target_role or target_id == f"Global: {target_role}" or ov.get('name') == target_role:
                             for ov_ch in ov.get('channels', []):
                                 if ov_ch.get('name') == target_role:
                                     matched_ov_ch = ov_ch
                                     break
                             # Fallback to direct 'value' for legacy global presets
                             if matched_ov_ch is None and 'value' in ov:
-                                ov_key = f"dimmer_{p_id}_{ov_name}_{inst['id']}"
+                                ov_key = f"dimmer_{p_id}_{target_id}_{inst['id']}"
                                 # Use warped dt for global value sweeps
                                 preset_override_val = self._resolve_preset_value(ov_key, ov.get('value', 0), self._eff_dt)
                     
@@ -711,10 +776,11 @@ class DMXEngine:
 
         # State Maintenance for this specific rule instance
         st = logic_matrix.states[instance_key]
-        return self._apply_rule_math(rule, st, audio, logic_matrix, ch_def)
+        return self._apply_rule_math(rule, st, logic_matrix, self._dt * logic_matrix.speed_mult, 
+                                    audio=audio, ch_def=ch_def, vibe_splits=cache.vibe_splits)
 
-    def _apply_rule_math(self, rule, st, audio, logic_matrix, ch_def=None):
-        """Standardized math engine for all DMX channels."""
+    def _apply_rule_math(self, rule, st, logic_matrix, dt, audio=None, ch_def=None, use_intensity=True, vibe_splits=None):
+        """Core mathematical mapping from audio/logic to DMX value"""
         behavior = rule.get('behavior', 'static').lower()
         source = rule.get('source', 'volume').lower()
         mods = rule.get('modifiers', {'speed': 0.5, 'react': 0.5, 'hold_type': 'none'})
@@ -739,51 +805,80 @@ class DMXEngine:
         c_max = int(cal.get('max', fixture_cal.get('max', 255)))
         c_center = int(cal.get('center', fixture_cal.get('center', (c_min + c_max) // 2)))
 
-        r_center = rule.get('rel_center')
-        if r_center is None and easy_id and easy_id in self.behavior_defaults:
-            r_center = self.behavior_defaults[easy_id].get('rel_center')
-        if r_center is not None:
-             c_center = c_min + (float(r_center) * (c_max - c_min))
+        # --- DYNAMIC VIBE PARTITIONING ---
+        current_vibe = audio.get('vibe', 'mid') if audio else 'mid'
+        l_bound = 0.0
+        r_bound = 1.0
+        
+        if vibe_splits:
+            s1 = vibe_splits.get('chillMid', 33) / 100.0
+            s2 = vibe_splits.get('midHigh', 66) / 100.0
+            
+            if current_vibe == 'chill':
+                r_bound = s1
+            elif current_vibe == 'mid':
+                l_bound = s1
+                r_bound = s2
+            elif current_vibe == 'high':
+                l_bound = s2
+        
+        # Calculate Effective Sub-Range
+        span = c_max - c_min
+        eff_min = c_min + (span * l_bound)
+        eff_max = c_min + (span * r_bound)
+        eff_center = (eff_min + eff_max) / 2.0
 
         # 1. Resolve Driver Magnitude (E)
         E = logic_matrix.state.get(source, 0.0)
 
-        # 2. State Maintenance (Non-Physics)
+        # 2. State Maintenance
         if 'phase' not in st: 
-            st.update({'phase': 0.0, 't': 0.0, 'hold_active': False, 'held_dmx': c_center})
+            st.update({'phase': 0.0, 't': 0.0, 'hold_active': False, 'held_dmx': eff_center, 'step': 0, 'bucket': 0, 'last_beat': False})
 
-        # 3. Hold Logic (Musical Durations)
-        is_beat = audio.get('beat', False)
+        # 3. Hold Logic (Pulse-aware transitions)
+        curr_beat_count = audio.get('beat_count', 0) if audio else 0
+        if 'last_beat_count' not in st: st['last_beat_count'] = curr_beat_count
+        
+        # Detect if a NEW beat has occurred since the last engine frame
+        has_new_beat = (curr_beat_count > st['last_beat_count'])
+        # Also detect a "Bar" (every 4 beats)
+        has_new_bar = has_new_beat and (curr_beat_count % 4 == 0)
+        
+        # Update state for next frame
+        st['last_beat_count'] = curr_beat_count
+        
         trigger_hold = False
-        beat_count = logic_matrix.beat_count
-
-        if hold_type == 'beat' and is_beat: trigger_hold = True
-        elif hold_type == 'bar' and is_beat and (beat_count % 4 == 0): trigger_hold = True
-        elif hold_type == '2 bar' and is_beat and (beat_count % 8 == 0): trigger_hold = True
-        elif hold_type == '4 bar' and is_beat and (beat_count % 16 == 0): trigger_hold = True
-
+        if hold_type == 'beat' and has_new_beat: trigger_hold = True
+        elif hold_type == 'bar' and has_new_bar: trigger_hold = True
+        
         if trigger_hold: 
             st['hold_active'] = True
-            st.pop('held_dmx', None) # Allow capture of NEW value
+            st.pop('held_dmx', None)
         elif hold_type == 'none':
             st['hold_active'] = False
 
-        # 4. Behavior Logic (Non-Physics)
+        # 4. Behavior Logic
         y = 0.0 
-        dt = self._dt
-
+        
         if behavior == 'static':
-            return max(0, min(255, int(rule.get('value', c_max))))
+            # For static behavior, if we have a specific 'value', use it. 
+            # Otherwise use the center of our partitioned range.
+            if 'value' in rule:
+                return max(0, min(255, int(rule['value'])))
+            return max(0, min(255, int(eff_center)))
         
         elif behavior == 'direct':
-            y = (E * 2.0) - 1.0 # Centered unipolar-to-bipolar for calibration mapping
+            y = (E * 2.0) - 1.0
             
-        elif behavior in ['sine', 'square', 'saw']:
-            freq = (speed * 0.1) + (E * 5.0 * react) # Variable frequency based on energy
-            st['phase'] = (st['phase'] + dt * freq) % 1.0
-            p = st['phase']
-            amp = react # Use react as amplitude scale
+        elif behavior in ['sine', 'square', 'saw', 'triangle']:
+            if source in ['beat', 'bar']:
+                p = E # Rhythmic phase lock
+            else:
+                freq = (speed * 0.1) + (E * 5.0 * react)
+                st['phase'] = (st['phase'] + dt * freq) % 1.0
+                p = st['phase']
             
+            amp = react
             if behavior == 'sine': y = amp * math.sin(p * 2.0 * math.pi)
             elif behavior == 'saw': y = amp * ((p * 2.0) - 1.0)
             elif behavior == 'square': y = amp if p < 0.5 else -amp
@@ -794,7 +889,33 @@ class DMXEngine:
 
         elif behavior == 'beat phase':
             p = logic_matrix.state.get('beat phase', 0.0)
-            y = (p * 2.0 * E) - 1.0 # Ramp scaled by amplitude (E)
+            y = (p * 2.0 * E) - 1.0
+
+        elif behavior == 'stochastic':
+            y = (random.random() * 2.0) - 1.0
+
+        elif behavior == 'spike':
+            if 'spike_val' not in st: st['spike_val'] = 0.0
+            threshold = (1.0 - react) * 0.35
+            if E > st.get('last_E', 0.0) + threshold:
+                st['spike_val'] = E
+            st['spike_val'] *= max(0.0, 1.0 - dt * speed * 1.2)
+            st['last_E'] = E
+            y = (st['spike_val'] * 2.0) - 1.0
+
+        elif behavior == 'hum':
+            st['t'] += dt * speed * 2.5
+            osc = math.sin(st['t']) * react * 0.2
+            y = ((E + osc) * 2.0) - 1.0
+
+        elif behavior == 'fuzzy':
+            st['t'] += dt * speed * 1.8
+            noise = (logic_matrix._noise1d(st['t']) * 2.0 - 1.0) * react * 0.25
+            y = ((E + noise) * 2.0) - 1.0
+
+        elif behavior == 'direct_stepped':
+            steps = 8
+            y = (math.floor(E * steps) / steps * 2.0) - 1.0
             
         elif behavior == 'bar phase':
             p = logic_matrix.state.get('bar phase', 0.0)
@@ -802,8 +923,11 @@ class DMXEngine:
 
         # Mapping normalized y to DMX
         y = max(-1.0, min(1.0, y))
-        if y >= 0: final_dmx = c_center + (y * (c_max - c_center))
-        else: final_dmx = c_center + (y * (c_center - c_min))
+        if use_intensity:
+            y *= self.eff_intensity  # Scale amplitude within range, not absolute DMX
+        
+        if y >= 0: final_dmx = eff_center + (y * (eff_max - eff_center))
+        else: final_dmx = eff_center + (y * (eff_center - eff_min))
         
         # Hold persistence
         if hold_type != 'none':
@@ -813,7 +937,7 @@ class DMXEngine:
             else:
                 st.pop('held_dmx', None)
         
-        return max(0, min(255, int(round(final_dmx))))
+        return max(0, min(255, int(final_dmx)))
 
     def _resolve_preset_value(self, ov_key, val, dt):
         """
@@ -914,8 +1038,8 @@ class DMXEngine:
         return self._apply_rule_math(rule, st, audio, logic_matrix)
 
     def get_universe(self): return self.universe[:]
-    def set_intensity(self, val): self.intensity = float(val)
-    def set_speed(self, val): self.speed = float(val)
+    def set_intensity(self, val): self.base_intensity = float(val)
+    def set_speed(self, val): self.base_speed = float(val)
     def set_audio_sensitivity(self, val): self.audio_sensitivity = float(val)
     # Removed legacy _detect_bass_style
 

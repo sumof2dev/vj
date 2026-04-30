@@ -1,5 +1,36 @@
 console.log("shared_setup.js loading...");
 
+window.enforceDmxLimit = function(el) {
+    let val = el.value.replace(/\D/g, ''); // Digits only
+    if (val === '') {
+        // Allow empty
+    } else {
+        if (val.length > 3) val = val.slice(-3); // Rolling 3-digit window
+        let num = parseInt(val);
+        if (num > 255) num = 255;
+        val = num.toString();
+    }
+    el.value = val;
+    return val;
+};
+
+window.generateFriendlyId = function(type, existingIds = []) {
+    const words = ['rave', 'box', 'cave', 'theone', 'beaver', 'slimy', 'hasty', 'baggage', 'rock', 'toy', 'tease', 'mildly', 'fat', 'twist', 'good', 'miami', 'grab', 'cash', 'money', 'bills', 'yeet', 'nocap', 'uhhuh', 'kiss', 'climb', 'drop', 'grandma', 'love', 'roses', 'cinch', 'knot', 'xray', 'rip', 'tit', 'wish', 'head', 'rash', 'play', 'unload', 'brave', 'daddy'];
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const word = words[Math.floor(Math.random() * words.length)];
+    const baseId = `${mm}${dd}.${type}.${word}`;
+    
+    let finalId = baseId;
+    let counter = 1;
+    while (existingIds.includes(finalId)) {
+        finalId = `${baseId}(${counter})`;
+        counter++;
+    }
+    return finalId;
+};
+
 window.addEventListener('error', function(e) {
     console.error("❌ GLOBAL ERROR:", e.message, "at", e.filename, ":", e.lineno);
     const el = document.getElementById('debug-error-overlay');
@@ -62,22 +93,31 @@ window.BEHAVIORS = [
     { id: 'square', label: 'Square' },
     { id: 'noise', label: 'Noise' },
     { id: 'beat phase', label: 'Beat Phase' },
-    { id: 'bar phase', label: 'Bar Phase' }
+    { id: 'stochastic', label: 'Stochastic' },
+    { id: 'spike', label: 'Spike' },
+    { id: 'hum', label: 'Hum' },
+    { id: 'fuzzy', label: 'Fuzzy' },
+    { id: 'direct_stepped', label: 'Direct Stepped' }
 ];
 
 window.EASY_DESCRIPTORS = [
-    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "sine", "source": "impact", "speed": 1, "react": 0.45, "hold_type": "none", "rel_center": 0.498},
-    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "noise", "source": "bar phase", "speed": 0.1, "react": 0.65, "hold_type": "none"},
-    {"id": "bass_pump", "label": "Bass Pump", "behavior": "direct", "source": "beat phase", "speed": 1, "react": 1, "hold_type": "none"},
-    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "sine", "source": "volume", "speed": 0.7, "react": 0.65, "hold_type": "bar", "rel_center": 0.498},
-    {"id": "pause_jitter", "label": "Pause-Jitter Sine", "behavior": "noise", "source": "beat phase", "speed": 0, "react": 0.95, "hold_type": "none"},
-    {"id": "rapid_climb", "label": "Rapid Climb", "behavior": "saw", "source": "spectral flux", "speed": 0.5, "react": 0.85, "hold_type": "none", "rel_center": 0.498},
+    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "bin 0", "speed": 0.2, "react": 0, "hold_type": "bar", "rel_center": 0.498},
+    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "bass", "speed": 0.3, "react": 0.45, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "bass_pump", "label": "Bass Pump", "behavior": "direct", "source": "bin 1", "speed": 0.2, "react": 0.5, "hold_type": "none", "rel_center": 0.498},
+    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "fuzzy", "source": "bin 2", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "rapid_climb", "label": "Rapid Climb", "behavior": "direct", "source": "impact", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     {"id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5},
-    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "noise", "source": "beat phase", "speed": 0.3, "react": 0.4, "hold_type": "beat", "rel_center": 0.498},
-    {"id": "inverse_bass", "label": "Inverse Bass", "behavior": "direct", "source": "bass", "speed": 0.4, "react": 0.8, "hold_type": "none", "rel_center": 0.5},
-    {"id": "kick_drum_step", "label": "kick drum step", "behavior": "beat phase", "source": "bin 0", "speed": 0.4, "react": 0.65, "hold_type": "none", "rel_center": 0.208},
+    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "volume", "speed": 0.3, "react": 0.15, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "inverse_bass", "label": "Flux Direct", "behavior": "direct", "source": "spectral flux", "speed": 0.4, "react": 0.8, "hold_type": "none", "rel_center": 0.502},
+    {"id": "kick_drum_step", "label": "kick drum step", "behavior": "direct", "source": "bin 0", "speed": 1, "react": 0.45, "hold_type": "beat", "rel_center": 0.208},
     {"id": "hi_hat", "label": "hi hat", "behavior": "beat phase", "source": "highs", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
-    {"id": "hi_hat", "label": "hi hat", "behavior": "static", "source": "bass", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498, "value": 127},
+    {"id": "random_bar_hold", "label": "Random Bar Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "bar", "rel_center": 0.5},
+    {"id": "random_beat_hold", "label": "Random Beat Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "beat", "rel_center": 0.5},
+    {"id": "beat_jump", "label": "Beat Jump", "behavior": "spike", "source": "beat phase", "speed": 0.2, "react": 0.4, "hold_type": "none", "rel_center": 0.5},
+    {"id": "bass_hum", "label": "Bass Line Hum", "behavior": "hum", "source": "bass", "speed": 0.1, "react": 0.1, "hold_type": "none", "rel_center": 0.5},
+    {"id": "direct_hold", "label": "Direct and Hold", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.2, "hold_type": "beat", "rel_center": 0.502},
+    {"id": "hi_hit", "label": "Hi Hit", "behavior": "spike", "source": "highs", "speed": 0.2, "react": 0.75, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_mids", "label": "Fuzzy Mids", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "none", "rel_center": 0.502},
     {"id": "new_trigger_state", "label": "New Trigger State", "behavior": "static", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498, "value": 127},
     // PREMADE_ANCHOR
 ];
@@ -90,9 +130,7 @@ window.SOURCES = [
     { id: 'spectral flux', label: 'Spectral Flux' },
     { id: 'impact', label: 'Impact' },
     { id: 'beat phase', label: 'Beat Phase' },
-    { id: 'bar phase', label: 'Bar Phase' },
     { id: '2 bar phase', label: '2 Bar Phase' },
-    { id: '4 bar phase', label: '4 Bar Phase' },
     { id: 'bin 0', label: 'Bin 0' },
     { id: 'bin 1', label: 'Bin 1' },
     { id: 'bin 2', label: 'Bin 2' },
@@ -105,8 +143,7 @@ window.HOLD_TYPES = [
     { id: 'none', label: 'None' },
     { id: 'beat', label: 'Beat' },
     { id: 'bar', label: 'Bar' },
-    { id: '2 bar', label: '2 Bar' },
-    { id: '4 bar', label: '4 Bar' }
+    { id: '2 bar', label: '2 Bar' }
 ];
 
 
@@ -164,7 +201,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "424260634";
+window.APP_VERSION = "429262154";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -311,6 +348,7 @@ var syncAllProfiles = window.syncAllProfiles = async function() {
 // --- DMX & AUDIO STATE ---
 window.latestDmxUniverse = new Uint8Array(513);
 window.latestAudioState = { vol: 0.1, bins: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], vibe: 'mid', transient: 'steady', beat: false };
+window.vibeHistory = [];
 window.latestOverrides = new Set();
 window.ws = null;
 window.dmx_connected = false;
@@ -335,6 +373,39 @@ const savedTheme = localStorage.getItem('ravebox_setup_theme');
 if (savedTheme) document.body.classList.add(savedTheme);
 
 window.toggleSidebar = () => document.getElementById('sidebar')?.classList.toggle('collapsed');
+
+window.updateUniversalHUD = function() {
+    const hud = document.getElementById('universal-hud');
+    if (!hud) return;
+
+    // 1. Presets (Include manual presets + core engine states)
+    const presetsCont = document.getElementById('hud-presets');
+    if (presetsCont) {
+        let activeNames = [];
+        if (window.latestAudioState.lissajous_active > 0.5) activeNames.push("Lissajous");
+        if (window.latestAudioState.calibrated_preset_active) activeNames.push("Calibrated");
+        
+        const activeIds = window.latestAudioState.manual_active_presets || [];
+        activeIds.forEach(id => {
+            const p = (window.db.presets || []).find(x => x.id === id || x.name === id);
+            if (p) activeNames.push(p.name);
+        });
+        
+        presetsCont.innerHTML = activeNames.map(name => `<span class="hud-preset-badge">${name}</span>`).join('');
+    }
+
+    // 2. Vibe Log
+    const logCont = document.getElementById('hud-vibe-log');
+    if (logCont) {
+        logCont.innerHTML = window.vibeHistory.map(entry => `
+            <div class="hud-vibe-line">
+                <span class="ts">${entry.ts}</span>
+                <span class="vibe vibe-${entry.vibe}">${entry.vibe.toUpperCase()}${entry.variant !== undefined && entry.variant !== null ? '·' + entry.variant : ''}</span>
+                <span class="vol">${entry.vol}%</span>
+            </div>
+        `).join('');
+    }
+};
 
 var updateUniqueFunctions = window.updateUniqueFunctions = function() {
     ['pres-add-global-func', 'test-function-picker'].forEach(id => {
@@ -366,7 +437,7 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function() {
 
 // --- NAVIGATION & UI REFRESH ---
 var switchTab = window.switchTab = function(tabId, noHistory = false) {
-    const isProfilePage = window.location.pathname.includes('profile.html');
+    const isProfilePage = window.location.pathname.endsWith('/profile.html') || window.location.pathname === 'profile.html';
     if (isProfilePage && tabId !== 'tab-profile') { window.location.href = 'setup.html?tab=' + tabId.replace('tab-', ''); return; }
 
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -449,7 +520,7 @@ var sendIt = window.sendIt = async function(event) {
 
 // --- BOOT COMPLETE ---
 window.RAVEBOX_READY = true;
-console.log("✅ RaveBox Core Ready (v426)");
+console.log("✅ RaveBox Core Ready (v427)");
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
@@ -506,19 +577,28 @@ console.log("✅ RaveBox Core Ready (v426)");
 
 function loadNodeIp() {
     const input = document.getElementById('dmx-node-ip-input');
+    const updateBtn = document.getElementById('btn-update-node');
+    const toolsRow = document.getElementById('node-tools-row');
     if (!input) return;
     fetch('/api/remote_settings')
         .then(r => r.json())
         .then(data => {
-            input.value = data.master?.node_ip || "";
+            const ip = data.master?.node_ip || "";
+            input.value = ip;
+            if (updateBtn) updateBtn.style.display = ip ? 'block' : 'none';
+            if (toolsRow) toolsRow.style.display = ip ? 'flex' : 'none';
         })
         .catch(e => console.warn("Failed to load node IP:", e));
 }
 
 function saveNodeIp() {
     const input = document.getElementById('dmx-node-ip-input');
+    const updateBtn = document.getElementById('btn-update-node');
+    const toolsRow = document.getElementById('node-tools-row');
     if (!input) return;
     const nodeIp = input.value;
+    if (updateBtn) updateBtn.style.display = nodeIp ? 'block' : 'none';
+    if (toolsRow) toolsRow.style.display = nodeIp ? 'flex' : 'none';
     
     fetch('/api/remote_settings')
         .then(r => r.json())
@@ -531,6 +611,94 @@ function saveNodeIp() {
                 body: JSON.stringify(data)
             });
         })
-        .then(() => console.log("📡 Node IP saved to server:", nodeIp))
+        .then(() => {
+            console.log("📡 Node IP saved to server:", nodeIp);
+            fetch('/api/restart', { method: 'POST' }).catch(() => {});
+        })
         .catch(e => console.error("Failed to save node IP:", e));
+}
+
+async function updateNode(event) {
+    if (event) event.stopPropagation();
+    const nodeIp = document.getElementById('dmx-node-ip-input').value;
+    if (!nodeIp) return;
+
+    const btn = document.getElementById('btn-update-node');
+    const originalText = btn.innerText;
+    btn.innerText = "PUSHING...";
+    btn.disabled = true;
+
+    try {
+        // We use the Launcher's shell endpoint to run the push_update script
+        const cmd = `./push_update.sh ${nodeIp} --node`;
+        const res = await fetch(`${window.LAUNCHER_API}/shell?cmd=${encodeURIComponent(cmd)}`);
+        const data = await res.json();
+        
+        if (data.exit_code === 0) {
+            btn.innerText = "SUCCESS";
+            btn.style.background = "var(--primary)";
+        } else {
+            alert("Update Failed: " + (data.stderr || "Check console"));
+            btn.innerText = "FAILED";
+        }
+    } catch (e) {
+        alert("Error: " + e.message);
+        btn.innerText = "ERROR";
+    } finally {
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+            btn.style.background = "";
+        }, 3000);
+    }
+}
+
+function remoteNodeTool(type) {
+    const nodeIp = document.getElementById('dmx-node-ip-input').value;
+    if (!nodeIp) return;
+
+    const modal = document.getElementById('node-console-modal');
+    const output = document.getElementById('node-console-output');
+    const title = document.getElementById('node-console-title');
+    
+    if (modal) modal.style.display = 'flex';
+    if (output) {
+        output.textContent = `> Requesting ${type.toUpperCase()} from ${nodeIp}...\n`;
+        output.style.color = "#aaa";
+    }
+
+    let cmd = "";
+    switch(type) {
+        case 'status': cmd = "sudo systemctl status vj-node"; break;
+        case 'logs': cmd = "sudo journalctl -u vj-node -n 50"; break;
+        case 'restart': cmd = "sudo systemctl restart vj-node"; break;
+        case 'reboot': 
+            if (!confirm("Are you sure you want to reboot the remote hardware?")) {
+                if (modal) modal.style.display = 'none';
+                return;
+            }
+            cmd = "sudo reboot"; 
+            break;
+    }
+
+    if (title) title.textContent = `📡 NODE ${type.toUpperCase()}: ${nodeIp}`;
+
+    // Talk to the remote launcher
+    const url = `http://${nodeIp}:8001/shell?cmd=${encodeURIComponent(cmd)}`;
+    
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (output) {
+                output.textContent = (data.stdout || '') + (data.stderr || '');
+                if (!output.textContent.trim()) output.textContent = "> Command executed successfully (exit code " + data.exit_code + ")";
+                output.style.color = data.exit_code === 0 ? "#0f0" : "#ff3366";
+            }
+        })
+        .catch(e => {
+            if (output) {
+                output.textContent = "❌ Connection Failed: " + e.message + "\n\n1. Ensure Node is on the same network\n2. Ensure Launcher is running on port 8001\n3. Check if your browser is blocking mixed content (if Master is HTTPS)";
+                output.style.color = "#ff3366";
+            }
+        });
 }

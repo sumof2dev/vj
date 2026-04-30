@@ -50,7 +50,7 @@
 
         .test-hub-header-sticky {
             position: sticky;
-            top: -24px;   /* Account for main padding */
+            top: 25px;   /* Account for HUD height */
             z-index: 1001;
             background: var(--bg);
             backdrop-filter: blur(15px);
@@ -59,15 +59,82 @@
             margin: 0 0 20px 0; /* Align naturally with .main padding */
         }
 
+        /* Universal HUD Overlay */
+        .universal-hud {
+            position: sticky;
+            top: -24px;
+            z-index: 1002;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 8px 24px;
+            margin: -24px -24px 15px -24px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-height: 42px;
+        }
+
+        .hud-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            min-height: 12px;
+        }
+
+        .hud-preset-badge {
+            font-size: 8px;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: var(--accent);
+            color: #000;
+            padding: 1px 6px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .hud-vibe-log {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .hud-vibe-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: var(--text-dim);
+            line-height: 1.1;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .hud-vibe-line .ts { color: #555; }
+        .hud-vibe-line .vibe { font-weight: 900; text-transform: uppercase; }
+        .hud-vibe-line .vol { color: var(--accent-alt); opacity: 0.8; font-weight: bold; }
+
+        .vibe-chill { color: #2dd4bf; }
+        .vibe-mid { color: #0ea5e9; }
+        .vibe-high { color: #8b5cf6; }
+        .vibe-build { color: #ff00ff; }
+        .vibe-drop { color: #ff3366; }
+
         @media (max-width: 768px) {
-            .test-hub-header-sticky {
+            .universal-hud {
                 top: -12px;
-                padding: 10px 12px;
                 margin: -12px -12px 10px -12px;
+                padding: 6px 12px;
+            }
+            .test-hub-header-sticky {
+                top: 40px;
+                padding: 10px 12px;
+                margin: 0 -12px 10px -12px;
             }
         }
         html {
             height: 100%;
+            overscroll-behavior-x: none;
         }
 
         * {
@@ -229,6 +296,8 @@
             height: 100dvh;
             overflow: hidden;
             font-size: 14px;
+            overscroll-behavior-x: none;
+            touch-action: pan-y;
         }
 
         /* --- SIDEBAR NAV --- */
@@ -403,8 +472,12 @@
             flex: 1;
             padding: 24px;
             overflow-y: auto;
+            min-height: 0;
+            min-width: 0;
+            height: 100dvh;
             transition: all 0.3s ease;
             position: relative;
+            -webkit-overflow-scrolling: touch;
         }
 
         .tab-content {
@@ -492,15 +565,7 @@
             padding-top: 15px;
         }
 
-        #stage-list,
-        #saved-profiles-list,
-        #saved-presets-list,
-        #test-ensemble-strips {
-            max-height: none;
-            overflow: visible;
-            padding-right: 5px;
-            /* Space for scrollbar */
-        }
+
 
         /* Custom scrollbar for item-list */
         .item-list::-webkit-scrollbar {
@@ -968,6 +1033,15 @@
         }
 
         /* --- NEW COMPACT TEST HUB STYLES --- */
+        .preset-editor-actions, .profile-editor-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            justify-content: flex-end;
+        }
+
         .test-controls-bar {
             display: flex;
             gap: 12px;
@@ -994,7 +1068,7 @@
         }
 
         #test-live-feed-container.active {
-            max-height: 500px;
+            max-height: 80vh;
             opacity: 1;
             padding: 10px;
             position: sticky;
@@ -1009,6 +1083,32 @@
             display: block;
             margin: 0 auto;
             border-radius: var(--radius-md);
+        }
+
+        .test-fixture-picker {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 8px 0;
+            margin-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .test-fixture-picker::-webkit-scrollbar {
+            height: 4px;
+        }
+        .test-fixture-picker::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+        .test-fixture-picker::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .test-fixture-picker::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
         }
 
         .test-strip-card {
@@ -1030,9 +1130,86 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        .item-list {
+            margin-top: 10px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        #pres-active-triggers, #pres-overrides-container {
+            max-height: 70vh;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        #pres-active-triggers::-webkit-scrollbar, #pres-overrides-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        #pres-active-triggers::-webkit-scrollbar-thumb, #pres-overrides-container::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
         .compact-slider-list {
             display: flex;
             flex-direction: column;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .preset-editor-actions, .profile-editor-actions {
+            position: sticky;
+            bottom: -24px; /* Sticks to bottom of .main padding */
+            background: rgba(15, 15, 20, 0.95);
+            backdrop-filter: blur(10px);
+            margin: 20px -24px -24px -24px;
+            padding: 20px 24px;
+            border-top: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+        }
+
+        @media (max-width: 768px) {
+            .preset-editor-actions, .profile-editor-actions {
+                position: relative;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 15px 0;
+                margin: 20px 0 0 0;
+                background: transparent;
+                backdrop-filter: none;
+                border-radius: 0;
+                z-index: 1;
+                box-shadow: none;
+                display: flex;
+                gap: 10px;
+                border-top: 1px solid var(--border);
+            }
+        }
+
+        .compact-slider-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .compact-slider-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+        .compact-slider-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .compact-slider-list::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
         }
 
         .compact-slider-row {
@@ -1171,6 +1348,8 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .fixture-picker-pill:hover {
@@ -1255,6 +1434,8 @@
             .main {
                 height: 100%;
                 overflow-y: auto;
+                min-height: 0;
+                min-width: 0;
                 padding: 12px;
                 padding-bottom: 140px;
                 /* Leave room for the fixed bottom nav */

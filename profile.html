@@ -12,13 +12,71 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-    <link rel="stylesheet" href="setup.css?v=424260634">
+    <link rel="stylesheet" href="setup.css?v=strategy_v16">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
     .sidebar-title .brand span { color: var(--accent) !important; font-size: 0.85em !important; margin-left: 2px !important; font-weight: 900 !important; }
     .sidebar-title .subtitle { font-size: 0.75rem !important; font-weight: 800 !important; letter-spacing: 1px !important; text-transform: uppercase !important; color: var(--accent) !important; opacity: 0.8 !important; align-self: flex-start !important; margin-top: -2px !important; margin-left: 12px !important; }
-</style>
+        
+        :root {
+            --bg: #09090b;
+            --card: #18181b;
+            --chill: #2dd4bf;
+            --mid: #0ea5e9;
+            --high: #8b5cf6;
+        }
+        .channel-card {
+            background: var(--card);
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .channel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px; border-bottom: 1px solid #27272a; padding-bottom: 12px;
+        }
+        .channel-title { font-size: 16px; font-weight: 700; color: var(--accent); }
+        .section-title {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 8px;
+            display: flex; justify-content: space-between;
+        }
+        .logic-selector {
+            width: 100%; background: #09090b; border: 1px solid #27272a;
+            border-radius: 8px; color: var(--text); padding: 10px 14px;
+            font-size: 13px; appearance: none; cursor: pointer; outline: none; margin-bottom: 16px;
+        }
+        .proportion-container {
+            height: 42px; background: #09090b; border-radius: 8px; position: relative;
+            display: flex; overflow: hidden; margin-bottom: 8px; border: 1px solid #27272a;
+            touch-action: none;
+        }
+        .vibe-segment {
+            height: 100%; display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.9);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: width 0.05s;
+        }
+        .chill-seg { background: var(--chill); }
+        .mid-seg { background: var(--mid); }
+        .high-seg { background: var(--high); }
+        .handle {
+            position: absolute; top: 0; bottom: 0; width: 10px; background: #fff;
+            cursor: ew-resize; z-index: 10; border-radius: 1px; box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            touch-action: none;
+        }
+        .range-item {
+            display: flex; align-items: center; background: #09090b;
+            border-radius: 8px; padding: 10px 14px; gap: 12px; border: 1px solid #27272a; margin-bottom: 6px;
+        }
+        .range-label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding-top: 20px; border-top: 1px solid #27272a; }
+        .control-group label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 10px; text-transform: uppercase; font-weight: 700; }
+        .slider-custom { width: 100%; accent-color: var(--accent); }
+    </style>
 </head>
 
 <body>
@@ -49,27 +107,9 @@
 
 
 
-        <div class="nav-btn active" id="nav-btn-profile" onclick="switchTab('tab-profile')" title="Profiles">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path
-                    d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1.1 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.4 1.5 3.5.8.8 1.3 1.5 1.5 2.5">
-                </path>
-                <path d="M9 18h6"></path>
-                <path d="M10 22h4"></path>
-            </svg>
+        <div class="nav-btn active" id="nav-btn-stage" onclick="window.location.href='setup.html?tab=stage'" title="Profile">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1.1 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.4 1.5 3.5.8.8 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>
             <span class="nav-text">Profile</span>
-        </div>
-
-        <div class="nav-btn" id="nav-btn-stage" onclick="window.location.href='setup.html?tab=tab-stage'" title="Stage">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4"></path>
-                <path d="M2 10v11a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V10"></path>
-                <path d="M2 10h20"></path>
-                <path d="m9 15 3 3 3-3"></path>
-            </svg>
-            <span class="nav-text">Stage</span>
         </div>
 
         <div class="nav-btn" id="nav-btn-live" onclick="window.location.href='setup.html?tab=tab-live'"
@@ -129,43 +169,14 @@
         </div>
     </div>
     <div class="main">
-        <div id="tab-profile" class="tab-content active">
-            <div id="profile-list-view">
-                <div class="row" style="justify-content:space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="margin:0; border:none; padding:0;">Profiles</h2>
-                </div>
-                <p style="color:var(--text-dim); margin-top: -10px; margin-bottom: 20px;">Profiles define each unique
-                    fixture.
-                    Multiple fixtures can share the same profile. Profiles are assigned location in the stage tab</p>
-
-                <div class="card">
-                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                        <button class="btn btn-primary" onclick="window.location.href='fixture_ai.html'">Add</button>
-                        <button class="btn" onclick="document.getElementById('load-behavior-input').click()">Load</button>
-                    </div>
-
-                    <hr style="border:0; border-top:1px solid #333; margin: 15px 0;">
-                    <div class="card-title"
-                        style="font-size: 0.9rem; color: var(--accent); border:none; margin-bottom: 10px;">Active
-                        Profiles active on stage</div>
-                    <div id="active-profiles-list" class="item-list"></div>
-
-                    <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
-                    <div id="all-profiles-section" class="">
-                        <div class="card-title" onclick="toggleAllProfiles()"
-                            style="font-size: 0.9rem; color: var(--text-dim); border:none; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none;">
-                            <span class="collapse-icon" style="font-size: 10px;">▼</span>
-                            All Profiles:
-                        </div>
-                        <div id="saved-profiles-list" class="item-list collapsible-content"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="profile-editor-view" style="display:none">
-            <div class="row" style="justify-content:space-between; align-items: center; margin-bottom: 10px;">
+        <div id="universal-hud" class="universal-hud">
+            <div id="hud-presets" class="hud-presets"></div>
+            <div id="hud-vibe-log" class="hud-vibe-log"></div>
+        </div>
+            <div id="profile-editor-view">
+            <div class="row" style="display:flex; justify-content:space-between; align-items: center; margin-bottom: 10px;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <button class="btn btn-sm" onclick="showProfileList()">← Back</button>
+                    <button class="btn btn-sm" onclick="window.location.href='setup.html?tab=stage'">← Back</button>
                     <h2 style="margin:0; border:none; padding:0;">Profile Editor</h2>
                     <div id="editor-heartbeat"
                         style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">
@@ -173,10 +184,6 @@
                 </div>
             </div>
 
-            <div style="display:flex; gap:8px; margin-bottom: 20px;">
-                <button class="btn btn-primary btn-sm" onclick="refineProfileGlobal()">Refine Profile</button>
-                <button class="btn btn-sm" onclick="downloadBehaviorProfile()">Export JSON</button>
-            </div>
             
             <input type="file" id="load-behavior-input" style="display:none"
                 onchange="loadBehaviorProfile(event)">
@@ -198,13 +205,12 @@
                 </div>
 
 
-                <div class="form-row" style="display:flex; align-items: flex-end; gap:10px; grid-template-columns: 1fr auto;">
+                <div class="form-row">
                     <div style="flex:1">
                         <label>Profile Label</label>
                         <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
                         <input type="hidden" id="prof-base-fixture">
                     </div>
-                    <button class="btn btn-primary" onclick="saveProfile()" style="height:38px;" title="Sync changes to the server backend">Save Profile</button>
                 </div>
 
                 <div id="prof-mappings" style="margin-top: 10px;"></div>
@@ -229,9 +235,14 @@
                             </div>
                         </div>
                     </div>
+            </div>
+
+                <div class="profile-editor-actions">
+                    <button class="btn btn-secondary" onclick="window.location.href='setup.html?tab=stage'">Cancel</button>
+                    <button class="btn btn-sm" onclick="downloadBehaviorProfile()">Export JSON</button>
+                    <button class="btn btn-primary btn-sm" onclick="refineProfileGlobal()" style="background: var(--accent-alt); border-color: var(--accent-alt);">Refine Profile</button>
+                    <button class="btn btn-primary" onclick="saveProfile()" title="Sync changes to the server backend">Save Profile</button>
                 </div>
-
-
             </div>
         </div>
 
@@ -422,18 +433,26 @@
             </div>
         </div>
     </div>
-    <script src="shared_setup.js?v=424260634"></script>
-    <script src="profile_logic.js?v=424260634"></script>
-    <script src="ai_architect.js?v=424260634"></script>
+    <script src="shared_setup.js?v=strategy_v19"></script>
+    <script src="live_controller.js?v=strategy_v19"></script>
+    <script src="profile_logic.js?v=strategy_v19"></script>
+    <script src="ai_architect.js?v=strategy_v19"></script>
+    <script src="stage_logic.js?v=strategy_v19"></script>
     <script>window.onload = () => {
-        console.log("🚀 VJ Profiles starting (v424)...");
-        // renderProfileList is required on page load to populate the registry.
-        if (typeof renderProfileList === 'function') {
-            renderProfileList();
+        const urlParams = new URLSearchParams(window.location.search);
+        const profileId = urlParams.get('id');
+        
+        if (!profileId) {
+            console.log("🚀 No profile ID found, redirecting to Dashboard...");
+            window.location.href = 'setup.html?tab=stage';
+            return;
+        }
+
+        console.log("🚀 VJ Profile Editor starting (v435)...");
+        if (typeof renderProfileMappings === 'function') {
+            renderProfileMappings();
             if (typeof updateUniqueFunctions === 'function') updateUniqueFunctions();
         }
-        // Deep linking (editProfile by ID) is now handled by Core Routing in shared_setup.js (v424)
-        // to ensure centralized and deterministic navigation across RaveBox.
     };</script>
 </body>
 

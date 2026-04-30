@@ -43,6 +43,7 @@ rsync -avz --progress \
     --exclude='visualizer_src/node_modules' \
     --exclude='.agent' \
     --exclude='scratch' \
+    --exclude='fixtures' \
     ./ "$REMOTE_USER@$TARGET:$REMOTE_PATH/"
 
 # Determine if we should set up as a node

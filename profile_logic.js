@@ -86,7 +86,10 @@ function loadProfileChannels() {
     }
 
     const activeProfile = activeProfileId ? db.profiles.find(p => p.id === activeProfileId) : null;
-    if (activeProfile) normalizeProfileData(activeProfile);
+    if (activeProfile) {
+        normalizeProfileData(activeProfile);
+        window.currentProfileName = activeProfile.name;
+    }
 
     if (currentProfileChannels.length === 0 || !activeProfileId) {
         currentProfileMappings = (activeProfile && activeProfile.mappings) ? JSON.parse(JSON.stringify(activeProfile.mappings)) : [];
@@ -169,6 +172,13 @@ function loadProfileChannels() {
                             <option value="none">UNMAPPED</option>
                             ${KNOWN_ROLES.map(r => `<option value="${r}" ${ch.role === r ? 'selected' : ''}>${r.toUpperCase()}</option>`).join('')}
                         </select>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px; width:80px;">
+                        <span style="font-size:9px; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">DEF:</span>
+                        <input type="text" value="${ch.default || 0}" 
+                               oninput="enforceDmxLimit(this); currentProfileChannels[${chIdx}].default=parseInt(this.value); event.stopPropagation()"
+                               onclick="event.stopPropagation()"
+                               style="background:none; border:none; color:#fff; width:50px; text-align:center; padding:0; font-size:12px; font-weight:bold;">
                     </div>
                     <div style="display:flex; gap:5px;">
                         <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addVibeRule(${chIdx})" title="Add Vibe Rule" style="width:36px; height:32px; padding:0; font-size:18px; font-weight:bold; display:flex; align-items:center; justify-content:center;">+</button>
@@ -347,14 +357,23 @@ function renderVibeRuleHtml(chIdx, ruleIdx, rule, rulesCount) {
                     ${EASY_DESCRIPTORS.map(d => `<option value="${d.id}" ${rule.easy_id === d.id ? 'selected' : ''}>${d.label.toUpperCase()}</option>`).join('')}
                 </select>
 
-                <!-- RANGE: WIDER FOR READABILITY (HIDDEN IF STATIC) -->
+                <!-- RANGE: 3-POINT CALIBRATION (HIDDEN IF STATIC) -->
                 ${isStatic ? `<div style="width:10px;"></div>` : `
-                <div style="display:flex; align-items:center; gap:4px; font-size:9px; font-family:var(--font-mono); color:rgba(255,255,255,0.2); background:rgba(255,255,255,0.03); padding:0 6px; border-radius:4px; width:135px; justify-content:center;">
-                    <input type="number" min="0" max="255" value="${rule.cal.min}" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.min', parseInt(this.value))" style="background:none; border:none; color:#fff; width:33px; text-align:center; padding:0; font-size:10px;">
-                    <span>-</span>
-                    <input type="number" min="0" max="255" value="${rule.cal.center}" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.center', parseInt(this.value))" style="background:none; border:none; color:var(--accent); width:33px; text-align:center; padding:0; font-size:10px;">
-                    <span>-</span>
-                    <input type="number" min="0" max="255" value="${rule.cal.max}" onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.max', parseInt(this.value))" style="background:none; border:none; color:#fff; width:33px; text-align:center; padding:0; font-size:10px;">
+                <div style="display:flex; align-items:center; gap:2px; font-family:var(--font-mono); background:rgba(255,255,255,0.03); padding:3px 5px; border-radius:4px;">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
+                        <span style="font-size:6px; color:rgba(255,255,255,0.25); letter-spacing:0.5px; text-transform:uppercase;">MIN</span>
+                        <input type="text" value="${rule.cal.min}" oninput="enforceDmxLimit(this); updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.min', parseInt(this.value))" style="background:none; border:none; border-bottom:1px solid rgba(255,255,255,0.1); color:#fff; width:60px; text-align:center; padding:1px 0; font-size:10px; font-weight:bold;">
+                    </div>
+                    <span style="color:rgba(255,255,255,0.15); font-size:8px; margin:6px 1px 0;">–</span>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
+                        <span style="font-size:6px; color:var(--accent); letter-spacing:0.5px; text-transform:uppercase; opacity:0.7;">CTR</span>
+                        <input type="text" value="${rule.cal.center}" oninput="enforceDmxLimit(this); updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.center', parseInt(this.value))" style="background:rgba(0,242,255,0.05); border:none; border-bottom:1px solid var(--accent); color:var(--accent); width:60px; text-align:center; padding:1px 0; font-size:10px; font-weight:bold; border-radius:2px;">
+                    </div>
+                    <span style="color:rgba(255,255,255,0.15); font-size:8px; margin:6px 1px 0;">–</span>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
+                        <span style="font-size:6px; color:rgba(255,255,255,0.25); letter-spacing:0.5px; text-transform:uppercase;">MAX</span>
+                        <input type="text" value="${rule.cal.max}" oninput="enforceDmxLimit(this); updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.max', parseInt(this.value))" style="background:none; border:none; border-bottom:1px solid rgba(255,255,255,0.1); color:#fff; width:60px; text-align:center; padding:1px 0; font-size:10px; font-weight:bold;">
+                    </div>
                 </div>
                 `}
             </div>
@@ -387,8 +406,8 @@ function renderVibeRuleHtml(chIdx, ruleIdx, rule, rulesCount) {
             ${isStatic ? `
                 <div style="display:flex; align-items:center; gap:10px; padding:4px 0;">
                     <label style="font-size:9px; font-weight:bold; color:var(--accent);">STATIC VALUE</label>
-                    <input type="number" min="0" max="255" value="${rule.value || 0}" 
-                           onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'value', parseInt(this.value))" 
+                    <input type="text" value="${rule.value || 0}" 
+                           oninput="enforceDmxLimit(this); updateProfileMapping(${chIdx}, ${ruleIdx}, 'value', parseInt(this.value))" 
                            class="glass-input" style="width:60px; height:22px; font-size:11px; font-weight:bold; background:rgba(255,255,255,0.05);">
                     <span style="font-size:8px; color:var(--text-dim);">(Bypasses ranges)</span>
                 </div>
@@ -485,7 +504,7 @@ async function duplicateProfileById(id) {
     if (!original) return;
 
     const copy = JSON.parse(JSON.stringify(original));
-    copy.id = 'prof_' + Date.now();
+    copy.id = window.generateFriendlyId('p', db.profiles.map(p => p.id));
     copy.name = (copy.name || "Unnamed Profile") + " (Copy)";
     
     // Ensure we don't accidentally copy the filename reference which would overwrite the original
@@ -507,6 +526,7 @@ function duplicateProfile() {
 }
 
 async function saveProfile(silent = false) {
+    window.compileProfileMappings(); // Force refresh of partitioning mappings before save
     const name = document.getElementById('prof-name').value.trim();
     const activeProfile = db.profiles.find(p => p.id === activeProfileId);
 
@@ -515,10 +535,11 @@ async function saveProfile(silent = false) {
         return false;
     }
     const profileData = {
-        id: activeProfileId || ('prof_' + Date.now()),
+        id: activeProfileId || window.generateFriendlyId('p', db.profiles.map(p => p.id)),
         name: name,
         channels: JSON.parse(JSON.stringify(currentProfileChannels)),
-        mappings: JSON.parse(JSON.stringify(currentProfileMappings))
+        mappings: JSON.parse(JSON.stringify(currentProfileMappings)),
+        vibeSplits: JSON.parse(JSON.stringify(window.vibeSplits || {}))
     };
 
     // Use centralized saving logic in shared_setup.js
@@ -544,7 +565,8 @@ function downloadBehaviorProfile() {
         id: activeProfileId,
         name: name,
         channels: (activeProfile && activeProfile.channels) ? activeProfile.channels : [],
-        mappings: JSON.parse(JSON.stringify(currentProfileMappings))
+        mappings: JSON.parse(JSON.stringify(currentProfileMappings)),
+        vibeSplits: JSON.parse(JSON.stringify(window.vibeSplits || {}))
     };
 
     const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
@@ -570,6 +592,7 @@ function loadBehaviorProfile(event) {
             if (profileData.id) activeProfileId = profileData.id;
             if (profileData.mappings) {
                 currentProfileMappings = profileData.mappings;
+                if (profileData.vibeSplits) window.vibeSplits = profileData.vibeSplits;
                 loadProfileChannels(); // This will render the UI
             }
         } catch (err) {
@@ -616,17 +639,11 @@ function addVibeRule(chIdx) {
     });
 
     const rules = currentProfileMappings[chIdx];
+    // Ensure the first rule is 'any' if it's currently something else and it's the only rule
     if (rules.length === 1) {
         rules[0].vibe = 'any';
-    } else if (rules.length > 1) {
-        rules[0].vibe = 'any';
-        rules[rules.length - 1].vibe = 'high';
-        for (let i = 1; i < rules.length - 1; i++) {
-            if (rules[i].vibe === 'any' || rules[i].vibe === 'high') {
-                rules[i].vibe = 'mid';
-            }
-        }
     }
+    // Note: We no longer auto-assign mid/high to new rules to respect the user's "default to any" preference.
 
     loadProfileChannels();
 }
@@ -655,7 +672,12 @@ function editProfile(id) {
     // Normalization / Healing Layer
     normalizeProfileData(prof);
 
-    document.getElementById('prof-name').value = prof.name;
+    const nameField = document.getElementById('prof-name');
+    if (nameField) nameField.value = prof.name;
+    else {
+        console.warn("⚠️ [Profile Editor] UI elements missing. Ensure you are on profile.html.");
+        return;
+    }
     
     // Set collapsed state FIRST (Start collapsed as requested)
     collapsedChannels = new Set();
@@ -664,9 +686,13 @@ function editProfile(id) {
     }
 
     currentProfileMappings = JSON.parse(JSON.stringify(prof.mappings));
+    if (prof.vibeSplits) window.vibeSplits = JSON.parse(JSON.stringify(prof.vibeSplits));
+    else window.vibeSplits = {};
 
-    document.getElementById('profile-list-view').style.display = 'none';
-    document.getElementById('profile-editor-view').style.display = 'block';
+    const listView = document.getElementById('profile-list-view');
+    const editorView = document.getElementById('profile-editor-view');
+    if (listView) listView.style.display = 'none';
+    if (editorView) editorView.style.display = 'block';
 
     loadProfileChannels();
 }
@@ -698,7 +724,13 @@ async function deleteProfile(id) {
 }
 
 function goToProfile(profileId) {
-    // currentTab = 'tab-profile'; // Controlled by switchTab hook now
+    // If we are NOT on the profile page (indicated by missing editor view), redirect.
+    if (!document.getElementById('profile-editor-view')) {
+        console.log(`🚀 Redirecting to profile.html for profile: ${profileId}`);
+        window.location.href = `profile.html?id=${profileId}`;
+        return;
+    }
+
     if (document.getElementById('tab-profile')) currentTab = 'tab-profile';
     switchTab('tab-profile', true); // Skip the list reset
     editProfile(profileId);
@@ -731,7 +763,7 @@ function changeTriggerType(idx, type) {
     else if (type === 'state') trigger = { ...trigger, value: 'building' };
     else if (type === 'volume') trigger = { ...trigger, less_than: 100, greater_than: 0 };
     else if (type === 'bin') trigger = { ...trigger, target: 'BASS', less_than: '', greater_than: '' };
-    else if (type === 'channel') trigger = { ...trigger, target: 1, less_than: '', greater_than: '' };
+    else if (type === 'channel') trigger = { type: "channel", fixture: (db.stage[0]?.id || ""), role: "dimmer", greater_than: 0, less_than: 255 };
 
     currentPresetTriggers[idx] = trigger;
     renderPresetTriggers();
@@ -742,9 +774,11 @@ function removePresetTrigger(idx) {
     renderPresetTriggers();
 }
 
-function updateTriggerVal(idx, key, val) {
-    currentPresetTriggers[idx][key] = val;
-    renderPresetTriggers();
+function updateTriggerVal(idx, key, val, silent = false) {
+    if (currentPresetTriggers[idx]) {
+        currentPresetTriggers[idx][key] = val;
+    }
+    if (!silent) renderPresetTriggers();
 }
 
 function renderPresetTriggers() {
@@ -801,12 +835,23 @@ function renderPresetTriggers() {
                 <input type="number" value="${lt}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
             `;
         } else if (type === 'channel') {
+            const stage = db.stage || [];
+            const roles = getFixtureRoles(t.fixture);
             inputs = `
-                <input type="number" value="${gt}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
-                <span>&le;</span>
-                <input type="number" value="${target}" style="width:85px;" placeholder="Ch #" onchange="updateTriggerVal(${idx}, 'target', parseInt(this.value))">
-                <span>&le;</span>
-                <input type="number" value="${lt}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
+                <input type="text" value="${gt}" style="width:60px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; text-align:center;" placeholder="Min" 
+                       oninput="enforceDmxLimit(this); updateTriggerVal(${idx}, 'greater_than', parseInt(this.value), true)">
+                <span style="font-size:10px; opacity:0.5;">&le;</span>
+                <select onchange="updateTriggerVal(${idx}, 'fixture', this.value); renderPresetTriggers()" style="width:90px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-weight:bold; font-size:10px;">
+                    <option value="">-- FIX --</option>
+                    ${stage.map(s => `<option value="${s.id}" ${t.fixture === s.id ? 'selected' : ''}>${s.id}</option>`).join('')}
+                </select>
+                <select onchange="updateTriggerVal(${idx}, 'role', this.value)" style="width:100px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent-alt); font-weight:bold; font-size:10px;">
+                    <option value="">-- FUNC --</option>
+                    ${roles.map(r => `<option value="${r}" ${t.role === r ? 'selected' : ''}>${r.toUpperCase()}</option>`).join('')}
+                </select>
+                <span style="font-size:10px; opacity:0.5;">&le;</span>
+                <input type="text" value="${lt}" style="width:60px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; text-align:center;" placeholder="Max" 
+                       oninput="enforceDmxLimit(this); updateTriggerVal(${idx}, 'less_than', parseInt(this.value), true)">
             `;
         } else if (type === 'manual') {
             inputs = 'Manual Activation Only';
@@ -824,7 +869,7 @@ function renderPresetTriggers() {
                         <option value="state" ${t.type === 'state' ? 'selected' : ''}>Performance State</option>
                         <option value="volume" ${t.type === 'volume' ? 'selected' : ''}>Overall Volume</option>
                         <option value="bin" ${t.type === 'bin' ? 'selected' : ''}>Frequency Bin</option>
-                        <option value="channel" ${t.type === 'channel' ? 'selected' : ''}>Channel DMX Value</option>
+                        <option value="channel" ${t.type === 'channel' ? 'selected' : ''}>Fixture Function</option>
                     </select>
                     <button class="btn btn-danger btn-sm" onclick="removePresetTrigger(${idx})">X</button>
                 </div>
@@ -954,19 +999,42 @@ function renderProfileList() {
             </div>`).join('') || '<div style="padding:10px; color:#666; font-size:13px;">No behaviors currently active on stage.</div>';
     }
 
-    const savedProfList = document.getElementById('saved-profiles-list');
+    const savedProfList = document.getElementById('saved-profiles-list') || document.getElementById('all-profiles-list');
     if (savedProfList) {
         const uniqueAllProfs = getUniqueProfiles();
-        savedProfList.innerHTML = uniqueAllProfs.map(p => `
-            <div class="item-row" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
-                <div style="display:flex; align-items:center; gap:10px;" onclick="editProfile('${p.id}')">
-                    <div style="width:8px; height:8px; border-radius:50%; background:var(--accent); opacity:0.5;"></div>
-                    <span style="font-weight:600; font-size:13px;">${p.name}</span>
-                </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <button class="btn btn-danger btn-sm" style="opacity:0; transition:opacity 0.2s; padding:2px 8px; font-size:9px;" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
-                </div>
-            </div>`).join('') || '<div style="padding:10px; color:#666; font-size:13px;">No profiles yet.</div>';
+        const isAllProfiles = savedProfList.id === 'all-profiles-list';
+        
+        if (isAllProfiles) {
+            const countEl = document.getElementById('all-profiles-count');
+            if (countEl) countEl.innerText = `${uniqueAllProfs.length} SAVED`;
+            
+            savedProfList.innerHTML = uniqueAllProfs.map(p => `
+                <div class="item-row" style="padding:10px 16px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); border-bottom:1px solid rgba(255,255,255,0.02);">
+                    <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="goToProfile('${p.id}')">
+                        <div style="width:6px; height:6px; border-radius:50%; background:var(--accent); opacity:0.4;"></div>
+                        <div style="display:flex; flex-direction:column;">
+                            <span style="font-weight:700; font-size:13px; color:#fff;">${p.name}</span>
+                            <span style="font-size:9px; color:#666; font-family:monospace;">${p.id}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn btn-sm" style="font-size:10px; background:rgba(0, 242, 255, 0.1); border-color:rgba(0, 242, 255, 0.2); color:var(--accent);" onclick="addProfileToStage('${p.id}')">Add to Stage</button>
+                        <button class="btn btn-sm" style="font-size:10px;" onclick="goToProfile('${p.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" style="padding:4px 8px; font-size:9px; opacity:0.4; transition:opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.4" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
+                    </div>
+                </div>`).join('') || '<div style="padding:15px; color:#444; font-size:12px; text-align:center;">No profiles found.</div>';
+        } else {
+            savedProfList.innerHTML = uniqueAllProfs.map(p => `
+                <div class="item-row" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
+                    <div style="display:flex; align-items:center; gap:10px;" onclick="editProfile('${p.id}')">
+                        <div style="width:8px; height:8px; border-radius:50%; background:var(--accent); opacity:0.5;"></div>
+                        <span style="font-weight:600; font-size:13px;">${p.name}</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn btn-danger btn-sm" style="opacity:0; transition:opacity 0.2s; padding:2px 8px; font-size:9px;" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
+                    </div>
+                </div>`).join('') || '<div style="padding:10px; color:#666; font-size:13px;">No profiles yet.</div>';
+        }
         
         // Add hover effect to show delete button
         const rows = savedProfList.querySelectorAll('.item-row');
@@ -1018,7 +1086,7 @@ async function savePreset(silent = false) {
         }
     } else {
         db.presets.push({
-            id: 'pre_' + Date.now(),
+            id: window.generateFriendlyId('pr', db.presets.map(p => p.id)),
             name,
             triggers: JSON.parse(JSON.stringify(currentPresetTriggers)),
             overrides: JSON.parse(JSON.stringify(currentPresetOverrides))
@@ -1027,6 +1095,7 @@ async function savePreset(silent = false) {
     await saveDB();
     refreshUI();
     if (!silent) resetPresetForm();
+    if (typeof closePresetAiModal === 'function') closePresetAiModal();
 }
 
 function editPreset(id) {
@@ -1172,3 +1241,578 @@ window.renderActivePresets = renderActivePresets;
 window.addConditionFromUI = addConditionFromUI;
 window.resetPresetForm = resetPresetForm;
 window.addOverrideToCurrentPreset = addOverrideToCurrentPreset;
+function getFixtureRoles(fixtureId) {
+    if (!fixtureId) return [];
+    const inst = db.stage.find(s => s.id === fixtureId);
+    if (!inst) return [];
+    const prof = (db.profiles || []).find(p => p.id === inst.profileId);
+    if (!prof) return [];
+    return (prof.channels || []).map(ch => ch.role || ch.name).filter(r => r && r !== 'none');
+}
+
+    window.channelConfig = window.channelConfig || {};
+    window.vibeSplits = window.vibeSplits || {};
+    window.simBuffers = {}; 
+    window.simPhases = {}; 
+    
+    // --- 1. COMPILE UI STATE TO LEGACY DB STATE ---
+    window.compileProfileMappings = function() {
+        if (!window.currentProfileMappings) return;
+        
+        (window.currentProfileChannels || []).forEach((ch, chIdx) => {
+            const conf = window.channelConfig[chIdx];
+            if (!conf) return;
+            
+            const newMappings = [];
+            
+            conf.ranges.forEach((r) => {
+                const rMin = parseFloat(r.min);
+                const rMax = parseFloat(r.max);
+                const rCtr = parseFloat(r.center !== undefined ? r.center : Math.floor((rMin + rMax) / 2));
+                
+                newMappings.push({
+                    behavior: conf.behavior,
+                    vibe: r.vibeNum === 'any' ? 'any' : ('any ' + r.vibeNum),
+                    description: 'Partitioned Range',
+                    source: conf.source,
+                    cal: { min: Math.round(rMin), max: Math.round(rMax), center: Math.round(rCtr) },
+                    modifiers: { 
+                        speed: conf.speed, 
+                        react: conf.react, 
+                        hold_type: conf.hold_type || 'none' 
+                    }
+                });
+            });
+            
+            window.currentProfileMappings[chIdx] = newMappings;
+        });
+    };
+    
+    // --- 2. MAIN RENDERER ---
+    window.renderProfileMappings = function() {
+        const container = document.getElementById('prof-mappings');
+        if (!container) return;
+        
+        const titleEl = document.getElementById('prof-name');
+        if (titleEl && !titleEl.dataset.loaded) {
+            titleEl.value = window.currentProfileName || '';
+            titleEl.dataset.loaded = 'true';
+        }
+        
+        let html = '';
+        
+        (window.currentProfileChannels || []).forEach((ch, chIdx) => {
+            const mappings = (window.currentProfileMappings && window.currentProfileMappings[chIdx]) || [];
+            
+            if (!window.channelConfig[chIdx]) {
+                const first = mappings[0] || {};
+                const defaultBehavior = first.behavior || 'static';
+                const defaultSource = first.source || 'volume';
+                const defaultSpeed = first.modifiers ? (first.modifiers.speed !== undefined ? first.modifiers.speed : 0.5) : 0.5;
+                const defaultReact = first.modifiers ? (first.modifiers.react !== undefined ? first.modifiers.react : 0.5) : 0.5;
+                const defaultHold = first.modifiers ? (first.modifiers.hold_type || 'none') : 'none';
+                
+                let ranges = mappings.map(m => {
+                    const vibeParts = (m.vibe || 'any').split(' ');
+                    const rMin = (m.cal?.min !== undefined) ? m.cal.min : 0;
+                    const rMax = (m.cal?.max !== undefined) ? m.cal.max : 255;
+                    const rCtr = (m.cal?.center !== undefined) ? m.cal.center : Math.floor((rMin + rMax) / 2);
+                    return { min: rMin, center: rCtr, max: rMax, vibeNum: vibeParts[1] || 'any' };
+                });
+                if(ranges.length === 0) ranges = [{min:0, center:127, max:255, vibeNum: 'any'}];
+                
+                if (!window.vibeSplits) window.vibeSplits = {};
+                if (!window.vibeSplits[chIdx]) {
+                    // Try to infer from existing mappings if possible, or use default
+                    window.vibeSplits[chIdx] = { chillMid: 33, midHigh: 66 };
+                }
+                const splits = window.vibeSplits[chIdx];
+                
+                window.channelConfig[chIdx] = { 
+                    behavior: defaultBehavior, 
+                    source: defaultSource, 
+                    speed: defaultSpeed, 
+                    react: defaultReact, 
+                    hold_type: defaultHold,
+                    ranges: ranges 
+                };
+            }
+            
+            const conf = window.channelConfig[chIdx];
+            const splits = window.vibeSplits[chIdx];
+            
+            let activeEasyId = window.getActivePreset(conf);
+            
+            let libOptions = '<option value="">-- Custom / Manual --</option>';
+            (window.EASY_DESCRIPTORS || []).forEach(d => {
+                libOptions += '<option value="' + d.id + '" ' + (d.id === activeEasyId ? 'selected' : '') + '>' + d.label + '</option>';
+            });
+
+            let behaviorOptions = '';
+            (window.BEHAVIORS || []).forEach(b => {
+                behaviorOptions += '<option value="' + b.id + '" ' + (b.id === conf.behavior ? 'selected' : '') + '>' + b.label + '</option>';
+            });
+
+            let sourceOptions = '';
+            (window.SOURCES || []).forEach(s => {
+                sourceOptions += '<option value="' + s.id + '" ' + (s.id === conf.source ? 'selected' : '') + '>' + s.label + '</option>';
+            });
+
+            let rangesHtml = '';
+            conf.ranges.forEach((r, rIdx) => {
+                rangesHtml += '<div class="range-item" style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">' +
+                    '<div style="display:flex; align-items:center; gap:4px;">' +
+                        '<select onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'vibeNum\', this.value)" style="background:#1a1a1a; color:var(--accent); border:1px solid #333; border-radius:4px; font-size:9px; padding:1px 4px; font-weight:900; outline:none; cursor:pointer; width:45px;">' +
+                            '<option value="any" ' + (r.vibeNum === 'any' ? 'selected' : '') + '>ANY</option>' +
+                            '<option value="1" ' + (r.vibeNum === '1' ? 'selected' : '') + '>1</option>' +
+                            '<option value="2" ' + (r.vibeNum === '2' ? 'selected' : '') + '>2</option>' +
+                            '<option value="3" ' + (r.vibeNum === '3' ? 'selected' : '') + '>3</option>' +
+                        '</select>' +
+                    '</div>' +
+                    '<div style="display:flex; gap:4px; flex:1; justify-content:center; align-items:center;">' +
+                        '<input type="number" value="' + r.min + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'min\', this.value)" style="width:36px; background:rgba(45,212,191,0.05); color:#2dd4bf; border:1px solid #2dd4bf; border-radius:4px; text-align:center; font-size:12px; padding:2px 0; font-weight:bold;">' +
+                        '<span style="color:var(--text-dim);">-</span>' +
+                        '<input type="number" value="' + (r.center !== undefined ? r.center : Math.floor((r.min + r.max) / 2)) + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'center\', this.value)" style="width:36px; background:rgba(14,165,233,0.05); color:#0ea5e9; border:1px solid #0ea5e9; border-radius:4px; text-align:center; font-size:12px; padding:2px 0; font-weight:bold;">' +
+                        '<span style="color:var(--text-dim);">-</span>' +
+                        '<input type="number" value="' + r.max + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'max\', this.value)" style="width:36px; background:rgba(139,92,246,0.05); color:#8b5cf6; border:1px solid #8b5cf6; border-radius:4px; text-align:center; font-size:12px; padding:2px 0; font-weight:bold;">' +
+                    '</div>' +
+                    '<button class="btn btn-sm btn-danger" onclick="removeRange(' + chIdx + ', ' + rIdx + ')" style="padding:2px 6px; font-size:10px; height:22px;">X</button>' +
+                '</div>';
+            });
+            
+            html += '<div class="channel-card" data-chidx="' + chIdx + '">' +
+                '<div class="channel-header">' +
+                    '<div class="channel-title">CH ' + (chIdx + 1) + ': ' + (ch.name || ch.role || 'Unassigned') + '</div>' +
+                    '<button class="btn btn-sm btn-danger" onclick="removeProfileChannel(' + chIdx + ')" style="background:transparent; border:1px solid #ff4757; color:#ff4757;">Remove</button>' +
+                '</div>' +
+                '<div class="section-title">BEHAVIOR PRESET</div>' +
+                '<select id="preset-select-' + chIdx + '" class="logic-selector" style="border-color:var(--accent); color:var(--accent); font-weight:bold;" onchange="applyEasyBehaviorToChannel(' + chIdx + ', this.value)">' + libOptions + '</select>' +
+                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">' +
+                    '<div><div class="section-title">LOGIC</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'behavior\', this.value)">' + behaviorOptions + '</select></div>' +
+                    '<div><div class="section-title">SOURCE</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'source\', this.value)">' + sourceOptions + '</select></div>' +
+                '</div>' +
+                '<div class="waveform-wrap" style="height:60px; background:#09090b; border-radius:8px; border:1px solid #27272a; margin-bottom:16px; position:relative; overflow:hidden;">' +
+                    '<canvas id="wave-' + chIdx + '" class="behavior-wave" style="width:100%; height:100%; display:block;"></canvas>' +
+                    '<div style="position:absolute; top:4px; left:6px; font-size:8px; color:#444; pointer-events:none; font-weight:bold; letter-spacing:1px;">LIVE BEHAVIOR PREVIEW</div>' +
+                '</div>' +
+                '<div class="section-title">Vibe Mapping Spectrum</div>' +
+                '<div class="proportion-container" id="prop-cont-' + chIdx + '" style="touch-action:none;">' +
+                    '<div class="vibe-segment chill-seg" style="width: ' + splits.chillMid + '%">CHILL</div>' +
+                    '<div class="handle" id="handle1-' + chIdx + '" style="left: calc(' + splits.chillMid + '% - 6px); touch-action:none;"></div>' +
+                    '<div class="vibe-segment mid-seg" style="width: ' + (splits.midHigh - splits.chillMid) + '%">MID</div>' +
+                    '<div class="handle" id="handle2-' + chIdx + '" style="left: calc(' + splits.midHigh + '% - 6px); touch-action:none;"></div>' +
+                    '<div class="vibe-segment high-seg" style="width: ' + (100 - splits.midHigh) + '%">HIGH</div>' +
+                '</div>' +
+                '<div style="font-size:10px; color:#666; text-align:center; margin-bottom:20px;">Drag handles to adjust the distribution of ranges across vibes.</div>' +
+                '<div class="section-title">Valid Value Ranges' +
+                    '<button class="btn btn-sm" onclick="addRange(' + chIdx + ')" style="padding:2px 8px; font-size:9px;">+ ADD</button>' +
+                '</div>' +
+                '<div id="ranges-' + chIdx + '">' + rangesHtml + '</div>' +
+                '<div class="controls-grid">' +
+                    '<div class="control-group"><label>Base Speed</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.speed + '" onchange="updateChannelConfig(' + chIdx + ', \'speed\', this.value)"></div>' +
+                    '<div class="control-group"><label>Reactivity</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.react + '" onchange="updateChannelConfig(' + chIdx + ', \'react\', this.value)"></div>' +
+                '</div>' +
+            '</div>';
+        });
+        
+        container.innerHTML = html;
+        
+        (window.currentProfileChannels || []).forEach((ch, chIdx) => {
+            attachHandleDrag(chIdx, 1);
+            attachHandleDrag(chIdx, 2);
+        });
+        
+        compileProfileMappings();
+        startWaveformLoop();
+    };
+    
+    // --- 3. EVENT HANDLERS & SIMULATION ---
+    window.applyEasyBehaviorToChannel = function(chIdx, easyId) {
+        if (!easyId) return;
+        const desc = (window.EASY_DESCRIPTORS || []).find(d => d.id === easyId);
+        if (!desc) return;
+        
+        const conf = window.channelConfig[chIdx];
+        conf.behavior = desc.behavior || 'static';
+        conf.source = desc.source || 'volume';
+        conf.speed = desc.speed !== undefined ? desc.speed : 0.5;
+        conf.react = desc.react !== undefined ? desc.react : 0.5;
+        conf.hold_type = desc.hold_type || 'none';
+        
+        window.renderProfileMappings();
+    };
+
+    window.startWaveformLoop = function() {
+        if (window.waveformRunning) return;
+        window.waveformRunning = true;
+        const loop = () => {
+            if (!window.waveformRunning) return;
+            drawAllWaveforms();
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+    };
+
+    // Simple 1D hash for Perlin-like noise (matches engine's _hash1d / _noise1d)
+    function _hash1d(x) { return (Math.sin(x) * 43758.5453123) % 1.0; }
+    function _noise1d(t) {
+        const i = Math.floor(t);
+        const f = t - i;
+        const u = f * f * f * (f * (f * 6 - 15) + 10);
+        const v0 = _hash1d(i);
+        const v1 = _hash1d(i + 1);
+        return v0 + (v1 - v0) * u;
+    }
+
+    window.drawAllWaveforms = function() {
+        const audio = window.latestAudioState;
+        if (!audio) return;
+        const dt = 0.016; // ~60fps frame time
+        
+        Object.keys(window.channelConfig).forEach(function(chKey) {
+            const chIdx = parseInt(chKey);
+            const conf = window.channelConfig[chIdx];
+            const canvas = document.getElementById('wave-' + chIdx);
+            if (!canvas) return;
+            
+            // Initialize state (mirrors engine's per-rule state)
+            if (!window.simStates) window.simStates = {};
+            if (!window.simStates[chIdx]) window.simStates[chIdx] = { phase: 0, t: 0, spike_val: 0, last_E: 0, hold_active: false, held_dmx: null };
+            if (!window.simBuffers[chIdx]) window.simBuffers[chIdx] = Array(100).fill(127);
+            const st = window.simStates[chIdx];
+            
+            const hold_type = (conf.hold_type || 'none').toLowerCase();
+            const is_beat = audio.beat || false;
+            const is_bar = audio.bar || false;
+            
+            if (hold_type === 'beat') {
+                if (is_beat) st.hold_active = false;
+                else st.hold_active = true;
+            } else if (hold_type === 'bar') {
+                if (is_bar) st.hold_active = false;
+                else st.hold_active = true;
+            } else {
+                st.hold_active = false;
+            }
+            
+            // --- SOURCE RESOLUTION (matches engine LogicMatrix.state) ---
+            let E = 0;
+            const src = conf.source;
+            if (src === 'volume') E = audio.vol || 0;
+            else if (src === 'bass') E = audio.bass || 0;
+            else if (src === 'mids' || src === 'mid') E = audio.mid || 0;
+            else if (src === 'highs' || src === 'high') E = audio.high || 0;
+            else if (src === 'spectral flux') E = audio.flux || 0;
+            else if (src === 'impact') E = audio.impact || audio.flux || 0;
+            else if (src === 'beat phase') E = audio.beat_phase || 0;
+            else if (src === 'bar phase') E = audio.bar_phase || 0;
+            else if (src && src.indexOf('bin ') === 0) {
+                const bIdx = parseInt(src.split(' ')[1]);
+                E = (audio.bins && audio.bins[bIdx] !== undefined) ? Math.min(1.0, audio.bins[bIdx] * 2.0) : 0;
+            }
+
+            const speed = conf.speed !== undefined ? conf.speed : 0.5;
+            const react = conf.react !== undefined ? conf.react : 0.5;
+            const behavior = conf.behavior || 'static';
+            
+            // --- CAL RANGE (from first range entry) ---
+            const r0 = (conf.ranges && conf.ranges[0]) || { min: 0, center: 127, max: 255 };
+            const c_min = (r0.min !== undefined) ? parseInt(r0.min) : 0;
+            const c_max = (r0.max !== undefined) ? parseInt(r0.max) : 255;
+            const c_center = (r0.center !== undefined) ? parseInt(r0.center) : Math.floor((c_min + c_max) / 2);
+            
+            // --- DYNAMIC VIBE PARTITIONING (Matches Engine) ---
+            const vibe = audio.vibe || 'mid';
+            const splits = (window.vibeSplits && window.vibeSplits[chIdx]) ? window.vibeSplits[chIdx] : { chillMid: 33, midHigh: 66 };
+            let l_bound = 0.0;
+            let r_bound = 1.0;
+            const s1 = splits.chillMid / 100.0;
+            const s2 = splits.midHigh / 100.0;
+
+            if (vibe === 'chill') r_bound = s1;
+            else if (vibe === 'mid') { l_bound = s1; r_bound = s2; }
+            else if (vibe === 'high') l_bound = s2;
+
+            const span = c_max - c_min;
+            const eff_min = c_min + span * l_bound;
+            const eff_max = c_min + span * r_bound;
+            const eff_center = (eff_min + eff_max) / 2.0;
+
+            // --- BEHAVIOR MATH (mirrors engine _apply_rule_math exactly) ---
+            let y = 0.0;
+            
+            if (behavior === 'static') {
+                window.simBuffers[chIdx].push(eff_center);
+                if (window.simBuffers[chIdx].length > 100) window.simBuffers[chIdx].shift();
+            } else {
+                if (behavior === 'direct') {
+                    y = (E * 2.0) - 1.0;
+                    
+                } else if (behavior === 'sine' || behavior === 'square' || behavior === 'saw' || behavior === 'triangle') {
+                    const freq = (speed * 0.1) + (E * 5.0 * react);
+                    st.phase = (st.phase + dt * freq) % 1.0;
+                    const p = st.phase;
+                    const amp = react;
+                    if (behavior === 'sine') y = amp * Math.sin(p * 2.0 * Math.PI);
+                    else if (behavior === 'saw') y = amp * ((p * 2.0) - 1.0);
+                    else if (behavior === 'square') y = p < 0.5 ? amp : -amp;
+                    
+                } else if (behavior === 'noise') {
+                    st.t += dt * (speed * 0.5 + E * react * 2.0);
+                    y = (_noise1d(st.t) * 2.0) - 1.0;
+                    
+                } else if (behavior === 'beat phase') {
+                    const bp = audio.beat_phase || 0;
+                    y = (bp * 2.0 * E) - 1.0;
+                    
+                } else if (behavior === 'bar phase') {
+                    const barp = audio.bar_phase || 0;
+                    y = (barp * 2.0 * E) - 1.0;
+                    
+                } else if (behavior === 'stochastic') {
+                    y = (Math.random() * 2.0) - 1.0;
+                    
+                } else if (behavior === 'spike') {
+                    const threshold = (1.0 - react) * 0.35;
+                    if (E > st.last_E + threshold) st.spike_val = E;
+                    st.spike_val *= Math.max(0.0, 1.0 - dt * speed * 1.2);
+                    st.last_E = E;
+                    y = (st.spike_val * 2.0) - 1.0;
+                    
+                } else if (behavior === 'hum') {
+                    st.t += dt * speed * 2.5;
+                    const osc = Math.sin(st.t) * react * 0.2;
+                    y = ((E + osc) * 2.0) - 1.0;
+                    
+                } else if (behavior === 'fuzzy') {
+                    st.t += dt * speed * 1.8;
+                    const noise = (_noise1d(st.t) * 2.0 - 1.0) * react * 0.25;
+                    y = ((E + noise) * 2.0) - 1.0;
+                    
+                } else if (behavior === 'direct_stepped') {
+                    y = (Math.floor(E * 8) / 8 * 2.0) - 1.0;
+                }
+                
+                // --- Y → DMX MAPPING (mirrors engine exactly) ---
+                y = Math.max(-1.0, Math.min(1.0, y));
+                let final_dmx;
+                if (y >= 0) final_dmx = eff_center + (y * (eff_max - eff_center));
+                else final_dmx = eff_center + (y * (eff_center - eff_min));
+                
+                // Hold Logic
+                if (hold_type !== 'none') {
+                    if (st.hold_active) {
+                        if (st.held_dmx === null) st.held_dmx = final_dmx;
+                        final_dmx = st.held_dmx;
+                    } else {
+                        st.held_dmx = null;
+                    }
+                }
+                
+                final_dmx = Math.max(0, Math.min(255, Math.round(final_dmx)));
+                
+                window.simBuffers[chIdx].push(final_dmx);
+                if (window.simBuffers[chIdx].length > 100) window.simBuffers[chIdx].shift();
+            }
+            
+            // --- DRAW ---
+            const ctx = canvas.getContext('2d');
+            if (canvas.width !== canvas.clientWidth) {
+                canvas.width = canvas.clientWidth;
+                canvas.height = canvas.clientHeight;
+            }
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            
+            // Draw range guide lines (min, center, max)
+            ctx.setLineDash([3, 3]);
+            ctx.lineWidth = 1;
+            // Min line
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.beginPath();
+            const yMin = h - (eff_min / 255) * h;
+            ctx.moveTo(0, yMin); ctx.lineTo(w, yMin);
+            ctx.stroke();
+            // Max line
+            ctx.beginPath();
+            const yMax = h - (eff_max / 255) * h;
+            ctx.moveTo(0, yMax); ctx.lineTo(w, yMax);
+            ctx.stroke();
+            // Center line
+            ctx.strokeStyle = 'rgba(0,242,255,0.15)';
+            ctx.beginPath();
+            const yCtr = h - (eff_center / 255) * h;
+            ctx.moveTo(0, yCtr); ctx.lineTo(w, yCtr);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw waveform
+            ctx.beginPath();
+            ctx.strokeStyle = '#00f2ff';
+            ctx.lineWidth = 2;
+            const buf = window.simBuffers[chIdx];
+            for (let i = 0; i < buf.length; i++) {
+                const x = (i / (buf.length - 1)) * w;
+                const vy = h - (buf[i] / 255) * h;
+                if (i === 0) ctx.moveTo(x, vy);
+                else ctx.lineTo(x, vy);
+            }
+            ctx.stroke();
+        });
+    };
+    
+    window.attachHandleDrag = function(chIdx, handleNum) {
+        const handle = document.getElementById('handle' + handleNum + '-' + chIdx);
+        const cont = document.getElementById('prop-cont-' + chIdx);
+        if(!handle || !cont) return;
+        
+        const startDrag = (e) => {
+            e.preventDefault();
+            const onMove = (moveEvent) => {
+                const clientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+                const rect = cont.getBoundingClientRect();
+                let pct = ((clientX - rect.left) / rect.width) * 100;
+                pct = Math.max(0, Math.min(100, pct));
+                
+                const splits = window.vibeSplits[chIdx];
+                if (handleNum === 1) {
+                    pct = Math.min(pct, splits.midHigh - 5);
+                    splits.chillMid = pct;
+                } else {
+                    pct = Math.max(pct, splits.chillMid + 5);
+                    splits.midHigh = pct;
+                }
+                
+                // Real-time UI updates
+                cont.querySelector('.chill-seg').style.width = splits.chillMid + '%';
+                cont.querySelector('.mid-seg').style.width = (splits.midHigh - splits.chillMid) + '%';
+                cont.querySelector('.high-seg').style.width = (100 - splits.midHigh) + '%';
+                
+                const h1 = document.getElementById('handle1-' + chIdx);
+                const h2 = document.getElementById('handle2-' + chIdx);
+                if (h1) h1.style.left = 'calc(' + splits.chillMid + '% - 6px)';
+                if (h2) h2.style.left = 'calc(' + splits.midHigh + '% - 6px)';
+                
+                window.compileProfileMappings(); // Real-time preview!
+            };
+            
+            const stopDrag = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchend', stopDrag);
+            };
+            
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('touchmove', onMove);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchend', stopDrag);
+        };
+        
+        handle.onmousedown = startDrag;
+        handle.ontouchstart = startDrag;
+    };
+    
+    window.addRange = function(chIdx) {
+        window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255, vibeNum: 'any'});
+        window.renderProfileMappings();
+    };
+    
+    window.removeRange = function(chIdx, rIdx) {
+        window.channelConfig[chIdx].ranges.splice(rIdx, 1);
+        if(window.channelConfig[chIdx].ranges.length === 0) {
+            window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255, vibeNum: 'any'});
+        }
+        window.renderProfileMappings();
+    };
+    
+    window.updateRange = function(chIdx, rIdx, field, val) {
+        if (field === 'min' || field === 'max' || field === 'center') val = parseInt(val);
+        window.channelConfig[chIdx].ranges[rIdx][field] = val;
+        window.compileProfileMappings();
+    };
+    
+    window.getActivePreset = function(conf) {
+        if (!window.EASY_DESCRIPTORS || !conf) return "";
+        for (let d of window.EASY_DESCRIPTORS) {
+            let match = true;
+            let behaviorTarget = d.behavior || 'static';
+            if (behaviorTarget !== conf.behavior) match = false;
+            
+            let sourceTarget = d.source || 'volume';
+            if (behaviorTarget !== 'static' && sourceTarget !== conf.source) match = false;
+            
+            let speedTarget = d.speed !== undefined ? d.speed : 0.5;
+            if (Math.abs(parseFloat(speedTarget) - parseFloat(conf.speed)) > 0.001) match = false;
+            
+            let reactTarget = d.react !== undefined ? d.react : 0.5;
+            if (Math.abs(parseFloat(reactTarget) - parseFloat(conf.react)) > 0.001) match = false;
+            
+            let holdTarget = d.hold_type || 'none';
+            if (holdTarget !== conf.hold_type) match = false;
+            
+            if (match) return d.id;
+        }
+        return "";
+    };
+
+    window.updateChannelConfig = function(chIdx, field, val) {
+        if(field === 'speed' || field === 'react') val = parseFloat(val);
+        window.channelConfig[chIdx][field] = val;
+        window.compileProfileMappings();
+        
+        const presetSelect = document.getElementById('preset-select-' + chIdx);
+        if (presetSelect) {
+            presetSelect.value = window.getActivePreset(window.channelConfig[chIdx]);
+        }
+    };
+    
+    const _originalSaveProfile = window.saveProfile;
+    window.saveProfile = async function(isSilent) {
+        window.compileProfileMappings(); 
+        const urlParams = new URLSearchParams(window.location.search);
+        const profile = window.db.profiles.find(p => p.id === urlParams.get('id'));
+        if(profile) {
+            const titleEl = document.getElementById('prof-name');
+            if(titleEl) profile.name = titleEl.value;
+        }
+        if (_originalSaveProfile) return await _originalSaveProfile(isSilent === true);
+        else {
+            await window.saveProfileToServer(profile);
+            if (isSilent !== true) alert("Profile Saved!");
+            return true;
+        }
+    };
+    
+    window.removeProfileChannel = function(chIdx) {
+        if(!confirm(`Remove channel ${chIdx + 1}?`)) return;
+        window.currentProfileChannels.splice(chIdx, 1);
+        window.currentProfileMappings.splice(chIdx, 1);
+        delete window.channelConfig[chIdx];
+        delete window.vibeSplits[chIdx];
+        const newConf = {};
+        const newSplits = {};
+        let newIdx = 0;
+        for(let key in window.channelConfig) {
+            const k = parseInt(key);
+            if(k !== chIdx) {
+                newConf[newIdx] = window.channelConfig[key];
+                newSplits[newIdx] = window.vibeSplits[key];
+                newIdx++;
+            }
+        }
+        window.channelConfig = newConf;
+        window.vibeSplits = newSplits;
+        window.renderProfileMappings();
+    };
+    
+    const _originalAddProfileChannel = window.addProfileChannel;
+    window.addProfileChannel = function() {
+        if (_originalAddProfileChannel) _originalAddProfileChannel();
+        else {
+            if(!window.currentProfileChannels) window.currentProfileChannels = [];
+            window.currentProfileChannels.push({name: "New Channel", role: "unassigned"});
+        }
+        setTimeout(() => window.renderProfileMappings(), 50);
+    };

@@ -147,16 +147,12 @@ Context:
   - "target": "visualdmx" -> Modifies Visualizer-specific shaders (u_strobe, u_blackout, u_spin, etc).
 
 SCHEMA RULES:
-1. MODIFIERS: All timing and sensitivity settings MUST live inside the "modifiers" object.
+1. MODIFIERS: All timing and sensitivity settings MUST live inside the "modifiers" object (speed, react, hold_type).
 2. SOURCE: Frequency bins bin_0 (Sub) through bin_5 (Treble) are available for targeted reactivity.
-3. RANGE PRESERVATION: Keep changes within the 'cal' object bounds unless explicitly asked to expand them.
+3. RANGE PRESERVATION: Keep changes within the 'cal' object bounds (min, center, max) unless explicitly asked to expand them.
 4. NO STATIC FOR RANGES: Never use behavior 'static' if min != max. Use 'sine' or 'step' instead.
-5. AUDIO-REACTIVE MOVEMENT (Base Profiles):
-   - To create movement, use behaviors like 'sine' (oscillation), 'direct' (1:1 mapping), or 'noise' (organic drift).
-   - The range of movement is governed by 'cal.min' and 'cal.max'.
-   - Speed and reactivity are controlled via the 'modifiers' object.
-   - Example (Oscillation): To move pan between 50 and 200, set behavior: 'sine', cal.min: 50, cal.max: 200.
-6. NO SEQUENCER STRINGS: The "32-96-32" sequencer syntax (dashes/commas) is EXCLUSIVELY for Presets. DO NOT use these strings in Base Profile rules.
+5. 3-DIGIT PRECISION: Always return DMX values as 0-255 integers.
+6. NO SEQUENCER STRINGS: The "32-96-32" sequencer syntax is EXCLUSIVELY for Presets. DO NOT use these strings in Base Profile rules.
 
 CHANNEL ROLE DICTIONARY:
 - "pan" = role: pos_x
@@ -164,35 +160,33 @@ CHANNEL ROLE DICTIONARY:
 - "zoom" = role: zoom
 - "strobe" = role: strobe
 - "dimmer" = role: dimmer
+- "drawing" = role: drawing (Laser/Vector path)
+- "clip" = role: clip (Media/Video select)
+- "group" = role: group (Master group index)
 - GLOBAL "rate" / "global speed" / "time" -> Actor: system, Function: speed
 - GLOBAL "master" / "total intensity" -> Actor: system, Function: intensity
-- USER TAGS: If the user provides a tag like [ch:role] (e.g. [ch:dimmer] or [ch:pos_x]), they are explicitly targeting the channel with that role. Prioritize these tags over textual descriptions.
-When the user says "rotation" without axis, interpret as rot_z. Match these aliases to the correct channel by checking the Fixture Context roles.
-
-RELATIONAL PROMPTS: Understand cross-channel relationships.
-- "if zoom is at 127, rotation should be below 127" = find channel with role zoom, note its cal.center (127), then find rotation channel and set its cal.max below that value.
-- "pan faster than tilt" = pos_x speed should be higher than pos_y speed.
-- Apply the user's intent across the correct channels by matching role names from the dictionary above.
+- USER TAGS: If the user provides a tag like [ch:role] (e.g. [ch:dimmer]), prioritize it. Match aliases (e.g. "rotation" -> rot_z).
 
 VIBE RULES & SYNC GROUPS:
 The "vibe" field controls WHEN a rule activates based on detected audio energy level.
-Valid values: "any", "chill", "chill 1", "chill 2", "chill 3", "mid", "mid 1", "mid 2", "mid 3", "high", "high 1", "high 2", "high 3", "build", "drop", "never".
-- The base vibe (any/chill/mid/high) controls activation threshold.
-- The number suffix (1, 2, 3) is a sync group for multi-fixture coordination.
-- "any" = active at all times. First range should always be "any" with no number.
-- The last range of a multi-range channel can be "high", "high 1", "high 2", or "high 3".
-- When modifying vibes, RANDOMIZE the sync group numbers across different channels to prevent all channels from landing in the same group (which makes output "too busy"). Spread 1, 2, 3 across channels.
+- GOLD STANDARD: Use vibe: "any" as the default. The engine automatically partitions "any" rules into Chill/Mid/High dynamics.
+- SYNC GROUPS: Use variants "any 1", "any 2", or "any 3" to create variety across multiple fixtures of the same type. Spreading these variants makes the output feel more organic and less "mirrored".
+- SPECIFIC VIBES: Use "chill", "mid", "high", "build", "drop" ONLY if you want a fundamentally different behavior (e.g. static on chill, but direct-mapping on high).
+- CRITICAL: DO NOT delete or collapse existing ranges unless explicitly asked. Return all rules in the updated array.
 
 THE PLAYBOOK (Style Macros):
-- "B-Side": Shift bin sources (e.g. bin 0 -> bin 1). Invert movement directions. Swap speeds between related axes (Pan/Tilt).
-- "Rhythm": Use 'square' or 'saw' behaviors. Set source to 'impact' or 'beat phase'. Set 'react' to 1.0 (high sensitivity) and 'speed' to 0.8+. 
-- "Liquid": Use 'sine' or 'noise' behaviors. Set source to 'spectral flux' or 'volume'. Set 'react' to 0.2 (high smoothing) and 'speed' to 0.1-.
+- "B-Side": Shift bin sources (e.g. bin 0 -> bin 1). Invert movement. Swap speeds between Pan/Tilt.
+- "Rhythm": Use 'square' or 'saw' behaviors. Source: 'impact' or 'beat phase'. React: 1.0, Speed: 0.8+.
+- "Liquid": Use 'sine' or 'noise' behaviors. Source: 'spectral flux' or 'volume'. React: 0.2, Speed: 0.1-.
 
-Output: Return a JSON object with "logic_explanation" (compact summary of what you did) and "mappings" (the updated 2D array).
-- CURRENT LIVE UI STATE (Source of Truth): ${JSON.stringify(currentProfileMappings)}
-- FIXTURE CONTEXT (Available Roles): ${JSON.stringify(fixtureChannels)}
+Output: Return a JSON object with:
+- "logic_explanation": (compact summary of what you did)
+- "mappings": (the updated 2D array)
+- "question": (Optional: Use this field to ask for clarification if the user's request is ambiguous).
+- CURRENT LIVE UI STATE: ${JSON.stringify(currentProfileMappings)}
+- FIXTURE CONTEXT: ${JSON.stringify(fixtureChannels)}
 - NEW INSTRUCTIONS: ${JSON.stringify(pendingAiInstructions)}
-- CONVERSATION DIALOGUE (Instruction Context - Text Only): ${JSON.stringify(aiConversationHistory.slice(-5))}
+- CONVERSATION DIALOGUE: ${JSON.stringify(aiConversationHistory.slice(-5))}
 
 Output: Valid raw JSON object only.
 `;
@@ -220,6 +214,20 @@ Output: Valid raw JSON object only.
 
                 let newMappings = aiResult.mappings || aiResult;
                 const logicLog = aiResult.logic_explanation || "";
+                const question = aiResult.question || "";
+
+                if (question) {
+                    addAiChatMessage('ai', `❓ ${question}`);
+                    // If no mappings returned, stop here
+                    if (!aiResult.mappings && !Array.isArray(aiResult)) {
+                        const thinkingBubble = document.getElementById(thinkingId);
+                        if (thinkingBubble) thinkingBubble.remove();
+                        if (masterInput) masterInput.disabled = false;
+                        if (sendBtn) sendBtn.disabled = false;
+                        if (masterInput) masterInput.focus();
+                        return;
+                    }
+                }
 
                 if (!Array.isArray(newMappings)) throw new Error("AI returned invalid mapping format (expected array).");
 
@@ -1011,8 +1019,12 @@ Output: Valid raw JSON object only.
             const history = document.getElementById('ai-preset-chat-history');
             const xyPanel = document.getElementById('ai-preset-xy-panel');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
+            const fixPicker = document.getElementById('ai-fixture-picker');
+            const zonePicker = document.getElementById('ai-zone-picker');
             if (history) history.style.display = 'flex';
             if (xyPanel) xyPanel.style.display = 'none';
+            if (fixPicker) fixPicker.style.display = 'none';
+            if (zonePicker) zonePicker.style.display = 'none';
             if (xyBtn) xyBtn.classList.remove('active');
         }
 
@@ -1021,6 +1033,12 @@ Output: Valid raw JSON object only.
             const xyPanel = document.getElementById('ai-preset-xy-panel');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
             if (!history || !xyPanel || !xyBtn) return;
+
+            // Close other pickers
+            const fixPicker = document.getElementById('ai-fixture-picker');
+            const zonePicker = document.getElementById('ai-zone-picker');
+            if (fixPicker) fixPicker.style.display = 'none';
+            if (zonePicker) zonePicker.style.display = 'none';
 
             if (xyPanel.style.display === 'none') {
                 history.style.display = 'none';
@@ -1043,57 +1061,83 @@ Output: Valid raw JSON object only.
             const activeProfileIds = new Set(stageInstances.map(inst => inst.profileId));
             const activeProfiles = (db.profiles || []).filter(p => activeProfileIds.has(p.id));
 
-            // Filter for X/Y roles
-            const xyProfiles = activeProfiles.filter(p => {
+            // Filter for X/Y or Zoom roles
+            const calProfiles = activeProfiles.filter(p => {
                 const roles = (p.channels || []).map(ch => ch.role);
-                return roles.some(r => r === 'pos_x') && roles.some(r => r === 'pos_y');
+                return roles.some(r => ['pos_x', 'pos_y', 'zoom'].includes(r));
             });
 
-            if (xyProfiles.length === 0) {
-                panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-dim);">No active profiles with X/Y functions found on stage.</div>`;
+            if (calProfiles.length === 0) {
+                panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-dim);">No active profiles with X/Y or Zoom functions found on stage.</div>`;
                 return;
             }
 
             panel.innerHTML = `
-                <div style="font-size:0.8rem; font-weight:bold; color:var(--accent-alt); margin-bottom:10px; text-transform:uppercase;">Positional Calibration</div>
+                <div style="font-size:0.8rem; font-weight:bold; color:var(--accent-alt); margin-bottom:10px; text-transform:uppercase;">Positional & Zoom Calibration</div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
-                    ${xyProfiles.map(p => {
-                        const cal = p.calibration || { x: { left: 0, right: 255 }, y: { top: 0, bottom: 255 } };
+                    ${calProfiles.map(p => {
+                        const roles = (p.channels || []).map(ch => ch.role);
+                        const hasXY = roles.includes('pos_x') && roles.includes('pos_y');
+                        const hasZoom = roles.includes('zoom');
+                        
+                        const cal = p.calibration || {};
+                        const x = cal.x || { left: 0, right: 255 };
+                        const y = cal.y || { top: 0, bottom: 255 };
+                        const zoom = cal.zoom || { smallest: 0, largest: 255 };
+
                         return `
                             <div class="card" style="margin:0; padding:10px; background:rgba(255,255,255,0.03);">
                                 <div style="font-weight:900; font-size:11px; margin-bottom:10px; color:var(--accent);">${p.name}</div>
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                    <div>
-                                        <label style="font-size:8px; color:var(--text-dim);">X RANGE (LEFT - RIGHT)</label>
-                                        <div style="display:flex; align-items:center; gap:5px;">
-                                            <input type="number" value="${cal.x.left}" placeholder="Left" 
-                                                onchange="saveProfileCalibration('${p.id}', 'x', 'left', this.value)"
-                                                style="height:24px; font-size:10px; padding:0 5px;">
-                                            <span style="opacity:0.3">-</span>
-                                            <input type="number" value="${cal.x.right}" placeholder="Right" 
-                                                onchange="saveProfileCalibration('${p.id}', 'x', 'right', this.value)"
-                                                style="height:24px; font-size:10px; padding:0 5px;">
+                                <div style="display:flex; flex-direction:column; gap:10px;">
+                                    ${hasXY ? `
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                        <div>
+                                            <label style="font-size:8px; color:var(--text-dim);">X RANGE (LEFT - RIGHT)</label>
+                                            <div style="display:flex; align-items:center; gap:5px;">
+                                                <input type="number" value="${x.left}" placeholder="Left" 
+                                                    onchange="saveProfileCalibration('${p.id}', 'x', 'left', this.value)"
+                                                    style="height:24px; font-size:10px; padding:0 5px;">
+                                                <span style="opacity:0.3">-</span>
+                                                <input type="number" value="${x.right}" placeholder="Right" 
+                                                    onchange="saveProfileCalibration('${p.id}', 'x', 'right', this.value)"
+                                                    style="height:24px; font-size:10px; padding:0 5px;">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style="font-size:8px; color:var(--text-dim);">Y RANGE (TOP - BOTTOM)</label>
+                                            <div style="display:flex; align-items:center; gap:5px;">
+                                                <input type="number" value="${y.top}" placeholder="Top" 
+                                                    onchange="saveProfileCalibration('${p.id}', 'y', 'top', this.value)"
+                                                    style="height:24px; font-size:10px; padding:0 5px;">
+                                                <span style="opacity:0.3">-</span>
+                                                <input type="number" value="${y.bottom}" placeholder="Bottom" 
+                                                    onchange="saveProfileCalibration('${p.id}', 'y', 'bottom', this.value)"
+                                                    style="height:24px; font-size:10px; padding:0 5px;">
+                                            </div>
                                         </div>
                                     </div>
+                                    ` : ''}
+                                    ${hasZoom ? `
                                     <div>
-                                        <label style="font-size:8px; color:var(--text-dim);">Y RANGE (TOP - BOTTOM)</label>
+                                        <label style="font-size:8px; color:var(--text-dim);">ZOOM RANGE (SMALLEST - LARGEST)</label>
                                         <div style="display:flex; align-items:center; gap:5px;">
-                                            <input type="number" value="${cal.y.top}" placeholder="Top" 
-                                                onchange="saveProfileCalibration('${p.id}', 'y', 'top', this.value)"
-                                                style="height:24px; font-size:10px; padding:0 5px;">
+                                            <input type="number" value="${zoom.smallest}" placeholder="Smallest" 
+                                                onchange="saveProfileCalibration('${p.id}', 'zoom', 'smallest', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px; width:70px;">
                                             <span style="opacity:0.3">-</span>
-                                            <input type="number" value="${cal.y.bottom}" placeholder="Bottom" 
-                                                onchange="saveProfileCalibration('${p.id}', 'y', 'bottom', this.value)"
-                                                style="height:24px; font-size:10px; padding:0 5px;">
+                                            <input type="number" value="${zoom.largest}" placeholder="Largest" 
+                                                onchange="saveProfileCalibration('${p.id}', 'zoom', 'largest', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px; width:70px;">
                                         </div>
                                     </div>
+                                    ` : ''}
                                 </div>
                             </div>
                         `;
                     }).join('')}
                 </div>
                 <div style="margin-top:15px; font-size:9px; color:var(--text-dim); line-height:1.4;">
-                    💡 These bounds tell the AI the physical limits of the fixture. If you ask for a square or circle, it will scale the movement within these ranges.
+                    💡 These bounds tell the AI the physical limits of the fixture. If you ask for a square, circle, or zoom effect, it will scale the movement within these ranges.
                 </div>
             `;
         }
@@ -1103,7 +1147,17 @@ Output: Valid raw JSON object only.
             if (!prof) return;
             
             if (!prof.calibration) {
-                prof.calibration = { x: { left: 0, right: 255 }, y: { top: 0, bottom: 255 } };
+                prof.calibration = { 
+                    x: { left: 0, right: 255 }, 
+                    y: { top: 0, bottom: 255 },
+                    zoom: { smallest: 0, largest: 255 }
+                };
+            }
+            if (!prof.calibration[axis]) {
+                if (axis === 'zoom') prof.calibration.zoom = { smallest: 0, largest: 255 };
+                else if (axis === 'x') prof.calibration.x = { left: 0, right: 255 };
+                else if (axis === 'y') prof.calibration.y = { top: 0, bottom: 255 };
+                else prof.calibration[axis] = {};
             }
             
             prof.calibration[axis][side] = parseInt(val);
@@ -1115,10 +1169,10 @@ Output: Valid raw JSON object only.
             if (modal) modal.classList.remove('active');
             document.body.classList.remove('ai-modal-open');
 
-            const diffBtn = document.getElementById('ai-preset-view-diff-btn');
-            const applyBtn = document.getElementById('ai-preset-apply-btn');
             if (diffBtn) diffBtn.style.display = 'none';
             if (applyBtn) applyBtn.style.display = 'none';
+            const saveBtn = document.getElementById('ai-preset-save-btn');
+            if (saveBtn) saveBtn.style.display = 'none';
 
             // Hide the fixture picker if open
             const picker = document.getElementById('ai-fixture-picker');
@@ -1126,15 +1180,77 @@ Output: Valid raw JSON object only.
         }
 
         function toggleFixturePicker() {
+            const history = document.getElementById('ai-preset-chat-history');
             const picker = document.getElementById('ai-fixture-picker');
+            const zonePicker = document.getElementById('ai-zone-picker');
+            const xyPanel = document.getElementById('ai-preset-xy-panel');
+            const xyBtn = document.getElementById('ai-xy-picker-btn');
             if (!picker) return;
             
+            // Close other pickers
+            if (zonePicker) zonePicker.style.display = 'none';
+            if (xyPanel) xyPanel.style.display = 'none';
+            if (xyBtn) xyBtn.classList.remove('active');
+
             if (picker.style.display === 'block') {
                 picker.style.display = 'none';
+                if (history) history.style.display = 'flex';
             } else {
                 populateFixturePicker();
                 picker.style.display = 'block';
+                if (history) history.style.display = 'none';
             }
+        }
+
+        function toggleZonePicker() {
+            const history = document.getElementById('ai-preset-chat-history');
+            const picker = document.getElementById('ai-zone-picker');
+            const fixPicker = document.getElementById('ai-fixture-picker');
+            const xyPanel = document.getElementById('ai-preset-xy-panel');
+            const xyBtn = document.getElementById('ai-xy-picker-btn');
+            if (!picker) return;
+            
+            // Close other pickers
+            if (fixPicker) fixPicker.style.display = 'none';
+            if (xyPanel) xyPanel.style.display = 'none';
+            if (xyBtn) xyBtn.classList.remove('active');
+
+            if (picker.style.display === 'block') {
+                picker.style.display = 'none';
+                if (history) history.style.display = 'flex';
+            } else {
+                populateZonePicker();
+                picker.style.display = 'block';
+                if (history) history.style.display = 'none';
+            }
+        }
+
+        function populateZonePicker() {
+            const picker = document.getElementById('ai-zone-picker');
+            if (!picker) return;
+            
+            const stage = db.stage || [];
+            // Get unique zones, excluding empty ones
+            const zones = [...new Set(stage.map(inst => (inst.zone || '').trim()).filter(z => z !== ''))];
+            
+            if (zones.length === 0) {
+                picker.innerHTML = `<div style="padding:15px; text-align:center; color:var(--text-dim); font-size:12px;">No zones found. Add locations to your fixtures in the Stage tab!</div>`;
+                return;
+            }
+
+            picker.innerHTML = zones.map((zone) => {
+                const count = stage.filter(inst => (inst.zone || '').trim() === zone).length;
+                return `
+                    <div class="fixture-picker-item" onclick="insertZoneTag('${zone}')"
+                        style="padding:10px 15px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;">
+                        <div>
+                            <div style="font-weight:bold; color:var(--accent-alt); text-transform:uppercase; font-size:12px;">${zone}</div>
+                            <div style="font-size:9px; color:var(--text-dim);">${count} fixtures</div>
+                        </div>
+                        <div style="font-size:9px; color:var(--text-dim);">Zone</div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function populateFixturePicker() {
@@ -1186,6 +1302,29 @@ Output: Valid raw JSON object only.
             
             // Close picker
             document.getElementById('ai-fixture-picker').style.display = 'none';
+            const history = document.getElementById('ai-preset-chat-history');
+            if (history) history.style.display = 'flex';
+        }
+
+        function insertZoneTag(zoneName) {
+            const textarea = document.getElementById('ai-preset-textarea');
+            if (!textarea) return;
+            
+            const tag = `[zone:${zoneName}]`;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            
+            textarea.value = text.substring(0, start) + tag + text.substring(end);
+            
+            // Put cursor after the tag
+            textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+            textarea.focus();
+            
+            // Close picker
+            document.getElementById('ai-zone-picker').style.display = 'none';
+            const history = document.getElementById('ai-preset-chat-history');
+            if (history) history.style.display = 'flex';
         }
 
         function addPresetAiChatMessage(role, text) {
@@ -1284,100 +1423,55 @@ Output: Valid raw JSON object only.
             // ADD SPATIAL AWARENESS CONTEXT
             const spatialContext = stageContext.filter(f => f.calibration).map(f => {
                 const c = f.calibration;
-                return `Fixture ${f.id} Bounds: X(${c.x.left} to ${c.x.right}), Y(${c.y.top} to ${c.y.bottom})`;
+                let desc = `Fixture ${f.id}: `;
+                if (c.x && c.y) desc += `X(Left:${c.x.left}, Right:${c.x.right}), Y(Top:${c.y.top}, Bottom:${c.y.bottom})`;
+                if (c.zoom) {
+                    if (c.x && c.y) desc += ", ";
+                    desc += `Zoom(Smallest:${c.zoom.smallest}, Largest:${c.zoom.largest})`;
+                }
+                return desc;
             }).join('\n');
 
-            let systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox Preset System.
-Task: ${current_editing_preset_id ? 'Refine an existing' : 'Generate a new'} preset based on the user's natural language description.
+            const systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox Preset System.
+Task: ${current_editing_preset_id ? 'Refine an existing' : 'Generate a new'} preset based on the user's description.
 
-Context:
-- A Preset consists of TRIGGERS (when it activates) and OVERRIDES (what it does when active).
-- Triggers define conditions. ALL triggers must be true simultaneously (AND logic).
-- If user describes "X OR Y", return MULTIPLE presets with different triggers but same overrides.
-- Overrides target specific stage fixtures by ID, or "global" for all.
+${spatialContext ? `CALIBRATION (Safe Zones):
+${spatialContext}
+CRITICAL: Use these specific Left, Right, Top, Bottom, Smallest, and Largest values exactly as labeled. 
+Follow labels strictly. If "Smallest" is 255 and "Largest" is 0, then 255 is the small state.` : "NOTICE: No fixtures are calibrated. DO NOT use spatial keywords (Left, Right, Circle, etc) unless you use generic 0-255 ranges."}
 
-${spatialContext ? `Positional Calibration (Safe Zones):\n${spatialContext}\nUse these bounds for movement shapes (circles, lines, squares) if asked for specific fixtures.` : ""}
+ROLE MAPPING:
+KNOWN_ROLES: ${window.KNOWN_ROLES ? window.KNOWN_ROLES.join(', ') : 'pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, generic, dimmer, mode, clip, group'}
 
-TRIGGER SCHEMA:
-- {type: "vibe", value: "<value>"} — values: chill, mid, high
-- {type: "state", value: "<value>"} — values: building, tension, dropping
-- {type: "volume", greater_than: N, less_than: N} — 0-100 scale. ALWAYS provide both.
-- {type: "bin", target: "<name>", greater_than: N, less_than: N} — names: SUB..BRILLIANCE. ALWAYS provide both.
-- {type: "channel", target: <addr>, greater_than: N, less_than: N} — raw DMX. ALWAYS provide both.
-- {type: "manual"} — activated only by user click.
-- For all numeric triggers (volume, bin, channel), you MUST specify both "greater_than" and "less_than" to define a range.
+SPATIAL FORMULA COOKBOOK:
+1. CIRCLE: pos_x: "[Left]-[Right]-[Left]", pos_y: "[Top]-[Bottom]-[Top] + 16"
+2. FIGURE-8: pos_x: "[Left]-[Right]-[Left]-[Right]-[Left]", pos_y: "[Top]-[Bottom]-[Top] + 32"
+3. PULSE ZOOM: zoom: "[Smallest]-[Largest]-[Smallest]"
+If user says "center", use (Left+Right)/2.
+
+TRIGGER LOGIC:
+- Multiple triggers within a single preset are evaluated with AND logic. 
+- All conditions (e.g. Vibe is High AND Volume > 50%) must be met for the preset to activate.
 
 OVERRIDE SCHEMA:
-Each override targets one fixture + one channel role:
-- Instance: {id: "<fixture_id>", target: "<fixture_id>", type: "instance", name: "<role>", role: "<role>", value: <string_or_num>, smoothing: 0, channels: [{name: "<role>", value: <string_or_num>}]}
-- Global: {id: "global", target: "global", type: "global", name: "<role>", role: "<role>", value: <string_or_num>, smoothing: 0, channels: [{name: "<role>", value: <string_or_num>}]}
+- "mode": "value" (Static DMX) or "behavior" (Live mapping change).
+- If mode is "behavior", the "value" field should be a behavior name (sine, direct, etc) and "source" should be an audio source (bass, volume, etc).
+- Instance: {id: "<fixture_id>", target: "<fixture_id>", type: "instance", name: "<role>", role: "<role>", value: <string_or_num>, channels: [{name: "<role>", value: <val>, mode: "value"}]}
+- Global: {id: "global", target: "global", type: "global", name: "<role>", role: "<role>", value: <string_or_num>, channels: [{name: "<role>", value: <val>, mode: "value"}]}
 
-RANGE SEQUENCER SYNTAX (The "Tracer"):
-For creating movement/paths within a preset override 'value' field:
-- Basic: 255 (Static), "32-96" (Linear Range)
-- Chains: "32-96-32" (Ping-Pong / Triangle)
-- Sequences: "0, 255, 127" (Timed Steps)
-- Offsets: "+val" (e.g. "32-96-32 + 16" shifts phase by 1/4 cycle).
-
-SPATIAL FORMULA COOKBOOK (Templates for coordinated X/Y):
-Extract MIN and MAX from user prompt (or defaults). Use these templates exactly:
-1. CIRCLE:
-   pos_x: "min-max-min"
-   pos_y: "min-max-min + 16"
-2. FIGURE-8 / LISSAJOUS (Horizontal):
-   pos_x: "min-max-min-max-min"
-   pos_y: "min-max-min + 16"
-3. FIGURE-8 / LISSAJOUS (Vertical):
-   pos_x: "min-max-min"
-   pos_y: "min-max-min-max-min + 16"
-4. SQUARE PATH:
-   pos_x: "min-max, max, max-min, min"
-   pos_y: "min, min-max, max, max-min"
-5. TRIANGLE: 
-   pos_x: "center-max-min-center"
-   pos_y: "min-max-max-min"
-
-IMPORTANT: If the user says "center" without a range, use the fixture's calibrated center value. If the user request is ambiguous, you MUST ask clarifying questions.
-
-BEHAVIOR OVERRIDES (for movement/strobe/sweep):
-When the user describes dynamic behavior (strobe, sweep, oscillate, pulse), use mode:"behavior" on the channel.
-- {name: "<role>", mode: "behavior", behavior: "<type>", source: "<driver>", modifiers: {speed: 0.5, react: 0.5}, cal: {min: 0, center: 127, max: 255}}
-- behavior types: static, direct, sine, saw, square, noise, beat phase, bar phase
-- source drivers: volume, bass, mids, highs, spectral flux, impact, beat phase, bar phase
-- hold types: none, beat, bar, 2 bar, 4 bar
-
-# DRIVER SELECTION GUIDE:
-- "Impact/Percussive": Use 'impact' or 'spectral flux'.
-- "Groove/Steady": Use 'volume' or 'bass'.
-- "Liquid/Cinematic": Use 'sine' or 'noise'.
-- "1:1 Reactive": Use 'direct' logic.
-- "Rhythmic Jump": Use 'square' logic with 'beat phase' source.
-
-AVAILABLE ROLES: pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, generic, dimmer, mode, clip, group
-
-FIXTURE ALIAS HINTS:
-- "all fixtures" / "everything" = use type "global"
-- USER TAGS: If the user provides a tag like [fix:ID] (e.g. [fix:Left Beam]), they are explicitly targeting that SPECIFIC fixture ID. Prioritize these tags.
-- "blackout" = set dimmer to 0
-- "full brightness" / "max" = set dimmer to 255
-
-${current_editing_preset_id ? 'IMPORTANT: You are EDITING an existing preset. The user description intends to MODIFY the current state provided below. Only change what is requested.' : ''}
-
-Stage Instances (fixture IDs and their roles): ${JSON.stringify(stageContext)}
-
-- CURRENT LIVE UI STATE (Source of Truth):
+- CURRENT LIVE UI STATE:
 - Preset Label: "${document.getElementById('pres-name')?.value || 'Unnamed Preset'}"
 - Active Triggers: ${JSON.stringify(currentPresetTriggers)}
 - Active Overrides: ${JSON.stringify(currentPresetOverrides)}
 
 - NEW INSTRUCTION: ${text}
-- CONVERSATION DIALOGUE (Instruction Context - Text Only): ${JSON.stringify(presetConversationHistory.slice(-5))}
+- CONVERSATION DIALOGUE: ${JSON.stringify(presetConversationHistory.slice(-5))}
 
-Output: Return a valid JSON object with:
-- "presets": array of objects, each with {name: string, triggers: array, overrides: array}
-- "logic_explanation": compact summary of what was generated
+Output: Return a JSON object with:
+- "presets": array of objects {name: string, triggers: array, overrides: array}
+- "logic_explanation": compact summary
+Output: Valid raw JSON object only.`;
 
-Return raw JSON only, no markdown.`;
 
             try {
                 const model = localStorage.getItem('vj_gemini_model') || 'gemini-2.5-flash';
@@ -1469,8 +1563,10 @@ Return raw JSON only, no markdown.`;
                 // Show diff/apply buttons
                 const diffBtn = document.getElementById('ai-preset-view-diff-btn');
                 const applyBtn = document.getElementById('ai-preset-apply-btn');
+                const saveBtn = document.getElementById('ai-preset-save-btn');
                 if (diffBtn) diffBtn.style.display = 'block';
                 if (applyBtn) applyBtn.style.display = 'block';
+                if (saveBtn) saveBtn.style.display = 'block';
 
                 // If multiple presets were generated (OR logic), notify user
                 if (presets.length > 1) {
@@ -1805,5 +1901,8 @@ Return raw JSON only, no markdown.`;
         window.saveStagedPresetToDb = saveStagedPresetToDb;
         window.saveAllStagedPresets = saveAllStagedPresets;
         window.toggleFixturePicker = toggleFixturePicker;
+        window.toggleZonePicker = toggleZonePicker;
+        window.toggleAiXyMode = toggleAiXyMode;
         window.populateFixturePicker = populateFixturePicker;
         window.insertFixtureTag = insertFixtureTag;
+        window.insertZoneTag = insertZoneTag;

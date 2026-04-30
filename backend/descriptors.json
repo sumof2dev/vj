@@ -2,57 +2,50 @@
     {
         "id": "pulse_beat",
         "label": "Pulse with Beat",
-        "behavior": "sine",
-        "source": "impact",
-        "speed": 1,
-        "react": 0.45,
-        "hold_type": "none",
+        "behavior": "direct",
+        "source": "bin 0",
+        "speed": 0.2,
+        "react": 0,
+        "hold_type": "bar",
         "rel_center": 0.498
     },
     {
         "id": "smooth_drift",
         "label": "Smooth Drift",
-        "behavior": "noise",
-        "source": "bar phase",
-        "speed": 0.1,
-        "react": 0.65,
-        "hold_type": "none"
+        "behavior": "sine",
+        "source": "bass",
+        "speed": 0.3,
+        "react": 0.45,
+        "hold_type": "beat",
+        "rel_center": 0.498
     },
     {
         "id": "bass_pump",
         "label": "Bass Pump",
         "behavior": "direct",
-        "source": "beat phase",
-        "speed": 1,
-        "react": 1,
-        "hold_type": "none"
+        "source": "bin 1",
+        "speed": 0.2,
+        "react": 0.5,
+        "hold_type": "none",
+        "rel_center": 0.498
     },
     {
         "id": "snap_phrase",
         "label": "Snap Phrase",
-        "behavior": "sine",
-        "source": "volume",
-        "speed": 0.7,
-        "react": 0.65,
-        "hold_type": "bar",
+        "behavior": "fuzzy",
+        "source": "bin 2",
+        "speed": 1,
+        "react": 1,
+        "hold_type": "none",
         "rel_center": 0.498
-    },
-    {
-        "id": "pause_jitter",
-        "label": "Pause-Jitter Sine",
-        "behavior": "noise",
-        "source": "beat phase",
-        "speed": 0,
-        "react": 0.95,
-        "hold_type": "none"
     },
     {
         "id": "rapid_climb",
         "label": "Rapid Climb",
-        "behavior": "saw",
-        "source": "spectral flux",
-        "speed": 0.5,
-        "react": 0.85,
+        "behavior": "direct",
+        "source": "impact",
+        "speed": 1,
+        "react": 1,
         "hold_type": "none",
         "rel_center": 0.498
     },
@@ -66,31 +59,31 @@
     {
         "id": "cycle_random",
         "label": "Random - On Beat",
-        "behavior": "noise",
-        "source": "beat phase",
+        "behavior": "stochastic",
+        "source": "volume",
         "speed": 0.3,
-        "react": 0.4,
+        "react": 0.15,
         "hold_type": "beat",
         "rel_center": 0.498
     },
     {
         "id": "inverse_bass",
-        "label": "Inverse Bass",
+        "label": "Flux Direct",
         "behavior": "direct",
-        "source": "bass",
+        "source": "spectral flux",
         "speed": 0.4,
         "react": 0.8,
         "hold_type": "none",
-        "rel_center": 0.5
+        "rel_center": 0.502
     },
     {
         "id": "kick_drum_step",
         "label": "kick drum step",
-        "behavior": "beat phase",
+        "behavior": "direct",
         "source": "bin 0",
-        "speed": 0.4,
-        "react": 0.65,
-        "hold_type": "none",
+        "speed": 1,
+        "react": 0.45,
+        "hold_type": "beat",
         "rel_center": 0.208
     },
     {
@@ -104,15 +97,74 @@
         "rel_center": 0.498
     },
     {
-        "id": "hi_hat",
-        "label": "hi hat",
-        "behavior": "static",
-        "source": "bass",
-        "speed": 1,
-        "react": 1,
+        "id": "random_bar_hold",
+        "label": "Random Bar Hold",
+        "behavior": "stochastic",
+        "source": "volume",
+        "speed": 0.5,
+        "react": 0.5,
+        "hold_type": "bar",
+        "rel_center": 0.5
+    },
+    {
+        "id": "random_beat_hold",
+        "label": "Random Beat Hold",
+        "behavior": "stochastic",
+        "source": "volume",
+        "speed": 0.5,
+        "react": 0.5,
+        "hold_type": "beat",
+        "rel_center": 0.5
+    },
+    {
+        "id": "beat_jump",
+        "label": "Beat Jump",
+        "behavior": "spike",
+        "source": "beat phase",
+        "speed": 0.2,
+        "react": 0.4,
         "hold_type": "none",
-        "rel_center": 0.498,
-        "value": 127
+        "rel_center": 0.5
+    },
+    {
+        "id": "bass_hum",
+        "label": "Bass Line Hum",
+        "behavior": "hum",
+        "source": "bass",
+        "speed": 0.1,
+        "react": 0.1,
+        "hold_type": "none",
+        "rel_center": 0.5
+    },
+    {
+        "id": "direct_hold",
+        "label": "Direct and Hold",
+        "behavior": "direct",
+        "source": "volume",
+        "speed": 0.5,
+        "react": 0.2,
+        "hold_type": "beat",
+        "rel_center": 0.502
+    },
+    {
+        "id": "hi_hit",
+        "label": "Hi Hit",
+        "behavior": "spike",
+        "source": "highs",
+        "speed": 0.2,
+        "react": 0.75,
+        "hold_type": "none",
+        "rel_center": 0.498
+    },
+    {
+        "id": "fuzzy_mids",
+        "label": "Fuzzy Mids",
+        "behavior": "fuzzy",
+        "source": "mids",
+        "speed": 0.1,
+        "react": 0.1,
+        "hold_type": "none",
+        "rel_center": 0.502
     },
     {
         "id": "new_trigger_state",

@@ -12,13 +12,14 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=424260634">
+<link rel="stylesheet" href="setup.css?v=strategy_v16">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
     .sidebar-title .brand span { color: var(--accent) !important; font-size: 0.85em !important; margin-left: 2px !important; font-weight: 900 !important; }
     .sidebar-title .subtitle { font-size: 0.75rem !important; font-weight: 800 !important; letter-spacing: 1px !important; text-transform: uppercase !important; color: var(--accent) !important; opacity: 0.8 !important; align-self: flex-start !important; margin-top: -2px !important; margin-left: 12px !important; }
 </style>
+<link rel="stylesheet" href="engine_tab.css?v=strategy_v19">
 </head>
 
 <body>
@@ -40,25 +41,22 @@
 
 
 
-        <div class="nav-btn" id="nav-btn-profile" onclick="window.location.href='profile.html'" title="Profiles">
+        <div class="nav-btn active" id="nav-btn-stage" onclick="switchTab('tab-stage')" title="Profile">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1.1 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.4 1.5 3.5.8.8 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>
             <span class="nav-text">Profile</span>
         </div>
 
-        <div class="nav-btn active" id="nav-btn-stage" onclick="switchTab('tab-stage')" title="Stage">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4"></path><path d="M2 10v11a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V10"></path><path d="M2 10h20"></path><path d="m9 15 3 3 3-3"></path></svg>
-            <span class="nav-text">Stage</span>
-        </div>
-
-        <div class="nav-btn" id="nav-btn-live" onclick="switchTab('tab-live')" title="Live Console">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><circle cx="7" cy="7" r="2"></circle><circle cx="17" cy="7" r="2"></circle><circle cx="7" cy="17" r="2"></circle><circle cx="17" cy="17" r="2"></circle></svg>
-            <span class="nav-text">Live</span>
-        </div>
+        
 
         <div class="nav-btn" id="nav-btn-presets" onclick="switchTab('tab-presets')" title="Presets">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
             <span class="nav-text">Presets</span>
         </div>
+        <div class="nav-btn" id="nav-btn-engine" onclick="switchTab('tab-engine')" title="Engine">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            <span class="nav-text">Engine</span>
+        </div>
+
 
         <div class="nav-btn" id="nav-btn-test" onclick="switchTab('tab-test')" title="Test Hub">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
@@ -89,57 +87,77 @@
         </div>
     </div>
 <div class="main">
+    <div id="universal-hud" class="universal-hud">
+        <div id="hud-presets" class="hud-presets"></div>
+        <div id="hud-vibe-log" class="hud-vibe-log"></div>
+    </div>
     <div id="tab-stage" class="tab-content">
-        <h2>Stage Patching</h2>
-        <p style="color:var(--text-dim)">Deploy profiles to the physical rig.</p>
+        <div class="row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <h2 style="margin:0;">Profile</h2>
+            <div class="btn-settings" onclick="cycleTheme()" title="Cycle Theme" style="cursor:pointer; opacity:0.6; transition: opacity 0.2s;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </div>
+        </div>
 
-        <div class="card">
-            <div class="card-title">Patch to Stage</div>
-            <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
-                <div>
-                    <label>Profile</label>
-                    <select id="stage-profile"></select>
+        <!-- PROFILES & MANAGEMENT -->
+        <div class="card" id="all-profiles-card" style="border-color: rgba(0, 242, 255, 0.2);">
+            <div class="row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="window.location.href='fixture_ai.html'">Add Profile</button>
+                    <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="document.getElementById('load-profile-input').click()">Load</button>
+                    <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background:var(--success); border-color:var(--success);" onclick="sendIt(event)">Save Stage</button>
+                    <input type="file" id="load-profile-input" style="display:none" onchange="loadProfiles(event)" multiple>
                 </div>
-                <div>
-                    <label>Address (1-512)</label>
-                    <input type="number" id="stage-addr" value="1" min="1" max="512">
-                </div>
-                <div>
-                    <label>Offset</label>
-                    <input type="number" id="stage-offset" value="0" min="0" max="512">
-                </div>
-                <div>
-                    <label>Zone</label>
-                    <input type="text" id="stage-zone" value="center" list="zone-options">
-                    <datalist id="zone-options">
-                        <option value="left">
-                        <option value="right">
-                        <option value="center">
-                        <option value="top">
-                        <option value="bottom">
-                    </datalist>
+                
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <input type="text" id="dmx-node-ip-input" placeholder="NODE IP: OFF" 
+                                style="width:110px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:var(--accent); font-family:monospace; font-weight:800; font-size:11px; padding:4px 8px; outline:none;" 
+                                onchange="saveNodeIp()">
+                            <button id="btn-update-node" class="btn btn-sm" style="height:22px; font-size:8px; padding:0 8px; background:rgba(0,242,255,0.1); color:var(--accent); border-color:rgba(0,242,255,0.2); display:none;" onclick="updateNode(event)">UPDATE</button>
+                        </div>
+                        <div id="node-tools-row" style="display:none; gap:4px;">
+                            <button class="btn btn-sm" style="height:16px; font-size:7px; padding:0 4px; opacity:0.6;" onclick="remoteNodeTool('status')">STAT</button>
+                            <button class="btn btn-sm" style="height:16px; font-size:7px; padding:0 4px; opacity:0.6;" onclick="remoteNodeTool('logs')">LOGS</button>
+                            <button class="btn btn-sm" style="height:16px; font-size:7px; padding:0 4px; opacity:0.6;" onclick="remoteNodeTool('restart')">RESTART</button>
+                            <button class="btn btn-sm" style="height:16px; font-size:7px; padding:0 4px; color:var(--danger); border-color:rgba(255,0,0,0.2); opacity:0.6;" onclick="remoteNodeTool('reboot')">REBOOT</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <button class="btn btn-primary" onclick="patchToStage()">➕ Add to Stage</button>
-                <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.3); padding:5px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
-                    <label style="font-size:10px; color:#666; text-transform:uppercase; white-space:nowrap;">📡 Node Mode (IP)</label>
-                    <input type="text" id="dmx-node-ip-input" placeholder="OFF" 
-                        style="width:110px; background:none; border:none; color:var(--accent); font-family:monospace; font-weight:800; font-size:12px; padding:0;" 
-                        onchange="saveNodeIp()">
+
+            <!-- COLLAPSIBLE: ALL PROFILES (Selection List) -->
+            <div class="row" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding: 2px 0;" onclick="toggleAllProfilesCollapse()">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="background: var(--accent); width: 4px; height: 16px; border-radius: 2px;"></div>
+                    <div class="card-title" style="margin:0; font-size: 14px;">Profile Library</div>
+                    <span id="all-profiles-count" style="font-size: 10px; color: #666; font-weight: 800;"></span>
+                </div>
+                <div id="all-profiles-arrow" style="transition: transform 0.3s; color: #666;">▼</div>
+            </div>
+            <div id="all-profiles-content" style="display:none; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                <div id="all-profiles-list" class="item-list"></div>
+            </div>
+        </div>
+
+        <!-- NODE CONSOLE MODAL -->
+        <div id="node-console-modal" class="ai-modal-overlay" style="display:none; z-index:15000;" onclick="this.style.display='none'">
+            <div class="ai-modal-content" style="max-width:600px; background:#000;" onclick="event.stopPropagation()">
+                <div class="ai-modal-header">
+                    <div id="node-console-title" style="font-weight:800; color:var(--accent); font-size:11px; letter-spacing:1px;">📡 NODE REMOTE CONSOLE</div>
+                    <button class="btn btn-sm" onclick="document.getElementById('node-console-modal').style.display='none'">×</button>
+                </div>
+                <div class="ai-modal-body" style="padding:0;">
+                    <pre id="node-console-output" style="margin:0; padding:15px; background:#000; color:#0f0; font-family:monospace; font-size:11px; white-space:pre-wrap; max-height:400px; overflow-y:auto;"></pre>
                 </div>
             </div>
         </div>
 
+        <!-- STAGE LIST -->
         <div class="card">
-            <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <div class="card-title" style="margin:0;">On Stage</div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn btn-sm" id="btn-toggle-json" onclick="toggleStageJson()">JSON</button>
-                    <button class="btn btn-primary btn-sm" onclick="sendIt(event)">Save Stage</button>
-                </div>
-            </div>
-            <div id="stage-list" class="item-list"></div>
+            <div id="stage-list" class="item-list" style="margin-top:0; border-top:none; padding-top:0;"></div>
+            
             <div id="stage-json-container" style="display:none; margin-top: 10px;">
                 <textarea id="stage-json-editor"
                     style="width:100%; height:300px; background:#1a1a1f; color:#0f0; font-family:monospace; border:1px solid #333; padding:10px; border-radius:4px;"></textarea>
@@ -267,7 +285,7 @@
                             <option value="state">State</option>
                             <option value="volume">Volume</option>
                             <option value="bin">Energy Bin</option>
-                            <option value="channel">DMX Channel</option>
+                            <option value="channel">Fixture Function</option>
                         </select>
                         <button class="btn btn-primary" onclick="addConditionFromUI()">+ Add Condition</button>
                     </div>
@@ -331,9 +349,9 @@
                 <!-- Active overrides will be rendered here -->
             </div>
 
-            <div style="margin-top: 20px; padding-top:15px; border-top:1px solid #333;">
+            <div class="preset-editor-actions">
                 <button class="btn btn-primary" onclick="savePreset()">💾 Save Preset</button>
-                <button class="btn btn-sm" style="margin-left:10px;" onclick="resetPresetForm()">Cancel</button>
+                <button class="btn btn-sm" onclick="resetPresetForm()">Cancel</button>
             </div>
         </div>
 
@@ -344,7 +362,208 @@
     </div>
 
     <!-- AI PRESET CHAT MODAL -->
-    <div id="ai-preset-modal" class="ai-modal-overlay"
+    
+    <div id="tab-engine" class="tab-content">
+        <h2>Engine & Analysis</h2>
+        <p style="color:var(--text-dim)">Sanity checks, live laboratory, and training data collection.</p>
+        
+        <details class="engine-accordion" ontoggle="if(this.open) { if(typeof openBehaviorLab === 'function') openBehaviorLab(); } else { window.labRunning = false; }">
+
+            <summary>🔬 Live Behavior Laboratory</summary>
+            <div class="accordion-content">
+                <!-- BEHAVIOR LABORATORY MODAL -->
+    
+        <div class="lab-modal-content" style="box-shadow:none; border:none; height:auto; background:transparent;">
+            <div class="lab-header">
+                <h2>🔬 Live Behavior Laboratory</h2>
+                
+            </div>
+            <div class="lab-body">
+                <div class="lab-controls" style="gap: 1.5rem;">
+                    <div style="flex: 2; display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 0.55rem; color: var(--accent);">BEHAVIOR PRESET</label>
+                        <select id="labBehaviorSelect" class="lab-select" style="padding: 6px 10px; font-size: 0.85rem;" onchange="resetLab()">
+                            <!-- Populated via JS -->
+                        </select>
+                    </div>
+                    <div style="flex: 3; display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 0.55rem; color: var(--text-dim);">SOURCE & LOGIC</label>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <select id="labSourceSelect" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 80px;" onchange="syncLabProbe()">
+                                <!-- Populated via JS -->
+                            </select>
+                            <select id="labBehaviorSelectSpecific" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 100px;" onchange="syncLabProbe()">
+                                <!-- Populated via JS -->
+                            </select>
+                            <select id="labHoldSelect" class="lab-select" style="font-size: 0.75rem; padding: 6px 8px; flex: 1; min-width: 80px; color: var(--success);" onchange="syncLabProbe()">
+                                <!-- Populated via JS -->
+                            </select>
+                            <button class="btn btn-save" style="padding: 0 12px; font-size: 0.65rem; background: var(--accent); height: 32px; width: auto; margin-right: 5px;" onclick="saveLabAsDefault()">
+                                SAVE
+                            </button>
+                            <button class="btn btn-save" style="padding: 0 12px; font-size: 0.65rem; background: var(--secondary); color:#fff; height: 32px; width: auto;" onclick="addNewBehaviorFromLab()">
+                                ADD NEW
+                            </button>
+                        </div>
+                    </div>
+                    <div style="flex: 2; display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 0.55rem; color: var(--text-dim);">DMX RANGE (MIN/CTR/MAX)</label>
+                        <div style="display: flex; gap: 4px;">
+                            <input type="number" id="labMin" value="0" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(45,212,191,0.05); color: #2dd4bf; border: 1px solid #2dd4bf; border-radius: 4px; flex: 1; text-align: center;">
+                            <input type="number" id="labCenter" value="127" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(14,165,233,0.05); color: #0ea5e9; border: 1px solid #0ea5e9; border-radius: 4px; flex: 1; text-align: center;">
+                            <input type="number" id="labMax" value="255" min="0" max="255" onchange="syncLabProbe()" style="padding: 6px; font-size: 0.8rem; background: rgba(139,92,246,0.05); color: #8b5cf6; border: 1px solid #8b5cf6; border-radius: 4px; flex: 1; text-align: center;">
+                        </div>
+                    </div>
+                </div>
+                <div class="lab-controls" style="background: rgba(255, 255, 255, 0.04); padding: 0.8rem; border-radius: 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem; width: 100%;">
+                        <div style="display: flex; gap: 1.5rem;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                                    <label style="font-size: 0.6rem; color: var(--accent); letter-spacing: 1px;">SPEED</label>
+                                    <span id="labSpeedVal" style="font-family: monospace; color: #fff; font-size: 0.8rem;">0.50</span>
+                                </div>
+                                <input type="range" id="labSpeed" min="0" max="1" step="0.05" value="0.5" 
+                                    style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border: none; cursor: pointer; accent-color: var(--accent);"
+                                    oninput="document.getElementById('labSpeedVal').textContent = parseFloat(this.value).toFixed(2); syncLabProbe()">
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                                    <label style="font-size: 0.6rem; color: var(--secondary); letter-spacing: 1px;">REACTIVITY</label>
+                                    <span id="labReactVal" style="font-family: monospace; color: #fff; font-size: 0.8rem;">0.80</span>
+                                </div>
+                                <input type="range" id="labReact" min="0" max="1" step="0.05" value="0.8" 
+                                    style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border: none; cursor: pointer; accent-color: var(--secondary);"
+                                    oninput="document.getElementById('labReactVal').textContent = parseFloat(this.value).toFixed(2); syncLabProbe()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lab-chart-wrap">
+                    <canvas id="behaviorChart"></canvas>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-dim);">
+                    <div>🔴 REAL AUDIO INPUT <span id="labEnergyStatus" style="margin-left:10px; color:var(--accent); font-weight:bold;">SIGNAL: 0%</span></div>
+                    <div>Y-AXIS: 0 - 255 | X-AXIS: ROLLING 5s (30Hz)</div>
+                </div>
+            </div>
+        </div>
+    
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="engine_tab.js?v=strategy_v19"></script>
+
+            </div>
+        </details>
+
+        <details class="engine-accordion">
+            <summary>🧠 The Collector</summary>
+            <div class="accordion-content">
+                <!-- TRAINING HUB (Feature Collector) -->
+            <div id="trainingHub" class="dash-panel" style="margin-top: 10px; border-color: rgba(249, 202, 36, 0.3);">
+                <div class="dash-header">
+                    <span style="color:#f9ca24;">🧠 Feature Collector</span>
+                    <span style="font-size: 9px; opacity:0.6;">30s BEFORE / 10s AFTER</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button class="btn" style="background:rgba(42, 90, 138, 0.4); border-color:#2a5a8a;" onclick="captureSnippet('chill')">Chill</button>
+                    <button class="btn" style="background:rgba(90, 90, 42, 0.4); border-color:#5a5a2a;" onclick="captureSnippet('mid')">Mid</button>
+                    <button class="btn" style="background:rgba(162, 155, 230, 0.4); border-color:#a29be6;" onclick="captureSnippet('building')">Building</button>
+                    <button class="btn" style="background:rgba(249, 202, 36, 0.4); border-color:#f9ca24;" onclick="captureSnippet('tension')">Tension</button>
+                    <button class="btn" style="background:rgba(235, 77, 75, 0.4); border-color:#eb4d4b; font-weight:900;" onclick="captureSnippet('dropping')">THE DROP</button>
+                    <button class="btn" style="background:rgba(138, 42, 90, 0.4); border-color:#8a2a5a;" onclick="captureSnippet('high')">High Vibe</button>
+                </div>
+                <div id="snippet-feedback" style="font-size:10px; color:#888; text-align:center; margin-top:8px;">Tap when energy transitions occur</div>
+            </div>
+
+        
+            </div>
+        </details>
+
+        <details class="engine-accordion">
+            <summary>⚖️ The Sanity Check</summary>
+            <div class="accordion-content">
+                <!-- SECTION: CALIBRATION (Sanity Check) -->
+            <div id="section-calibration" class="section">
+                <h1>Sanity Check</h1>
+                <p>Verify audio engine logic integrity against a factory source of truth.</p>
+                
+                <div id="calInitial" class="help-card" style="text-align: center;">
+                    <p>Verify engine performance against a synthetic EDM track or audit the live configuration against Gold Standards.</p>
+                    <div class="btn-grid-responsive" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <button class="btn btn-save" style="background: var(--accent); color: #000;" onclick="startCalibration()">Run Engine Calibration</button>
+                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Run Gold Standard Audit</button>
+
+                        <button class="btn btn-save" style="background: #333; color: #fff;" onclick="toggleLongTermAnalysis()">Long Term Analysis</button>
+                    </div>
+
+                </div>
+
+                <div id="longTermStatus" class="help-card" style="display:none; text-align: center; border-color: var(--accent);">
+                    <h3>Long Term Analysis Recording</h3>
+                    <div id="longTermTimer" style="font-family: monospace; font-size: 2.5rem; color: var(--accent); margin-bottom: 10px;">00:00:00</div>
+                    <div style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 20px;">
+                        Samples: <span id="longTermSamples" style="color:#fff">0</span> | 
+                        Est. Size: <span id="longTermMemory" style="color:#fff">0 KB</span>
+                    </div>
+                    <button class="btn btn-save" style="background: #ff3366; color: #fff; width: auto; padding: 10px 30px;" onclick="toggleLongTermAnalysis()">Stop & Save Analysis</button>
+                </div>
+
+                <div id="calRunning" class="help-card" style="display:none; text-align: center;">
+                    <h3>Analysis in Progress...</h3>
+                    <div id="calRunningBpm">---</div>
+                    <div class="cal-progress-wrap">
+                        <div id="calProgressBar" class="cal-progress-bar"></div>
+                    </div>
+                </div>
+
+                <div id="calResults" class="help-card" style="display:none;">
+                    <h3>Calibration Summary</h3>
+                    <div class="cal-grid">
+                        <div class="cal-item">
+                            <h4>Beats (Recall)</h4>
+                            <div id="calRecall">--</div>
+                        </div>
+                        <div class="cal-item">
+                            <h4>BPM Accuracy</h4>
+                            <div id="calBpmAcc">--</div>
+                        </div>
+                        <div id="calHealthWrap" class="cal-item" style="grid-column: span 2; display:none; border-color: rgba(0, 242, 255, 0.3); background: rgba(0, 242, 255, 0.05);">
+                            <h4>Environmental Audit</h4>
+                            <div id="calSignalHealth" style="font-weight: bold; font-size: 0.85rem; margin-bottom: 4px;">--</div>
+                            <div id="calSettingsSummary" style="color: var(--text-dim); font-size: 0.7rem; line-height: 1.4;">--</div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 15px 0 10px; color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Engine Logic Checks</h4>
+                    <div id="calChecksList" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Items injected here -->
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                        <button class="btn btn-save" style="background: rgba(255,255,255,0.1); color: #fff;" onclick="startCalibration()">Re-Run Calibration</button>
+                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Run Audit</button>
+                    </div>
+                </div>
+
+                <div id="auditResults" class="help-card" style="display:none;">
+                    <h3>Gold Standard Audit</h3>
+                    <p id="auditOverall" style="font-weight: bold; margin-bottom: 15px;"></p>
+                    <div id="auditChecksList" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Items injected here -->
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Re-Run Audit</button>
+                        <button class="btn btn-save" style="background: var(--accent); color: #000;" onclick="startCalibration()">Run Calibration</button>
+                    </div>
+                </div>
+            </div>
+        
+    
+            </div>
+        </details>
+    </div>
+<div id="ai-preset-modal" class="ai-modal-overlay"
         onclick="closePresetAiModal()">
         <div class="ai-modal-content chat-optimized" onclick="event.stopPropagation()">
             <div class="ai-modal-header">
@@ -375,9 +594,10 @@
             <div class="ai-modal-footer chat-footer">
                 <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
                     <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
-                        onclick="clearPresetAiChatHistory()">🗑️ Wipe</button>
+                        onclick="clearPresetAiChatHistory()">🗑️ Clear</button>
                     <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">[FIX]</button>
-                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[X/Y]</button>
+                    <button class="btn-suggestion" id="ai-zone-picker-btn" onclick="toggleZonePicker()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[ZONE]</button>
+                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt); opacity: 0.6;">[X/Y]</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
@@ -389,8 +609,13 @@
                 </div>
 
                 <div id="ai-fixture-picker" 
-                    style="display:none; position: absolute; bottom: 130px; left: 10px; right: 10px; background: #1a1a1a; border: 1px solid var(--accent); border-radius: 12px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                    style="display:none; padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
                     <!-- Fixture items injected here -->
+                </div>
+
+                <div id="ai-zone-picker" 
+                    style="display:none; padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent-alt); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
+                    <!-- Zone items injected here -->
                 </div>
 
                 <div style="display: flex; gap: 10px; position: relative;">
@@ -426,9 +651,12 @@
                     <div style="display:flex; gap:8px;">
                         <button class="btn btn-secondary btn-sm" id="ai-preset-view-diff-btn" onclick="showPresetAiDiff()"
                             style="display:none; border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
+                        <button class="btn btn-accent btn-sm" id="ai-preset-save-btn"
+                            onclick="savePreset()"
+                            style="display:none; background:var(--accent);">💾 Save Preset</button>
                         <button class="btn btn-primary btn-sm" id="ai-preset-apply-btn"
                             onclick="acceptPresetAi()"
-                            style="display:none; background:var(--success);">Apply</button>
+                            style="display:none; background:var(--success);">Apply & Close</button>
                     </div>
                 </div>
             </div>
@@ -572,18 +800,6 @@
                     <div id="rec-status" class="rec-status">
                         <span class="rec-dot"></span> REC <span id="rec-timer" style="margin-left:8px; font-family:monospace;">00:00</span>
                     </div>
-                    <div id="test-vibe-badge" style="
-                        font-size: 10px;
-                        font-weight: 900;
-                        letter-spacing: 1px;
-                        text-transform: uppercase;
-                        padding: 3px 10px;
-                        border-radius: 20px;
-                        background: rgba(255,255,255,0.05);
-                        border: 1px solid #333;
-                        color: #666;
-                        transition: background 0.4s, color 0.4s, border-color 0.4s;
-                    ">VIBE —</div>
                 </div>
                 <div style="display:flex; gap:8px;">
                     <button id="btn-mute-others" class="btn btn-sm" onclick="toggleMuteOthers()" 
@@ -595,19 +811,6 @@
                     <button class="btn btn-danger btn-sm" onclick="clearAllGlobalOverrides()">Release All</button>
                 </div>
             </div>
-            <div id="active-presets-bar" class="active-presets-bar"></div>
-        <div id="test-event-log" style="
-            max-height: 72px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 10px;
-            color: #666;
-            padding: 4px 8px;
-            border-top: 1px solid #1a1a1a;
-            display: flex;
-            flex-direction: column-reverse;
-            gap: 2px;
-        "></div>
         </div>
 
         <div id="test-live-feed-container">
@@ -630,7 +833,7 @@
                     <button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:#333;" onclick="clearTestFunctions()">Clear</button>
                 </div>
             </div>
-            <div id="test-fixture-picker" style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div id="test-fixture-picker" class="test-fixture-picker">
                 <!-- Picks will be rendered here -->
             </div>
 
@@ -654,15 +857,16 @@
         window.LAUNCHER_API = window.LAUNCHER_API || "";
         window.API_BASE = window.API_BASE || "";
     </script>
-    <script src="shared_setup.js?v=424260634"></script>
-<script src="live_controller.js?v=424260634"></script>
-<script src="profile_logic.js?v=424260634"></script>
-<script src="ai_architect.js?v=424260634"></script>
-<script src="stage_logic.js?v=424260634"></script>
+    <script src="shared_setup.js?v=strategy_v19"></script>
+<script src="live_controller.js?v=strategy_v19"></script>
+<script src="profile_logic.js?v=strategy_v19"></script>
+<script src="ai_architect.js?v=strategy_v19"></script>
+<script src="stage_logic.js?v=strategy_v19"></script>
 <script>window.onload = () => { 
-    console.log("🚀 VJ Manager starting (UI Refreshed)..."); 
+    console.log("✅ RaveBox Core Ready (v435)"); 
     // All routing and landing logic (redirects, tab switching) 
     // is now handled by Core Routing in shared_setup.js (v424)
     // to ensure deterministic behavior across all pages.
+    if (typeof loadNodeIp === 'function') loadNodeIp();
     if (typeof refreshUI === 'function') refreshUI();
 };</script></body></html>
