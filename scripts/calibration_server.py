@@ -133,7 +133,15 @@ class CalibrationHandler(BaseHTTPRequestHandler):
         if self.path.startswith('/capture'):
             frame = ctx.get_frame()
             if frame is not None:
-                _, jpeg = cv2.imencode('.jpg', frame)
+                # Optional Resizing
+                w = query.get('w', [None])[0]
+                h = query.get('h', [None])[0]
+                if w and h:
+                    try:
+                        frame = cv2.resize(frame, (int(w), int(h)), interpolation=cv2.INTER_AREA)
+                    except: pass
+
+                _, jpeg = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
                 self.send_cors_headers(200, "image/jpeg")
                 self.wfile.write(jpeg.tobytes())
             else: self.send_error(503)

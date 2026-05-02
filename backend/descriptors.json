@@ -5,8 +5,8 @@
         "behavior": "direct",
         "source": "bin 0",
         "speed": 0.2,
-        "react": 0,
-        "hold_type": "bar",
+        "react": 0.8,
+        "hold_type": "none",
         "rel_center": 0.498
     },
     {
@@ -14,9 +14,9 @@
         "label": "Smooth Drift",
         "behavior": "sine",
         "source": "bass",
-        "speed": 0.3,
-        "react": 0.45,
-        "hold_type": "beat",
+        "speed": 0.1,
+        "react": 0.25,
+        "hold_type": "none",
         "rel_center": 0.498
     },
     {
@@ -24,19 +24,19 @@
         "label": "Bass Pump",
         "behavior": "direct",
         "source": "bin 1",
-        "speed": 0.2,
-        "react": 0.5,
+        "speed": 0.05,
+        "react": 0.9,
         "hold_type": "none",
         "rel_center": 0.498
     },
     {
         "id": "snap_phrase",
         "label": "Snap Phrase",
-        "behavior": "fuzzy",
-        "source": "bin 2",
-        "speed": 1,
-        "react": 1,
-        "hold_type": "none",
+        "behavior": "stochastic",
+        "source": "mids",
+        "speed": 0.5,
+        "react": 0.45,
+        "hold_type": "beat",
         "rel_center": 0.498
     },
     {
@@ -60,7 +60,7 @@
         "id": "cycle_random",
         "label": "Random - On Beat",
         "behavior": "stochastic",
-        "source": "volume",
+        "source": "mids",
         "speed": 0.3,
         "react": 0.15,
         "hold_type": "beat",
@@ -80,16 +80,16 @@
         "id": "kick_drum_step",
         "label": "kick drum step",
         "behavior": "direct",
-        "source": "bin 0",
-        "speed": 1,
+        "source": "bass",
+        "speed": 0,
         "react": 0.45,
         "hold_type": "beat",
-        "rel_center": 0.208
+        "rel_center": 0.004
     },
     {
         "id": "hi_hat",
         "label": "hi hat",
-        "behavior": "beat phase",
+        "behavior": "direct",
         "source": "highs",
         "speed": 1,
         "react": 1,
@@ -119,22 +119,22 @@
     {
         "id": "beat_jump",
         "label": "Beat Jump",
-        "behavior": "spike",
+        "behavior": "direct",
         "source": "beat phase",
         "speed": 0.2,
         "react": 0.4,
         "hold_type": "none",
-        "rel_center": 0.5
+        "rel_center": 0.502
     },
     {
         "id": "bass_hum",
         "label": "Bass Line Hum",
-        "behavior": "hum",
-        "source": "bass",
-        "speed": 0.1,
-        "react": 0.1,
+        "behavior": "direct",
+        "source": "bin 1",
+        "speed": 0,
+        "react": 0.6,
         "hold_type": "none",
-        "rel_center": 0.5
+        "rel_center": 0.502
     },
     {
         "id": "direct_hold",
@@ -149,10 +149,10 @@
     {
         "id": "hi_hit",
         "label": "Hi Hit",
-        "behavior": "spike",
+        "behavior": "saw",
         "source": "highs",
         "speed": 0.2,
-        "react": 0.75,
+        "react": 0.65,
         "hold_type": "none",
         "rel_center": 0.498
     },

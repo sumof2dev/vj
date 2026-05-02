@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Console - RaveBox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="setup.css?v=51262349">
+    <link rel="stylesheet" href="engine_tab.css?v=51262349">
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --surface: #16161a;
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --success: #00ff88;
+            --error: #ff3366;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+        }
+
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('background.png') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+            transition: background-image 1s ease-in-out;
+        }
+
+        .console-container {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
+            width: 100%;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            max-width: 350px; /* Default small */
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .console-header {
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .console-header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #live-console-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+
+
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .console-container {
+                border-radius: 24px;
+            }
+            #live-console-grid {
+                gap: 8px;
+                padding: 15px;
+            }
+        }
+        /* Console Header HUD Overrides */
+        .console-header .universal-hud {
+            position: relative !important;
+            top: 0 !important;
+            background: none !important;
+            backdrop-filter: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            overflow: hidden !important;
+        }
+        .console-header .hud-presets {
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 11px !important;
+            color: var(--primary) !important;
+            font-weight: 800 !important;
+        }
+        .console-header .hud-vibe-log {
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 10px !important;
+            color: var(--text-dim) !important;
+            max-width: 150px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        /* Mini EQ */
+        .mini-eq {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 20px;
+            padding: 2px 4px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .eq-bar {
+            width: 3px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 1px;
+            transition: height 0.1s ease-out;
+            min-height: 2px;
+        }
+        
+        /* Clean Divider Accordion */
+        .engine-accordion summary::after {
+            display: none !important;
+        }
+        .engine-accordion summary {
+            outline: none;
+        }
+    </style>
+</head>
+<body class="theme-glass" style="flex-direction: column; padding: 20px;">
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay">
+        <div class="loader-logo">RAVE<span>BOX</span></div>
+        <div class="loader-spinner-wrap">
+            <div class="loader-spinner"></div>
+            <div class="loader-spinner-inner"></div>
+        </div>
+    </div>
+
+    <div class="console-container" id="console-main-container">
+        <div class="console-header" style="padding: 15px 20px;">
+            <div style="display:flex; align-items:center; gap:15px; flex:1;">
+                <h1 style="margin:0;">Console <span style="font-size: 8px; opacity: 0.3; vertical-align: middle;">VJ Console v51262349</span></h1>
+                <div class="mini-eq" id="console-eq">
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                    <div class="eq-bar"></div>
+                </div>
+                <div id="universal-hud" class="universal-hud" style="margin:0; border:none; background:none; padding:0; box-shadow:none; flex:1;">
+                    <div id="hud-presets" class="hud-presets" style="margin:0; font-size:10px;"></div>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div id="hud-vibe-log" class="hud-vibe-log" style="margin:0; border:none; background:none; padding:0; box-shadow:none; font-size:10px; opacity:0.8;"></div>
+                <div id="live-edit-controls" style="display:none; gap:8px; align-items:center;">
+                    <button class="btn btn-primary btn-sm" onclick="saveLiveConfigToServer()" style="background:var(--danger); font-size:9px;">SAVE AS...</button>
+                    <button class="btn btn-sm" onclick="loadLiveConfigFromServer()" style="font-size:9px;">LOAD</button>
+                </div>
+                <button class="btn btn-sm" id="live-gear-btn" onclick="toggleLiveEditMode()" style="padding: 8px; border-radius: 50%; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+                <button class="btn btn-sm" onclick="window.location.href='manager.html'" style="padding: 8px; border-radius: 50%; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- CAMERA FEED ABOVE GRID -->
+        <div id="live-console-feed-container" style="display:none; padding:10px; background: #000; border-bottom: 1px solid var(--border); flex-shrink: 0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div style="font-size:10px; font-weight:800; color:var(--accent);">● LIVE FEED</div>
+                <button class="btn btn-sm" onclick="toggleLiveConsoleFeed(false)">✕ CLOSE FEED</button>
+            </div>
+            <img id="live-console-feed-img" style="width:100%; border-radius:8px; display:block;" src="">
+        </div>
+
+        <div id="live-console-grid">
+            <!-- Buttons will be injected here -->
+        </div>
+
+        <!-- 3. SLIDER SETUP (Live Override) -->
+        <details class="engine-accordion" style="margin: 0; border:none; border-top:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0;" ontoggle="if(this.open) { renderSliderSetup(); this.scrollIntoView({behavior:'smooth'}); }">
+            <summary style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
+                <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+            </summary>
+            <div class="accordion-content" style="background:rgba(0,0,0,0.2); padding: 10px;">
+                <!-- Fixture Picker -->
+                <div id="pres-slider-setup-picker" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px;">
+                    <!-- Fixture pills injected here -->
+                </div>
+
+                <!-- Strips Container -->
+                <div id="pres-slider-setup-strips" style="display:flex; gap:10px; overflow-x:auto; padding:10px 0; min-height:160px; scrollbar-width: thin; scrollbar-color: var(--accent) transparent;">
+                    <!-- Sliders injected here -->
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);">
+                    <button class="btn btn-sm" onclick="clearSliderSetup()" style="font-size:10px; opacity:0.6; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">CLEAR ALL OVERRIDES</button>
+                    <!-- Hide Capture button in Console as there's no active preset editor context -->
+                    <button class="btn btn-primary btn-sm" onclick="recordSliderSetup()" id="pres-slider-record-btn" style="display:none; font-size:10px;">CAPTURE</button>
+                </div>
+            </div>
+        </details>
+    </div>
+
+    <!-- ASSIGNMENT MODAL (Mirrored from setup.html) -->
+    <div id="live-assignment-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2001; align-items:center; justify-content:center; padding:20px;">
+        <div class="card" style="width:100%; max-width:400px; padding:20px; background:#16161a; border-radius:24px; border:1px solid rgba(255,255,255,0.1);">
+            <div class="card-title">Assign Button <span id="assign-btn-idx">#1</span></div>
+            
+            <label>Function Type</label>
+            <select id="assign-type" onchange="updateAssignmentOptions()" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px; margin-top:5px;">
+                <option value="none">None</option>
+                <option value="preset">Preset</option>
+                <option value="slider">2 Axis (XY)</option>
+                <option value="dmx_slider">DMX Slider (Console)</option>
+                <option value="knob">Knob (Rotary)</option>
+                <option value="live_feed">Live Feed Toggle</option>
+                <option value="blackout">Blackout</option>
+            </select>
+
+            <div id="assign-preset-wrap" style="display:none; margin-top:15px;">
+                <label>Select Preset</label>
+                <select id="assign-preset-id" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px; margin-top:5px;"></select>
+            </div>
+
+            <div id="assign-slider-wrap" style="display:none; margin-top:10px;">
+                <!-- CHANNEL Y (Vertical / Default) -->
+                <div style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:10px; border-left: 3px solid var(--accent);">
+                    <div style="font-size:10px; font-weight:800; color:var(--accent); margin-bottom:5px;">CHANNEL Y (VERTICAL)</div>
+                    <label>Profile</label>
+                    <select id="assign-profile-id" onchange="updateAssignmentChannels('assign-channel-idx', this.value)" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></select>
+                    <label style="margin-top:8px; display:block;">Channel</label>
+                    <select id="assign-channel-idx" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></select>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+                        <div><label>Min</label><input type="number" id="assign-min" value="0" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></div>
+                        <div><label>Max</label><input type="number" id="assign-max" value="255" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></div>
+                    </div>
+                </div>
+
+                <!-- CHANNEL X (Horizontal - Optional) -->
+                <div id="assign-x-wrap" style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border-left: 3px solid var(--accent-alt);">
+                    <div style="font-size:10px; font-weight:800; color:var(--accent-alt); margin-bottom:5px;">CHANNEL X (HORIZONTAL - OPTIONAL)</div>
+                    <label>Profile</label>
+                    <select id="assign-profile-id-x" onchange="updateAssignmentChannels('assign-channel-idx-x', this.value)" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;">
+                        <option value="">-- None (Single Axis) --</option>
+                    </select>
+                    <label style="margin-top:8px; display:block;">Channel</label>
+                    <select id="assign-channel-idx-x" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></select>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+                        <div><label>Min</label><input type="number" id="assign-min-x" value="0" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></div>
+                        <div><label>Max</label><input type="number" id="assign-max-x" value="255" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <label style="margin-top:15px; display:block;">Button Color</label>
+            <div style="display:flex; gap:8px; margin-top:5px;">
+                <button class="color-swatch" onclick="setAssignColor('#7c4dff')" style="background:#7c4dff; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+                <button class="color-swatch" onclick="setAssignColor('#00ffcc')" style="background:#00ffcc; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+                <button class="color-swatch" onclick="setAssignColor('#ff4757')" style="background:#ff4757; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+                <button class="color-swatch" onclick="setAssignColor('#2ed573')" style="background:#2ed573; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+                <button class="color-swatch" onclick="setAssignColor('#ffa502')" style="background:#ffa502; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn" onclick="closeAssignment()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAssignment()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared_setup.js?v=51262349"></script>
+    <script src="profile_logic.js?v=51262349"></script>
+    <script src="live_controller.js?v=51262349"></script>
+    <script>
+        // Mirror Manager Background Logic
+        let currentBgUrl = '';
+        function connectLiveDashboard() {
+            if (window.ws && (window.ws.readyState === WebSocket.CONNECTING || window.ws.readyState === WebSocket.OPEN)) return;
+
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+            const wsUrl = window.isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : 
+                          ((window.isCustomTunnel) ? `${wsProtocol}://${window.wsHost}` : 
+                          `${wsProtocol}://${window.host || location.hostname}:${savedPort}`);
+            
+            const ws = new WebSocket(wsUrl);
+            ws.binaryType = 'arraybuffer';
+            window.ws = ws;
+
+            ws.onmessage = (e) => {
+                if (e.data instanceof ArrayBuffer) {
+                    window.lastBinaryData = e.data;
+                    return;
+                }
+                
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type === 'audio_state' || msg.type === 'state') {
+                        window.latestAudioState = msg;
+                        const sp = msg.spotify;
+                        if (sp && sp.image_high && sp.image_high !== currentBgUrl) {
+                            currentBgUrl = sp.image_high;
+                            document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('${currentBgUrl}')`;
+                        } else if (!sp && currentBgUrl !== '') {
+                            currentBgUrl = '';
+                            document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('background.png')`;
+                        }
+                        if (typeof window.updateUniversalHUD === 'function') window.updateUniversalHUD();
+                    }
+                } catch (err) {}
+            };
+
+            // High-frequency UI update loop for EQ
+            setInterval(() => {
+                if (!window.lastBinaryData) return;
+                const view = new DataView(window.lastBinaryData);
+                
+                // Update Mini EQ
+                // Layout: bins start at offset 32 (6x f32)
+                const bars = document.querySelectorAll('#console-eq .eq-bar');
+                for (let i = 0; i < 6; i++) {
+                    if (bars[i]) {
+                        const val = view.getFloat32(32 + (i * 4), true);
+                        const h = Math.max(2, val * 18);
+                        bars[i].style.height = h + 'px';
+                        
+                        // Dynamic color/opacity
+                        const isActive = val > 0.05;
+                        const isPeak = val > 0.85;
+                        bars[i].style.background = isPeak ? '#f200ff' : (isActive ? '#00f2ff' : '#555');
+                        bars[i].style.opacity = 0.4 + (val * 0.6);
+                    }
+                }
+            }, 50); // 20fps for smooth bars
+        }
+        
+        function initConsole() {
+            if (typeof loadLiveConfig === 'function') loadLiveConfig();
+            if (typeof renderLiveTab === 'function') renderLiveTab();
+            connectLiveDashboard();
+        }
+
+        if (window.RAVEBOX_READY) {
+            initConsole();
+        } else {
+            window.addEventListener('RAVEBOX_READY', initConsole);
+        }
+
+        // Dynamic Sizing Logic
+        const originalRender = window.renderLiveTab;
+        window.renderLiveTab = function() {
+            if (typeof originalRender === 'function') originalRender();
+            else if (typeof window.renderLiveTabActual === 'function') window.renderLiveTabActual();
+            const container = document.getElementById('console-main-container');
+            if (!container) return;
+
+            const grid = document.getElementById('live-console-grid');
+            const btns = grid.querySelectorAll('.live-btn');
+            
+            let maxIdx = -1;
+            btns.forEach((btn, i) => {
+                const cfg = liveConfig[i];
+                if (cfg && cfg.type !== 'none') maxIdx = i;
+            });
+
+            if (window.liveEditMode) maxIdx = Math.max(maxIdx, 15);
+
+            const rowCount = Math.ceil((maxIdx + 1) / 4);
+            const colCount = Math.min(4, maxIdx + 1);
+
+            // Adjust width based on columns used (though we usually have 4 cols)
+            // But let's adjust max-width based on how "full" it is
+            if (maxIdx < 4) {
+                container.style.maxWidth = '350px';
+            } else if (maxIdx < 8) {
+                container.style.maxWidth = '500px';
+            } else {
+                container.style.maxWidth = '800px';
+            }
+
+            // Adjust height implicitly via content, but we can add a class if it's "full screen"
+            if (maxIdx >= 11) {
+                container.style.borderRadius = '24px';
+                container.style.width = '95%';
+            } else {
+                container.style.width = 'auto';
+                container.style.minWidth = '320px';
+            }
+        };
+    </script>
+</body>
+</html>

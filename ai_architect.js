@@ -1467,9 +1467,18 @@ OVERRIDE SCHEMA:
 - NEW INSTRUCTION: ${text}
 - CONVERSATION DIALOGUE: ${JSON.stringify(presetConversationHistory.slice(-5))}
 
-Output: Return a JSON object with:
-- "presets": array of objects {name: string, triggers: array, overrides: array}
-- "logic_explanation": compact summary
+Output: Return a JSON object with EXACTLY this structure:
+{
+  "presets": [
+    {
+      "name": "Descriptive Name",
+      "triggers": [...],
+      "overrides": [...]
+    }
+  ],
+  "logic_explanation": "Compact summary of the strategy"
+}
+CRITICAL: Do NOT return an empty presets array. If you describe a lighting plan in 'logic_explanation', you MUST provide the corresponding JSON data in the 'presets' array.
 Output: Valid raw JSON object only.`;
 
 
@@ -1530,7 +1539,6 @@ Output: Valid raw JSON object only.`;
                                 name: role,
                                 role: role,
                                 value: val,
-                                smoothing: o.smoothing ?? 0,
                                 channels: (o.channels && o.channels.length > 0) ? o.channels.map(ch => ({
                                     name: ch.name || role,
                                     value: ch.value ?? val,
@@ -1834,7 +1842,7 @@ Output: Valid raw JSON object only.`;
                 fixtureIds.forEach(id => {
                     currentPresetOverrides.push({
                         id: id, target: id, type: 'instance',
-                        name: 'dimmer', role: 'dimmer', value: 0, smoothing: 0,
+                        name: 'dimmer', role: 'dimmer', value: 0,
                         channels: [{ name: 'dimmer', value: 0 }]
                     });
                 });
@@ -1843,7 +1851,7 @@ Output: Valid raw JSON object only.`;
                 if (fixtureIds.length === 0) {
                     currentPresetOverrides.push({
                         id: 'global', target: 'global', type: 'global',
-                        name: 'dimmer', role: 'dimmer', value: 0, smoothing: 0,
+                        name: 'dimmer', role: 'dimmer', value: 0,
                         channels: [{ name: 'dimmer', value: 0 }]
                     });
                 }

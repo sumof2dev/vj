@@ -131,6 +131,10 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
              return
 
 
+        if path == '/api/descriptors.json':
+            self._handle_get_descriptors()
+            return
+
         return super().do_GET()
 
     def do_PUT(self):
@@ -309,6 +313,20 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         fpath = os.path.join(BASE_DIR, 'fixtures', fname)
         if not os.path.exists(fpath):
             self.send_error(404, "Fixture not found")
+            return
+
+        try:
+            with open(fpath, 'r') as f:
+                data = json.load(f)
+            self._send_json(data)
+        except Exception as e:
+            self.send_error(500, str(e))
+
+    def _handle_get_descriptors(self):
+        """Read descriptors.json from backend/"""
+        fpath = os.path.join(BASE_DIR, 'backend', 'descriptors.json')
+        if not os.path.exists(fpath):
+            self.send_error(404, "Descriptors not found")
             return
 
         try:

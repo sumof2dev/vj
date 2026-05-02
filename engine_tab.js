@@ -19,12 +19,26 @@ let labState = {
 
 window.openBehaviorLab = function() {
     console.log("🔬 Opening Behavior Laboratory...");
-    window.labRunning = true;
-    if (!labChart) {
-        initLabChart();
+    
+    // Prevent multiple loops
+    if (window.labRunning) {
+        console.log("⚠️ Lab already running, skipping re-init.");
+        return;
     }
-    resetLab();
-    labLoop();
+    
+    window.labRunning = true;
+    labBuffer = []; // Reset buffer
+    
+    if (labChart) {
+        labChart.destroy();
+        labChart = null;
+    }
+    
+    if (typeof initLabChart === 'function') initLabChart();
+    if (typeof resetLab === 'function') resetLab();
+    
+    labLastTick = Date.now();
+    requestAnimationFrame(labLoop);
 };
 
 function startCalibration() {
@@ -172,15 +186,26 @@ initEngineTab();
         }
 
         function calculateRuleSimulation(dt, st, rule, audio) {
+            if (isNaN(dt)) dt = 0.033;
+            
             const behavior = (rule.behavior || 'static').toLowerCase();
             const source = (rule.source || 'volume').toLowerCase();
-            const speed = parseFloat(rule.modifiers?.speed || 0.5);
-            const react = parseFloat(rule.modifiers?.react || 0.8);
-            const hold_type = (rule.modifiers?.hold_type || 'none').toLowerCase();
             
-            const c_min = parseInt(rule.cal?.min || 0);
-            const c_max = parseInt(rule.cal?.max || 255);
-            const c_center = parseInt(rule.cal?.center || 127);
+            // Support both flat and nested (modifiers) formats with strict NaN protection
+            const speed = parseFloat(rule.modifiers?.speed ?? rule.speed ?? 0.5) || 0;
+            const react = parseFloat(rule.modifiers?.react ?? rule.react ?? 0.8) || 0;
+            const hold_type = (rule.modifiers?.hold_type ?? rule.hold_type ?? 'none').toLowerCase();
+            
+            const c_min = parseInt(rule.cal?.min ?? rule.min ?? 0) || 0;
+            const c_max = parseInt(rule.cal?.max ?? rule.max ?? 255) || 255;
+            
+            // Fixed operator precedence for center calculation
+            let c_center = 127;
+            if (rule.cal?.center !== undefined) c_center = parseInt(rule.cal.center);
+            else if (rule.rel_center !== undefined) c_center = Math.round(c_min + (rule.rel_center * (c_max - c_min)));
+            else if (rule.center !== undefined) c_center = parseInt(rule.center);
+            
+            if (isNaN(c_center)) c_center = 127;
 
             // 1. Resolve Driver Magnitude (E)
             let E = 0;
@@ -188,12 +213,14 @@ initEngineTab();
             else if (source === 'bass') E = audio.bass || 0;
             else if (source === 'mids') E = audio.mid || 0;
             else if (source === 'highs') E = audio.high || 0;
-            else if (source === 'spectral flux') E = audio.flux || 0;
+            else if (source === 'spectral flux' || source === 'impact') E = audio.flux || 0;
             else if (source === 'beat phase') E = audio.beat_phase || 0;
             else if (source.startsWith('bin ')) {
                 const idx = parseInt(source.split(' ')[1]);
                 E = (audio.bins && audio.bins[idx] !== undefined) ? audio.bins[idx] : 0;
             } else if (source === 'static') E = 1.0;
+            
+            if (isNaN(E)) E = 0;
 
             // 2. Hold Logic
             let trigger_hold = false;
@@ -226,6 +253,29 @@ initEngineTab();
             } else if (behavior === 'stochastic') {
                 if (trigger_hold || !st.hold_active) st._rand = (Math.random() * 2.0) - 1.0;
                 y = st._rand || 0;
+            } else if (behavior === 'spike') {
+                if (st.spike_val === undefined) st.spike_val = 0;
+                const threshold = (1.0 - react) * 0.35;
+                if (E > (st.last_E || 0) + threshold) st.spike_val = E;
+                st.spike_val *= Math.max(0.0, 1.0 - dt * speed * 1.2);
+                st.last_E = E;
+                y = (st.spike_val * 2.0) - 1.0;
+            } else if (behavior === 'hum') {
+                st.t += dt * speed * 2.5;
+                const osc = Math.sin(st.t) * react * 0.2;
+                y = ((E + osc) * 2.0) - 1.0;
+            } else if (behavior === 'fuzzy') {
+                st.t += dt * speed * 1.8;
+                const noise = (_labNoise(st.t) * 2.0 - 1.0) * react * 0.25;
+                y = ((E + noise) * 2.0) - 1.0;
+            } else if (behavior === 'direct_stepped') {
+                const steps = 8;
+                y = (Math.floor(E * steps) / steps * 2.0) - 1.0;
+            } else if (behavior === 'beat phase') {
+                y = (audio.beat_phase * 2.0 * E) - 1.0;
+            } else if (behavior === 'bar phase') {
+                const p = ((audio.beat_count % 4) + audio.beat_phase) / 4.0;
+                y = (p * 2.0 * E) - 1.0;
             }
 
             // 4. Map to DMX
@@ -240,24 +290,9 @@ initEngineTab();
             return final_dmx;
         }
 
-        function parseBinaryState(buffer) {
+        window.parseBinaryState = function(buffer) {
             const dv = new DataView(buffer);
-
-            // Long Term Recording hook (Sample at 5Hz / 200ms)
-            if (window.longTermRecording) {
-                const now = Date.now();
-                if (now - window.lastLongTermSampleAt >= 200) {
-                    window.lastLongTermSampleAt = now;
-                    const currentBins = [];
-                    for (let i = 0; i < 6; i++) {
-                        currentBins.push(parseFloat(dv.getFloat32(32 + i * 4, true).toFixed(3)));
-                    }
-                    window.longTermData.push({
-                        t: Math.round((now - window.longTermStartTime) / 1000),
-                        b: currentBins
-                    });
-                }
-            }
+            
             // Layout (Total 599 bytes): m_time(f32), flux..bpm(6x f32), beat_phase(f32), bins(6x f32), beat..pad(4x u8), axis..
             labAudioState.flux = dv.getFloat32(4, true);
             labAudioState.bass = dv.getFloat32(8, true);
@@ -277,6 +312,13 @@ initEngineTab();
             }
             labAudioState._lastBeat = beat;
             labAudioState.beat = beat;
+
+            // Debug Heartbeat for Lab Data
+            if (!window._labDebugCounter) window._labDebugCounter = 0;
+            window._labDebugCounter++;
+            if (window._labDebugCounter % 60 === 0) {
+                console.log("📈 Lab Data Heartbeat:", { vol: labAudioState.vol.toFixed(3), bins: labAudioState.bins.map(b => b.toFixed(2)) });
+            }
         }
 
         function toggleLongTermAnalysis() {
@@ -519,15 +561,22 @@ initEngineTab();
                 labChart.data.datasets[0].data = labBuffer;
                 
                 // Update reference lines
-                const c_min = parseInt(document.getElementById('labMin').value) || 0;
-                const c_max = parseInt(document.getElementById('labMax').value) || 255;
-                const c_center = parseInt(document.getElementById('labCenter').value) || 127;
+                const c_min = parseInt(document.getElementById('labMin')?.value) || 0;
+                const c_max = parseInt(document.getElementById('labMax')?.value) || 255;
+                const c_center = parseInt(document.getElementById('labCenter')?.value) || 127;
                 
-                labChart.data.datasets[1].data = Array(labChart.data.datasets[1].data.length).fill(c_max);
-                labChart.data.datasets[2].data = Array(labChart.data.datasets[2].data.length).fill(c_min);
-                labChart.data.datasets[3].data = Array(labChart.data.datasets[3].data.length).fill(c_center);
+                if (labChart.data.datasets[1]) labChart.data.datasets[1].data = Array(labBuffer.length).fill(c_max);
+                if (labChart.data.datasets[2]) labChart.data.datasets[2].data = Array(labBuffer.length).fill(c_min);
+                if (labChart.data.datasets[3]) labChart.data.datasets[3].data = Array(labBuffer.length).fill(c_center);
                 
                 labChart.update('none');
+                
+                // Final Diagnostic: If we have data but no line, it's a Chart.js issue
+                if (!window._labLoopCount) window._labLoopCount = 0;
+                window._labLoopCount++;
+                if (window._labLoopCount % 90 === 0) {
+                    console.log(`📊 Lab Rendering Check: ${labBuffer.length} points | Latest: ${Math.round(val)}`);
+                }
             }
             requestAnimationFrame(labLoop);
         }

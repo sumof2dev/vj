@@ -31,6 +31,37 @@ window.generateFriendlyId = function(type, existingIds = []) {
     return finalId;
 };
 
+window.showToast = function(msg, duration = 3000, type = 'info') {
+    let el = document.getElementById('toast-container');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'toast-container';
+        el.style.cssText = 'position:fixed; bottom:80px; left:50%; transform:translateX(-50%); z-index:100000; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
+        document.body.appendChild(el);
+    }
+
+    const toast = document.createElement('div');
+    toast.style.cssText = `background:rgba(0,0,0,0.9); color:#fff; padding:12px 24px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); border-left:4px solid var(--accent); backdrop-filter:blur(20px); font-size:13px; font-weight:900; box-shadow:0 15px 45px rgba(0,0,0,0.6); transform:translateY(40px); opacity:0; transition:all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); pointer-events:auto; letter-spacing:0.5px; text-transform:uppercase;`;
+    
+    if (type === 'warning') toast.style.borderLeftColor = '#f1c40f';
+    else if (type === 'error') toast.style.borderLeftColor = '#e74c3c';
+    else if (type === 'success') toast.style.borderLeftColor = 'var(--success)';
+    
+    toast.innerText = msg;
+    el.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity = '1';
+    }, 10);
+
+    setTimeout(() => {
+        toast.style.transform = 'translateY(-20px)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, duration);
+};
+
 window.addEventListener('error', function(e) {
     console.error("❌ GLOBAL ERROR:", e.message, "at", e.filename, ":", e.lineno);
     const el = document.getElementById('debug-error-overlay');
@@ -101,22 +132,22 @@ window.BEHAVIORS = [
 ];
 
 window.EASY_DESCRIPTORS = [
-    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "bin 0", "speed": 0.2, "react": 0, "hold_type": "bar", "rel_center": 0.498},
-    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "bass", "speed": 0.3, "react": 0.45, "hold_type": "beat", "rel_center": 0.498},
-    {"id": "bass_pump", "label": "Bass Pump", "behavior": "direct", "source": "bin 1", "speed": 0.2, "react": 0.5, "hold_type": "none", "rel_center": 0.498},
-    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "fuzzy", "source": "bin 2", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "bin 0", "speed": 0.2, "react": 0.8, "hold_type": "none", "rel_center": 0.498},
+    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "bass", "speed": 0.1, "react": 0.25, "hold_type": "none", "rel_center": 0.498},
+    {"id": "bass_pump", "label": "Bass Pump", "behavior": "direct", "source": "bin 1", "speed": 0.05, "react": 0.9, "hold_type": "none", "rel_center": 0.498},
+    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "stochastic", "source": "mids", "speed": 0.5, "react": 0.45, "hold_type": "beat", "rel_center": 0.498},
     {"id": "rapid_climb", "label": "Rapid Climb", "behavior": "direct", "source": "impact", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     {"id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5},
-    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "volume", "speed": 0.3, "react": 0.15, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "mids", "speed": 0.3, "react": 0.15, "hold_type": "beat", "rel_center": 0.498},
     {"id": "inverse_bass", "label": "Flux Direct", "behavior": "direct", "source": "spectral flux", "speed": 0.4, "react": 0.8, "hold_type": "none", "rel_center": 0.502},
-    {"id": "kick_drum_step", "label": "kick drum step", "behavior": "direct", "source": "bin 0", "speed": 1, "react": 0.45, "hold_type": "beat", "rel_center": 0.208},
-    {"id": "hi_hat", "label": "hi hat", "behavior": "beat phase", "source": "highs", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "kick_drum_step", "label": "kick drum step", "behavior": "direct", "source": "bass", "speed": 0, "react": 0.45, "hold_type": "beat", "rel_center": 0.004},
+    {"id": "hi_hat", "label": "hi hat", "behavior": "direct", "source": "highs", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     {"id": "random_bar_hold", "label": "Random Bar Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "bar", "rel_center": 0.5},
     {"id": "random_beat_hold", "label": "Random Beat Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "beat", "rel_center": 0.5},
-    {"id": "beat_jump", "label": "Beat Jump", "behavior": "spike", "source": "beat phase", "speed": 0.2, "react": 0.4, "hold_type": "none", "rel_center": 0.5},
-    {"id": "bass_hum", "label": "Bass Line Hum", "behavior": "hum", "source": "bass", "speed": 0.1, "react": 0.1, "hold_type": "none", "rel_center": 0.5},
+    {"id": "beat_jump", "label": "Beat Jump", "behavior": "direct", "source": "beat phase", "speed": 0.2, "react": 0.4, "hold_type": "none", "rel_center": 0.502},
+    {"id": "bass_hum", "label": "Bass Line Hum", "behavior": "direct", "source": "bin 1", "speed": 0, "react": 0.6, "hold_type": "none", "rel_center": 0.502},
     {"id": "direct_hold", "label": "Direct and Hold", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.2, "hold_type": "beat", "rel_center": 0.502},
-    {"id": "hi_hit", "label": "Hi Hit", "behavior": "spike", "source": "highs", "speed": 0.2, "react": 0.75, "hold_type": "none", "rel_center": 0.498},
+    {"id": "hi_hit", "label": "Hi Hit", "behavior": "saw", "source": "highs", "speed": 0.2, "react": 0.65, "hold_type": "none", "rel_center": 0.498},
     {"id": "fuzzy_mids", "label": "Fuzzy Mids", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "none", "rel_center": 0.502},
     {"id": "new_trigger_state", "label": "New Trigger State", "behavior": "static", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498, "value": 127},
     // PREMADE_ANCHOR
@@ -201,7 +232,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "429262154";
+window.APP_VERSION = "51262349";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -222,7 +253,8 @@ async function initDatabaseSync() {
             { key: 'presets', path: 'presets.json' },
             { key: 'stage', path: 'stage_config.json' },
             { key: 'liveConsole', path: 'live_console.json' },
-            { key: 'savedConsoles', path: 'live_consoles/index.json' } // (Optional index)
+            { key: 'savedConsoles', path: 'live_consoles/index.json' },
+            { key: 'descriptors', path: '../descriptors.json' } // Premade behaviors
         ];
 
         const syncResults = await Promise.allSettled(
@@ -238,8 +270,45 @@ async function initDatabaseSync() {
             }
         });
 
+        // 3. Collection-based Profile Sync (Since profiles.json doesn't exist)
+        console.log("📂 [SYNC] Fetching profile collection...");
+        try {
+            const listRes = await fetch(`${window.API_BASE_ROOT}/api/fixtures`);
+            if (listRes.ok) {
+                const allFiles = await listRes.json();
+                const profileFiles = allFiles.filter(f => f.startsWith('profiles/') && f.endsWith('.json'));
+                
+                const profileContents = await Promise.allSettled(
+                    profileFiles.map(f => fetch(`${window.API_BASE}/${f}`).then(r => r.json()))
+                );
+
+                window.db.profiles = [];
+                profileContents.forEach((res, i) => {
+                    if (res.status === 'fulfilled' && res.value) {
+                        const p = res.value;
+                        p._fileName = profileFiles[i];
+                        window.db.profiles.push(p);
+                    }
+                });
+                console.log(`✅ [SYNC] Loaded ${window.db.profiles.length} individual profiles.`);
+            }
+        } catch (profileErr) {
+            console.warn("⚠️ [SYNC] Failed to load individual profiles:", profileErr);
+        }
+
         console.log(`✅ [SYNC] Successfully synchronized ${syncCount} core files from server.`);
         
+        // Merge Descriptors into EASY_DESCRIPTORS
+        if (window.db.descriptors && Array.isArray(window.db.descriptors)) {
+            const existingIds = new Set(window.EASY_DESCRIPTORS.map(d => d.id));
+            window.db.descriptors.forEach(d => {
+                if (!existingIds.has(d.id)) {
+                    window.EASY_DESCRIPTORS.push(d);
+                }
+            });
+            console.log(`✨ [SYNC] Merged ${window.db.descriptors.length} premade behaviors into library.`);
+        }
+
         // 3. Persist merged state back to localStorage ONLY (never overwrite server during init)
         window.saveDB(true);
 
@@ -252,8 +321,16 @@ async function initDatabaseSync() {
         console.warn("⚠️ Database Sync failed, using LocalStorage fallback:", e);
     }
     
-    RAVEBOX_READY = true;
+    window.RAVEBOX_READY = true;
     window.dispatchEvent(new CustomEvent('RAVEBOX_READY'));
+    
+    // Hide Loading Overlay
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
+    }
+
+    console.log("✅ RaveBox Core Ready (v51262349)");
 }
 
 // Kick off sync immediately
@@ -451,6 +528,7 @@ var switchTab = window.switchTab = function(tabId, noHistory = false) {
     
     if (tabId === 'tab-live') { if (typeof loadLiveConfig === 'function') loadLiveConfig(); if (typeof renderLiveTab === 'function') renderLiveTab(); }
     if (tabId === 'tab-test') { if (typeof renderTestTab === 'function') renderTestTab(); }
+    if (tabId === 'tab-presets') { if (typeof renderSliderSetup === 'function') renderSliderSetup(); }
 
     // Persist for state-aware components
     localStorage.setItem('vj_active_tab', tabId);
@@ -473,6 +551,7 @@ var refreshUI = window.refreshUI = function() {
     if (typeof renderProfileList === 'function') renderProfileList();
     if (typeof renderStageList === 'function') renderStageList();
     if (typeof updateStageProfileList === 'function') updateStageProfileList();
+    if (window.currentTab === 'tab-presets' && typeof window.renderSliderSetup === 'function') window.renderSliderSetup();
 };
 
 var sendIt = window.sendIt = async function(event) {
@@ -519,8 +598,34 @@ var sendIt = window.sendIt = async function(event) {
 };
 
 // --- BOOT COMPLETE ---
-window.RAVEBOX_READY = true;
-console.log("✅ RaveBox Core Ready (v427)");
+window.togglePresetEditor = function(show) {
+    const content = document.getElementById('preset-editor-content');
+    const actionsTop = document.getElementById('preset-editor-actions-top');
+    const addBtn = document.getElementById('preset-add-btn');
+    const genBtn = document.getElementById('preset-gen-btn-top');
+    const arrow = document.getElementById('preset-editor-arrow');
+    const header = document.getElementById('preset-editor-header');
+
+    if (show === undefined) show = content.style.display === 'none';
+
+    if (show) {
+        content.style.display = 'block';
+        actionsTop.style.display = 'flex';
+        addBtn.style.display = 'none';
+        genBtn.style.display = 'none';
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+        if (header) header.style.background = 'rgba(255,255,255,0.05)';
+    } else {
+        content.style.display = 'none';
+        actionsTop.style.display = 'none';
+        addBtn.style.display = 'block';
+        genBtn.style.display = 'block';
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+        if (header) header.style.background = 'rgba(255,255,255,0.02)';
+    }
+};
+
+window.APP_VERSION = "51262349";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
@@ -577,34 +682,78 @@ console.log("✅ RaveBox Core Ready (v427)");
 
 function loadNodeIp() {
     const input = document.getElementById('dmx-node-ip-input');
-    const updateBtn = document.getElementById('btn-update-node');
-    const toolsRow = document.getElementById('node-tools-row');
     if (!input) return;
     fetch('/api/remote_settings')
         .then(r => r.json())
         .then(data => {
             const ip = data.master?.node_ip || "";
+            const active = data.master?.node_active !== false; // Default true
             input.value = ip;
-            if (updateBtn) updateBtn.style.display = ip ? 'block' : 'none';
-            if (toolsRow) toolsRow.style.display = ip ? 'flex' : 'none';
+            input.dataset.active = active;
+            updateNodeUiState(input, active);
         })
         .catch(e => console.warn("Failed to load node IP:", e));
 }
 
-function saveNodeIp() {
+function updateNodeUiState(input, active) {
+    if (!input.value) {
+        input.style.borderColor = "rgba(255,255,255,0.1)";
+        input.style.background = "rgba(255,255,255,0.03)";
+        input.style.boxShadow = "none";
+        input.style.color = "var(--text-dim)";
+        return;
+    }
+    if (active) {
+        input.style.borderColor = "var(--accent)";
+        input.style.background = "rgba(0, 242, 255, 0.05)";
+        input.style.boxShadow = "0 0 10px rgba(0, 242, 255, 0.2)";
+        input.style.color = "var(--accent)";
+    } else {
+        input.style.borderColor = "rgba(255,255,255,0.1)";
+        input.style.background = "rgba(255,255,255,0.02)";
+        input.style.boxShadow = "none";
+        input.style.color = "rgba(255,255,255,0.3)";
+    }
+}
+
+window.toggleNodeMode = function() {
     const input = document.getElementById('dmx-node-ip-input');
-    const updateBtn = document.getElementById('btn-update-node');
-    const toolsRow = document.getElementById('node-tools-row');
-    if (!input) return;
-    const nodeIp = input.value;
-    if (updateBtn) updateBtn.style.display = nodeIp ? 'block' : 'none';
-    if (toolsRow) toolsRow.style.display = nodeIp ? 'flex' : 'none';
+    if (!input || !input.value || !input.readOnly) return;
     
+    const wasActive = input.dataset.active === 'true';
+    const nowActive = !wasActive;
+    input.dataset.active = nowActive;
+    
+    updateNodeUiState(input, nowActive);
+    saveNodeIp(input.value, nowActive);
+};
+
+window.editNodeIp = function() {
+    const input = document.getElementById('dmx-node-ip-input');
+    if (!input) return;
+    input.readOnly = false;
+    input.style.background = "rgba(255,255,255,0.1)";
+    input.style.color = "#fff";
+    input.focus();
+    input.select();
+};
+
+window.lockNodeIp = function() {
+    const input = document.getElementById('dmx-node-ip-input');
+    if (!input || input.readOnly) return;
+    input.readOnly = true;
+    const active = input.dataset.active === 'true';
+    updateNodeUiState(input, active);
+    saveNodeIp(input.value, active);
+};
+
+function saveNodeIp(nodeIp, active = true) {
     fetch('/api/remote_settings')
         .then(r => r.json())
         .then(data => {
             if (!data.master) data.master = {};
             data.master.node_ip = nodeIp;
+            data.master.node_active = active;
             return fetch('/vj_remote_settings.json', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -612,93 +761,8 @@ function saveNodeIp() {
             });
         })
         .then(() => {
-            console.log("📡 Node IP saved to server:", nodeIp);
+            console.log("📡 Node settings saved:", nodeIp, active);
             fetch('/api/restart', { method: 'POST' }).catch(() => {});
         })
         .catch(e => console.error("Failed to save node IP:", e));
-}
-
-async function updateNode(event) {
-    if (event) event.stopPropagation();
-    const nodeIp = document.getElementById('dmx-node-ip-input').value;
-    if (!nodeIp) return;
-
-    const btn = document.getElementById('btn-update-node');
-    const originalText = btn.innerText;
-    btn.innerText = "PUSHING...";
-    btn.disabled = true;
-
-    try {
-        // We use the Launcher's shell endpoint to run the push_update script
-        const cmd = `./push_update.sh ${nodeIp} --node`;
-        const res = await fetch(`${window.LAUNCHER_API}/shell?cmd=${encodeURIComponent(cmd)}`);
-        const data = await res.json();
-        
-        if (data.exit_code === 0) {
-            btn.innerText = "SUCCESS";
-            btn.style.background = "var(--primary)";
-        } else {
-            alert("Update Failed: " + (data.stderr || "Check console"));
-            btn.innerText = "FAILED";
-        }
-    } catch (e) {
-        alert("Error: " + e.message);
-        btn.innerText = "ERROR";
-    } finally {
-        setTimeout(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-            btn.style.background = "";
-        }, 3000);
-    }
-}
-
-function remoteNodeTool(type) {
-    const nodeIp = document.getElementById('dmx-node-ip-input').value;
-    if (!nodeIp) return;
-
-    const modal = document.getElementById('node-console-modal');
-    const output = document.getElementById('node-console-output');
-    const title = document.getElementById('node-console-title');
-    
-    if (modal) modal.style.display = 'flex';
-    if (output) {
-        output.textContent = `> Requesting ${type.toUpperCase()} from ${nodeIp}...\n`;
-        output.style.color = "#aaa";
-    }
-
-    let cmd = "";
-    switch(type) {
-        case 'status': cmd = "sudo systemctl status vj-node"; break;
-        case 'logs': cmd = "sudo journalctl -u vj-node -n 50"; break;
-        case 'restart': cmd = "sudo systemctl restart vj-node"; break;
-        case 'reboot': 
-            if (!confirm("Are you sure you want to reboot the remote hardware?")) {
-                if (modal) modal.style.display = 'none';
-                return;
-            }
-            cmd = "sudo reboot"; 
-            break;
-    }
-
-    if (title) title.textContent = `📡 NODE ${type.toUpperCase()}: ${nodeIp}`;
-
-    // Talk to the remote launcher
-    const url = `http://${nodeIp}:8001/shell?cmd=${encodeURIComponent(cmd)}`;
-    
-    fetch(url)
-        .then(r => r.json())
-        .then(data => {
-            if (output) {
-                output.textContent = (data.stdout || '') + (data.stderr || '');
-                if (!output.textContent.trim()) output.textContent = "> Command executed successfully (exit code " + data.exit_code + ")";
-                output.style.color = data.exit_code === 0 ? "#0f0" : "#ff3366";
-            }
-        })
-        .catch(e => {
-            if (output) {
-                output.textContent = "❌ Connection Failed: " + e.message + "\n\n1. Ensure Node is on the same network\n2. Ensure Launcher is running on port 8001\n3. Check if your browser is blocking mixed content (if Master is HTTPS)";
-                output.style.color = "#ff3366";
-            }
-        });
 }

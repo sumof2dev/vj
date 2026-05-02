@@ -888,13 +888,12 @@ function addOverrideToCurrentPreset() {
     const val = valInput.includes('-') ? valInput : (parseInt(valInput) || 0);
 
     currentPresetOverrides.push({
-        id: fixId,
-        target: fixId,
+        id: (fixId === 'global') ? `global_${funcId}` : fixId,
+        target: (fixId === 'global') ? `Global: ${funcId}` : fixId,
         type: (fixId === 'global') ? 'global' : 'instance',
         name: funcId,
         role: funcId,
         value: val,
-        smoothing: 0,
         channels: [{ name: funcId, value: val }]
     });
     renderPresetOverrides();
@@ -905,7 +904,7 @@ function addOverrideToCurrentPreset() {
 function renderPresetOverrides() {
     const container = document.getElementById('pres-overrides-container');
     container.innerHTML = currentPresetOverrides.map((ov, ovIdx) => {
-        const targetLabel = (ov.target === 'global') ? 'GLOBAL' : `FIX: ${ov.target}`;
+        const targetLabel = (ov.type === 'global') ? 'GLOBAL' : `FIX: ${ov.target}`;
         return `
             <div class="card" style="margin-bottom:10px; border-left: 3px solid var(--accent);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -917,8 +916,6 @@ function renderPresetOverrides() {
                     <div style="display:flex; gap:10px; align-items:center;">
                         <label style="font-size:0.8rem;">Value / Range:</label>
                         <input type="text" value="${ov.value || 0}" onchange="updateOverrideVal(${ovIdx}, this.value)" style="width:120px;" placeholder="e.g. 128 or 0-255">
-                        <label style="font-size:0.8rem;">Smoothing:</label>
-                        <input type="number" min="0" max="1" step="0.1" value="${ov.smoothing || 0}" onchange="updateOverrideSmooth(${ovIdx}, this.value)" style="width:85px;">
                     </div>
                 </div>
             </div>
@@ -934,9 +931,6 @@ function updateOverrideVal(idx, val) {
     }
 }
 
-function updateOverrideSmooth(idx, val) {
-    currentPresetOverrides[idx].smoothing = parseFloat(val);
-}
 
 function removePresetOverride(idx) {
     currentPresetOverrides.splice(idx, 1);
@@ -960,10 +954,13 @@ function resetPresetForm() {
     
     // Reset AI Button label
     const aiBtn = document.getElementById('preset-ai-gen-btn');
-    if (aiBtn) aiBtn.innerText = "✨ Generate";
+    if (aiBtn) aiBtn.innerText = "Generate";
 
     renderPresetTriggers();
     renderPresetOverrides();
+
+    // Collapse if open
+    if (typeof togglePresetEditor === 'function') togglePresetEditor(false);
 }
 
 // renderEnsemblePicker and toggleFixtureInTest moved to stage_logic.js
@@ -1094,13 +1091,18 @@ async function savePreset(silent = false) {
     }
     await saveDB();
     refreshUI();
-    if (!silent) resetPresetForm();
+    if (!silent) {
+        resetPresetForm();
+        if (typeof togglePresetEditor === 'function') togglePresetEditor(false);
+    }
     if (typeof closePresetAiModal === 'function') closePresetAiModal();
 }
 
 function editPreset(id) {
     const pre = db.presets.find(p => p.id === id);
     if (!pre) return;
+
+    if (typeof togglePresetEditor === 'function') togglePresetEditor(true);
 
     current_editing_preset_id = id;
     document.getElementById('pres-name').value = pre.name;
@@ -1175,14 +1177,17 @@ function updatePresetFunctionDropdown() {
         funcSel.onchange(); 
     } else if (stageId === 'system') {
         funcSel.innerHTML = '<option value="">-- Select System Function --</option>' +
-            ['rate', 'intensity'].map(f => `<option value="${f}">${f.toUpperCase()}</option>`).join('');
+            ['pause'].map(f => `<option value="${f}">${f.toUpperCase()}</option>`).join('');
         
         funcSel.onchange = () => {
              const fn = funcSel.value;
-             if (fn === 'rate') if (valLabel) valLabel.innerText = "Speed Multiplier (100 = Normal, 200 = 2x)";
-             else if (fn === 'intensity') if (valLabel) valLabel.innerText = "Global Output (100 = Normal, 0 = Blk)";
-             else if (valLabel) valLabel.innerText = "Multiplier (100 = 1.0x)";
-             if (valInput) valInput.placeholder = "100";
+             if (fn === 'pause') {
+                 if (valLabel) valLabel.innerText = "Freeze Engine (255 = Pause, 0 = Play)";
+                 if (valInput) valInput.placeholder = "255";
+             } else {
+                 if (valLabel) valLabel.innerText = "Value";
+                 if (valInput) valInput.placeholder = "100";
+             }
         };
         funcSel.onchange();
     } else {
@@ -1816,3 +1821,188 @@ function getFixtureRoles(fixtureId) {
         }
         setTimeout(() => window.renderProfileMappings(), 50);
     };
+// --- 8. PRESET SLIDER SETUP (Tactile Recording) ---
+window.activeSliderSetupFixtures = [];
+window.sliderSetupValues = {}; // { fixtureId: { channelIdx: value } }
+
+window.renderSliderSetup = function() {
+    // 0. Ensure DB is populated
+    if (!window.db) {
+        console.error("❌ [SliderSetup] window.db is missing!");
+        return;
+    }
+
+    let stage = window.db.stage || [];
+    
+    // Nuclear Fallback: If stage is empty, try to force a reload from localStorage
+    if (stage.length === 0) {
+        const stored = localStorage.getItem('ravebox_v2_db');
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (parsed.stage && Array.isArray(parsed.stage) && parsed.stage.length > 0) {
+                    console.log("🔄 [SliderSetup] Recovered stage from LocalStorage fallback.");
+                    window.db.stage = parsed.stage;
+                    stage = parsed.stage;
+                }
+            } catch(e) {}
+        }
+    }
+
+    console.log("🛠️ [SliderSetup] Rendering... Fixtures found:", stage.length);
+    
+    const picker = document.getElementById('pres-slider-setup-picker');
+    const strips = document.getElementById('pres-slider-setup-strips');
+    if (!picker || !strips) return;
+
+    // 1. Fixture Picker
+    picker.innerHTML = stage.map(inst => {
+        const isActive = window.activeSliderSetupFixtures.includes(inst.id);
+        return `<div class="fixture-picker-pill ${isActive ? 'active' : ''}" onclick="toggleFixtureInSliderSetup('${inst.id}')">
+            ${inst.id}
+        </div>`;
+    }).join('') || '<div style="color:#666; font-size:12px; padding:10px;">No fixtures found. Check Stage Tab.</div>';
+
+    // 2. Slider Strips
+    if (window.activeSliderSetupFixtures.length === 0) {
+        strips.innerHTML = '<div style="padding:20px; text-align:center; color:#444; width:100%; border:1px dashed #222; border-radius:8px; font-size:12px;">Select fixtures above to live-adjust sliders.</div>';
+        return;
+    }
+
+    let html = '';
+    window.activeSliderSetupFixtures.forEach(id => {
+        const inst = window.db.stage.find(s => s.id === id);
+        if (!inst) return;
+        const prof = window.db.profiles.find(p => p.id === inst.profileId);
+        if (!prof) return;
+
+        const channels = prof.channels || [];
+        if (!window.sliderSetupValues[id]) window.sliderSetupValues[id] = {};
+
+        html += `
+            <div class="test-strip" style="min-width: unset; flex-shrink: 0; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <div style="font-size: 10px; font-weight: 900; color: var(--accent); text-transform: uppercase;">${id}</div>
+                <div style="display: flex; gap: 10px;">
+                    ${channels.map((ch, chIdx) => {
+                        const val = window.sliderSetupValues[id][chIdx] !== undefined ? window.sliderSetupValues[id][chIdx] : (ch.default || 0);
+                        return `
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+                                <div style="font-size: 8px; color: #666; height: 10px; overflow: hidden; text-transform: uppercase; width: 30px; text-align: center;">${ch.name || ch.role}</div>
+                                <div class="vertical-slider-container">
+                                    <div class="dmx-fader-track"></div>
+                                    <input type="range" min="0" max="255" step="1" value="${val}" 
+                                        oninput="adjustSliderSetupValue('${id}', ${chIdx}, parseInt(this.value))">
+                                    <div class="dmx-fader-cap" style="bottom: ${Math.round((val / 255) * (120 - 18))}px;"></div>
+                                </div>
+                                <div style="font-size: 10px; font-weight: bold; color: #fff; font-family: monospace;">${val}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    });
+    strips.innerHTML = html;
+}
+
+window.toggleFixtureInSliderSetup = function(id) {
+    if (window.activeSliderSetupFixtures.includes(id)) {
+        window.activeSliderSetupFixtures = window.activeSliderSetupFixtures.filter(f => f !== id);
+        delete window.sliderSetupValues[id];
+    } else {
+        window.activeSliderSetupFixtures.push(id);
+    }
+    window.renderSliderSetup();
+}
+
+window.adjustSliderSetupValue = function(id, chIdx, val) {
+    if (!window.sliderSetupValues[id]) window.sliderSetupValues[id] = {};
+    window.sliderSetupValues[id][chIdx] = val;
+    window.renderSliderSetup();
+    window.sendSliderSetupOverride(id, chIdx, val);
+}
+
+window.sendSliderSetupOverride = function(id, chIdx, val) {
+    const inst = window.db.stage.find(s => s.id === id);
+    if (!inst) return;
+    const baseAddr = parseInt(inst.address) || 0;
+    const offset = parseInt(inst.offset || 0);
+    const addr = baseAddr + offset + chIdx;
+
+    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify({
+            type: 'manual_override',
+            address: addr,
+            value: val
+        }));
+    }
+}
+
+window.clearSliderSetup = function() {
+    const addresses = [];
+    window.activeSliderSetupFixtures.forEach(id => {
+        const inst = window.db.stage.find(s => s.id === id);
+        if (!inst) return;
+        const baseAddr = parseInt(inst.address) || 0;
+        const offset = parseInt(inst.offset || 0);
+        const prof = window.db.profiles.find(p => p.id === inst.profileId);
+        if (!prof) return;
+        (prof.channels || []).forEach((_, chIdx) => {
+            addresses.push(baseAddr + offset + chIdx);
+        });
+    });
+
+    if (window.ws && window.ws.readyState === WebSocket.OPEN && addresses.length > 0) {
+        window.ws.send(JSON.stringify({
+            type: 'clear_channel_overrides',
+            addresses: addresses
+        }));
+    }
+
+    window.activeSliderSetupFixtures = [];
+    window.sliderSetupValues = {};
+    window.renderSliderSetup();
+}
+
+window.recordSliderSetup = function() {
+    let capturedCount = 0;
+    Object.keys(window.sliderSetupValues).forEach(fixId => {
+        const channels = window.sliderSetupValues[fixId];
+        Object.keys(channels).forEach(chIdx => {
+            const val = channels[chIdx];
+            const inst = window.db.stage.find(s => s.id === fixId);
+            if (!inst) return;
+            const prof = window.db.profiles.find(p => p.id === inst.profileId);
+            if (!prof) return;
+            const ch = prof.channels[chIdx];
+            const role = ch.role || ch.name;
+
+            const existingIdx = currentPresetOverrides.findIndex(ov => ov.id === fixId && ov.role === role);
+            const override = {
+                id: fixId,
+                target: fixId,
+                type: 'instance',
+                name: role,
+                role: role,
+                value: val,
+                channels: [{ name: role, value: val }]
+            };
+
+            if (existingIdx !== -1) {
+                currentPresetOverrides[existingIdx] = override;
+            } else {
+                currentPresetOverrides.push(override);
+            }
+            capturedCount++;
+        });
+    });
+
+    if (capturedCount > 0) {
+        renderPresetOverrides();
+        if (typeof showToast === 'function') showToast(`Captured ${capturedCount} slider values!`, 3000);
+        else console.log(`Captured ${capturedCount} slider values!`);
+    } else {
+        if (typeof showToast === 'function') showToast("No sliders have been adjusted to capture.", 3000, "warning");
+        else console.warn("No sliders have been adjusted to capture.");
+    }
+}

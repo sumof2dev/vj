@@ -388,7 +388,8 @@ def save_live_defaults():
                 "speed": dmx_engine.base_speed if dmx_engine else 1.0,
                 "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
                 "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
-                "node_ip": network_dmx_node.ip if network_dmx_node else ""
+                "node_ip": network_dmx_node.ip if network_dmx_node else getattr(main, 'node_ip_cache', ""),
+                "node_active": network_dmx_node is not None
             },
             "laser": {
                 "speed": dmx_engine.base_speed if dmx_engine else 1.0,
@@ -422,10 +423,21 @@ def load_live_defaults():
             if "speed" in m_data and dmx_engine: dmx_engine.set_speed(m_data["speed"])
             if "intensity" in m_data and dmx_engine: dmx_engine.set_intensity(m_data["intensity"])
             if "sceneFreq" in m_data and dmx_engine: dmx_engine.scene_freq = m_data["sceneFreq"]
-            if "node_ip" in m_data and m_data["node_ip"]:
+            node_ip = m_data.get("node_ip")
+            node_active = m_data.get("node_active", True)
+            
+            # Cache the IP even if not active, so save_live_defaults doesn't lose it
+            import __main__ as main
+            main.node_ip_cache = node_ip
+            
+            if node_ip and node_active:
                 global network_dmx_node
-                network_dmx_node = DMXNetworkNode(m_data["node_ip"])
-                print(f"🌐 Loaded Network DMX Target: {m_data['node_ip']}")
+                network_dmx_node = DMXNetworkNode(node_ip)
+                print(f"🌐 Loaded Network DMX Target: {node_ip} (ACTIVE)")
+            else:
+                network_dmx_node = None
+                if node_ip:
+                    print(f"🌐 Network DMX Target: {node_ip} (DISABLED)")
 
             # 2. Laser Section
             l_data = data.get("laser", {})
@@ -1145,6 +1157,12 @@ async def ws_handler(websocket):
                                 else:
                                     dmx_engine.lab_probe_state = {}
                                     
+                        elif msg_type == "set_pause":
+                            # Toggle global engine pause (Freeze with debt)
+                            state = data.get("state")
+                            if dmx_engine:
+                                dmx_engine.set_pause(state)
+
                         elif msg_type == "blackout":
                             # Toggle global blackout
                             state = data.get("state")

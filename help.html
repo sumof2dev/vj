@@ -10,7 +10,7 @@
         // Inject cache buster for shared_setup.js
         const v = new URLSearchParams(window.location.search).get('v') || Date.now();
         const script = document.createElement('script');
-        script.src = `shared_setup.js?v=429262154${v}`;
+        script.src = `shared_setup.js?v=51262349
         document.head.appendChild(script);
     </script>
 
@@ -422,10 +422,87 @@
             }
         }
 
+        /* --- LOADING OVERLAY --- */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #050508;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        #loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loader-logo {
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            text-transform: uppercase;
+            color: #fff;
+            margin-bottom: 24px;
+        }
+        .loader-logo span { color: var(--accent); }
+        .loader-spinner-wrap {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            margin-bottom: 20px;
+        }
+        .loader-spinner {
+            width: 100%;
+            height: 100%;
+            border: 3px solid rgba(255, 255, 255, 0.03);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        .loader-spinner-inner {
+            position: absolute;
+            top: 10px; left: 10px; right: 10px; bottom: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.02);
+            border-top: 2px solid var(--accent-alt);
+            border-radius: 50%;
+            animation: spin 1.5s linear infinite reverse;
+            opacity: 0.7;
+        }
+        .loader-text {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            animation: loader-pulse 2s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes loader-pulse {
+            0% { opacity: 0.4; transform: scale(0.98); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0.4; transform: scale(0.98); }
+        }
+
         </style>
 </head>
 
 <body>
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay">
+        <div class="loader-logo">RAVE<span>BOX</span></div>
+        <div class="loader-spinner-wrap">
+            <div class="loader-spinner"></div>
+            <div class="loader-spinner-inner"></div>
+        </div>
+    </div>
+
     <div class="container">
         <aside class="sidebar">
             <div class="sidebar-header">

@@ -13,21 +13,24 @@ VERSION_CODE=$(date +%-m%-d%y%H%M)
 echo "📅 Updating version timestamp to $VERSION_CODE..."
 
 # 1. Update window.APP_VERSION in shared_setup.js
-sed -i -E "s/(window\.APP_VERSION = \")[0-9]+(\";)/\1$VERSION_CODE\2/" shared_setup.js
+sed -i -E "s/(window\.APP_VERSION = \")[^\"]+(\";)/\1$VERSION_CODE\2/" shared_setup.js
 
-# 2. Update console logs in manager.html
-sed -i -E "s/(btn\.innerText = action === 'start' \? \")[0-9]+(\" : \"Until next time\";)/\1$VERSION_CODE\2/" manager.html
+# 2. Update version strings in HTML files
+echo "📅 Updating version strings in HTML headers..."
+sed -i -E "s/(VJ Manager v)[0-9]+/\1$VERSION_CODE/g" setup.html manager.html
+sed -i -E "s/(VJ Console v)[0-9]+/\1$VERSION_CODE/g" console.html
+sed -i -E "s/(VJ Player v)[0-9]+/\1$VERSION_CODE/g" player.html
+sed -i -E "s/(VJ Standalone v)[0-9]+/\1$VERSION_CODE/g" standalone.html
+sed -i -E "s/(VJ Profile Editor starting \(v)[0-9]+(\))/\1$VERSION_CODE\2/g" profile.html
+sed -i -E "s/(Core Ready \(v)[0-9]+(\))/\1$VERSION_CODE\2/g" shared_setup.js
 
-# 3. Update APP_VERSION in other HTML files that still have it (legacy)
-sed -i -E "s/(const APP_VERSION = \")[0-9]+(\";)/\1$VERSION_CODE\2/" fixture_ai.html
+# 3. Update "Initializing" logic in manager.html
+sed -i -E "s/(btn\.innerText = action === 'start' \? \")[^\"]+(\" : \"Until next time\";)/\1$VERSION_CODE\2/" manager.html
 
 # 4. Global Cache Buster: Update ?v= tags in all HTML files
 echo "🧹 Updating cache busters (?v=) in HTML files..."
-sed -i -E "s/(\.js\?v=)[0-9]+/\1$VERSION_CODE/g" *.html
-sed -i -E "s/(\.css\?v=)[0-9]+/\1$VERSION_CODE/g" *.html
-sed -i -E "s/(VJ Manager v)[0-9]+/\1$VERSION_CODE/g" setup.html
-sed -i -E "s/(VJ Player v)[0-9]+/\1$VERSION_CODE/g" player.html
-sed -i -E "s/(VJ Standalone v)[0-9]+/\1$VERSION_CODE/g" standalone.html
+sed -i -E "s/(\.js\?v=)[^\"]+/\1$VERSION_CODE/g" *.html
+sed -i -E "s/(\.css\?v=)[^\"]+/\1$VERSION_CODE/g" *.html
 
 if [ ! -d "visualizer_src" ]; then
     echo "❌ Error: visualizer_src directory not found!"

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ravebox-vj-1777524884';
+const CACHE_NAME = 'ravebox-vj-1777704569'; // Bumping version
 
 self.addEventListener('install', (event) => {
     // Cache each asset individually — skip any that fail (e.g. missing on GCS)
@@ -62,7 +62,9 @@ self.addEventListener('fetch', (event) => {
                 return response;
             }).catch(() => {
                 return caches.match(event.request).then(cachedRes => {
-                    return cachedRes || caches.match('manager.html');
+                    if (cachedRes) return cachedRes;
+                    // Fallback to home page if the specific page isn't cached
+                    return caches.match('manager.html');
                 });
             })
         );
@@ -72,7 +74,11 @@ self.addEventListener('fetch', (event) => {
     // For other assets, try cache first, then network
     event.respondWith(
         caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
+            // Return cached response OR try network, then fallback to a 404-safe state
+            return response || fetch(event.request).catch(() => {
+                console.warn('SW: Fetch failed for', event.request.url);
+                return new Response('Network error occurred', { status: 408, headers: { 'Content-Type': 'text/plain' } });
+            });
         })
     );
 });

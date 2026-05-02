@@ -61,6 +61,8 @@
 
         /* Universal HUD Overlay */
         .universal-hud {
+            width: 100%;
+            max-width: 1000px;
             position: sticky;
             top: -24px;
             z-index: 1002;
@@ -68,8 +70,8 @@
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             border-bottom: 1px solid rgba(255,255,255,0.05);
-            padding: 8px 24px;
-            margin: -24px -24px 15px -24px;
+            padding: 8px 0;
+            margin: -24px 0 15px 0;
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -122,6 +124,8 @@
 
         @media (max-width: 768px) {
             .universal-hud {
+            width: 100%;
+            max-width: 1000px;
                 top: -12px;
                 margin: -12px -12px 10px -12px;
                 padding: 6px 12px;
@@ -1897,27 +1901,246 @@
         }
         /* --- LIVE CONSOLE PREMIUM BUTTONS --- */
         .live-btn {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+            background-color: #1a1a1f;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 2px solid rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
         }
 
         .live-btn:active {
-            transform: scale(0.96);
-            background: rgba(var(--accent-rgb), 0.1);
-            border-color: var(--accent);
-            box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.2);
+            transform: scale(0.98);
+            background-color: #121215;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 5px rgba(0, 0, 0, 0.4);
+            border-bottom-width: 1px;
         }
 
         .live-btn.active {
-            background: rgba(var(--accent-rgb), 0.2);
-            border-color: var(--accent);
-            box-shadow: 0 0 30px rgba(var(--accent-rgb), 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+            background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(var(--accent-rgb), 0.03) 100%);
+            background-color: #1a1a1f;
+            border-color: rgba(var(--accent-rgb), 0.4);
+            box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        }
+
+        /* DMX Fader Styles */
+        .dmx-fader-track {
+            width: 10px;
+            height: 100%;
+            background: linear-gradient(90deg, #000 0%, #111 50%, #000 100%);
+            border-radius: 5px;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: inset 1px 0 3px rgba(0,0,0,0.8);
+            margin: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .dmx-fader-cap {
+            width: 32px;
+            height: 18px;
+            background: linear-gradient(180deg, #555 0%, #333 45%, #222 55%, #333 100%);
+            border: 1px solid #111;
+            border-radius: 4px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: bottom 0.05s ease-out;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .dmx-fader-cap::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 5px;
+            right: 5px;
+            height: 2px;
+            background: rgba(255,255,255,0.05);
+            border-top: 1px solid rgba(0,0,0,0.5);
+            transform: translateY(-50%);
+        }
+
+        .live-btn.active .dmx-fader-cap {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.3), 0 6px 12px rgba(0,0,0,0.8);
         }
 
         .fill-indicator {
-            background: linear-gradient(to top, rgba(var(--accent-rgb), 0.2), transparent);
-            border-top: 1px solid rgba(var(--accent-rgb), 0.3);
+            background: linear-gradient(to top, rgba(var(--accent-rgb), 0.15), transparent);
+            border-top: 1px solid rgba(var(--accent-rgb), 0.2);
+            z-index: 0;
         }
+
+/* Knob Styles */
+.knob-container {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #2a2a2e 0%, #16161a 100%);
+    border-radius: 50%;
+    position: relative;
+    border: 2px solid rgba(255,255,255,0.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 5px 0;
+    pointer-events: none;
+}
+
+.knob-body {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(180deg, #444 0%, #222 100%);
+    border-radius: 50%;
+    position: relative;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1);
+    transition: transform 0.05s ease-out;
+    pointer-events: none;
+}
+
+.knob-pointer {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    width: 3px;
+    height: 10px;
+    background: var(--primary);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 5px var(--primary);
+}
+
+.live-btn.active .knob-body {
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.2), 0 4px 10px rgba(0,0,0,0.8);
+}
+/* --- LOADING OVERLAY --- */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #050508;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+#loading-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.loader-logo {
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    text-transform: uppercase;
+    color: #fff;
+    margin-bottom: 24px;
+    filter: drop-shadow(0 0 20px rgba(var(--accent-rgb), 0.3));
+}
+
+.loader-logo span {
+    color: var(--accent);
+}
+
+.loader-spinner-wrap {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin-bottom: 20px;
+}
+
+.loader-spinner {
+    width: 100%;
+    height: 100%;
+    border: 3px solid rgba(255, 255, 255, 0.03);
+    border-top: 3px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.loader-spinner-inner {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.02);
+    border-top: 2px solid var(--accent-alt);
+    border-radius: 50%;
+    animation: spin 1.5s linear infinite reverse;
+    opacity: 0.7;
+}
+
+.loader-text {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    animation: loader-pulse 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes loader-pulse {
+    0% { opacity: 0.4; transform: scale(0.98); }
+    50% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0.4; transform: scale(0.98); }
+}
+/* --- Vertical Slider Setup --- */
+.vertical-slider-container {
+    height: 120px;
+    width: 24px;
+    position: relative;
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.vertical-slider-container input[type="range"] {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    z-index: 10;
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    appearance: none;
+    -webkit-appearance: none;
+}

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RaveBox</title>
-    <link rel="stylesheet" href="setup.css?v=429262154">
+    <link rel="stylesheet" href="setup.css?v=51262349">
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
@@ -720,10 +720,18 @@
 
 </head>
 <body>
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay">
+        <div class="loader-logo">RAVE<span>BOX</span></div>
+        <div class="loader-spinner-wrap">
+            <div class="loader-spinner"></div>
+            <div class="loader-spinner-inner"></div>
+        </div>
+    </div>
 
     <div class="container">
-        <h1>RaveBox <a href="setup.html?tab=live&view=console"
-                style="color: inherit; text-decoration: none;">Control</a></h1>
+        <h1>RaveBox <a href="console.html"
+                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v51262349</span></h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
@@ -898,7 +906,7 @@
         window.LAUNCHER_API = window.LAUNCHER_API || "";
         window.API_BASE = window.API_BASE || "";
     </script>
-    <script src="shared_setup.js?v=429262154"></script>
+    <script src="shared_setup.js?v=51262349"></script>
     <script>
         // Routing and globals are handled by shared_setup.js
         console.log("📍 Host:", window.host, "| Launcher:", window.LAUNCHER_API);

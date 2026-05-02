@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live Feed - RaveBox</title>
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg: #0a0a0c;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        #toggle-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 10;
+            position: relative;
+        }
+
+        #toggle-btn::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            opacity: 0.2;
+            animation: pulse 3s infinite;
+            z-index: -1;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.2; }
+            50% { transform: scale(1.4); opacity: 0; }
+            100% { transform: scale(1); opacity: 0.2; }
+        }
+
+        #toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        #toggle-btn:active {
+            transform: scale(0.9) translateY(2px);
+        }
+
+        #toggle-btn svg {
+            width: 48px;
+            height: 48px;
+            fill: var(--primary);
+            filter: drop-shadow(0 0 10px var(--primary));
+        }
+
+        #feed-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            display: none;
+            z-index: 20;
+            cursor: pointer;
+        }
+
+        #feed-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .active #feed-container {
+            display: block;
+        }
+
+        /* Status Dot */
+        .status-dot {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff3366;
+            box-shadow: 0 0 10px #ff3366;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+    <button id="toggle-btn" aria-label="Toggle Live Feed">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 2c0-3.31-2.69-6-6-6s-6 2.69-6 6c0 2.22 1.21 4.15 3 5.19l-1 1.74c-2.42-1.39-4-4-4-6.93 0-4.42 3.58-8 8-8s8 3.58 8 8c0 2.93-1.58 5.54-4 6.93l-1-1.74c1.79-1.04 3-2.97 3-5.19z"/>
+        </svg>
+    </button>
+
+    <div id="feed-container">
+        <div class="status-dot"></div>
+        <img id="feed-img" src="" alt="Live Feed" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'">
+    </div>
+
+    <script>
+        const toggleBtn = document.getElementById('toggle-btn');
+        const feedContainer = document.getElementById('feed-container');
+        const feedImg = document.getElementById('feed-img');
+        let interval = null;
+        let isActive = false;
+
+        let isFetching = false;
+
+        function updateFrame() {
+            if (!isActive || isFetching) return;
+            isFetching = true;
+            
+            const timestamp = Date.now();
+            const imgUrl = `/capture?w=320&h=240&t=${timestamp}`;
+            
+            const nextFrame = new Image();
+            nextFrame.onload = () => {
+                if (isActive) {
+                    feedImg.src = imgUrl;
+                }
+                isFetching = false;
+                // Wait 60ms between frames to keep server load low (~15 FPS)
+                setTimeout(updateFrame, 60); 
+            };
+            nextFrame.onerror = () => {
+                isFetching = false;
+                if (isActive) setTimeout(updateFrame, 1000);
+            };
+            nextFrame.src = imgUrl;
+        }
+
+        function startFeed() {
+            if (isActive) return;
+            isActive = true;
+            document.body.classList.add('active');
+            updateFrame();
+        }
+
+        function stopFeed() {
+            isActive = false;
+            document.body.classList.remove('active');
+            isFetching = false;
+        }
+
+        toggleBtn.addEventListener('click', startFeed);
+        feedContainer.addEventListener('click', stopFeed);
+
+        // Optional: Handle PWA/Standalone mode to prevent accidental refreshes
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>

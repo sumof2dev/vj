@@ -14,6 +14,10 @@ let pointerInitialClientY = 0;
 let pointerInitialClientX = 0;
 let pointerCurrentClientY = 0;
 let pointerCurrentClientX = 0;
+let buttonHoldActive = false;
+let buttonHoldType = null;
+let buttonHoldId = null;
+let buttonHoldMoved = false;
 
 function loadLiveConfig() {
     if (window.db.liveConsole && Array.isArray(window.db.liveConsole) && window.db.liveConsole.length > 0) {
@@ -159,12 +163,12 @@ function renderLiveTab() {
             const maxY = cfg.max !== undefined ? cfg.max : 255;
             const pctY = Math.max(0, Math.min(100, ((valY - minY) / (maxY - minY)) * 100));
 
-            label = instY ? instY.id : (profY ? profY.name : 'SLIDER');
+            label = instY ? instY.id : (profY ? profY.name : '2 AXIS');
             sublabel = chY ? (chY.role || chY.name) : '';
 
-            let xyLabelHtml = `<div style="display:flex; gap:4px; align-items:center; z-index:1;">
-                                <span style="color:var(--accent); font-size:9px;">Y:</span>
-                                <span class="val-indicator-y" style="font-size:11px; font-weight:900; opacity:${isOverriddenY ? 1 : 0.5}">${isOverriddenY ? valY : 'AUTO'}</span>
+            let xyLabelHtml = `<div style="display:flex; gap:4px; align-items:center; z-index:1; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                                <span style="color:var(--accent); font-size:9px; font-weight:700;">Y:</span>
+                                <span class="val-indicator-y" style="font-size:11px; font-weight:900; opacity:${isOverriddenY ? 1 : 0.6}">${isOverriddenY ? valY : 'AUTO'}</span>
                                </div>`;
 
             if (cfg.targetIdX) {
@@ -175,15 +179,58 @@ function renderLiveTab() {
                 const isOverriddenX = addrX !== null && window.latestOverrides && window.latestOverrides.has(addrX);
                 const valX = addrX !== null ? (window.latestDmxUniverse[addrX] || (window.latestAudioState && window.latestAudioState.manual_overrides ? window.latestAudioState.manual_overrides[addrX] : 0) || 0) : 0;
                 
-                xyLabelHtml += `<div style="display:flex; gap:4px; align-items:center; z-index:1;">
-                                    <span style="color:var(--accent-alt); font-size:9px;">X:</span>
-                                    <span class="val-indicator-x" style="font-size:11px; font-weight:900; opacity:${isOverriddenX ? 1 : 0.5}">${isOverriddenX ? valX : 'AUTO'}</span>
+                xyLabelHtml += `<div style="display:flex; gap:4px; align-items:center; z-index:1; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                                    <span style="color:var(--accent-alt); font-size:9px; font-weight:700;">X:</span>
+                                    <span class="val-indicator-x" style="font-size:11px; font-weight:900; opacity:${isOverriddenX ? 1 : 0.6}">${isOverriddenX ? valX : 'AUTO'}</span>
                                 </div>`;
             }
 
             content = `<div class="fill-indicator" style="position:absolute; bottom:0; left:0; width:100%; height:${pctY}%; pointer-events:none; transition: height 0.05s;"></div>
                        ${xyLabelHtml}`;
             if (isOverriddenY) extraClass = 'active';
+        } else if (cfg.type === 'dmx_slider') {
+            const inst = (window.db.stage || []).find(s => s.id === cfg.targetId);
+            const prof = inst ? (window.db.profiles || []).find(p => p.id === inst.profileId) : null;
+            const ch = (prof && prof.channels) ? prof.channels[cfg.channelIdx] : null;
+            const addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
+            const isOverridden = addr !== null && window.latestOverrides && window.latestOverrides.has(addr);
+            const val = addr !== null ? (window.latestDmxUniverse[addr] || (window.latestAudioState && window.latestAudioState.manual_overrides ? window.latestAudioState.manual_overrides[addr] : 0) || 0) : 0;
+            
+            const min = cfg.min !== undefined ? cfg.min : 0;
+            const max = cfg.max !== undefined ? cfg.max : 255;
+            const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+
+            label = inst ? inst.id : (prof ? prof.name : 'FADER');
+            sublabel = ch ? (ch.role || ch.name) : '';
+
+            content = `<div class="dmx-fader-track">
+                            <div class="dmx-fader-cap" style="bottom:${pct}%;"></div>
+                       </div>
+                       <div class="val-indicator-dmx" style="font-size:10px; font-weight:900; color:var(--accent); position:absolute; top:25px; left:50%; transform:translateX(-50%); z-index:5;">${isOverridden ? val : 'AUTO'}</div>`;
+            if (isOverridden) extraClass = 'active';
+        } else if (cfg.type === 'knob') {
+            const inst = (window.db.stage || []).find(s => s.id === cfg.targetId);
+            const prof = inst ? (window.db.profiles || []).find(p => p.id === inst.profileId) : null;
+            const ch = (prof && prof.channels) ? prof.channels[cfg.channelIdx] : null;
+            const addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
+            const isOverridden = addr !== null && window.latestOverrides && window.latestOverrides.has(addr);
+            const val = addr !== null ? (window.latestDmxUniverse[addr] || (window.latestAudioState && window.latestAudioState.manual_overrides ? window.latestAudioState.manual_overrides[addr] : 0) || 0) : 0;
+            
+            const min = cfg.min !== undefined ? cfg.min : 0;
+            const max = cfg.max !== undefined ? cfg.max : 255;
+            const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+            const rotation = -135 + (pct * 2.7); // Map 0-100 to -135 to +135 deg
+
+            label = inst ? inst.id : (prof ? prof.name : 'KNOB');
+            sublabel = ch ? (ch.role || ch.name) : '';
+
+            content = `<div class="knob-container">
+                            <div class="knob-body" style="transform: rotate(${rotation}deg);">
+                                <div class="knob-pointer"></div>
+                            </div>
+                       </div>
+                       <div class="val-indicator-knob" style="font-size:10px; font-weight:900; color:var(--accent); position:absolute; top:25px; left:50%; transform:translateX(-50%); z-index:5;">${isOverridden ? val : 'AUTO'}</div>`;
+            if (isOverridden) extraClass = 'active';
         } else if (cfg.type === 'live_feed') {
             const isFeedActive = document.getElementById('live-console-feed-container') && document.getElementById('live-console-feed-container').style.display === 'block';
             label = "LIVE FEED";
@@ -211,9 +258,9 @@ function renderLiveTab() {
                      onpointerleave="handleLivePointerUp(event, ${i})"
                      oncontextmenu="return false;">
             <div style="font-size:8px; opacity:0.6; position:absolute; top:5px; left:5px; z-index:2;">#${i + 1}</div>
-            <div style="font-size:11px; font-weight:800; text-align:center; padding:0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; z-index:1;">${label}</div>
+            <div style="font-size:11px; font-weight:800; text-align:center; padding:0 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; z-index:1; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">${label}</div>
             ${content}
-            ${sublabel ? `<div style="font-size:8px; opacity:0.6; z-index:1;">${sublabel}</div>` : ''}
+            ${sublabel ? `<div style="font-size:8px; opacity:0.6; z-index:1; text-shadow: 0 1px 2px rgba(0,0,0,0.5); ${cfg.type === 'dmx_slider' ? 'position:absolute; bottom:5px;' : ''}">${sublabel}</div>` : ''}
         </div>`;
     }
     grid.innerHTML = html;
@@ -239,7 +286,7 @@ function handleLivePointerDown(e, idx) {
     draggedBtnIdx = null;
     dragTargetIdx = null;
     isDraggingBtn = false;
-    presetHoldMoved = false;
+    buttonHoldMoved = false;
 
     if (liveEditMode) {
         longPressTimer = setTimeout(() => {
@@ -254,32 +301,41 @@ function handleLivePointerDown(e, idx) {
     const cfg = liveConfig[idx];
     if (!cfg || cfg.type === 'none') return;
 
-    if (cfg.type === 'preset' && cfg.targetId) {
+    if (cfg.type === 'preset' || cfg.type === 'live_feed' || cfg.type === 'blackout') {
         e.target.closest('.live-btn')?.setPointerCapture(e.pointerId);
-        presetHoldActive = true;
-        presetHoldId = cfg.targetId;
+        buttonHoldActive = true;
+        buttonHoldType = cfg.type;
+        buttonHoldId = cfg.targetId;
         presetLastMovePos = { x: e.clientX, y: e.clientY };
         presetMoveSpeed = 0;
 
         // Start hold timer — after 300ms without a pointerup, activate momentary mode
         longPressTimer = setTimeout(() => {
-            if (presetHoldActive && !presetHoldMoved) {
-                // Momentary hold: activate now, will deactivate on release
+            if (buttonHoldActive && !buttonHoldMoved) {
                 isLongPress = true;
-                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                    window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: true }));
+                // Momentary hold: activate now, will deactivate on release
+                if (buttonHoldType === 'preset') {
+                    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                        window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId, state: true }));
+                    }
+                } else if (buttonHoldType === 'live_feed') {
+                    toggleLiveConsoleFeed(true);
+                } else if (buttonHoldType === 'blackout') {
+                    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                        window.ws.send(JSON.stringify({ type: 'blackout', state: true }));
+                    }
                 }
+                
                 // Visual feedback
                 const btn = document.querySelectorAll('.live-btn')[idx];
                 if (btn) btn.classList.add('active');
             }
         }, 300);
-    } else if (cfg.type === 'slider') {
-        e.target.setPointerCapture(e.pointerId);
-    } else if (cfg.type === 'live_feed') {
-        toggleLiveConsoleFeed();
+    } else if (cfg.type === 'slider' || cfg.type === 'dmx_slider' || cfg.type === 'knob') {
+        e.target.closest('.live-btn')?.setPointerCapture(e.pointerId);
     }
 }
+window.renderLiveTabActual = renderLiveTab;
 
 function handleLivePointerMove(e, idx) {
     pointerCurrentClientY = e.clientY;
@@ -295,15 +351,15 @@ function handleLivePointerMove(e, idx) {
             if (liveEditMode) {
                 isDraggingBtn = true;
                 draggedBtnIdx = idx;
-            } else if (presetHoldActive) {
-                // Movement detected during preset hold — enter cycle mode
-                presetHoldMoved = true;
+            } else if (buttonHoldActive) {
+                // Movement detected during button hold — enter cycle mode (presets only)
+                buttonHoldMoved = true;
             }
         }
     }
 
     // --- PRESET CYCLE MODE (hold + move) ---
-    if (presetHoldActive && presetHoldMoved && !liveEditMode) {
+    if (buttonHoldActive && buttonHoldMoved && !liveEditMode && buttonHoldType === 'preset') {
         const dx = e.clientX - presetLastMovePos.x;
         const dy = e.clientY - presetLastMovePos.y;
         const moveDist = Math.sqrt(dx * dx + dy * dy);
@@ -322,7 +378,7 @@ function handleLivePointerMove(e, idx) {
             // First cycle activation
             presetCycleState = true;
             if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: true }));
+                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId, state: true }));
             }
             const btn = document.querySelectorAll('.live-btn')[idx];
             if (btn) btn.classList.add('active');
@@ -333,7 +389,7 @@ function handleLivePointerMove(e, idx) {
         presetCycleInterval = setInterval(() => {
             presetCycleState = !presetCycleState;
             if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: presetCycleState }));
+                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId, state: presetCycleState }));
             }
             const btn = document.querySelectorAll('.live-btn')[idx];
             if (btn) {
@@ -370,7 +426,7 @@ function handleLivePointerMove(e, idx) {
 
     if (liveEditMode || isLongPress) return;
     const cfg = liveConfig[idx];
-    if (!cfg || cfg.type !== 'slider') return;
+    if (!cfg || (cfg.type !== 'slider' && cfg.type !== 'dmx_slider' && cfg.type !== 'knob')) return;
 
     const screenH = window.innerHeight;
     const screenW = window.innerWidth;
@@ -402,10 +458,12 @@ function handleLivePointerMove(e, idx) {
     }
 
     const btn = e.target.closest('.live-btn');
-    if (btn) {
+    if (btn && cfg.type !== 'dmx_slider' && cfg.type !== 'knob') {
         const dy = pointerCurrentClientY - pointerInitialClientY;
         const dx = cfg.targetIdX ? (pointerCurrentClientX - pointerInitialClientX) : 0;
         btn.style.transform = `translate(${dx}px, ${dy}px)`;
+        btn.style.zIndex = "1000";
+    } else if (btn) {
         btn.style.zIndex = "1000";
     }
 
@@ -449,16 +507,59 @@ function processOverride(targetId, chIdx, val, isHome, btn, axis = 'y') {
     }
 }
 
+
 function syncBtnVisuals(btn, axis, label, val, active) {
     if (!btn) return;
     const valDisplay = btn.querySelector(`.val-indicator-${axis}`);
     if (valDisplay) {
-        valDisplay.innerText = label;
-        valDisplay.style.opacity = active ? '1' : '0.5';
+        valDisplay.innerText = active ? val : 'AUTO';
+        valDisplay.style.opacity = active ? 1 : 0.5;
     }
+    
+    // Also try general ones for dmx/knob
     if (axis === 'y') {
+        const dmxVal = btn.querySelector('.val-indicator-dmx');
+        if (dmxVal) {
+            dmxVal.innerText = active ? val : 'AUTO';
+        }
+        const knobVal = btn.querySelector('.val-indicator-knob');
+        if (knobVal) {
+            knobVal.innerText = active ? val : 'AUTO';
+        }
+    }
+    
+    if (axis === 'y' || axis === 'dmx') {
         const fill = btn.querySelector('.fill-indicator');
         if (fill) fill.style.background = `rgba(255,255,255,${active ? '0.2' : '0.05'})`;
+        
+        const cap = btn.querySelector('.dmx-fader-cap');
+        if (cap) {
+            const cfg = liveConfig[activePointerIdx];
+            if (cfg) {
+                const min = cfg.min !== undefined ? cfg.min : 0;
+                const max = cfg.max !== undefined ? cfg.max : 255;
+                const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+                cap.style.bottom = pct + '%';
+                
+                const valIndicator = btn.querySelector('div[style*="color:var(--accent)"]');
+                if (valIndicator) valIndicator.innerText = active ? val : 'AUTO';
+            }
+        }
+
+        const knob = btn.querySelector('.knob-body');
+        if (knob) {
+            const cfg = liveConfig[activePointerIdx];
+            if (cfg) {
+                const min = cfg.min !== undefined ? cfg.min : 0;
+                const max = cfg.max !== undefined ? cfg.max : 255;
+                const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+                const rotation = -135 + (pct * 2.7);
+                knob.style.transform = `rotate(${rotation}deg)`;
+                
+                const valIndicator = btn.querySelector('div[style*="color:var(--accent)"]');
+                if (valIndicator) valIndicator.innerText = active ? val : 'AUTO';
+            }
+        }
     }
 }
 
@@ -473,9 +574,9 @@ async function handleLivePointerUp(e, idx) {
         await saveLiveConfig();
     }
 
-    // --- PRESET RELEASE LOGIC ---
-    const wasPresetHold = presetHoldActive;
-    const wasPresetMoved = presetHoldMoved;
+    // --- BUTTON RELEASE LOGIC (Preset, Live Feed, Blackout) ---
+    const wasButtonHold = buttonHoldActive;
+    const wasButtonMoved = buttonHoldMoved;
     const wasLongPress = isLongPress;
 
     // Clean up cycle interval
@@ -484,31 +585,48 @@ async function handleLivePointerUp(e, idx) {
         presetCycleInterval = null;
     }
 
-    if (wasPresetHold && presetHoldId) {
+    if (wasButtonHold) {
         const cfg = liveConfig[idx];
         const dist = Math.sqrt(Math.pow(pointerCurrentClientX - pointerInitialClientX, 2) + Math.pow(pointerCurrentClientY - pointerInitialClientY, 2));
 
-        if (wasPresetMoved) {
+        if (wasButtonMoved && buttonHoldType === 'preset') {
             // MODE 3: Hold + Move (Cycle) → turn OFF on release
             if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: false }));
+                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId, state: false }));
             }
         } else if (wasLongPress) {
             // MODE 2: Hold without move (Momentary) → turn OFF on release
-            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId, state: false }));
+            if (buttonHoldType === 'preset') {
+                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                    window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId, state: false }));
+                }
+            } else if (buttonHoldType === 'live_feed') {
+                toggleLiveConsoleFeed(false);
+            } else if (buttonHoldType === 'blackout') {
+                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                    window.ws.send(JSON.stringify({ type: 'blackout', state: false }));
+                }
             }
-        } else if (dist < 10) {
+        } else if (dist < 15) {
             // MODE 1: Quick tap → Toggle (stays on/off)
-            if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetHoldId }));
+            if (buttonHoldType === 'preset') {
+                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                    window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId }));
+                }
+            } else if (buttonHoldType === 'live_feed') {
+                toggleLiveConsoleFeed();
+            } else if (buttonHoldType === 'blackout') {
+                if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                    window.ws.send(JSON.stringify({ type: 'blackout' }));
+                }
             }
         }
 
-        // Reset preset state
-        presetHoldActive = false;
-        presetHoldId = null;
-        presetHoldMoved = false;
+        // Reset interaction state
+        buttonHoldActive = false;
+        buttonHoldId = null;
+        buttonHoldType = null;
+        buttonHoldMoved = false;
         presetCycleState = false;
         presetMoveSpeed = 0;
     }
@@ -530,21 +648,15 @@ async function handleLivePointerUp(e, idx) {
     }
     isLongPress = false;
 
-    // Non-preset interactions
-    if (!wasPresetHold) {
+    // Non-button interactions (Sliders, Knobs)
+    if (!wasButtonHold) {
         const cfg = liveConfig[idx];
         const dist = Math.sqrt(Math.pow(pointerCurrentClientX - pointerInitialClientX, 2) + Math.pow(pointerCurrentClientY - pointerInitialClientY, 2));
 
-        if (dist < 10) {
+        if (dist < 15) {
             if (!liveEditMode) {
-                if (cfg && cfg.type === 'slider') {
+                if (cfg && (cfg.type === 'slider' || cfg.type === 'dmx_slider' || cfg.type === 'knob')) {
                     await clearSliderOverrides(cfg);
-                } else if (cfg && cfg.type === 'live_feed') {
-                    toggleLiveConsoleFeed();
-                } else if (cfg && cfg.type === 'blackout') {
-                    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                        window.ws.send(JSON.stringify({ type: 'blackout' }));
-                    }
                 }
             } else {
                 openAssignment(idx);
@@ -633,7 +745,7 @@ function openAssignment(idx) {
     
     if (cfg.type === 'preset') {
         document.getElementById('assign-preset-id').value = cfg.targetId || '';
-    } else if (cfg.type === 'slider') {
+    } else if (cfg.type === 'slider' || cfg.type === 'dmx_slider' || cfg.type === 'knob') {
         const profileId = cfg.targetId || document.getElementById('assign-profile-id').value;
         const profileIdX = cfg.targetIdX !== undefined ? cfg.targetIdX : document.getElementById('assign-profile-id-x').value;
 
@@ -657,7 +769,7 @@ function openAssignment(idx) {
 function updateAssignmentOptions() {
     const type = document.getElementById('assign-type').value;
     document.getElementById('assign-preset-wrap').style.display = type === 'preset' ? 'block' : 'none';
-    document.getElementById('assign-slider-wrap').style.display = type === 'slider' ? 'block' : 'none';
+    document.getElementById('assign-slider-wrap').style.display = (type === 'slider' || type === 'dmx_slider' || type === 'knob') ? 'block' : 'none';
 
     const fixtureList = (window.db.stage || []).map(inst => {
         const prof = window.db.profiles.find(p => p.id === inst.profileId);
@@ -668,7 +780,7 @@ function updateAssignmentOptions() {
     if (type === 'preset') {
         const sel = document.getElementById('assign-preset-id');
         sel.innerHTML = (window.db.presets || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-    } else if (type === 'slider') {
+    } else if (type === 'slider' || type === 'dmx_slider' || type === 'knob') {
         const selY = document.getElementById('assign-profile-id');
         selY.innerHTML = fixtureList;
         updateAssignmentChannels('assign-channel-idx', selY.value);
@@ -676,6 +788,10 @@ function updateAssignmentOptions() {
         const selX = document.getElementById('assign-profile-id-x');
         selX.innerHTML = '<option value="">-- None (Single Axis) --</option>' + fixtureList;
         updateAssignmentChannels('assign-channel-idx-x', selX.value);
+        
+        // Hide X axis for dmx_slider and knob
+        const xWrap = document.getElementById('assign-x-wrap');
+        if (xWrap) xWrap.style.display = (type === 'dmx_slider' || type === 'knob') ? 'none' : 'block';
     }
 }
 
@@ -710,7 +826,7 @@ async function saveAssignment() {
     
     if (type === 'preset') {
         cfg.targetId = document.getElementById('assign-preset-id').value;
-    } else if (type === 'slider') {
+    } else if (type === 'slider' || type === 'dmx_slider' || type === 'knob') {
         cfg.targetId = document.getElementById('assign-profile-id').value;
         cfg.channelIdx = parseInt(document.getElementById('assign-channel-idx').value);
         cfg.min = parseInt(document.getElementById('assign-min').value) || 0;

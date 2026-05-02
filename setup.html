@@ -12,17 +12,26 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=strategy_v16">
+<link rel="stylesheet" href="setup.css?v=51262349">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
     .sidebar-title .brand span { color: var(--accent) !important; font-size: 0.85em !important; margin-left: 2px !important; font-weight: 900 !important; }
     .sidebar-title .subtitle { font-size: 0.75rem !important; font-weight: 800 !important; letter-spacing: 1px !important; text-transform: uppercase !important; color: var(--accent) !important; opacity: 0.8 !important; align-self: flex-start !important; margin-top: -2px !important; margin-left: 12px !important; }
 </style>
-<link rel="stylesheet" href="engine_tab.css?v=strategy_v19">
+<link rel="stylesheet" href="engine_tab.css?v=51262349">
 </head>
 
 <body>
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay">
+        <div class="loader-logo">RAVE<span>BOX</span></div>
+        <div class="loader-spinner-wrap">
+            <div class="loader-spinner"></div>
+            <div class="loader-spinner-inner"></div>
+        </div>
+    </div>
+
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-toggle" onclick="toggleSidebar()">
@@ -35,7 +44,7 @@
             </div>
             <div class="sidebar-title">
                 <div class="brand">RAVE<span>BOX</span></div>
-                <div class="subtitle">SETUP</div>
+                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v51262349</span></div>
             </div>
         </div>
 
@@ -113,15 +122,8 @@
                     <div style="display:flex; flex-direction:column; gap:5px;">
                         <div style="display:flex; align-items:center; gap:5px;">
                             <input type="text" id="dmx-node-ip-input" placeholder="NODE IP: OFF" 
-                                style="width:110px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:var(--accent); font-family:monospace; font-weight:800; font-size:11px; padding:4px 8px; outline:none;" 
-                                onchange="saveNodeIp()">
-                            <button id="btn-update-node" class="btn btn-sm" style="height:22px; font-size:8px; padding:0 8px; background:rgba(0,242,255,0.1); color:var(--accent); border-color:rgba(0,242,255,0.2); display:none;" onclick="updateNode(event)">UPDATE</button>
-                        </div>
-                        <div id="node-tools-row" style="display:none; gap:4px;">
-                            <button class="btn btn-sm" style="height:16px; font-size:7px; padding:0 4px; opacity:0.6;" onclick="remoteNodeTool('status')">STAT</button>
-                            <button class="btn btn-sm" style="height:16px; font-size:7px; padding:0 4px; opacity:0.6;" onclick="remoteNodeTool('logs')">LOGS</button>
-                            <button class="btn btn-sm" style="height:16px; font-size:7px; padding:0 4px; opacity:0.6;" onclick="remoteNodeTool('restart')">RESTART</button>
-                            <button class="btn btn-sm" style="height:16px; font-size:7px; padding:0 4px; color:var(--danger); border-color:rgba(255,0,0,0.2); opacity:0.6;" onclick="remoteNodeTool('reboot')">REBOOT</button>
+                                style="width:130px; height:28px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:var(--accent); font-family:monospace; font-weight:800; font-size:11px; padding:0 12px; outline:none; cursor:pointer; text-align:center; transition: all 0.2s;" 
+                                readonly onclick="toggleNodeMode()" ondblclick="editNodeIp()" onblur="lockNodeIp()" onkeydown="if(event.key==='Enter') lockNodeIp()">
                         </div>
                     </div>
                 </div>
@@ -167,191 +169,109 @@
         </div>
     </div>
 
-    <div id="tab-live" class="tab-content">
-        <h2>Live Console</h2>
-        <p style="color:var(--text-dim)">Real-time controller interface for overrides and presets.</p>
-        
-        <div class="row" style="display:flex; justify-content:flex-end; margin-bottom:15px; gap:10px;">
-            <div id="live-edit-controls" style="display:none; gap:8px; align-items:center;">
-                <button class="btn btn-primary btn-sm" onclick="saveLiveConfigToServer()" style="background:var(--danger);">SAVE AS...</button>
-                <button class="btn btn-sm" onclick="loadLiveConfigFromServer()">LOAD</button>
-            </div>
-            <button class="btn btn-sm" id="live-gear-btn" onclick="toggleLiveEditMode()" style="padding: 8px; border-radius: 50%; width: 36px; height: 36px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-            </button>
-        </div>
-
-        <!-- CAMERA FEED ABOVE GRID -->
-        <div id="live-console-feed-container" style="display:none; padding:10px; background: #000; border-bottom: 1px solid var(--border); margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <div style="font-size:10px; font-weight:800; color:var(--accent);">● LIVE FEED</div>
-                <button class="btn btn-sm" onclick="toggleLiveConsoleFeed(false)">✕ CLOSE FEED</button>
-            </div>
-            <img id="live-console-feed-img" style="width:100%; border-radius:8px; display:block;" src="">
-        </div>
-
-        <div id="live-console-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; min-height: 100px;">
-            <!-- Buttons will be injected here -->
-        </div>
-
-        <div id="live-assignment-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2001; align-items:center; justify-content:center; padding:20px;">
-            <div class="card" style="width:100%; max-width:400px; padding:20px;">
-                <div class="card-title">Assign Button <span id="assign-btn-idx">#1</span></div>
-                
-                <label>Function Type</label>
-                <select id="assign-type" onchange="updateAssignmentOptions()">
-                    <option value="none">None</option>
-                     <option value="preset">Preset</option>
-                     <option value="slider">Slider (Single/XY)</option>
-                     <option value="live_feed">Live Feed Toggle</option>
-                     <option value="blackout">Blackout</option>
-                 </select>
-
-                <div id="assign-preset-wrap" style="display:none; margin-top:15px;">
-                    <label>Select Preset</label>
-                    <select id="assign-preset-id"></select>
-                </div>
-
-                <div id="assign-slider-wrap" style="display:none; margin-top:10px;">
-                    <!-- CHANNEL Y (Vertical / Default) -->
-                    <div style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:10px; border-left: 3px solid var(--accent);">
-                        <div style="font-size:10px; font-weight:800; color:var(--accent); margin-bottom:5px;">CHANNEL Y (VERTICAL)</div>
-                        <label>Profile</label>
-                        <select id="assign-profile-id" onchange="updateAssignmentChannels('assign-channel-idx', this.value)"></select>
-                        <label style="margin-top:8px;">Channel</label>
-                        <select id="assign-channel-idx"></select>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
-                            <div><label>Min</label><input type="number" id="assign-min" value="0"></div>
-                            <div><label>Max</label><input type="number" id="assign-max" value="255"></div>
-                        </div>
-                    </div>
-
-                    <!-- CHANNEL X (Horizontal - Optional) -->
-                    <div style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border-left: 3px solid var(--accent-alt);">
-                        <div style="font-size:10px; font-weight:800; color:var(--accent-alt); margin-bottom:5px;">CHANNEL X (HORIZONTAL - OPTIONAL)</div>
-                        <label>Profile</label>
-                        <select id="assign-profile-id-x" onchange="updateAssignmentChannels('assign-channel-idx-x', this.value)">
-                            <option value="">-- None (Single Axis) --</option>
-                        </select>
-                        <label style="margin-top:8px;">Channel</label>
-                        <select id="assign-channel-idx-x"></select>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
-                            <div><label>Min</label><input type="number" id="assign-min-x" value="0"></div>
-                            <div><label>Max</label><input type="number" id="assign-max-x" value="255"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <label style="margin-top:15px;">Button Color</label>
-                <div style="display:flex; gap:8px; margin-top:5px;">
-                    <button class="color-swatch" onclick="setAssignColor('#7c4dff')" style="background:#7c4dff; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
-                    <button class="color-swatch" onclick="setAssignColor('#00ffcc')" style="background:#00ffcc; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
-                    <button class="color-swatch" onclick="setAssignColor('#ff4757')" style="background:#ff4757; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
-                    <button class="color-swatch" onclick="setAssignColor('#2ed573')" style="background:#2ed573; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
-                    <button class="color-swatch" onclick="setAssignColor('#ffa502')" style="background:#ffa502; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
-                </div>
-
-                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-                    <button class="btn" onclick="closeAssignment()">Cancel</button>
-                    <button class="btn btn-primary" onclick="saveAssignment()">Save</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div id="tab-presets" class="tab-content">
         <h2>Presets</h2>
         <p style="color:var(--text-dim)">Define structural overrides and automated triggers (e.g., The Drop).</p>
 
-        <div class="card">
-            <div class="card-title">Create New Preset</div>
-            <div class="form-row">
-                <div>
-                    <label>Preset Name</label>
-                    <input type="text" id="pres-name" placeholder="e.g., Massive Drop Lock">
-                    <button class="btn btn-primary btn-sm" id="preset-ai-gen-btn" onclick="openPresetAiChat()" style="margin-top:8px;">✨ Generate</button>
+        <div class="card" id="preset-editor-card" style="margin-bottom:20px; overflow:hidden; border-color: rgba(0, 242, 255, 0.15);">
+            <div id="preset-editor-header" class="row" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding: 12px 15px; background:rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="togglePresetEditor()">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="btn btn-primary btn-sm" id="preset-add-btn" style="height:28px; padding:0 12px; font-size:11px;" onclick="event.stopPropagation(); togglePresetEditor(true)">Add Preset</button>
+                    <button class="btn btn-primary btn-sm" id="preset-gen-btn-top" style="height:28px; padding:0 12px; font-size:11px; background:var(--secondary); border-color:var(--secondary);" onclick="event.stopPropagation(); openPresetAiChat(); togglePresetEditor(true)">Generate</button>
+                    
+                    <div id="preset-editor-actions-top" style="display:none; gap:10px; align-items:center;">
+                        <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background:var(--success); border-color:var(--success);" onclick="event.stopPropagation(); savePreset()">Save Preset</button>
+                        <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="event.stopPropagation(); togglePresetEditor(false)">Cancel</button>
+                    </div>
                 </div>
-                <div
-                    style="margin-top:15px; background:rgba(255,255,255,0.02); padding:10px; border-radius:4px; border:1px solid #333;">
-                    <label>Active Triggers</label>
-                    <div id="pres-active-triggers" style="margin-bottom:10px;"></div>
 
-                    <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px; display:flex; gap:8px; justify-content:flex-end; align-items:center;">
-                        <select id="pres-new-trigger-type" style="font-size:11px; background:#111; border:1px solid #444; color:#fff; border-radius:4px; padding:4px;">
-                            <option value="vibe">Vibe</option>
-                            <option value="state">State</option>
-                            <option value="volume">Volume</option>
-                            <option value="bin">Energy Bin</option>
-                            <option value="channel">Fixture Function</option>
-                        </select>
-                        <button class="btn btn-primary" onclick="addConditionFromUI()">+ Add Condition</button>
-                    </div>
-                </div> <!-- Closes line 637 Trigger Box -->
-            </div> <!-- Closes line 632 form-row -->
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div id="preset-editor-arrow" style="transition: transform 0.3s; color: #666; font-size: 10px;">▼</div>
+                </div>
+            </div>
 
-            <!-- Hidden templates for inputs, managed by JS -->
-            <div id="trigger-input-temp" style="display:none"></div>
+            <div id="preset-editor-content" style="display:none; padding:15px;">
+                <div class="row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div style="flex:1; margin-right:15px;">
+                        <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Preset Label</label>
+                        <input type="text" id="pres-name" placeholder="e.g. BREAKDOWN or KICK STROBE" style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                    </div>
+                    <button class="btn btn-primary btn-sm" id="preset-ai-gen-btn" onclick="openPresetAiChat()" style="margin-top:18px;">Generate</button>
+                </div>
 
-            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #444;">
-                <label style="font-size:1.1rem; font-weight:bold; color:var(--accent);">THEN:</label>
-                <div class="form-row" style="grid-template-columns: 1.5fr 1.5fr auto; align-items: end;">
-                    <div>
-                        <label>Target Fixture</label>
-                        <select id="pres-add-stage-fix" onchange="updatePresetFunctionDropdown()">
-                            <option value="global">ALL FIXTURES (Global)</option>
-                            <option value="visualdmx">VISUALIZER (VisualDMX)</option>
-                            <option value="system">ENGINE (System)</option>
-                        </select>
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">1. Trigger Conditions (AND Logic)</label>
+                        <div style="display:flex; gap:8px;">
+                            <select id="pres-new-trigger-type" style="font-size:11px; background:#111; border:1px solid #444; color:#fff; border-radius:4px; padding:4px;">
+                                <option value="vibe">Vibe</option>
+                                <option value="state">State</option>
+                                <option value="volume">Volume</option>
+                                <option value="bin">Energy Bin</option>
+                                <option value="channel">Fixture Function</option>
+                            </select>
+                            <button class="btn btn-sm" onclick="addConditionFromUI()" style="padding:4px 10px;">+ Add IF</button>
+                        </div>
                     </div>
-                    <div>
-                        <label>Target Function</label>
-                        <select id="pres-add-global-func">
-                            <option value="">-- Select Function --</option>
-                        </select>
+                    <div id="pres-active-triggers">
+                        <!-- Injected rows -->
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <label>Value / Range (0-255)</label>
-                        <div class="syntax-help-trigger">
-                            <span class="help-icon">?</span>
-                            <div class="syntax-guide">
-                                <div class="syntax-section">
-                                    <div class="syntax-header">ENGINE (System)</div>
-                                    <div class="syntax-item"><span>Rate:</span> 100=Normal, 50=Slow, 200=Fast</div>
-                                    <div class="syntax-item"><span>Intensity:</span> 0=Dark, 100=Normal, 150+=Boost</div>
-                                </div>
-                                
-                                <div class="syntax-section">
-                                    <div class="syntax-header">VISUALIZER (VisualDMX)</div>
-                                    <div class="syntax-item"><span>Zoom:</span> 0.5 (Wide), 1.0 (Normal), 2.0+ (Macro)</div>
-                                    <div class="syntax-item"><span>Hue:</span> 0-255 (Color Wheel Rotation)</div>
-                                    <div class="syntax-item"><span>Binary:</span> 1 = On, 0 = Off (Strobe, Invert, Spin)</div>
-                                    <div class="syntax-item"><span>Next/FX:</span> Enter 1 to jump to next</div>
-                                </div>
-                                
-                                <div class="syntax-section">
-                                    <div class="syntax-header">SEQUENCERS (Any Target)</div>
-                                    <div class="syntax-item"><span>Smooth:</span> 32-96 (Linear Sweep)</div>
-                                    <div class="syntax-item"><span>Steps:</span> 30, 127, 255 (Rhythmic Jump)</div>
-                                    <div class="syntax-item"><span>Offset:</span> 32-96+16 (+90&deg; Phase)</div>
-                                </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">2. Dynamic Overrides</label>
+                    </div>
+                    
+                    <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:10px; align-items:end;">
+                            <div>
+                                <label style="font-size:9px; color:#666;">TARGET</label>
+                                <select id="pres-add-stage-fix" onchange="updatePresetFunctionDropdown()"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:9px; color:#666;">FUNCTION</label>
+                                <select id="pres-add-global-func" onchange="updatePresetFunctionDropdown()"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:9px; color:#666;">VALUE / RANGE</label>
+                                <input type="text" id="pres-add-global-val" placeholder="255 or 0-255" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff;">
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="addOverrideToCurrentPreset()" style="padding:10px 15px;">ADD</button>
+                        </div>
+                    </div>
+
+                    <div id="pres-overrides-container">
+                        <!-- Injected overrides -->
+                    </div>
+                </div>
+
+                <details class="engine-accordion" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;" ontoggle="if(this.open) renderSliderSetup()">
+                    <summary style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:10px; opacity:0.6;">🎚️</span> 3. Slider Setup (Tactile Recording)
+                        <span style="margin-left:auto; font-size:9px; opacity:0.4;">[EXPAND]</span>
+                    </summary>
+                    <div class="accordion-content" style="padding-top:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <label style="font-size:0.65rem; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-weight:900;">Slider Calibration</label>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-sm btn-danger-soft" onclick="clearSliderSetup()" style="padding:4px 10px; font-size:10px;">Clear All</button>
+                                <button class="btn btn-primary btn-sm" onclick="recordSliderSetup()" style="padding:4px 10px; font-size:10px; background:var(--accent); color:#000;">Capture Sliders</button>
+                            </div>
+                        </div>
+                        
+                        <div id="pres-slider-setup-picker" class="test-fixture-picker" style="margin-bottom:15px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                            <!-- Fixture pills injected here -->
+                        </div>
+
+                        <div id="pres-slider-setup-strips" style="display:flex; gap:15px; overflow-x:auto; padding-bottom:10px; min-height:100px; scrollbar-width: thin; scrollbar-color: var(--accent) transparent;">
+                            <div style="padding:20px; text-align:center; color:#444; width:100%; border:1px dashed #222; border-radius:8px; font-size:12px;">
+                                Select fixtures above to live-adjust sliders.
                             </div>
                         </div>
                     </div>
-                    <input type="text" id="pres-add-global-val" placeholder="e.g. 255 or 32-96-32" style="width:100%;">
-                    <button class="btn btn-primary" onclick="addOverrideToCurrentPreset()">ADD ACTION</button>
-                </div>
-            </div>
-
-            <div id="pres-overrides-container" style="margin-top:20px;">
-                <!-- Active overrides will be rendered here -->
-            </div>
-
-            <div class="preset-editor-actions">
-                <button class="btn btn-primary" onclick="savePreset()">💾 Save Preset</button>
-                <button class="btn btn-sm" onclick="resetPresetForm()">Cancel</button>
+                </details>
             </div>
         </div>
 
@@ -449,10 +369,6 @@
                 </div>
             </div>
         </div>
-    
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="engine_tab.js?v=strategy_v19"></script>
-
             </div>
         </details>
 
@@ -758,39 +674,7 @@
     </div>
 
     <!-- --- SIM TAB --- -->
-    <div id="tab-sim" class="tab-content">
-        <div class="card">
-            <div class="card-title">Stage Simulation (Audience View)</div>
-            <div id="sim-stage-container">
-                <div class="sim-info">Virtual DMX Engine Running</div>
-                <canvas id="sim-canvas"></canvas>
-            </div>
-            <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:8px; border:1px solid #333;">
-                    <h4 style="margin:0 0 10px 0; font-size:12px; color:var(--accent-alt);">HOW TO USE</h4>
-                    <p style="font-size:11px; color:#888;">This simulator shows real-time projections for all <b>Stage
-                            Instances</b>. Position is derived from the assigned <b>Zone</b>
-                        (Left/Right/Top/Bottom/Center) and mapped to the audience perspective. Shape changes indicate
-                        <b>Pattern</b> DMX updates.</p>
-                    <select id="ai-model-select"
-                        style="width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; padding:10px; border-radius:8px; margin-top:10px;"
-                        onchange="localStorage.setItem('vj_gemini_model', this.value); document.querySelector('.active-model-name').innerText = this.options[this.selectedIndex].text;">
-                        <option value="gemini-3-flash" selected>Gemini 3 Flash</option>
-                        <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
-                        <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                        <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                        <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                        <option value="deep-research-pro-preview">Deep Research Pro Preview</option>
-                    </select>
-                </div>
-                <div id="sim-active-list"
-                    style="background:rgba(0,0,0,0.2); padding:15px; border-radius:8px; border:1px solid #111; max-height:120px; overflow-y:auto; font-family:monospace; font-size:11px; color:#aaa;">
-                    <!-- Populate with active fixtures -->
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <div id="tab-test" class="tab-content">
         <div class="test-hub-header-sticky">
@@ -857,13 +741,25 @@
         window.LAUNCHER_API = window.LAUNCHER_API || "";
         window.API_BASE = window.API_BASE || "";
     </script>
-    <script src="shared_setup.js?v=strategy_v19"></script>
-<script src="live_controller.js?v=strategy_v19"></script>
-<script src="profile_logic.js?v=strategy_v19"></script>
-<script src="ai_architect.js?v=strategy_v19"></script>
-<script src="stage_logic.js?v=strategy_v19"></script>
+    <script>
+        // Nuclear Option: If Service Worker is stuck serving stale code, unregister it
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    console.log("🛠️ Unregistering Rogue SW...");
+                    registration.unregister();
+                }
+            });
+        }
+    </script>
+    <script src="shared_setup.js?v=51262349"></script>
+    <script src="live_controller.js?v=51262349"></script>
+    <script src="profile_logic.js?v=51262349"></script>
+    <script src="ai_architect.js?v=51262349"></script>
+    <script src="stage_logic.js?v=51262349"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="engine_tab.js?v=51262349"></script>
 <script>window.onload = () => { 
-    console.log("✅ RaveBox Core Ready (v435)"); 
     // All routing and landing logic (redirects, tab switching) 
     // is now handled by Core Routing in shared_setup.js (v424)
     // to ensure deterministic behavior across all pages.

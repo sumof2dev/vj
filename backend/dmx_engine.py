@@ -160,11 +160,13 @@ class DMXEngine:
         
         self.base_speed = 0.6 
         self.base_intensity = 1.0
-        self.preset_speed = 1.0
-        self.preset_intensity = 1.0
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
         self.active_presets = []
+        
+        # Pause & Recovery System
+        self.is_paused = False
+        self.pause_debt = 0.0
         
         self._one_shot_active = False
         self._last_drop_time = 0.0
@@ -189,6 +191,9 @@ class DMXEngine:
             'chill': 0, 'mid': 0, 'high': 0, 'any': 0, 'build': 0, 'drop': 0
         }
         
+        self.auto_active_presets = [] # Presets triggered by audio
+        self.manual_active_presets = set() # Set of preset IDs manually forced ON
+        
         self.lab_probe_rule = None
         self.lab_probe_state = {} # Isolated state for Behavior Laboratory calculations
 
@@ -212,7 +217,8 @@ class DMXEngine:
         
         self._fixture_mtime = 0
         self._fast_cache = {} 
-        self.active_presets = [] 
+        self.active_presets = [] # Combined list for UI/Broadcast
+        self.auto_active_presets = []
         self.manual_active_presets = set() # Set of preset IDs manually forced ON
         self.active_visual_commands = []
         
@@ -396,15 +402,23 @@ class DMXEngine:
     def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
         self._dt = dt
         
-        # Reset Preset Layer (Volatile)
-        self.preset_speed = 1.0
-        self.preset_intensity = 1.0
+        # PAUSE & RECOVERY LOGIC
+        if self.is_paused:
+            self.pause_debt += dt
+            self.eff_speed = 0.0
+        else:
+            if self.pause_debt > 0.0:
+                # Catch up logic: recover lost time by boosting speed
+                # Quicker recovery (up to 5x total) the longer its held
+                recovery_mult = 1.0 + min(4.0, self.pause_debt * 0.5)
+                # Burn the debt (we are gaining 'recovery_mult - 1' extra seconds per real second)
+                burned = dt * (recovery_mult - 1.0)
+                self.pause_debt = max(0.0, self.pause_debt - burned)
+                self.eff_speed = self.base_speed * recovery_mult
+            else:
+                self.eff_speed = self.base_speed
         
-        # Determine Effective Totals (Manual * Automated)
-        self.eff_speed = self.base_speed * self.preset_speed
-        self.eff_intensity = self.base_intensity * self.preset_intensity
-        
-        # Warp the internal clock by system speed for both presets and physics
+        self.eff_intensity = self.base_intensity
         self._eff_dt = dt * self.eff_speed
 
         self.prev_gamepad = self.gamepad
@@ -412,8 +426,8 @@ class DMXEngine:
         self.transient = audio.get('transient', 'steady')
         current_vibe = audio.get('vibe', 'mid')
         
-        # Pre-calculate active presets (Global check once per frame)
-        self.active_presets = []
+        # --- AUTOMATIC PRESETS (Triggers) ---
+        self.auto_active_presets = []
         
         active_triggers = [f"vibe:{current_vibe}"]
         if self.transient: active_triggers.append(f"state:{self.transient}") # Support state triggers correctly
@@ -511,15 +525,17 @@ class DMXEngine:
                     break
                 
             if is_active:
-                self.active_presets.append(p_data)
+                self.auto_active_presets.append(p_data)
                 
         # --- MERGE MANUAL PRESETS ---
+        manual_presets_list = []
         for p_data in self.presets:
-            if not p_data.get('active', True): continue
             p_id = p_data.get('id', p_data.get('name'))
             if p_id in self.manual_active_presets:
-                if p_data not in self.active_presets:
-                    self.active_presets.append(p_data)
+                manual_presets_list.append(p_data)
+
+        # Update combined list for external observers
+        self.active_presets = self.auto_active_presets + manual_presets_list
 
         self.active_visual_commands = []
         force_next_visual = False
@@ -546,17 +562,9 @@ class DMXEngine:
                         ov_key = f"system_{p_id}_{fn}"
                         resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 100), dt)
                         
-                        # Apply multiplier directly to engine speed/intensity
-                        multiplier = resolved_val / 100.0
-                        if fn in ['speed', 'rate', 'dt']:
-                            self.preset_speed = multiplier
-                        elif fn == 'intensity':
-                            self.preset_intensity = multiplier
-
-        # Recalculate effective totals after preset evaluation
-        self.eff_speed = self.base_speed * self.preset_speed
-        self.eff_intensity = self.base_intensity * self.preset_intensity
-        self._eff_dt = dt * self.eff_speed
+                        if fn == 'pause':
+                            # Trigger pause if value is high (>= 128)
+                            self.set_pause(resolved_val >= 128)
 
         if 'left' in audio and 'right' in audio:
             self.logic_l.update(dt, audio['left'], self.transient, self.eff_speed, self.eff_intensity)
@@ -645,15 +653,22 @@ class DMXEngine:
         else:
             self.lab_dmx_val = 0
 
-        # Process All Instances
+        # 1. Base Layer Processing (Profiles + Auto-Presets)
         for i, inst in enumerate(self.stage_instances):
-            self._process_instance(inst, i, audio, self.sync_indices)
+            self._process_instance(inst, i, audio, self.auto_active_presets, self.sync_indices, use_raw_dt=False)
+
+        # 2. MANUAL PUNCH-THROUGH (Manual Presets & Overrides)
+        # These override the automated base layer
+        for i, inst in enumerate(self.stage_instances):
+            if manual_presets_list:
+                self._apply_presets_to_instance(inst, i, audio, manual_presets_list, use_raw_dt=True)
 
         for addr, val in self.overrides.items():
             if 0 < addr < len(self.universe):
                 self.universe[addr] = max(0, min(255, int(val)))
 
-        # GLOBAL BLACKOUT OVERRIDE
+        # 3. GLOBAL BLACKOUT OVERRIDE
+        # The absolute final master. Nothing escapes blackout.
         if self.blackout:
             for i in range(1, len(self.universe)):
                 self.universe[i] = 0
@@ -669,12 +684,10 @@ class DMXEngine:
         self.blackout = bool(state)
         print(f"🔦 Global Blackout: {'ON' if self.blackout else 'OFF'}")
 
-    def _process_instance(self, inst, zone_idx, audio, sync_indices=None):
+    def _process_instance(self, inst, zone_idx, audio, active_presets, sync_indices=None, use_raw_dt=False):
         profile = self.profiles.get(inst.get('profileId'))
         if not profile: return
 
-        # Unified Architecture: Channels are now part of the profile!
-        # Fallback to legacy fixtureId if channels key is missing (for transition support)
         channels = profile.get('channels', [])
         if not channels:
             fixture = self.fixtures.get(inst.get('fixtureId'))
@@ -687,10 +700,6 @@ class DMXEngine:
             base_addr = int(inst.get('address', 1)) + int(inst.get('offset', 0))
         except: return
         
-        active_triggers = []
-        current_vibe = audio.get('vibe', 'mid')
-        active_triggers.append(f"vibe:{current_vibe}")
-        
         # Simple global routing - Left/Right/Center usually inferred from zone name for now
         zone_str = str(inst.get('zone', '')).lower()
         if 'left' in zone_str: active_logic = self.logic_l; active_audio = audio.get('left', audio)
@@ -700,7 +709,6 @@ class DMXEngine:
 
 
         for ch_idx, ch_def in enumerate(channels):
-
             # Use addrOffset if provided explicitly, otherwise fallback to index relative to base_addr
             offset = ch_def.get('addrOffset')
             if offset is None: offset = ch_idx
@@ -708,26 +716,57 @@ class DMXEngine:
             final_addr = base_addr + int(offset)
             if not (0 < final_addr < len(self.universe)): continue
             
-            
             cache = self._fast_cache.get(profile['id'], {}).get(ch_idx)
             if not cache: continue
             
             val = self._calculate_channel(ch_idx, active_audio, active_logic, zone_idx, cache, profile['id'], ch_def, sync_indices)
+            self.universe[final_addr] = max(0, min(255, int(val)))
 
-            # Preset Overrides (Optimized)
+        # Now apply presets
+        self._apply_presets_to_instance(inst, zone_idx, audio, active_presets, use_raw_dt)
+
+    def _apply_presets_to_instance(self, inst, zone_idx, audio, active_presets, use_raw_dt=False):
+        profile = self.profiles.get(inst.get('profileId'))
+        if not profile: return
+
+        channels = profile.get('channels', [])
+        if not channels:
+            fixture = self.fixtures.get(inst.get('fixtureId'))
+            if fixture:
+                channels = fixture.get('channels', [])
+        
+        if not channels: return
+
+        try:
+            base_addr = int(inst.get('address', 1)) + int(inst.get('offset', 0))
+        except: return
+
+        zone_str = str(inst.get('zone', '')).lower()
+        if 'left' in zone_str: active_logic = self.logic_l; active_audio = audio.get('left', audio)
+        elif 'right' in zone_str: active_logic = self.logic_r; active_audio = audio.get('right', audio)
+        else: active_logic = self.logic; active_audio = audio
+
+        # Pre-resolve dt to use for this batch of presets
+        dt_to_use = self._dt if use_raw_dt else self._eff_dt
+
+        for ch_idx, ch_def in enumerate(channels):
+            offset = ch_def.get('addrOffset')
+            if offset is None: offset = ch_idx
+            final_addr = base_addr + int(offset)
+            if not (0 < final_addr < len(self.universe)): continue
+
             preset_override_val = None
-            
-            for p_data in self.active_presets:
+            target_role = ch_def.get('role', ch_def.get('name'))
+
+            for p_data in active_presets:
                 overrides = p_data.get('overrides', [])
                 p_id = p_data.get('id', p_data.get('name', 'unknown'))
                 for ov in overrides:
                     ov_type = ov.get('type')
                     target_id = ov.get('target', ov.get('id'))
-                    target_role = ch_def.get('role', ch_def.get('name'))
                     matched_ov_ch = None
                     
                     if ov_type == 'instance':
-                        # Resilient matching: ID, ProfileName, or Zone
                         is_match = (target_id == inst['id'] or 
                                    target_id == inst.get('profileName') or 
                                    (inst.get('zone') and str(inst.get('zone')).lower() == str(target_id).lower()))
@@ -742,28 +781,22 @@ class DMXEngine:
                                 if ov_ch.get('name') == target_role:
                                     matched_ov_ch = ov_ch
                                     break
-                            # Fallback to direct 'value' for legacy global presets
                             if matched_ov_ch is None and 'value' in ov:
                                 ov_key = f"dimmer_{p_id}_{target_id}_{inst['id']}"
-                                # Use warped dt for global value sweeps
-                                preset_override_val = self._resolve_preset_value(ov_key, ov.get('value', 0), self._eff_dt)
+                                preset_override_val = self._resolve_preset_value(ov_key, ov.get('value', 0), dt_to_use)
                     
                     if matched_ov_ch is not None:
                         if matched_ov_ch.get('mode') == 'behavior':
-                            # Dynamic behavior override — evaluate like a profile rule
                             bkey = f"preset_{p_id}_{ov.get('id','g')}_{target_role}_{zone_idx}"
                             preset_override_val = self._evaluate_preset_behavior(
-                                matched_ov_ch, active_audio, active_logic, bkey
+                                matched_ov_ch, active_audio, active_logic, bkey, use_raw_dt
                             )
                         else:
                             ov_key = f"dmx_{p_id}_{target_role}_{inst['id']}"
-                            # Use warped dt for instance value sweeps
-                            preset_override_val = self._resolve_preset_value(ov_key, matched_ov_ch.get('value', 0), self._eff_dt)
+                            preset_override_val = self._resolve_preset_value(ov_key, matched_ov_ch.get('value', 0), dt_to_use)
             
             if preset_override_val is not None:
-                val = preset_override_val
-                
-            self.universe[final_addr] = max(0, min(255, int(val)))
+                self.universe[final_addr] = max(0, min(255, int(preset_override_val)))
 
 
 
@@ -1025,22 +1058,39 @@ class DMXEngine:
         except:
             return 0.0
 
-    def _evaluate_preset_behavior(self, ov_ch, audio, logic_matrix, instance_key):
+    def _evaluate_preset_behavior(self, ov_ch, audio, logic_matrix, instance_key, use_raw_dt=False):
         """Standardized math for preset behavior overrides."""
-        # Force a rule-like object to reuse the math core
-        rule = {
-            'behavior': ov_ch.get('behavior', 'static'),
-            'source': ov_ch.get('source', 'volume'),
-            'modifiers': ov_ch.get('modifiers', {}),
-            'cal': ov_ch.get('cal', {})
-        }
-        st = logic_matrix.states[instance_key]
-        return self._apply_rule_math(rule, st, audio, logic_matrix)
+        try:
+            # Fallback for "value" vs "behavior" field names to support legacy/UI presets
+            behavior = ov_ch.get('behavior', ov_ch.get('value', 'static'))
+            if isinstance(behavior, int) or (isinstance(behavior, str) and behavior.isdigit()):
+                behavior = 'static' # It's a raw value, not a behavior name
+
+            # Force a rule-like object to reuse the math core
+            rule = {
+                'behavior': behavior,
+                'source': ov_ch.get('source', 'volume'),
+                'modifiers': ov_ch.get('modifiers', {}),
+                'cal': ov_ch.get('cal', {'min': 0, 'center': 128, 'max': 255})
+            }
+            st = logic_matrix.states[instance_key]
+            # Use raw dt if requested (e.g. for manual punch-through during pause)
+            dt_to_use = self._dt if use_raw_dt else self._eff_dt
+            return self._apply_rule_math(rule, st, logic_matrix, dt_to_use, audio=audio)
+        except Exception as e:
+            # print(f"⚠️ Preset behavior evaluation failed: {e}")
+            return 0
 
     def get_universe(self): return self.universe[:]
     def set_intensity(self, val): self.base_intensity = float(val)
     def set_speed(self, val): self.base_speed = float(val)
     def set_audio_sensitivity(self, val): self.audio_sensitivity = float(val)
+    def set_pause(self, state): 
+        self.is_paused = bool(state)
+        if self.is_paused:
+            print("🛑 ENGINE PAUSED")
+        else:
+            print(f"▶️ ENGINE RESUMED (Debt: {self.pause_debt:.2f}s)")
     # Removed legacy _detect_bass_style
 
     def apply_overrides(self, ol, sl=[]):

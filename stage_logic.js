@@ -876,10 +876,10 @@ var switchTab = window.switchTab || function() { };
                     // 1. UPDATE AUDIO STATE
                     latestAudioState.vol = view.getFloat32(20, true);
                     latestAudioState.bpm = view.getFloat32(24, true);
-                    latestAudioState.beat = view.getUint8(52) === 1;
+                    latestAudioState.beat = view.getUint8(56) === 1;
 
                     const bins = [];
-                    for (let i = 0; i < 6; i++) bins.push(view.getFloat32(28 + (i * 4), true));
+                    for (let i = 0; i < 6; i++) bins.push(view.getFloat32(32 + (i * 4), true));
                     latestAudioState.bins = bins;
 
                     // Populate top-level fields for visualizers and legacy logic
@@ -1474,8 +1474,10 @@ var switchTab = window.switchTab || function() { };
                     console.error("🚨 EMERGENCY BOOT: Core failed to report READY. Forcing initialization...");
                     window.RAVEBOX_READY = true;
                 } else {
-                    console.warn(`⏳ Waiting for Core (Attempt ${bootAttempts})...`);
-                    return setTimeout(initApp, 100);
+                    if (bootAttempts % 10 === 1) { // Only log every 10 attempts
+                        console.warn(`⏳ Waiting for Core Sync (Attempt ${bootAttempts})...`);
+                    }
+                    return setTimeout(initApp, 200);
                 }
             }
 
