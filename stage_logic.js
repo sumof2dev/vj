@@ -167,9 +167,28 @@ var switchTab = window.switchTab || function() { };
             if (inst) {
                 inst.zone = newZone.trim();
                 await saveDB();
-                // We don't refreshUI here to avoid losing focus, but we might need to re-sort soon
+                renderStageList(); // Refresh to reflect new grouping
             }
         }
+
+        window.updateZoneProfile = function(zone, profileId) {
+            if (profileId === "BULK") return;
+            const prof = db.profiles.find(p => p.id === profileId);
+            if (!prof) return;
+
+            if (!confirm(`Apply profile "${prof.name}" to all fixtures in zone "${zone}"?`)) return;
+
+            db.stage.forEach(s => {
+                const z = (s.zone || 'UNZONED').toUpperCase();
+                if (z === zone.toUpperCase()) {
+                    s.profileId = profileId;
+                    s.profileName = prof.name;
+                }
+            });
+
+            saveDB();
+            renderStageList();
+        };
 
         async function updateInstanceAddress(instId, newAddr) {
             const inst = db.stage.find(s => s.id === instId);
@@ -242,8 +261,17 @@ var switchTab = window.switchTab || function() { };
             let html = '';
             sortedZones.forEach(zone => {
                 html += `<div class="zone-header" style="padding:8px 12px; background:rgba(255,255,255,0.05); font-weight:900; font-size:10px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-top:10px; border-radius:8px 8px 0 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-                    ${zone}
-                    <span style="opacity:0.4; font-size:9px;">${grouped[zone].length} FIXTURES</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        ${zone}
+                        <span style="opacity:0.4; font-size:9px;">${grouped[zone].length} FIXTURES</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:8px; opacity:0.3;">BULK PROFILE:</span>
+                        <select style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:9px; border-radius:4px; padding:2px 4px; outline:none; cursor:pointer;" onchange="updateZoneProfile('${zone}', this.value)">
+                            <option value="BULK">-- APPLY TO ALL --</option>
+                            ${uniqueAllProfs.map(p => `<option value="${p.id}">${p.name.toUpperCase()}</option>`).join('')}
+                        </select>
+                    </div>
                 </div>`;
                 
                 html += grouped[zone].map(s => {
@@ -262,6 +290,8 @@ var switchTab = window.switchTab || function() { };
                             </select>
                             <span style="opacity:0.2; color:#fff; flex-shrink:0;">|</span>
                             <input type="text" value="${s.id}" style="background:none; border:none; color:#555; font-size:10px; font-weight:bold; letter-spacing:0.5px; outline:none; padding:0; width:auto; min-width:30px; flex:1;" onchange="updateInstanceId('${s.id}', this.value)" title="Fixture ID / Name">
+                            <span style="opacity:0.2; color:#fff; flex-shrink:0;">|</span>
+                            <input type="text" value="${s.zone || ''}" placeholder="ZONE" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:var(--accent-alt); font-size:9px; font-weight:900; letter-spacing:0.5px; outline:none; padding:2px 4px; width:70px; border-radius:3px; text-transform:uppercase;" onchange="updateInstanceZone('${s.id}', this.value)" title="Zone Assignment">
                         </div>
                         <div style="display:flex; gap:4px;">
                             <button class="btn btn-sm" style="width:22px; height:22px; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.3;" onclick="goToProfile('${s.profileId}')" title="Edit Profile">
@@ -930,7 +960,7 @@ var switchTab = window.switchTab || function() { };
                         if (msg.overrides) latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
                         if (msg.active_presets) {
                             activePresets = msg.active_presets;
-                            latestAudioState.manual_active_presets = msg.active_presets;
+                            latestAudioState.manual_active_presets = msg.manual_active_presets || [];
                             msg.active_presets.forEach(p => everActivatedPresets.add(p));
                             if (typeof window.updateUniversalHUD === 'function') window.updateUniversalHUD();
                         }
@@ -1560,7 +1590,8 @@ var switchTab = window.switchTab || function() { };
 function togglePreset(presetId) {
     if (!presetId) return;
     if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-        window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetId }));
+        // Enforce mutual exclusivity for manual presets triggered from UI
+        window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetId, exclusive: true }));
     } else {
         console.warn("WebSocket not connected, cannot toggle preset:", presetId);
     }

@@ -918,6 +918,7 @@ async def fast_broadcast_loop():
                         "vibe_variant": dmx_engine.sync_indices.get(current_vibe, 0) + 1 if dmx_engine else 1,
                         "transient": audio_state.get('transient', 'steady'),
                         "active_presets": [p.get('id', p['name']) for p in dmx_engine.active_presets] if dmx_engine else [],
+                        "manual_active_presets": list(dmx_engine.manual_active_presets) if dmx_engine else [],
                         "visual_commands": dmx_engine.active_visual_commands if dmx_engine else [],
                         "blackout": dmx_engine.blackout if dmx_engine else False,
                         "eff_speed": dmx_engine.eff_speed if dmx_engine else 0.6,
@@ -1174,8 +1175,9 @@ async def ws_handler(websocket):
                         elif msg_type == "toggle_preset":
                             preset_id = data.get("preset_id")
                             state = data.get("state") # optional
+                            exclusive = data.get("exclusive", False)
                             if dmx_engine and preset_id:
-                                dmx_engine.toggle_manual_preset(preset_id, state)
+                                dmx_engine.toggle_manual_preset(preset_id, state, exclusive)
                         
                         elif msg_type == "visual_states":
                             # Update synchronized visual layer indices

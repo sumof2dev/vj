@@ -15,6 +15,10 @@
             100% { opacity: 1; }
         }
 
+        .hidden {
+            display: none !important;
+        }
+
         .rec-status {
             display: none;
             align-items: center;
@@ -290,7 +294,7 @@
         }
 
         body {
-            background-size: cover;
+            background-color: transparent;
             color: var(--text);
             font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
             margin: 0;
@@ -304,13 +308,44 @@
             touch-action: pan-y;
         }
 
-        body.setup-bg {
-            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('background2.png') no-repeat center center fixed !important;
+        /* --- BACKGROUND LAYER ---
+         * Real DOM element: avoids all pseudo-element/flex stacking ambiguity.
+         * 100vmax square (always >= both viewport dimensions) centered on the viewport.
+         * Landscape: rotated -90deg so portrait images display correctly.
+         */
+        #bg-layer {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 100vmax;
+            height: 100vmax;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            pointer-events: none;
         }
 
-        body.engine-test-bg {
-            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('background3.png') no-repeat center center fixed !important;
+        @media (orientation: landscape) {
+            #bg-layer {
+                transform: translate(-50%, -50%) rotate(-90deg);
+            }
         }
+
+        body.bg-stage #bg-layer, body.setup-bg #bg-layer {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/public/background.png');
+        }
+        body.bg-presets #bg-layer {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/public/background2.png');
+        }
+        body.bg-engine #bg-layer, body.engine-test-bg #bg-layer {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/public/background3.png');
+        }
+        body.bg-test #bg-layer {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/public/background4.png');
+        }
+
 
         /* --- SIDEBAR NAV --- */
         .sidebar {
@@ -323,7 +358,7 @@
             border-right: 1px solid var(--border);
             transition: width 0.3s ease;
             position: relative;
-            z-index: 1000;
+            z-index: 1001;
         }
 
         .sidebar.collapsed {
@@ -489,6 +524,7 @@
             height: 100dvh;
             transition: all 0.3s ease;
             position: relative;
+            z-index: 1;
             -webkit-overflow-scrolling: touch;
         }
 
@@ -1923,18 +1959,25 @@
             padding: 10px;
         }
 
-        .live-btn:active {
-            transform: scale(0.98);
-            background-color: #121215;
+        .live-btn:active, .live-btn.pressed {
+            transform: scale(0.95);
+            background-color: rgba(255, 255, 255, 0.1);
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 5px rgba(0, 0, 0, 0.4);
             border-bottom-width: 1px;
         }
 
         .live-btn.active {
-            background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.1) 0%, rgba(var(--accent-rgb), 0.03) 100%);
+            background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.25) 0%, rgba(var(--accent-rgb), 0.08) 100%);
             background-color: #1a1a1f;
-            border-color: rgba(var(--accent-rgb), 0.4);
-            box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+            border-color: var(--accent);
+            box-shadow: 0 0 25px rgba(var(--accent-rgb), 0.5), inset 0 0 10px rgba(var(--accent-rgb), 0.2);
+            animation: live-pulse 2s infinite;
+        }
+
+        @keyframes live-pulse {
+            0% { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.4), inset 0 0 10px rgba(var(--accent-rgb), 0.1); }
+            50% { box-shadow: 0 0 35px rgba(var(--accent-rgb), 0.6), inset 0 0 15px rgba(var(--accent-rgb), 0.3); }
+            100% { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.4), inset 0 0 10px rgba(var(--accent-rgb), 0.1); }
         }
 
         /* DMX Fader Styles */

@@ -66,7 +66,7 @@ window.addEventListener('error', function(e) {
     console.error("❌ GLOBAL ERROR:", e.message, "at", e.filename, ":", e.lineno);
     const el = document.getElementById('debug-error-overlay');
     if (el) {
-        el.style.display = 'block';
+        el.classList.remove('hidden');
         el.innerText = '❌ ' + e.message + ' at ' + e.filename + ':' + e.lineno;
     }
 });
@@ -232,7 +232,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "52262300";
+window.APP_VERSION = "53261507";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -330,7 +330,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v52262300)");
+    console.log("✅ RaveBox Core Ready (v53261507)");
 }
 
 // Kick off sync immediately
@@ -534,10 +534,12 @@ var switchTab = window.switchTab = function(tabId, noHistory = false) {
     localStorage.setItem('vj_active_tab', tabId);
     window.currentTab = tabId;
 
-    document.body.classList.remove('engine-test-bg');
-    if (tabId === 'tab-engine' || tabId === 'tab-test') {
-        document.body.classList.add('engine-test-bg');
-    }
+    // Cycle backgrounds
+    document.body.classList.remove('bg-stage', 'bg-presets', 'bg-engine', 'bg-test', 'setup-bg', 'engine-test-bg');
+    if (tabId === 'tab-stage') document.body.classList.add('bg-stage');
+    else if (tabId === 'tab-presets') document.body.classList.add('bg-presets');
+    else if (tabId === 'tab-engine') document.body.classList.add('bg-engine');
+    else if (tabId === 'tab-test') document.body.classList.add('bg-test');
 
     if (!noHistory) {
         const url = new URL(window.location);
@@ -611,26 +613,26 @@ window.togglePresetEditor = function(show) {
     const arrow = document.getElementById('preset-editor-arrow');
     const header = document.getElementById('preset-editor-header');
 
-    if (show === undefined) show = content.style.display === 'none';
+    if (show === undefined) show = content.classList.contains('hidden');
 
     if (show) {
-        content.style.display = 'block';
-        actionsTop.style.display = 'flex';
-        addBtn.style.display = 'none';
-        genBtn.style.display = 'none';
+        content.classList.remove('hidden');
+        actionsTop.classList.remove('hidden');
+        addBtn.classList.add('hidden');
+        genBtn.classList.add('hidden');
         if (arrow) arrow.style.transform = 'rotate(180deg)';
         if (header) header.style.background = 'rgba(255,255,255,0.05)';
     } else {
-        content.style.display = 'none';
-        actionsTop.style.display = 'none';
-        addBtn.style.display = 'block';
-        genBtn.style.display = 'block';
+        content.classList.add('hidden');
+        actionsTop.classList.add('hidden');
+        addBtn.classList.remove('hidden');
+        genBtn.classList.remove('hidden');
         if (arrow) arrow.style.transform = 'rotate(0deg)';
         if (header) header.style.background = 'rgba(255,255,255,0.02)';
     }
 };
 
-window.APP_VERSION = "52262300";
+window.APP_VERSION = "53261507";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
@@ -689,7 +691,7 @@ function loadNodeIp() {
     const input = document.getElementById('dmx-node-ip-input');
     if (!input) return;
     fetch('/api/remote_settings')
-        .then(r => r.json())
+        .then(r => r.ok ? r.json() : Promise.reject("Status " + r.status))
         .then(data => {
             const ip = data.master?.node_ip || "";
             const active = data.master?.node_active !== false; // Default true
@@ -754,7 +756,7 @@ window.lockNodeIp = function() {
 
 function saveNodeIp(nodeIp, active = true) {
     fetch('/api/remote_settings')
-        .then(r => r.json())
+        .then(r => r.ok ? r.json() : Promise.reject("Status " + r.status))
         .then(data => {
             if (!data.master) data.master = {};
             data.master.node_ip = nodeIp;
@@ -771,3 +773,19 @@ function saveNodeIp(nodeIp, active = true) {
         })
         .catch(e => console.error("Failed to save node IP:", e));
 }
+
+// --- 3. UI STATE MANAGEMENT & EVENT DELEGATION ---
+// Following 00_architecture_router.md standards
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-target]');
+        if (target) {
+            const tabId = target.getAttribute('data-target');
+            if (tabId) {
+                if (typeof window.switchTab === 'function') {
+                    window.switchTab(tabId);
+                }
+            }
+        }
+    });
+});

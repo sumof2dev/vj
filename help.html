@@ -10,7 +10,7 @@
         // Inject cache buster for shared_setup.js
         const v = new URLSearchParams(window.location.search).get('v') || Date.now();
         const script = document.createElement('script');
-        script.src = `shared_setup.js?v=52262300
+        script.src = `shared_setup.js
         document.head.appendChild(script);
     </script>
 
@@ -35,7 +35,7 @@
         }
 
         body {
-            background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9)), url('background.png') no-repeat center center fixed;
+            background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9)), url('/public/background.png') no-repeat center center fixed;
             background-size: cover;
             color: var(--text);
             margin: 0;

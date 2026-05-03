@@ -10,22 +10,23 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RaveBox">
-    <link rel="apple-touch-icon" href="icon.png">
-    <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=52262300">
+    <link rel="apple-touch-icon" href="/public/icon.png">
+    <link rel="icon" href="/public/icon.png">
+<link rel="stylesheet" href="setup.css">
 <style>
     html, body {
-        background-size: cover !important;
+        /* background-size handled in setup.css */
     }
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
     .sidebar-title .brand span { color: var(--accent) !important; font-size: 0.85em !important; margin-left: 2px !important; font-weight: 900 !important; }
     .sidebar-title .subtitle { font-size: 0.75rem !important; font-weight: 800 !important; letter-spacing: 1px !important; text-transform: uppercase !important; color: var(--accent) !important; opacity: 0.8 !important; align-self: flex-start !important; margin-top: -2px !important; margin-left: 12px !important; }
 </style>
-<link rel="stylesheet" href="engine_tab.css?v=52262300">
+<link rel="stylesheet" href="engine_tab.css">
 </head>
 
-<body class="setup-bg">
+<body>
+    <div id="bg-layer" aria-hidden="true"></div>
     <!-- LOADING OVERLAY -->
     <div id="loading-overlay">
         <div class="loader-logo">RAVE<span>BOX</span></div>
@@ -47,30 +48,30 @@
             </div>
             <div class="sidebar-title">
                 <div class="brand">RAVE<span>BOX</span></div>
-                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v52262300</span></div>
+                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v53261507</span></div>
             </div>
         </div>
 
 
 
-        <div class="nav-btn active" id="nav-btn-stage" onclick="switchTab('tab-stage')" title="Profile">
+        <div class="nav-btn active" id="nav-btn-stage" data-target="tab-stage" title="Profile">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1.1 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.4 1.5 3.5.8.8 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>
-            <span class="nav-text">Profile</span>
+            <span class="nav-text">Stage</span>
         </div>
 
         
 
-        <div class="nav-btn" id="nav-btn-presets" onclick="switchTab('tab-presets')" title="Presets">
+        <div class="nav-btn" id="nav-btn-presets" data-target="tab-presets" title="Presets">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
             <span class="nav-text">Presets</span>
         </div>
-        <div class="nav-btn" id="nav-btn-engine" onclick="switchTab('tab-engine')" title="Engine">
+        <div class="nav-btn" id="nav-btn-engine" data-target="tab-engine" title="Engine">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             <span class="nav-text">Engine</span>
         </div>
 
 
-        <div class="nav-btn" id="nav-btn-test" onclick="switchTab('tab-test')" title="Test Hub">
+        <div class="nav-btn" id="nav-btn-test" data-target="tab-test" title="Test Hub">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
             <span class="nav-text">Test</span>
         </div>
@@ -105,7 +106,7 @@
     </div>
     <div id="tab-stage" class="tab-content">
         <div class="row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-            <h2 style="margin:0;">Profile</h2>
+            <h2 style="margin:0;">Stage Manager</h2>
             <div class="btn-settings" onclick="cycleTheme()" title="Cycle Theme" style="cursor:pointer; opacity:0.6; transition: opacity 0.2s;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </div>
@@ -118,7 +119,7 @@
                     <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="window.location.href='fixture_ai.html'">Add Profile</button>
                     <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="document.getElementById('load-profile-input').click()">Load</button>
                     <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background:var(--success); border-color:var(--success);" onclick="sendIt(event)">Save Stage</button>
-                    <input type="file" id="load-profile-input" style="display:none" onchange="loadProfiles(event)" multiple>
+                    <input type="file" id="load-profile-input" class="hidden"   onchange="loadProfiles(event)" multiple>
                 </div>
                 
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -141,13 +142,13 @@
                 </div>
                 <div id="all-profiles-arrow" style="transition: transform 0.3s; color: #666;">▼</div>
             </div>
-            <div id="all-profiles-content" style="display:none; margin-top:15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+            <div id="all-profiles-content" class="hidden" style="margin-top:15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
                 <div id="all-profiles-list" class="item-list"></div>
             </div>
         </div>
 
         <!-- NODE CONSOLE MODAL -->
-        <div id="node-console-modal" class="ai-modal-overlay" style="display:none; z-index:15000;" onclick="this.style.display='none'">
+        <div id="node-console-modal" class="ai-modal-overlay hidden" style="z-index:15000;" onclick="this.classList.add('hidden')">
             <div class="ai-modal-content" style="max-width:600px; background:#000;" onclick="event.stopPropagation()">
                 <div class="ai-modal-header">
                     <div id="node-console-title" style="font-weight:800; color:var(--accent); font-size:11px; letter-spacing:1px;">📡 NODE REMOTE CONSOLE</div>
@@ -163,7 +164,7 @@
         <div class="card">
             <div id="stage-list" class="item-list" style="margin-top:0; border-top:none; padding-top:0;"></div>
             
-            <div id="stage-json-container" style="display:none; margin-top: 10px;">
+            <div id="stage-json-container" class="hidden" style="margin-top: 10px;">
                 <textarea id="stage-json-editor"
                     style="width:100%; height:300px; background:#1a1a1f; color:#0f0; font-family:monospace; border:1px solid #333; padding:10px; border-radius:4px;"></textarea>
                 <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="saveStageJson()">💾 Save JSON
@@ -183,7 +184,7 @@
                     <button class="btn btn-primary btn-sm" id="preset-add-btn" style="height:28px; padding:0 12px; font-size:11px;" onclick="event.stopPropagation(); togglePresetEditor(true)">Add Preset</button>
                     <button class="btn btn-primary btn-sm" id="preset-gen-btn-top" style="height:28px; padding:0 12px; font-size:11px; background:var(--secondary); border-color:var(--secondary);" onclick="event.stopPropagation(); openPresetAiChat(); togglePresetEditor(true)">Generate</button>
                     
-                    <div id="preset-editor-actions-top" style="display:none; gap:10px; align-items:center;">
+                    <div id="preset-editor-actions-top" class="hidden" style=" gap:10px; align-items:center;">
                         <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background:var(--success); border-color:var(--success);" onclick="event.stopPropagation(); savePreset()">Save Preset</button>
                         <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="event.stopPropagation(); togglePresetEditor(false)">Cancel</button>
                     </div>
@@ -194,7 +195,7 @@
                 </div>
             </div>
 
-            <div id="preset-editor-content" style="display:none; padding:15px;">
+            <div id="preset-editor-content" class="hidden" style="padding:15px;">
                 <div class="row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <div style="flex:1; margin-right:15px;">
                         <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Preset Label</label>
@@ -418,7 +419,7 @@
 
                 </div>
 
-                <div id="longTermStatus" class="help-card" style="display:none; text-align: center; border-color: var(--accent);">
+                <div id="longTermStatus" class="help-card" class="hidden" style=" text-align: center; border-color: var(--accent);">
                     <h3>Long Term Analysis Recording</h3>
                     <div id="longTermTimer" style="font-family: monospace; font-size: 2.5rem; color: var(--accent); margin-bottom: 10px;">00:00:00</div>
                     <div style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 20px;">
@@ -428,7 +429,7 @@
                     <button class="btn btn-save" style="background: #ff3366; color: #fff; width: auto; padding: 10px 30px;" onclick="toggleLongTermAnalysis()">Stop & Save Analysis</button>
                 </div>
 
-                <div id="calRunning" class="help-card" style="display:none; text-align: center;">
+                <div id="calRunning" class="help-card" class="hidden" style=" text-align: center;">
                     <h3>Analysis in Progress...</h3>
                     <div id="calRunningBpm">---</div>
                     <div class="cal-progress-wrap">
@@ -436,7 +437,7 @@
                     </div>
                 </div>
 
-                <div id="calResults" class="help-card" style="display:none;">
+                <div id="calResults" class="help-card" class="hidden"  >
                     <h3>Calibration Summary</h3>
                     <div class="cal-grid">
                         <div class="cal-item">
@@ -447,7 +448,7 @@
                             <h4>BPM Accuracy</h4>
                             <div id="calBpmAcc">--</div>
                         </div>
-                        <div id="calHealthWrap" class="cal-item" style="grid-column: span 2; display:none; border-color: rgba(0, 242, 255, 0.3); background: rgba(0, 242, 255, 0.05);">
+                        <div id="calHealthWrap" class="cal-item" style="grid-column: span 2;  border-color: rgba(0, 242, 255, 0.3); background: rgba(0, 242, 255, 0.05);">
                             <h4>Environmental Audit</h4>
                             <div id="calSignalHealth" style="font-weight: bold; font-size: 0.85rem; margin-bottom: 4px;">--</div>
                             <div id="calSettingsSummary" style="color: var(--text-dim); font-size: 0.7rem; line-height: 1.4;">--</div>
@@ -465,7 +466,7 @@
                     </div>
                 </div>
 
-                <div id="auditResults" class="help-card" style="display:none;">
+                <div id="auditResults" class="help-card" class="hidden"  >
                     <h3>Gold Standard Audit</h3>
                     <p id="auditOverall" style="font-weight: bold; margin-bottom: 15px;"></p>
                     <div id="auditChecksList" style="display: flex; flex-direction: column; gap: 8px;">
@@ -516,24 +517,24 @@
                         onclick="clearPresetAiChatHistory()">🗑️ Clear</button>
                     <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">[FIX]</button>
                     <button class="btn-suggestion" id="ai-zone-picker-btn" onclick="toggleZonePicker()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[ZONE]</button>
-                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt); opacity: 0.6;">[X/Y]</button>
+                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[X/Y]</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
                     <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
                 </div>
 
                 <div id="ai-preset-xy-panel" 
-                    style="display:none; padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
+                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
                     <!-- X/Y Calibration UI injected here -->
                 </div>
 
                 <div id="ai-fixture-picker" 
-                    style="display:none; padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
+                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
                     <!-- Fixture items injected here -->
                 </div>
 
                 <div id="ai-zone-picker" 
-                    style="display:none; padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent-alt); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
+                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent-alt); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
                     <!-- Zone items injected here -->
                 </div>
 
@@ -569,13 +570,13 @@
                     </div>
                     <div style="display:flex; gap:8px;">
                         <button class="btn btn-secondary btn-sm" id="ai-preset-view-diff-btn" onclick="showPresetAiDiff()"
-                            style="display:none; border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
+                            class="hidden" style=" border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
                         <button class="btn btn-accent btn-sm" id="ai-preset-save-btn"
                             onclick="savePreset()"
-                            style="display:none; background:var(--accent);">💾 Save Preset</button>
+                            class="hidden" style=" background:var(--accent);">💾 Save Preset</button>
                         <button class="btn btn-primary btn-sm" id="ai-preset-apply-btn"
                             onclick="acceptPresetAi()"
-                            style="display:none; background:var(--success);">Apply & Close</button>
+                            class="hidden" style=" background:var(--success);">Apply & Close</button>
                     </div>
                 </div>
             </div>
@@ -584,7 +585,7 @@
 
     <!-- AI PRESET DIFF MODAL -->
     <div id="ai-preset-diff-modal" class="ai-modal-overlay"
-        style="display:none; z-index:11000;"
+        class="hidden" style=" z-index:11000;"
         onclick="closePresetAiDiff()">
         <div class="ai-modal-content" style="max-width:600px;" onclick="event.stopPropagation()">
             <div class="ai-modal-header">
@@ -605,7 +606,7 @@
 
     <!-- AI STAGED PRESETS REVIEW MODAL -->
     <div id="ai-preset-staged-modal" class="ai-modal-overlay"
-        style="display:none; z-index:12000;"
+        class="hidden" style=" z-index:12000;"
         onclick="closeStagedPresetsReview()">
         <div class="ai-modal-content" style="max-width:500px;" onclick="event.stopPropagation()">
             <div class="ai-modal-header">
@@ -624,7 +625,7 @@
 
     <!-- AI SETTINGS MODAL -->
     <div id="ai-settings-modal" class="ai-modal-overlay"
-        style="display:none; z-index:10000;"
+        class="hidden" style=" z-index:10000;"
         onclick="closeAiSettings()">
         <div class="ai-modal-content" style="max-width:400px;" onclick="event.stopPropagation()">
             <div class="ai-modal-header">
@@ -708,6 +709,8 @@
         <p style="color:var(--text-dim); margin-bottom:20px;">Real-time DMX tactile control with visual verification.
         </p>
 
+        <!-- PRESET OVERRIDES -->
+        <div id="active-presets-bar" class="active-presets-bar"></div>
 
         <!-- ENSEMBLE PICKER -->
         <div class="test-controls-bar">
@@ -755,13 +758,13 @@
             });
         }
     </script>
-    <script src="shared_setup.js?v=52262300"></script>
-    <script src="live_controller.js?v=52262300"></script>
-    <script src="profile_logic.js?v=52262300"></script>
-    <script src="ai_architect.js?v=52262300"></script>
-    <script src="stage_logic.js?v=52262300"></script>
+    <script src="shared_setup.js"></script>
+    <script src="live_controller.js"></script>
+    <script src="profile_logic.js"></script>
+    <script src="ai_architect.js"></script>
+    <script src="stage_logic.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="engine_tab.js?v=52262300"></script>
+<script src="engine_tab.js"></script>
 <script>window.onload = () => { 
     // All routing and landing logic (redirects, tab switching) 
     // is now handled by Core Routing in shared_setup.js (v424)

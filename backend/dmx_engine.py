@@ -182,6 +182,7 @@ class DMXEngine:
         self._silence_start = None
         self.blackout = False
         self._was_silent = False
+        self._last_variant_change_time = 0.0
         
         self.behavior_defaults = {}
         self._descriptors_path = os.path.join('backend', 'descriptors.json')
@@ -577,19 +578,27 @@ class DMXEngine:
         # Removed legacy rhythm triggers
         
         # --- Vibe/Variant/Transient Change Detection ---
-        is_silent = audio.get('vol', 0.0) < 0.03
+        # Stability: 0.03 to enter silence, 0.06 to recover (prevent jitter at noise floor)
+        vol = audio.get('vol', 0.0)
+        is_silent = vol < (0.06 if self._was_silent else 0.03)
         vibe_changed = current_vibe != self._last_vibe
         silence_recovered = self._was_silent and not is_silent
         transient_changed = self.transient != self._last_transient
         variant_changed = False
         
         # Spectral Resolution (Determines synchronized 1, 2, or 3 variant)
+        # Stability: Only rotate variant if energy is significant (>0.1) or vibe changed
         if vibe_changed or silence_recovered or transient_changed:
             old_variant = self.sync_indices.get(current_vibe, 0)
             variant, dominant = self._resolve_spectral_variant(audio)
             
+            # Dampen variant changes: Only rotate if volume is above 0.1 or it's a major vibe change
+            # This prevents ghost cycling during quiet passages or noise floor jitter
             if variant != old_variant:
-                variant_changed = True
+                now = time.time()
+                if vibe_changed or (vol > 0.1 and now - self._last_variant_change_time > 2.0):
+                    variant_changed = True
+                    self._last_variant_change_time = now
             
             self.sync_indices[current_vibe] = variant
             self.sync_indices['any'] = variant
@@ -601,8 +610,9 @@ class DMXEngine:
             if eff_transient_vibe and transient_changed:
                 self.sync_indices[eff_transient_vibe] = variant
 
-            reason = 'vibe' if vibe_changed else ('silence recovery' if silence_recovered else f'transient → {self.transient}')
-            print(f"🎚️ Sync Variant [{reason}]: {current_vibe} → {variant + 1} (dominant bin: {dominant})")
+            if variant_changed or vibe_changed:
+                reason = 'vibe' if vibe_changed else ('silence recovery' if silence_recovered else f'transient → {self.transient}')
+                print(f"🎚️ Sync Variant [{reason}]: {current_vibe} → {variant + 1} (dominant bin: {dominant})")
 
         should_switch = False
         current_beat = audio.get('beat_count', 0)
@@ -1102,6 +1112,8 @@ class DMXEngine:
         # We now match by instance id or profile name
         if dev_id == "all":
             self.overrides = {}
+            self.manual_active_presets.clear()
+            print("🎛️ Cleared ALL manual overrides and manual presets")
             return
 
         inst = next((i for i in self.stage_instances if i['id'] == dev_id or i.get('profileName') == dev_id), None)
@@ -1124,19 +1136,24 @@ class DMXEngine:
     def clear_address_overrides(self, addresses):
         for addr in addresses:
             if int(addr) in self.overrides: del self.overrides[int(addr)]
-    def toggle_manual_preset(self, preset_id: str, state: bool = None):
-        """Force a preset to be active or inactive regardless of audio triggers."""
-        if state is None:
-            if preset_id in self.manual_active_presets:
-                self.manual_active_presets.remove(preset_id)
-            else:
-                self.manual_active_presets.add(preset_id)
-        elif state:
+    def toggle_manual_preset(self, preset_id: str, state: bool = None, exclusive: bool = False):
+        """Force a preset to be active or inactive regardless of audio triggers.
+           If exclusive is True and we are turning a preset ON, clear all other manual presets.
+        """
+        is_on = preset_id in self.manual_active_presets
+        target_state = state if state is not None else not is_on
+
+        if target_state:
+            if exclusive:
+                self.manual_active_presets.clear()
+                print(f"🎛️ [EXCLUSIVE] Clearing other manual presets for '{preset_id}'")
             self.manual_active_presets.add(preset_id)
         else:
             if preset_id in self.manual_active_presets:
                 self.manual_active_presets.remove(preset_id)
-        print(f"🎛️ Manual Preset '{preset_id}' is now {'ON' if preset_id in self.manual_active_presets else 'OFF'}")
+        
+        print(f"🎛️ Manual Preset State: {list(self.manual_active_presets)}")
+        print(f"🎛️ Manual Preset '{preset_id}' is now {'ON' if target_state else 'OFF'}")
 
     def clear_manual_presets(self):
         self.manual_active_presets.clear()

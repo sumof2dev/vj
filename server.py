@@ -27,6 +27,10 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
     """HTTP handler for VJ Production"""
     
     def end_headers(self):
+        # Disable caching for all responses to ensure real-time updates
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
         self.send_header('Access-Control-Allow-Origin', '*')
         super().end_headers()
 
@@ -54,12 +58,12 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # API: List UserGen Shaders
-        if path.startswith('/api/usergen/list') or path.startswith('/api/usergen2/list'):
+        if path.startswith('/api/usergen/list'):
             query = parsed.query
             layer_type = None
             if 'type=' in query:
                 layer_type = query.split('type=')[1].split('&')[0]
-            self._handle_list_shaders(layer_type, is_sandbox=path.startswith('/api/usergen2'))
+            self._handle_list_shaders(layer_type)
             return
 
         # API: List Fixtures
@@ -156,8 +160,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path.rstrip('/')
         
         # API: Save UserGen Shader
-        if path.startswith('/api/usergen/save') or path.startswith('/api/usergen2/save'):
-            self._handle_save_shader(is_sandbox=path.startswith('/api/usergen2'))
+        if path.startswith('/api/usergen/save'):
+            self._handle_save_shader()
             return
 
         # API: Save Image
@@ -181,8 +185,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # API: Rename UserGen Shader (Metadata prompt)
-        if path.startswith('/api/usergen/rename') or path.startswith('/api/usergen2/rename'):
-            self._handle_rename_shader(is_sandbox=path.startswith('/api/usergen2'))
+        if path.startswith('/api/usergen/rename'):
+            self._handle_rename_shader()
             return
 
         # API: Proxy Engine Restart
@@ -242,8 +246,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # API: Delete UserGen Shader (Existing Logic)
-        if path.startswith('/api/usergen/delete') or path.startswith('/api/usergen2/delete'):
-            is_sandbox = path.startswith('/api/usergen2')
+        if path.startswith('/api/usergen/delete'):
             from urllib.parse import parse_qs, unquote
             qs = parse_qs(parsed.query)
             fname = qs.get('file', [None])[0]
@@ -252,7 +255,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(400, "Invalid filename")
                 return
 
-            lib_root = os.path.join(BASE_DIR, 'library2' if is_sandbox else 'library')
+            lib_root = os.path.join(BASE_DIR, 'library')
             fpath = os.path.join(lib_root, fname)
             
             if os.path.exists(fpath):
@@ -383,9 +386,9 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, str(e))
 
 
-    def _handle_list_shaders(self, filter_type=None, is_sandbox=False):
+    def _handle_list_shaders(self, filter_type=None):
         """List all .frag files in library/ (recursive)"""
-        lib_root = os.path.join(BASE_DIR, 'library2' if is_sandbox else 'library')
+        lib_root = os.path.join(BASE_DIR, 'library')
         try:
             if not os.path.exists(lib_root):
                 os.makedirs(lib_root)
@@ -441,7 +444,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             print(f"❌ Error listing shaders: {e}")
             self.send_error(500, str(e))
 
-    def _handle_save_shader(self, is_sandbox=False):
+    def _handle_save_shader(self):
         """Save a shader .frag file to library/"""
         length = int(self.headers['Content-Length'])
         body = self.rfile.read(length)
@@ -459,7 +462,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(400, "Missing code")
                 return
 
-            lib_root = os.path.join(BASE_DIR, 'library2' if is_sandbox else 'library')
+            lib_root = os.path.join(BASE_DIR, 'library')
             target_dir = os.path.join(lib_root, layer_type)
             if not os.path.exists(target_dir):
                 os.makedirs(target_dir)
@@ -484,7 +487,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             print(f"❌ Error saving shader: {e}")
             self.send_error(500, str(e))
 
-    def _handle_rename_shader(self, is_sandbox=False):
+    def _handle_rename_shader(self):
         """Update the prompt (label) of a shader in its metadata file"""
         length = int(self.headers['Content-Length'])
         body = self.rfile.read(length)
@@ -498,7 +501,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(400, "Invalid input")
                 return
 
-            lib_root = os.path.join(BASE_DIR, 'library2' if is_sandbox else 'library')
+            lib_root = os.path.join(BASE_DIR, 'library')
             meta_path = os.path.join(lib_root, fname + ".json")
             
             meta = {}
@@ -563,7 +566,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 os.makedirs(img_root)
             results = []
             for f in os.listdir(img_root):
-                if f.endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                if f.endswith(('.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm')):
                     fpath = os.path.join(img_root, f)
                     results.append({
                         "file": f"library/images/{f}",
@@ -594,6 +597,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             ext = 'png'
             if 'jpeg' in header or 'jpg' in header: ext = 'jpg'
             elif 'webp' in header: ext = 'webp'
+            elif 'mp4' in header: ext = 'mp4'
+            elif 'webm' in header: ext = 'webm'
 
             img_bytes = base64.b64decode(encoded)
             img_root = os.path.join(BASE_DIR, 'library', 'images')
@@ -607,7 +612,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             with open(fpath, "wb") as f:
                 f.write(img_bytes)
 
-            print(f"📸 Saved Image Texture: {fname} ({len(img_bytes)} bytes)")
+            print(f"🎬 Saved Media Texture: {fname} ({len(img_bytes)} bytes)")
             self._send_json({"status": "ok", "file": f"library/images/{fname}", "name": fname})
         except Exception as e:
             print(f"❌ Error saving image: {e}")

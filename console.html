@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>Live Console - RaveBox</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" href="setup.css?v=52262300">
-    <link rel="stylesheet" href="engine_tab.css?v=52262300">
+    <link rel="stylesheet" href="setup.css">
+    <link rel="stylesheet" href="engine_tab.css">
     <style>
         :root {
             --bg: #0a0a0c;
@@ -19,7 +19,7 @@
         }
 
         body {
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('background.png') no-repeat center center fixed;
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/public/background.png') no-repeat center center fixed;
             background-size: cover;
             color: var(--text);
             margin: 0;
@@ -170,7 +170,7 @@
     <div class="console-container" id="console-main-container">
         <div class="console-header" style="padding: 15px 20px;">
             <div style="display:flex; align-items:center; gap:15px; flex:1;">
-                <h1 style="margin:0;">Console <span style="font-size: 8px; opacity: 0.3; vertical-align: middle;">VJ Console v52262300</span></h1>
+                <h1 style="margin:0;">Console <span style="font-size: 8px; opacity: 0.3; vertical-align: middle;">VJ Console v53261507</span></h1>
                 <div class="mini-eq" id="console-eq">
                     <div class="eq-bar"></div>
                     <div class="eq-bar"></div>
@@ -309,9 +309,9 @@
         </div>
     </div>
 
-    <script src="shared_setup.js?v=52262300"></script>
-    <script src="profile_logic.js?v=52262300"></script>
-    <script src="live_controller.js?v=52262300"></script>
+    <script src="shared_setup.js"></script>
+    <script src="profile_logic.js"></script>
+    <script src="live_controller.js"></script>
     <script>
         // Mirror Manager Background Logic
         let currentBgUrl = '';
@@ -344,7 +344,7 @@
                             document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('${currentBgUrl}')`;
                         } else if (!sp && currentBgUrl !== '') {
                             currentBgUrl = '';
-                            document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('background.png')`;
+                            document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/public/background.png')`;
                         }
                         if (typeof window.updateUniversalHUD === 'function') window.updateUniversalHUD();
                     }

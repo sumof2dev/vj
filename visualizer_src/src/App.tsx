@@ -493,6 +493,7 @@ export default function App() {
     const vibeRef = useRef('mid');
     const spotifyTextureRef = useRef<THREE.Texture | null>(null);
     const lastSpotifyUrlRef = useRef<string | null>(null);
+    const currentVideoRef = useRef<HTMLVideoElement | null>(null);
 
     const { wsUrl, apiBase } = useMemo(() => {
         const savedHost = localStorage.getItem('vj_backend_host') || window.location.hostname;
@@ -536,20 +537,17 @@ export default function App() {
 
     const fetchLibraries = async () => {
         try {
-            const [imgRes, aiRes, aiResOld] = await Promise.all([
+            const [imgRes, aiRes] = await Promise.all([
                 fetch(`${apiBase}/api/images/list`),
-                fetch(`${apiBase}/api/usergen2/list`),
                 fetch(`${apiBase}/api/usergen/list`)
             ]);
 
             const imgs = imgRes.ok ? await imgRes.json() : [];
             const ais = aiRes.ok ? await aiRes.json() : [];
-            const aisOld = aiResOld.ok ? await aiResOld.json() : [];
 
             const combined = [
                 ...imgs.map((i: any) => ({ ...i, category: 'tex' })),
-                ...ais.map((a: any) => ({ ...a, category: a.type || 'base', path: 'library2' })),
-                ...aisOld.map((a: any) => ({ ...a, category: a.type || 'base', path: 'library' }))
+                ...ais.map((a: any) => ({ ...a, category: a.type || 'base', path: 'library' }))
             ];
 
             combined.sort((a, b) => b.mtime - a.mtime);
@@ -575,7 +573,7 @@ export default function App() {
         if (!unsavedShader) return;
         try {
             setStatus("💾 Saving Shader...");
-            await fetch(`${apiBase}/api/usergen2/save`, {
+            await fetch(`${apiBase}/api/usergen/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code: unsavedShader.code, prompt: unsavedShader.prompt, layer_type: unsavedShader.category })
@@ -596,7 +594,7 @@ export default function App() {
         if (!newPrompt || newPrompt === item.prompt) return;
 
         try {
-            const endpoint = item.path === 'library' ? '/api/usergen/rename' : '/api/usergen2/rename';
+            const endpoint = '/api/usergen/rename';
             const res = await fetch(`${apiBase}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -625,16 +623,22 @@ export default function App() {
             let res;
             if (item.category === 'tex') {
                 res = await fetch(`${apiBase}/api/images/delete?file=${item.name}`, { method: 'DELETE' });
-            } else if (item.path === 'library') {
-                res = await fetch(`${apiBase}/api/usergen/delete?file=${item.file}`, { method: 'DELETE' });
             } else {
-                res = await fetch(`${apiBase}/api/usergen2/delete?file=${item.file}`, { method: 'DELETE' });
+                res = await fetch(`${apiBase}/api/usergen/delete?file=${item.file}`, { method: 'DELETE' });
             }
             if (res && res.ok) fetchLibraries();
         } catch (err) { }
     };
 
     const applyNewTexture = (texture: THREE.Texture) => {
+        // Clean up previous video if we are switching to a static image
+        if (!(texture instanceof THREE.VideoTexture) && currentVideoRef.current) {
+            currentVideoRef.current.pause();
+            currentVideoRef.current.removeAttribute('src');
+            currentVideoRef.current.load();
+            currentVideoRef.current = null;
+        }
+
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         if (uniformsRef.current.u_image.value && uniformsRef.current.u_image.value.image) {
@@ -666,10 +670,32 @@ export default function App() {
         }
 
         setActiveShaderId(item.file);
-        setStatus(`📂 Loading Image...`);
-        new THREE.TextureLoader().load(`${apiBase}/${item.file}`, (texture) => {
-            applyNewTexture(texture);
+        const isVideo = item.file.endsWith('.mp4') || item.file.endsWith('.webm');
+        setStatus(`📂 Loading ${isVideo ? 'Video' : 'Image'}...`);
 
+        if (isVideo) {
+            if (currentVideoRef.current) {
+                currentVideoRef.current.pause();
+                currentVideoRef.current.removeAttribute('src');
+                currentVideoRef.current.load();
+            }
+
+            const video = document.createElement('video');
+            video.src = `${apiBase}/${item.file}`;
+            video.loop = true;
+            video.muted = true;
+            video.crossOrigin = 'anonymous';
+            video.playsInline = true;
+            video.play().catch(err => console.warn("Video autoplay blocked", err));
+
+            currentVideoRef.current = video;
+
+            const texture = new THREE.VideoTexture(video);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            
+            applyNewTexture(texture);
+            
             const warpIdx = (styleIndex !== undefined)
                 ? (styleIndex % PRESET_WARPS.length)
                 : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length));
@@ -679,16 +705,32 @@ export default function App() {
             }
 
             applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
-            setStatus("📸 Texture Live!");
+            setStatus("🎥 Video Live!");
             setStatusColor("text-emerald-400");
-        });
+        } else {
+            new THREE.TextureLoader().load(`${apiBase}/${item.file}`, (texture) => {
+                applyNewTexture(texture);
+
+                const warpIdx = (styleIndex !== undefined)
+                    ? (styleIndex % PRESET_WARPS.length)
+                    : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length));
+
+                if (activeWarpIndex === null || styleIndex !== undefined) {
+                    setActiveWarpIndex(warpIdx);
+                }
+
+                applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
+                setStatus("📸 Texture Live!");
+                setStatusColor("text-emerald-400");
+            });
+        }
     };
 
     const loadAiShader = async (item: any) => {
         try {
             setActiveShaderId(item.file);
             setStatus(`✨ Compiling AI Shader...`);
-            const libPath = item.path || 'library2';
+            const libPath = 'library';
             const res = await fetch(`${apiBase}/${libPath}/${item.file}`);
             if (res.ok) {
                 const code = await res.text();
@@ -882,23 +924,64 @@ export default function App() {
         }
     };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const dataUrl = reader.result as string;
-                new THREE.TextureLoader().load(dataUrl, (texture) => {
-                    applyNewTexture(texture);
-                    const warpIdx = activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length);
-                    if (activeWarpIndex === null) setActiveWarpIndex(warpIdx);
-                    applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
-                    setStatus("📸 Texture loaded!");
-                    setStatusColor("text-emerald-400");
-                });
-                saveImageToServer(dataUrl);
-            };
-            reader.readAsDataURL(file);
+            const isVideo = file.type.startsWith('video/');
+
+            if (isVideo) {
+                const url = URL.createObjectURL(file);
+                
+                if (currentVideoRef.current) {
+                    currentVideoRef.current.pause();
+                    currentVideoRef.current.removeAttribute('src');
+                    currentVideoRef.current.load();
+                }
+
+                const video = document.createElement('video');
+                video.src = url;
+                video.loop = true;
+                video.muted = true;
+                video.crossOrigin = 'anonymous';
+                video.playsInline = true;
+                video.play().catch(err => console.warn("Video autoplay blocked", err));
+
+                currentVideoRef.current = video;
+
+                const texture = new THREE.VideoTexture(video);
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                
+                applyNewTexture(texture);
+                
+                const warpIdx = activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length);
+                if (activeWarpIndex === null) setActiveWarpIndex(warpIdx);
+                applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
+                
+                setStatus("🎥 Video Live!");
+                setStatusColor("text-emerald-400");
+                
+                const reader = new FileReader();
+                reader.onload = () => {
+                    saveImageToServer(reader.result as string);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    const dataUrl = reader.result as string;
+                    new THREE.TextureLoader().load(dataUrl, (texture) => {
+                        applyNewTexture(texture);
+                        const warpIdx = activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length);
+                        if (activeWarpIndex === null) setActiveWarpIndex(warpIdx);
+                        applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
+                        setStatus("📸 Texture loaded!");
+                        setStatusColor("text-emerald-400");
+                    });
+                    saveImageToServer(dataUrl);
+                };
+                reader.readAsDataURL(file);
+            }
         }
     };
 
@@ -1249,7 +1332,7 @@ export default function App() {
                             <div className="flex gap-2">
                                 {filterTab === 'tex' ? (
                                     <div className="relative">
-                                        <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                                        <input type="file" accept="image/*,video/mp4,video/webm" onChange={handleMediaUpload} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
                                         <button className="p-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white shadow-lg transition-colors">
                                             <Camera size={14} />
                                         </button>
@@ -1336,7 +1419,7 @@ export default function App() {
                                             <button
                                                 onClick={async (e) => {
                                                     e.stopPropagation();
-                                                    const libPath = item.path || 'library2';
+                                                    const libPath = 'library';
                                                     const res = await fetch(`${apiBase}/${libPath}/${item.file}`);
                                                     const code = await res.text();
                                                     const blob = new Blob([code], { type: 'text/plain' });

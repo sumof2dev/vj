@@ -47,3 +47,12 @@ If you are modifying the UI, check this list to ensure you are not re-introducin
   - **The Fix:** Hide containers using CSS `opacity` or `display: none`. Never delete and recreate the canvas node.
 - **Bug:** The sidebar loses its active state styling.
   - **Why it happens:** Applying the `.active` class to the `<a>` tag instead of the parent `<li>` tag.
+
+## 4. Caching and Versioning Anti-Pattern
+
+> [!CAUTION]
+> NEVER manually apply cache-busting query strings to file imports in HTML (e.g., `src="engine_tab.js?v=123"`). 
+
+- **The Problem:** Hardcoding versions causes endless caching loops during development. 
+- **The Standard:** All caching is handled at the infrastructure level via `dev_server.py` headers and Service Worker bypasses. 
+- **Action:** If the user complains that "files are not updating" or "clear the cache," DO NOT append version numbers to HTML script/link tags. Instead, verify that the `dev_server.py` is sending `Cache-Control: no-store` headers.

@@ -42,7 +42,7 @@ window.fetch = async function(url, options) {
             { file: 'demo_bg_1.jpg', name: 'demo_bg_1.jpg', mtime: Date.now() }
         ]), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlStr.includes('/api/usergen2/list') || urlStr.includes('/api/usergen/list')) {
+    if (urlStr.includes('/api/usergen/list')) {
         return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     // Fallback for real assets if they exist, or just return mock 200 for things we don't care about

@@ -1037,17 +1037,19 @@ Output: Valid raw JSON object only.
             // Close other pickers
             const fixPicker = document.getElementById('ai-fixture-picker');
             const zonePicker = document.getElementById('ai-zone-picker');
-            if (fixPicker) fixPicker.style.display = 'none';
-            if (zonePicker) zonePicker.style.display = 'none';
+            if (fixPicker) fixPicker.classList.add('hidden');
+            if (zonePicker) zonePicker.classList.add('hidden');
 
-            if (xyPanel.style.display === 'none') {
+            const isHidden = xyPanel.classList.contains('hidden');
+
+            if (isHidden) {
                 history.style.display = 'none';
-                xyPanel.style.display = 'block';
+                xyPanel.classList.remove('hidden');
                 xyBtn.classList.add('active');
                 renderAiXyPanel();
             } else {
                 history.style.display = 'flex';
-                xyPanel.style.display = 'none';
+                xyPanel.classList.add('hidden');
                 xyBtn.classList.remove('active');
             }
         }
@@ -1188,16 +1190,16 @@ Output: Valid raw JSON object only.
             if (!picker) return;
             
             // Close other pickers
-            if (zonePicker) zonePicker.style.display = 'none';
-            if (xyPanel) xyPanel.style.display = 'none';
+            if (zonePicker) zonePicker.classList.add('hidden');
+            if (xyPanel) xyPanel.classList.add('hidden');
             if (xyBtn) xyBtn.classList.remove('active');
 
-            if (picker.style.display === 'block') {
-                picker.style.display = 'none';
+            if (!picker.classList.contains('hidden')) {
+                picker.classList.add('hidden');
                 if (history) history.style.display = 'flex';
             } else {
                 populateFixturePicker();
-                picker.style.display = 'block';
+                picker.classList.remove('hidden');
                 if (history) history.style.display = 'none';
             }
         }
@@ -1211,16 +1213,16 @@ Output: Valid raw JSON object only.
             if (!picker) return;
             
             // Close other pickers
-            if (fixPicker) fixPicker.style.display = 'none';
-            if (xyPanel) xyPanel.style.display = 'none';
+            if (fixPicker) fixPicker.classList.add('hidden');
+            if (xyPanel) xyPanel.classList.add('hidden');
             if (xyBtn) xyBtn.classList.remove('active');
 
-            if (picker.style.display === 'block') {
-                picker.style.display = 'none';
+            if (!picker.classList.contains('hidden')) {
+                picker.classList.add('hidden');
                 if (history) history.style.display = 'flex';
             } else {
                 populateZonePicker();
-                picker.style.display = 'block';
+                picker.classList.remove('hidden');
                 if (history) history.style.display = 'none';
             }
         }

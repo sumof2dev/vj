@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RaveBox</title>
-    <link rel="stylesheet" href="setup.css?v=52262300">
+    <link rel="stylesheet" href="setup.css">
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
@@ -25,8 +25,7 @@
         }
 
         body {
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('background.png') no-repeat center center fixed;
-            background-size: cover;
+            background: #000;
             color: var(--text);
             margin: 0;
             display: flex;
@@ -40,6 +39,107 @@
             touch-action: none;
             /* Disable browser gestures like pull-to-refresh */
             overscroll-behavior-x: none;
+        }
+
+        /* Ken Burns Tunnel Background */
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000;
+            z-index: -1;
+            transition: opacity 1s ease;
+        }
+
+        .bg-image {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            filter: brightness(0.6);
+            /* 32s total cycle for 4 images (8s each) */
+            animation: tunnel-move 32s infinite linear;
+        }
+
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8));
+            z-index: 1;
+        }
+
+        /* Stagger the animations so they crossfade */
+        .bg-image:nth-child(1) { animation-delay: 0s; }
+        .bg-image:nth-child(2) { animation-delay: 8s; }
+        .bg-image:nth-child(3) { animation-delay: 16s; }
+        .bg-image:nth-child(4) { animation-delay: 24s; }
+
+        @keyframes tunnel-move {
+            0%   { opacity: 0; transform: scale(1); }
+            5%   { opacity: 1; }
+            25%  { opacity: 1; transform: scale(1.1); } /* End of primary phase */
+            35%  { opacity: 0; transform: scale(1.15); } /* Fade out during next image start */
+            100% { opacity: 0; transform: scale(1); }
+        }
+
+        /* Scanlines Effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2; /* On top of background but behind container if container has z-index */
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0),
+                rgba(255, 255, 255, 0) 50%,
+                rgba(0, 0, 0, 0.15) 50%,
+                rgba(0, 0, 0, 0.15)
+            );
+            background-size: 100% 4px;
+            animation: scroll-lines 10s linear infinite;
+            opacity: 0.8;
+        }
+
+        @keyframes scroll-lines {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100vh; }
+        }
+
+        /* Spotify Ken Burns */
+        .spotify-bg-image {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            filter: brightness(0.6);
+            animation: spotify-move 60s infinite linear;
+            transition: opacity 1s ease;
+        }
+
+        @keyframes spotify-move {
+            0%   { opacity: 0; transform: scale(1); }
+            5%   { opacity: 1; }
+            95%  { opacity: 1; transform: scale(1.15); }
+            100% { opacity: 0; transform: scale(1.2); }
+        }
+
+        /* Tunnel Layer */
+        #tunnelLayer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transition: opacity 1s ease;
         }
 
         .container {
@@ -720,6 +820,19 @@
 
 </head>
 <body>
+    <!-- Ken Burns Background -->
+    <div class="bg-container" id="bgContainer">
+        <div id="tunnelLayer">
+            <img src="/public/background.png" class="bg-image">
+            <img src="/public/background2.png" class="bg-image">
+            <img src="/public/background3.png" class="bg-image">
+            <img src="/public/background4.png" class="bg-image">
+        </div>
+        <img id="spotifyBg" class="spotify-bg-image" src="">
+        <div class="bg-overlay"></div>
+    </div>
+    <div id="scanlines" class="scanlines" style="display: none;"></div>
+
     <!-- LOADING OVERLAY -->
     <div id="loading-overlay">
         <div class="loader-logo">RAVE<span>BOX</span></div>
@@ -731,23 +844,19 @@
 
     <div class="container">
         <h1>RaveBox <a href="console.html"
-                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v52262300</span></h1>
+                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v53261507</span></h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
-        <div id="hostBadge"
-            style="font-size: 0.65rem; color: var(--text-dim); margin: -10px 0 5px; text-transform: uppercase; letter-spacing: 1px; cursor:pointer;"
-            onclick="changeHost()">
-            Controller: <span id="hostDisplay" style="color:var(--primary); font-weight:bold;">Local</span> <span id="hostChangePrompt">(Click to Change)</span>
+        <div id="hostBadge" style="font-size: 0.8rem; color: var(--text-dim); margin: -10px 0 15px; text-transform: uppercase; letter-spacing: 1px;">
+            <!-- Combined Backend Name and Engine Status -->
         </div>
 
         <div id="nodeStatusLine" class="node-status-line" style="display: none;">
             vj-node: <span id="nodeSvcStatus">---</span> | vj-engine: <span id="engineSvcStatus">---</span>
         </div>
 
-        <div class="action-btns">
-            <button id="btnToggle" class="btn btn-start" onclick="toggleEngine()">Launch Engine</button>
-        </div>
+
 
 
 
@@ -765,7 +874,7 @@
             </div>
 
             <!-- Spotify Overlay -->
-            <div class="dash-panel spotify-wrap" id="hubSpotify">
+            <div class="dash-panel spotify-wrap" id="hubSpotify" onclick="toggleEqDisplay()" style="cursor: pointer;">
                 <div class="dash-header"><span style="color:#1db954;">🎵 Now Playing</span></div>
                 <div style="display: flex; align-items: center;">
                     <img id="hubSpotArt" class="spot-art" src="">
@@ -906,16 +1015,12 @@
         window.LAUNCHER_API = window.LAUNCHER_API || "";
         window.API_BASE = window.API_BASE || "";
     </script>
-    <script src="shared_setup.js?v=52262300"></script>
+    <script src="shared_setup.js"></script>
     <script>
         // Routing and globals are handled by shared_setup.js
         console.log("📍 Host:", window.host, "| Launcher:", window.LAUNCHER_API);
 
         function changeHost() {
-            if (window.isCustomTunnel || window.isCustomSubdomain) {
-                if (!confirm("Caution: You are on a direct tunnel connection. Changing the host may disconnect you from this hardware instance. Proceed?")) return;
-            }
-            
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
             const isNode = localStorage.getItem('vj_node_mode') === 'true';
             
@@ -943,20 +1048,15 @@
             location.reload();
         }
 
-        const isNodeMode = localStorage.getItem('vj_node_mode') === 'true';
-        document.getElementById('hostDisplay').textContent = (localStorage.getItem('vj_backend_host') || "Local (" + host + ")");
+        const isNodeMode = localStorage.getItem("vj_node_mode") === "true";
         if (isNodeMode) {
-            document.getElementById('hostDisplay').textContent += " [NODE]";
             document.getElementById('nodeStatusLine').style.display = 'block';
         }
         
         // Hide the prompt if we are already connected via a direct tunnel mapping
         if (window.isCustomTunnel || window.isCustomSubdomain || (window.location.hostname.endsWith('ravebox.love') && !window.isOriginalCloud)) {
             document.getElementById('hostBadge').style.cursor = 'default';
-            const changePrompt = document.getElementById('hostChangePrompt');
-            if (changePrompt) changePrompt.style.display = 'none';
         }
-
         // Point links within the same origin (Port Independent)
         document.getElementById('link-visual').href = `./visualdmx.html`;
         document.getElementById('link-setup').href = `./setup.html`;
@@ -992,40 +1092,52 @@
                 const res = await fetch(`${window.LAUNCHER_API}/status`);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-                const badge = document.getElementById('status');
-                const btn = document.getElementById('btnToggle');
-
                 // Process multi-service status
-                const isNodePref = localStorage.getItem('vj_node_mode') === 'true';
+                const isNodePref = localStorage.getItem("vj_node_mode") === "true";
                 const engineSvc = data.engine || { active: data.active, status: data.status };
-                const nodeSvc = data.node || { active: false, status: 'inactive' };
-
-                // Update node status line UI
-                const nodeStatusDisplay = document.getElementById('nodeSvcStatus');
-                const engineStatusDisplay = document.getElementById('engineSvcStatus');
-                if (nodeStatusDisplay) nodeStatusDisplay.innerText = nodeSvc.status;
-                if (engineStatusDisplay) engineStatusDisplay.innerText = engineSvc.status;
-
-                // Determine overall "Active" state based on user preference
+                const nodeSvc = data.node || { active: false, status: "inactive" };
                 const isActive = isNodePref ? nodeSvc.active : engineSvc.active;
-                engineActive = isActive; // Sync global state for toggle button
-                
+                engineActive = isActive;
                 statusPollingRate = isActive ? 3000 : 8000;
-
+                const badge = document.getElementById("status");
                 if (badge) {
                     const statusText = isNodePref ? nodeSvc.status : (engineSvc.active ? engineSvc.status : "ready to party");
                     badge.innerText = isNodePref ? `Node: ${statusText}` : `Engine: ${statusText}`;
-                    badge.className = `status-badge ${isActive ? 'active' : 'inactive'}`;
+                    badge.className = `status-badge ${isActive ? "active" : "inactive"}`;
+                }
+                const nodeStatusDisplay = document.getElementById("nodeSvcStatus");
+                const engineSvcStatus = document.getElementById("engineSvcStatus");
+                if (nodeStatusDisplay) nodeStatusDisplay.innerText = nodeSvc.status;
+                if (engineSvcStatus) engineSvcStatus.innerText = engineSvc.status;
+                // Combined Controller/Engine UI
+                const hostBadge = document.getElementById('hostBadge');
+                if (hostBadge) {
+                    const savedHost = localStorage.getItem('vj_backend_host');
+                    const isNodePref = localStorage.getItem('vj_node_mode') === 'true';
+                    const isConnected = !!savedHost || window.isCustomSubdomain || window.isCustomTunnel;
+                    
+                    if (!isConnected && !isActive) {
+                        hostBadge.innerHTML = `<span onclick="changeHost()" style="cursor: pointer; color: var(--primary); font-weight: bold; border: 1px solid rgba(0, 242, 255, 0.2); padding: 6px 16px; border-radius: 50px; background: rgba(0, 242, 255, 0.1); font-size: 0.7rem;">Enter code to activate</span>`;
+                    } else {
+                        let hostDisplay = savedHost || (window.isCustomSubdomain ? window.location.hostname.split('.')[0] : "Local");
+                        if (isNodePref) hostDisplay += " [NODE]";
+                        const actionText = isActive ? "ACTIVE" : "deactivated";
+                        const actionColor = isActive ? "var(--success)" : "var(--error)";
+                        
+                        // Backend name is clickable only when deactivated
+                        const hostClick = isActive ? "" : 'onclick="changeHost()"';
+                        const hostStyle = isActive ? "cursor: default; opacity: 0.8;" : "cursor: pointer;";
+
+                        hostBadge.innerHTML = `
+                            <span ${hostClick} style="${hostStyle} color: var(--primary); font-weight: bold;">${hostDisplay}</span>: 
+                            <span onclick="toggleEngine()" style="cursor: pointer; color: ${actionColor}; font-weight: bold;">${actionText}</span>
+                        `;
+                    }
                 }
 
                 if (isActive) {
-                    btn.innerText = "DEACTIVATE";
-                    btn.className = "btn btn-stop";
                     if (!lastKnownActive) connectLiveDashboard(); 
                     if (document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
-                } else {
-                    btn.innerText = "ACTIVATE";
-                    btn.className = "btn btn-start";
                 }
                 lastKnownActive = isActive;
             } catch (e) {
@@ -1052,22 +1164,20 @@
                 alert("Enter the code!");
                 return;
             }
-            const btn = document.getElementById('btnToggle');
-            const originalText = btn.innerText;
-
-            btn.classList.add('loading');
             
-            const isNodePref = localStorage.getItem('vj_node_mode') === 'true';
-            btn.innerText = action === 'start' ? (isNodePref ? "INITIALIZING NODE" : "52262300") : "SHUTDOWN SEQUENCE";
+            const badge = document.getElementById('status');
+            if (badge) {
+                badge.innerText = action === 'start' ? "INITIALIZING..." : "SHUTDOWN SEQUENCE...";
+            }
 
             try {
+                const isNodePref = localStorage.getItem('vj_node_mode') === 'true';
                 const nodeParam = isNodePref ? "?node=true" : "";
                 const res = await fetch(`${window.LAUNCHER_API}/${action}${nodeParam}`);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 
                 if (action === 'start' && data.success) {
-                    const badge = document.getElementById('status');
                     if (badge) {
                         badge.innerText = "Pregaming. standby...";
                         badge.className = "status-badge active";
@@ -1075,10 +1185,6 @@
                 }
             } catch (e) {
                 alert(`Error: ${e.message}`);
-                btn.classList.remove('loading');
-                btn.innerText = originalText;
-            } finally {
-                setTimeout(() => btn.classList.remove('loading'), 4000);
             }
         }
 
@@ -1086,8 +1192,32 @@
 
         // --- DASHBOARD WEBSOCKET ---
         let ws = null;
-        let currentBgUrl = '';
         let wsErrorCount = 0;
+        let lastSpotifyData = null;
+        let bgPreference = 'spotify'; // Alternates every minute
+
+        function updateBackgroundUI() {
+            const tunnelLayer = document.getElementById('tunnelLayer');
+            const spotifyBg = document.getElementById('spotifyBg');
+            
+            if (lastSpotifyData && bgPreference === 'spotify') {
+                if (lastSpotifyData.image_high !== spotifyBg.src) {
+                    spotifyBg.src = lastSpotifyData.image_high;
+                }
+                spotifyBg.style.opacity = '1';
+                tunnelLayer.style.opacity = '0';
+            } else {
+                spotifyBg.style.opacity = '0';
+                tunnelLayer.style.opacity = '1';
+            }
+        }
+
+        // Background Rotation Timer
+        setInterval(() => {
+            bgPreference = (bgPreference === 'spotify' ? 'tunnel' : 'spotify');
+            console.log("🔄 Background Preference:", bgPreference.toUpperCase());
+            updateBackgroundUI();
+        }, 60000);
 
         const FREQ_LABELS = ['Beat', '1 Bar', '2 Bars', '4 Bars', 'Vibe'];
         const state = {
@@ -1101,18 +1231,29 @@
         function toggleSysControls() {
             const panel = document.getElementById('sysControls');
             const toggle = document.getElementById('eqToggle');
-            const spotify = document.getElementById('hubSpotify');
             if (panel.style.display === 'none') {
                 panel.style.display = 'block';
                 toggle.style.background = 'rgba(255, 255, 255, 0.08)';
                 toggle.style.borderRadius = '16px 16px 0 0';
-                if (spotify) spotify.classList.add('hide-forced');
                 ws.send(JSON.stringify({ type: 'get_params' }));
             } else {
                 panel.style.display = 'none';
                 toggle.style.background = 'rgba(0, 0, 0, 0.4)';
                 toggle.style.borderRadius = '16px';
-                if (spotify) spotify.classList.remove('hide-forced');
+            }
+        }
+
+        function toggleEqDisplay() {
+            const eq = document.getElementById('eqToggle');
+            const panel = document.getElementById('sysControls');
+            if (eq.style.display === 'none') {
+                eq.style.display = 'block';
+            } else {
+                eq.style.display = 'none';
+                panel.style.display = 'none';
+                // Reset eqToggle styling to minimized state
+                eq.style.background = 'rgba(0, 0, 0, 0.4)';
+                eq.style.borderRadius = '16px';
             }
         }
 
@@ -1311,7 +1452,16 @@
                         // RESTORE SPOTIFY UI
                         if (msg.spotify) {
                             const sp = msg.spotify;
-                            document.getElementById('hubSpotify').style.display = 'block';
+                            lastSpotifyData = sp; // Store for rotation
+                            const spotEl = document.getElementById('hubSpotify');
+                            
+                            // Hide EQ display by default if Spotify just became active
+                            if (spotEl.style.display !== 'block') {
+                                spotEl.style.display = 'block';
+                                document.getElementById('eqToggle').style.display = 'none';
+                                document.getElementById('sysControls').style.display = 'none';
+                            }
+
                             document.getElementById('hubSpotName').textContent = sp.name;
 
                             if (sp.duration_ms && sp.progress_ms) {
@@ -1322,17 +1472,16 @@
                                 art.src = sp.image_low;
                                 art.style.display = 'block';
                             }
-                            if (sp.image_high && sp.image_high !== currentBgUrl) {
-                                currentBgUrl = sp.image_high;
-                                document.body.style.transition = 'background-image 1s ease-in-out';
-                                document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.8)), url('${currentBgUrl}')`;
-                            }
+                            updateBackgroundUI();
                         } else {
-                            document.getElementById('hubSpotify').style.display = 'none';
-                            if (currentBgUrl !== '') {
-                                currentBgUrl = '';
-                                document.body.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('background.png')`;
+                            lastSpotifyData = null;
+                            const spotEl = document.getElementById('hubSpotify');
+                            if (spotEl.style.display === 'block') {
+                                spotEl.style.display = 'none';
+                                // Restore EQ display when Spotify becomes inactive
+                                document.getElementById('eqToggle').style.display = 'block';
                             }
+                            updateBackgroundUI();
                         }
                     }
                 } catch (e) { }
@@ -1408,6 +1557,22 @@
                     .catch(err => console.log('SW Failed', err));
             });
         }
+
+        // Scanlines Alternation Logic
+        (function() {
+            const scanlinesEl = document.getElementById('scanlines');
+            const showScanlines = localStorage.getItem('vj_show_scanlines') !== 'false';
+            
+            if (showScanlines) {
+                scanlinesEl.style.display = 'block';
+            } else {
+                scanlinesEl.style.display = 'none';
+            }
+            
+            // Flip for next refresh
+            localStorage.setItem('vj_show_scanlines', !showScanlines);
+            console.log("📺 Scanlines:", showScanlines ? "ACTIVE" : "HIDDEN", "(Next refresh will flip)");
+        })();
     </script>
 </body>
 

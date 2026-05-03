@@ -309,14 +309,14 @@ function handleLivePointerDown(e, idx) {
         presetLastMovePos = { x: e.clientX, y: e.clientY };
         presetMoveSpeed = 0;
 
-        // Start hold timer — after 300ms without a pointerup, activate momentary mode
+        // Start hold timer — after 1000ms without a pointerup, activate momentary mode
         longPressTimer = setTimeout(() => {
             if (buttonHoldActive && !buttonHoldMoved) {
                 isLongPress = true;
                 // Momentary hold: activate now, will deactivate on release
                 if (buttonHoldType === 'preset') {
                     if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                        window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId, state: true }));
+                        window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId, state: true, exclusive: true }));
                     }
                 } else if (buttonHoldType === 'live_feed') {
                     toggleLiveConsoleFeed(true);
@@ -326,11 +326,21 @@ function handleLivePointerDown(e, idx) {
                     }
                 }
                 
-                // Visual feedback
+                // Visual feedback for long press
                 const btn = document.querySelectorAll('.live-btn')[idx];
                 if (btn) btn.classList.add('active');
             }
-        }, 300);
+        }, 1000);
+
+        // Immediate visual feedback for the start of any interaction
+        const btn = document.querySelectorAll('.live-btn')[idx];
+        if (btn) {
+            // For presets, we can pre-toggle the highlight if it was a quick tap,
+            // but for now, just adding a pressed state or keeping it simple.
+            // Actually, let's just let the state update or the long-press timer handle the "active" class.
+            // But we can add a 'pressed' class for tactile feedback.
+            btn.classList.add('pressed');
+        }
     } else if (cfg.type === 'slider' || cfg.type === 'dmx_slider' || cfg.type === 'knob') {
         e.target.closest('.live-btn')?.setPointerCapture(e.pointerId);
     }
@@ -611,7 +621,7 @@ async function handleLivePointerUp(e, idx) {
             // MODE 1: Quick tap → Toggle (stays on/off)
             if (buttonHoldType === 'preset') {
                 if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-                    window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId }));
+                    window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: buttonHoldId, exclusive: true }));
                 }
             } else if (buttonHoldType === 'live_feed') {
                 toggleLiveConsoleFeed();
@@ -619,6 +629,16 @@ async function handleLivePointerUp(e, idx) {
                 if (window.ws && window.ws.readyState === WebSocket.OPEN) {
                     window.ws.send(JSON.stringify({ type: 'blackout' }));
                 }
+            }
+        }
+
+        // Visual feedback: remove pressed/active state on release
+        const btn = document.querySelectorAll('.live-btn')[idx];
+        if (btn) {
+            btn.classList.remove('pressed');
+            // If it was a long press, we must remove 'active' immediately because we sent state:false
+            if (wasLongPress) {
+                btn.classList.remove('active');
             }
         }
 
@@ -1056,3 +1076,29 @@ function drawAudioTimeline(canvas, ctx) {
     drawLine('mid', '#00f2ff', 2, 1, true);
     drawLine('bass', '#ff3366', 3, 1, true);
 }
+function updateLiveConsoleHighlights() {
+    if (!window.latestAudioState) return;
+    const manualActive = window.latestAudioState.manual_active_presets || [];
+    const blackoutActive = window.latestAudioState.blackout || false;
+
+    const btns = document.querySelectorAll('.live-btn');
+    liveConfig.forEach((cfg, idx) => {
+        const btn = btns[idx];
+        if (!btn) return;
+
+        if (cfg.type === 'preset') {
+            if (manualActive.includes(cfg.targetId)) {
+                btn.classList.add('active');
+            } else {
+                // Only remove if not currently being held for a long press
+                if (!buttonHoldActive || buttonHoldId !== cfg.targetId) {
+                    btn.classList.remove('active');
+                }
+            }
+        } else if (cfg.type === 'blackout') {
+            if (blackoutActive) btn.classList.add('active');
+            else btn.classList.remove('active');
+        }
+    });
+}
+window.updateLiveConsoleHighlights = updateLiveConsoleHighlights;

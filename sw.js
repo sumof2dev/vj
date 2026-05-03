@@ -1,4 +1,8 @@
-const CACHE_NAME = 'ravebox-vj-1777788028'; // Bumping version
+const isDev = self.location.hostname === 'localhost' || 
+              self.location.hostname.includes('vj-') || 
+              self.location.hostname.includes('.ravebox.love') || 
+              self.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
+const CACHE_NAME = 'ravebox-vj-1777846047'; // Bumping version
 
 self.addEventListener('install', (event) => {
     // Cache each asset individually — skip any that fail (e.g. missing on GCS)
@@ -13,8 +17,8 @@ self.addEventListener('install', (event) => {
                 'fixture_ai.html',
                 'robot_sim.html',
                 'manifest.json',
-                'icon.png',
-                'background.png'
+                '/public/icon.png',
+                '/public/background.png'
             ];
             return Promise.all(
                 urls.map(url => cache.add(url).catch(() => console.log('SW: skipped', url)))
@@ -39,6 +43,12 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // If we are on the dev server, bypass the service worker cache entirely
+    if (isDev) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
     if (event.request.method !== 'GET') return;
 
     // Bypass API routes completely

@@ -109,19 +109,16 @@
 
         async function fetchLibrary() {
             try {
-                const [imgRes, aiRes, aiResOld] = await Promise.all([
+                const [imgRes, aiRes] = await Promise.all([
                     fetch('/api/images/list'),
-                    fetch('/api/usergen2/list'),
                     fetch('/api/usergen/list')
                 ]);
                 const imgs = await imgRes.json();
                 const ais = await aiRes.json();
-                const aisOld = await aiResOld.json();
 
                 library = [
                     ...imgs.map(i => ({ ...i, category: 'tex' })),
-                    ...ais.map(a => ({ ...a, category: a.type || 'base', path: 'library2' })),
-                    ...aisOld.map(a => ({ ...a, category: a.type || 'base', path: 'library' }))
+                    ...ais.map(a => ({ ...a, category: a.type || 'base', path: 'library' }))
                 ];
                 library.sort((a, b) => b.mtime - a.mtime);
                 console.log("📚 Library Loaded:", library.length);
@@ -196,7 +193,7 @@
                     baseMesh.material.needsUpdate = true;
                 });
             } else {
-                const path = item.path || 'library2';
+                const path = 'library';
                 const res = await fetch(`/${path}/${item.file}`);
                 const code = await res.text();
                 const mesh = (type === 'base') ? baseMesh : fxMesh;
