@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ravebox-vj-1777704569'; // Bumping version
+const CACHE_NAME = 'ravebox-vj-1777788028'; // Bumping version
 
 self.addEventListener('install', (event) => {
     // Cache each asset individually — skip any that fail (e.g. missing on GCS)

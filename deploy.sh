@@ -25,7 +25,7 @@ sed -i -E "s/(VJ Profile Editor starting \(v)[0-9]+(\))/\1$VERSION_CODE\2/g" pro
 sed -i -E "s/(Core Ready \(v)[0-9]+(\))/\1$VERSION_CODE\2/g" shared_setup.js
 
 # 3. Update "Initializing" logic in manager.html
-sed -i -E "s/(btn\.innerText = action === 'start' \? \")[^\"]+(\" : \"Until next time\";)/\1$VERSION_CODE\2/" manager.html
+sed -i -E "s/(btn\.innerText = action === 'start' \? \(isNodePref \? \"INITIALIZING NODE\" : \")[0-9]+(\"\) : \"SHUTDOWN SEQUENCE\";)/\1$VERSION_CODE\2/" manager.html
 
 # 4. Global Cache Buster: Update ?v= tags in all HTML files
 echo "🧹 Updating cache busters (?v=) in HTML files..."

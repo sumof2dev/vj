@@ -12,17 +12,20 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-<link rel="stylesheet" href="setup.css?v=51262349">
+<link rel="stylesheet" href="setup.css?v=52262300">
 <style>
+    html, body {
+        background-size: cover !important;
+    }
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
     .sidebar-title .brand span { color: var(--accent) !important; font-size: 0.85em !important; margin-left: 2px !important; font-weight: 900 !important; }
     .sidebar-title .subtitle { font-size: 0.75rem !important; font-weight: 800 !important; letter-spacing: 1px !important; text-transform: uppercase !important; color: var(--accent) !important; opacity: 0.8 !important; align-self: flex-start !important; margin-top: -2px !important; margin-left: 12px !important; }
 </style>
-<link rel="stylesheet" href="engine_tab.css?v=51262349">
+<link rel="stylesheet" href="engine_tab.css?v=52262300">
 </head>
 
-<body>
+<body class="setup-bg">
     <!-- LOADING OVERLAY -->
     <div id="loading-overlay">
         <div class="loader-logo">RAVE<span>BOX</span></div>
@@ -44,7 +47,7 @@
             </div>
             <div class="sidebar-title">
                 <div class="brand">RAVE<span>BOX</span></div>
-                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v51262349</span></div>
+                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v52262300</span></div>
             </div>
         </div>
 
@@ -752,13 +755,13 @@
             });
         }
     </script>
-    <script src="shared_setup.js?v=51262349"></script>
-    <script src="live_controller.js?v=51262349"></script>
-    <script src="profile_logic.js?v=51262349"></script>
-    <script src="ai_architect.js?v=51262349"></script>
-    <script src="stage_logic.js?v=51262349"></script>
+    <script src="shared_setup.js?v=52262300"></script>
+    <script src="live_controller.js?v=52262300"></script>
+    <script src="profile_logic.js?v=52262300"></script>
+    <script src="ai_architect.js?v=52262300"></script>
+    <script src="stage_logic.js?v=52262300"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="engine_tab.js?v=51262349"></script>
+<script src="engine_tab.js?v=52262300"></script>
 <script>window.onload = () => { 
     // All routing and landing logic (redirects, tab switching) 
     // is now handled by Core Routing in shared_setup.js (v424)

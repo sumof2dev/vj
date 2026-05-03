@@ -290,7 +290,7 @@
         }
 
         body {
-            background: var(--bg);
+            background-size: cover;
             color: var(--text);
             font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
             margin: 0;
@@ -302,6 +302,14 @@
             font-size: 14px;
             overscroll-behavior-x: none;
             touch-action: pan-y;
+        }
+
+        body.setup-bg {
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('background2.png') no-repeat center center fixed !important;
+        }
+
+        body.engine-test-bg {
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('background3.png') no-repeat center center fixed !important;
         }
 
         /* --- SIDEBAR NAV --- */
@@ -1338,11 +1346,8 @@
             transform: scale(0.9);
         }
 
-        /* Red X boxes removed as requested */
-
-
         .fixture-picker-pill {
-            padding: 6px 12px;
+            padding: 4px 10px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border);
             border-radius: 20px;

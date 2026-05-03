@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-title" content="RaveBox">
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" href="icon.png">
-    <link rel="stylesheet" href="setup.css?v=51262349">
+    <link rel="stylesheet" href="setup.css?v=52262300">
 <style>
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
@@ -79,7 +79,7 @@
     </style>
 </head>
 
-<body>
+<body class="setup-bg">
     <button class="theme-toggle-fixed" onclick="cycleTheme()" title="Cycle UI Theme">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -433,11 +433,11 @@
             </div>
         </div>
     </div>
-    <script src="shared_setup.js?v=51262349"></script>
-    <script src="live_controller.js?v=51262349"></script>
-    <script src="profile_logic.js?v=51262349"></script>
-    <script src="ai_architect.js?v=51262349"></script>
-    <script src="stage_logic.js?v=51262349"></script>
+    <script src="shared_setup.js?v=52262300"></script>
+    <script src="live_controller.js?v=52262300"></script>
+    <script src="profile_logic.js?v=52262300"></script>
+    <script src="ai_architect.js?v=52262300"></script>
+    <script src="stage_logic.js?v=52262300"></script>
     <script>window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const profileId = urlParams.get('id');
@@ -448,7 +448,7 @@
             return;
         }
 
-        console.log("🚀 VJ Profile Editor starting (v51262349)...");
+        console.log("🚀 VJ Profile Editor starting (v52262300)...");
         if (typeof renderProfileMappings === 'function') {
             renderProfileMappings();
             if (typeof updateUniqueFunctions === 'function') updateUniqueFunctions();

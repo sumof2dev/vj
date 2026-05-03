@@ -232,7 +232,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "51262349";
+window.APP_VERSION = "52262300";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -330,7 +330,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v51262349)");
+    console.log("✅ RaveBox Core Ready (v52262300)");
 }
 
 // Kick off sync immediately
@@ -534,6 +534,11 @@ var switchTab = window.switchTab = function(tabId, noHistory = false) {
     localStorage.setItem('vj_active_tab', tabId);
     window.currentTab = tabId;
 
+    document.body.classList.remove('engine-test-bg');
+    if (tabId === 'tab-engine' || tabId === 'tab-test') {
+        document.body.classList.add('engine-test-bg');
+    }
+
     if (!noHistory) {
         const url = new URL(window.location);
         url.searchParams.set('tab', tabId.replace('tab-', ''));
@@ -625,7 +630,7 @@ window.togglePresetEditor = function(show) {
     }
 };
 
-window.APP_VERSION = "51262349";
+window.APP_VERSION = "52262300";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
