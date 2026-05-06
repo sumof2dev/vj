@@ -80,7 +80,8 @@ var currentPresetTriggers = [];
 var currentPresetOverrides = [];
 var simulationLastTime = 0;
 var lastDmxUpdate = Date.now();
-var db = { profiles: [], stage: [], presets: [], liveConsole: [], savedConsoles: [] };
+window.db = { profiles: [], stage: [], presets: [], liveConsole: [], savedConsoles: [] };
+var db = window.db;
 var activeProfileId = null;
 var currentProfileChannels = [];
 var currentProfileMappings = [];
@@ -232,7 +233,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "53261507";
+window.APP_VERSION = "56261042";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -298,7 +299,10 @@ async function initDatabaseSync() {
 
         console.log(`✅ [SYNC] Successfully synchronized ${syncCount} core files from server.`);
         
-        // Merge Descriptors into EASY_DESCRIPTORS
+        // 4. Data Normalization & Repair
+        repairPresets();
+        
+        // 5. Merge Descriptors into EASY_DESCRIPTORS
         if (window.db.descriptors && Array.isArray(window.db.descriptors)) {
             const existingIds = new Set(window.EASY_DESCRIPTORS.map(d => d.id));
             window.db.descriptors.forEach(d => {
@@ -330,7 +334,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v53261507)");
+    console.log("✅ RaveBox Core Ready (v56261042)");
 }
 
 // Kick off sync immediately
@@ -459,16 +463,29 @@ window.updateUniversalHUD = function() {
     const presetsCont = document.getElementById('hud-presets');
     if (presetsCont) {
         let activeNames = [];
+        let dimNames = [];
         if (window.latestAudioState.lissajous_active > 0.5) activeNames.push("Lissajous");
         if (window.latestAudioState.calibrated_preset_active) activeNames.push("Calibrated");
         
-        const activeIds = window.latestAudioState.manual_active_presets || [];
+        if (!window.everActivatedPresets) window.everActivatedPresets = new Set();
+
+        const activeIds = window.activePresets || (window.latestAudioState && window.latestAudioState.active_presets) || [];
         activeIds.forEach(id => {
-            const p = (window.db.presets || []).find(x => x.id === id || x.name === id);
-            if (p) activeNames.push(p.name);
+            window.everActivatedPresets.add(id);
+            const p = (window.db && window.db.presets) ? window.db.presets.find(x => x.id === id || x.name === id) : null;
+            const name = p ? p.name : id;
+            if (!activeNames.includes(name)) activeNames.push(name);
         });
         
-        presetsCont.innerHTML = activeNames.map(name => `<span class="hud-preset-badge">${name}</span>`).join('');
+        window.everActivatedPresets.forEach(id => {
+            const p = (window.db && window.db.presets) ? window.db.presets.find(x => x.id === id || x.name === id) : null;
+            const name = p ? p.name : id;
+            if (!activeNames.includes(name) && !dimNames.includes(name)) dimNames.push(name);
+        });
+        
+        presetsCont.innerHTML = 
+            activeNames.map(name => `<span class="hud-preset-badge">${name}</span>`).join('') +
+            dimNames.map(name => `<span class="hud-preset-badge dim">${name}</span>`).join('');
     }
 
     // 2. Vibe Log
@@ -506,7 +523,6 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function() {
         const options = (window.db.stage || []).map(inst => `<option value="${inst.id}">FIXTURE: ${inst.id}</option>`).join('');
         stageDrop.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' + 
                               '<option value="visualdmx">VISUALIZER (VisualDMX)</option>' +
-                              '<option value="system">ENGINE (System)</option>' +
                               options;
         if (current) stageDrop.value = current;
     }
@@ -535,8 +551,8 @@ var switchTab = window.switchTab = function(tabId, noHistory = false) {
     window.currentTab = tabId;
 
     // Cycle backgrounds
-    document.body.classList.remove('bg-stage', 'bg-presets', 'bg-engine', 'bg-test', 'setup-bg', 'engine-test-bg');
-    if (tabId === 'tab-stage') document.body.classList.add('bg-stage');
+    document.body.classList.remove('bg-stage', 'bg-presets', 'bg-engine', 'bg-test', 'setup-bg', 'engine-test-bg', 'bg-profile');
+    if (tabId === 'tab-stage' || tabId === 'tab-profile') document.body.classList.add('bg-stage');
     else if (tabId === 'tab-presets') document.body.classList.add('bg-presets');
     else if (tabId === 'tab-engine') document.body.classList.add('bg-engine');
     else if (tabId === 'tab-test') document.body.classList.add('bg-test');
@@ -629,10 +645,15 @@ window.togglePresetEditor = function(show) {
         genBtn.classList.remove('hidden');
         if (arrow) arrow.style.transform = 'rotate(0deg)';
         if (header) header.style.background = 'rgba(255,255,255,0.02)';
+        
+        // Deactivate test mode if active
+        if (window.presetTestActive) {
+            if (typeof window.testPreset === 'function') window.testPreset(false);
+        }
     }
 };
 
-window.APP_VERSION = "53261507";
+window.APP_VERSION = "56261042";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
@@ -776,6 +797,57 @@ function saveNodeIp(nodeIp, active = true) {
 
 // --- 3. UI STATE MANAGEMENT & EVENT DELEGATION ---
 // Following 00_architecture_router.md standards
+/**
+ * Normalizes preset data structures to ensure compatibility between UI and Engine.
+ * Fixes "broken" references where fixture/target IDs might be inconsistent.
+ */
+function repairPresets() {
+    if (!window.db.presets || !Array.isArray(window.db.presets)) return;
+    
+    console.log("🛠️ Repairing preset references...");
+    let repairedCount = 0;
+
+    window.db.presets.forEach(p => {
+        // Repair Triggers
+        if (p.triggers) {
+            p.triggers.forEach(t => {
+                if (t.type === 'channel') {
+                    const fixId = t.fixture || t.target || t.id;
+                    if (fixId && (!t.fixture || !t.target)) {
+                        t.fixture = fixId;
+                        t.target = fixId;
+                        repairedCount++;
+                    }
+                    if (!t.role && t.name) {
+                        t.role = t.name;
+                        repairedCount++;
+                    }
+                }
+            });
+        }
+        // Repair Overrides
+        if (p.overrides) {
+            p.overrides.forEach(o => {
+                const fixId = o.fixture || o.target || o.id;
+                if (fixId && (!o.fixture || !o.target)) {
+                    o.fixture = fixId;
+                    o.target = fixId;
+                    o.id = fixId;
+                    repairedCount++;
+                }
+                if (!o.role && o.name) {
+                    o.role = o.name;
+                    repairedCount++;
+                }
+            });
+        }
+    });
+
+    if (repairedCount > 0) {
+        console.log(`✅ Repaired ${repairedCount} field inconsistencies in presets.`);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', (e) => {
         const target = e.target.closest('[data-target]');

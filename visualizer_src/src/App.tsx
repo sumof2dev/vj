@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import * as THREE from "three";
-import { Camera, RefreshCw, X, Trash, Cloud, Layers, Sparkles, Settings, Key, Cpu, Save, Edit, Download, Home } from "lucide-react";
+import { Camera, RefreshCw, X, Trash, Cloud, Layers, Sparkles, Settings, Key, Cpu, Save, Edit, Download, Home, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { GoogleGenAI } from "@google/genai";
 
@@ -27,7 +27,17 @@ uniform float u_blackout; // 1.0 when blackout command active
 Must contain:
 precision highp float;
 varying vec2 vUv;
-void main() { ... gl_FragColor = vec4(color, 1.0); }`;
+void main() { ... gl_FragColor = vec4(color, 1.0); }
+`;
+
+const PASSTHROUGH_SHADER = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D u_image;
+void main() {
+    gl_FragColor = texture2D(u_image, vUv);
+}
+`;
 
 const DEFAULT_FRAGMENT_SHADER = `
 precision highp float;
@@ -448,6 +458,7 @@ void main() {
 `;
 
 const PRESET_WARPS = [
+    { name: 'NONE', code: PASSTHROUGH_SHADER },
     { name: 'KALEID', code: KALEIDO_SHADER },
     { name: 'GLITCH', code: RGB_GLITCH_SHADER },
     { name: 'MELT', code: FLUX_MELT_SHADER },
@@ -473,18 +484,19 @@ export default function App() {
     const [libraryItems, setLibraryItems] = useState<any[]>([]);
     const libraryRef = useRef<any[]>([]);
     const [showHistory, setShowHistory] = useState(false);
-    const [filterTab, setFilterTab] = useState<'tex' | 'base' | 'fx'>('tex');
+    const [filterTab, setFilterTab] = useState<'tex' | 'base'>('tex');
 
     // UI Toggles
     const [showAiInput, setShowAiInput] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [geminiKey, setGeminiKey] = useState(localStorage.getItem('vj_gemini_key') || '');
     const [aiModel, setAiModel] = useState(localStorage.getItem('vj_ai_model') || 'gemini-2.5-flash');
+    const [highPerformance, setHighPerformance] = useState(localStorage.getItem('vj_high_perf') !== 'false');
 
     const [geminiPrompt, setGeminiPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [unsavedShader, setUnsavedShader] = useState<{ code: string, prompt: string, category: string } | null>(null);
-    const [undoHistory, setUndoHistory] = useState<{ base: string | null, fx: string | null }>({ base: null, fx: null });
+    const [undoHistory, setUndoHistory] = useState<{ base: string | null }>({ base: null });
     const [activeShaderId, setActiveShaderId] = useState<string | null>(null);
     const [activeWarpIndex, setActiveWarpIndex] = useState<number | null>(null);
     const [currentSpotifyArt, setCurrentSpotifyArt] = useState<string | null>(null);
@@ -650,13 +662,14 @@ export default function App() {
 
     const loadFromLibrary = (item: any, styleIndex?: number) => {
         if (item.category === 'spotify') {
+            isPlayingVideoRef.current = false;
             if (spotifyTextureRef.current) {
                 applyNewTexture(spotifyTextureRef.current);
                 setActiveShaderId('spotify-art');
 
                 const warpIdx = (styleIndex !== undefined)
                     ? (styleIndex % PRESET_WARPS.length)
-                    : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length));
+                    : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1);
 
                 if (styleIndex !== undefined || activeWarpIndex === null) {
                     setActiveWarpIndex(warpIdx);
@@ -682,7 +695,13 @@ export default function App() {
 
             const video = document.createElement('video');
             video.src = `${apiBase}/${item.file}`;
-            video.loop = true;
+            video.loop = false;
+            isPlayingVideoRef.current = true;
+            videoFinishedRef.current = false;
+            video.onended = () => {
+                videoFinishedRef.current = true;
+                video.play().catch(err => console.warn("Video replay blocked", err));
+            };
             video.muted = true;
             video.crossOrigin = 'anonymous';
             video.playsInline = true;
@@ -698,7 +717,7 @@ export default function App() {
             
             const warpIdx = (styleIndex !== undefined)
                 ? (styleIndex % PRESET_WARPS.length)
-                : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length));
+                : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1);
 
             if (activeWarpIndex === null || styleIndex !== undefined) {
                 setActiveWarpIndex(warpIdx);
@@ -734,7 +753,40 @@ export default function App() {
             const res = await fetch(`${apiBase}/${libPath}/${item.file}`);
             if (res.ok) {
                 const code = await res.text();
-                if (item.category === 'base') setActiveWarpIndex(null);
+                
+                if (item.category === 'base') {
+                    let warpIdx = 0; // NONE
+                    if (vibeRef.current === 'high') {
+                        warpIdx = Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1;
+                    } else if (vibeRef.current === 'mid') {
+                        if (Math.random() > 0.5) {
+                            warpIdx = Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1;
+                        }
+                    }
+                    
+                    setActiveWarpIndex(warpIdx);
+                    
+                    if (warpIdx === 0) {
+                        setHighPerformance(true);
+                        localStorage.setItem('vj_high_perf', 'true');
+                    } else {
+                        setHighPerformance(false);
+                        localStorage.setItem('vj_high_perf', 'false');
+                        if (warpMeshRef.current) {
+                            const safeCode = ensureUniforms(PRESET_WARPS[warpIdx].code);
+                            warpMeshRef.current.material.dispose();
+                            warpMeshRef.current.material = new THREE.ShaderMaterial({
+                                vertexShader: VERTEX_SHADER,
+                                fragmentShader: safeCode,
+                                uniforms: uniformsRef.current,
+                                transparent: false,
+                                blending: THREE.NormalBlending,
+                                depthWrite: false,
+                            });
+                        }
+                    }
+                }
+                
                 applyNewShader(code, item.category);
             }
         } catch (e) {
@@ -771,8 +823,7 @@ export default function App() {
                 const usedInCode = new RegExp(`\\b${name}\\b`).test(code);
                 const alreadyDeclared = new RegExp(`(uniform|varying)\\s+\\S+\\s+${name}\\s*[;,]`).test(code);
                 // ALWAYS include hue/invert if they aren't declared, as we auto-inject logic that uses them
-                const isGlobalFX = (name === 'u_hue' || name === 'u_invert');
-                return (usedInCode || isGlobalFX) && !alreadyDeclared;
+                return (usedInCode) && !alreadyDeclared;
             })
             .map(([, decl]) => decl);
         if (toInject.length === 0) return code;
@@ -786,21 +837,7 @@ export default function App() {
             finalCode = preamble + '\n' + finalCode;
         }
 
-        // GLOBAL FX INJECTION: Append to the end of main()
-        const lastBrace = finalCode.lastIndexOf('}');
-        if (lastBrace > 0 && finalCode.includes('gl_FragColor')) {
-            const fxLogic = `
-    // Global FX Phase 1
-    if (u_invert > 0.0) gl_FragColor.rgb = mix(gl_FragColor.rgb, 1.0 - gl_FragColor.rgb, u_invert);
-    if (u_hue > 0.0) {
-        vec3 c_fx = gl_FragColor.rgb;
-        const vec3 k_fx = vec3(0.57735);
-        float cosA_fx = cos(u_hue * 6.28318);
-        gl_FragColor.rgb = c_fx * cosA_fx + cross(k_fx, c_fx) * sin(u_hue * 6.28318) + k_fx * dot(k_fx, c_fx) * (1.0 - cosA_fx);
-    }
-`;
-            finalCode = finalCode.slice(0, lastBrace) + fxLogic + '\n}';
-        }
+
         return finalCode;
     };
 
@@ -811,26 +848,13 @@ export default function App() {
                 vertexShader: VERTEX_SHADER,
                 fragmentShader: safeCode,
                 uniforms: uniformsRef.current,
-                transparent: category === 'fx',
-                blending: category === 'fx' ? THREE.AdditiveBlending : THREE.NormalBlending,
+                transparent: false,
+                blending: THREE.NormalBlending,
                 depthWrite: false,
             });
-
-            if (category === 'fx') {
-                if (fxMeshRef.current) {
-                    fxMeshRef.current.material.dispose();
-                    fxMeshRef.current.material = newMat;
-                    fxMeshRef.current.visible = true;
-                }
-            } else {
-                if (baseMeshRef.current) {
-                    baseMeshRef.current.material.dispose();
-                    baseMeshRef.current.material = newMat;
-                }
-                // Separating warped images from overlays
-                if (category === 'tex' && fxMeshRef.current) {
-                    fxMeshRef.current.visible = false;
-                }
+            if (baseMeshRef.current) {
+                baseMeshRef.current.material.dispose();
+                baseMeshRef.current.material = newMat;
             }
             setStatus(`✅ ${category.toUpperCase()} Live`);
             setStatusColor("text-indigo-400");
@@ -849,7 +873,7 @@ export default function App() {
 
         // Handle Undo Command
         if (action === 'refine' && (prmpt.toLowerCase() === 'undo' || prmpt.toLowerCase() === 'revert')) {
-            const previousCode = targetCategory === 'base' ? undoHistory.base : undoHistory.fx;
+            const previousCode = undoHistory.base;
             if (previousCode) {
                 applyNewShader(previousCode, targetCategory);
                 setGeminiPrompt('');
@@ -879,8 +903,6 @@ export default function App() {
             let currentCode = '';
             if (targetCategory === 'base' && baseMeshRef.current) {
                 currentCode = (baseMeshRef.current.material as THREE.ShaderMaterial).fragmentShader;
-            } else if (targetCategory === 'fx' && fxMeshRef.current) {
-                currentCode = (fxMeshRef.current.material as THREE.ShaderMaterial).fragmentShader;
             }
 
             // Save Undo state
@@ -940,7 +962,13 @@ export default function App() {
 
                 const video = document.createElement('video');
                 video.src = url;
-                video.loop = true;
+                video.loop = false;
+                isPlayingVideoRef.current = true;
+                videoFinishedRef.current = false;
+                video.onended = () => {
+                    videoFinishedRef.current = true;
+                    video.play().catch(err => console.warn("Video replay blocked", err));
+                };
                 video.muted = true;
                 video.crossOrigin = 'anonymous';
                 video.playsInline = true;
@@ -954,7 +982,7 @@ export default function App() {
                 
                 applyNewTexture(texture);
                 
-                const warpIdx = activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length);
+                const warpIdx = activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1;
                 if (activeWarpIndex === null) setActiveWarpIndex(warpIdx);
                 applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
                 
@@ -967,12 +995,13 @@ export default function App() {
                 };
                 reader.readAsDataURL(file);
             } else {
+                isPlayingVideoRef.current = false;
                 const reader = new FileReader();
                 reader.onload = async () => {
                     const dataUrl = reader.result as string;
                     new THREE.TextureLoader().load(dataUrl, (texture) => {
                         applyNewTexture(texture);
-                        const warpIdx = activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length);
+                        const warpIdx = activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1;
                         if (activeWarpIndex === null) setActiveWarpIndex(warpIdx);
                         applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
                         setStatus("📸 Texture loaded!");
@@ -1009,7 +1038,10 @@ export default function App() {
         u_invert: { value: 0 }
     });
     const baseMeshRef = useRef<THREE.Mesh | null>(null);
-    const fxMeshRef = useRef<THREE.Mesh | null>(null);
+
+    const isPlayingVideoRef = useRef(false);
+    const videoFinishedRef = useRef(true);
+
     const strobeActiveRef = useRef(false);
     const blackoutActiveRef = useRef(false);
     const spinActiveRef = useRef(false);
@@ -1025,13 +1057,34 @@ export default function App() {
     const mTimeRef = useRef(0.0);
     const beatPhaseRef = useRef(0.0);
     const localFlutterRef = useRef(0.0);
+    
+    const filterTabRef = useRef(filterTab);
+    useEffect(() => { filterTabRef.current = filterTab; }, [filterTab]);
+    
+    const highPerformanceRef = useRef(highPerformance);
+    useEffect(() => { highPerformanceRef.current = highPerformance; }, [highPerformance]);
+    
+    const captureThumbnailForRef = useRef<string | null>(null);
+    const [forceRender, setForceRender] = useState(0);
+
+    const warpMeshRef = useRef<THREE.Mesh | null>(null);
+    const renderTargetRef = useRef<THREE.WebGLRenderTarget | null>(null);
 
     useEffect(() => {
         if (!canvasRef.current) return;
-        const scene = new THREE.Scene();
+        const baseScene = new THREE.Scene();
+        const warpScene = new THREE.Scene();
+        
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
+
+        const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { 
+            minFilter: THREE.LinearFilter, 
+            magFilter: THREE.LinearFilter, 
+            format: THREE.RGBAFormat 
+        });
+        renderTargetRef.current = rt;
 
         const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
         const ctx = canvas.getContext('2d');
@@ -1046,12 +1099,13 @@ export default function App() {
 
         const baseMat = new THREE.ShaderMaterial({ vertexShader: VERTEX_SHADER, fragmentShader: DEFAULT_FRAGMENT_SHADER, uniforms: uniformsRef.current });
         const baseMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), baseMat);
-        scene.add(baseMesh); baseMeshRef.current = baseMesh;
+        baseScene.add(baseMesh); baseMeshRef.current = baseMesh;
+        
+        const warpMat = new THREE.ShaderMaterial({ vertexShader: VERTEX_SHADER, fragmentShader: PRESET_WARPS[0].code, uniforms: uniformsRef.current });
+        const warpMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), warpMat);
+        warpScene.add(warpMesh); warpMeshRef.current = warpMesh;
 
-        const fxMat = new THREE.ShaderMaterial({ vertexShader: VERTEX_SHADER, fragmentShader: DEFAULT_FRAGMENT_SHADER, uniforms: uniformsRef.current, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
-        const fxMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fxMat);
-        fxMesh.visible = false;
-        scene.add(fxMesh); fxMeshRef.current = fxMesh;
+
 
         let startT = performance.now() * 0.001;
         let lastTime = performance.now();
@@ -1063,7 +1117,27 @@ export default function App() {
             const dt = now - lastTime;
             if (dt >= 1000) { setFps(Math.round((frameCount * 1000) / dt)); frameCount = 0; lastTime = now; }
             uniformsRef.current.u_time.value = (now * 0.001) - startT;
-            renderer.render(scene, camera);
+            if (highPerformanceRef.current || filterTabRef.current === 'tex') {
+                renderer.setRenderTarget(null);
+                renderer.render(baseScene, camera);
+            } else {
+                renderer.setRenderTarget(renderTargetRef.current);
+                renderer.render(baseScene, camera);
+                
+                const originalImage = uniformsRef.current.u_image.value;
+                uniformsRef.current.u_image.value = renderTargetRef.current?.texture;
+                renderer.setRenderTarget(null);
+                renderer.render(warpScene, camera);
+                uniformsRef.current.u_image.value = originalImage;
+            }
+
+            if (captureThumbnailForRef.current) {
+                const dataUrl = renderer.domElement.toDataURL('image/jpeg', 0.5);
+                localStorage.setItem(`thumb_${captureThumbnailForRef.current}`, dataUrl);
+                captureThumbnailForRef.current = null;
+                setForceRender(prev => prev + 1);
+            }
+
             requestAnimationFrame(animate);
         };
         animate();
@@ -1076,7 +1150,7 @@ export default function App() {
     useEffect(() => {
         let socket: WebSocket | null = null;
         let lastBase = -1;
-        let lastFx = -1;
+
         const targetMods = { flux: 0, bass: 0, high: 0, vol: 0, beat_phase: 0 };
         const smoothedMods = { flux: 0, bass: 0, high: 0, vol: 0, beat_phase: 0 };
         let lastTime = performance.now();
@@ -1097,7 +1171,7 @@ export default function App() {
                     effIntensityRef.current = view.getUint8(59) / 255.0;
 
                     const baseIdx = view.getUint16(80, true);
-                    const fxIdx = view.getUint16(82, true);
+
 
                     if (autoCycleRef.current && libraryRef.current.length > 0) {
                         const bases = libraryRef.current.filter(i => i.category === 'base');
@@ -1109,39 +1183,27 @@ export default function App() {
                         const allSources = [...bases, ...imagePool];
 
                         if (baseIdx !== lastBase) {
-                            lastBase = baseIdx;
-                            if (allSources.length > 0) {
-                                const source = allSources[baseIdx % allSources.length];
-                                
-                                // Randomly enable dual-image masking ~50% of the time on drops
-                                uniformsRef.current.u_dual.value = Math.random() > 0.5 ? 1.0 : 0.0;
+                            if (isPlayingVideoRef.current && !videoFinishedRef.current) {
+                                // Block the visual change; wait for the video to play completely at least once
+                            } else {
+                                lastBase = baseIdx;
+                                if (allSources.length > 0) {
+                                    const source = allSources[baseIdx % allSources.length];
+                                    
+                                    // Randomly enable dual-image masking ~50% of the time on drops
+                                    uniformsRef.current.u_dual.value = Math.random() > 0.5 ? 1.0 : 0.0;
 
-                                if (source.category === 'tex') loadFromLibrary(source, baseIdx);
-                                else if (source.category === 'spotify' && spotifyTextureRef.current) {
-                                    applyNewTexture(spotifyTextureRef.current);
-                                    const warpIdx = baseIdx % PRESET_WARPS.length;
-                                    setActiveWarpIndex(warpIdx);
-                                    applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
-                                    setStatus("🎵 Spotify Art Live");
-                                    setStatusColor("text-emerald-400");
+                                    if (source.category === 'tex') loadFromLibrary(source, baseIdx);
+                                    else if (source.category === 'spotify' && spotifyTextureRef.current) {
+                                        applyNewTexture(spotifyTextureRef.current);
+                                        const warpIdx = baseIdx % PRESET_WARPS.length;
+                                        setActiveWarpIndex(warpIdx);
+                                        applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
+                                        setStatus("🎵 Spotify Art Live");
+                                        setStatusColor("text-emerald-400");
+                                    }
+                                    else loadAiShader(source);
                                 }
-                                else loadAiShader(source);
-                            }
-                        }
-                        if (fxIdx !== lastFx) {
-                            lastFx = fxIdx;
-                            const fxs = libraryRef.current.filter(i => i.category === 'fx');
-
-                            const currentSource = allSources.length > 0 ? allSources[Math.abs(lastBase) % allSources.length] : null;
-                            const isImageActive = currentSource?.category === 'tex' || currentSource?.category === 'spotify';
-
-                            const fxRatio = isImageActive ? 0.5 : (bases.length > 0 ? (fxs.length / bases.length) : 0);
-                            const seededRand = ((fxIdx * 9301 + 49297) % 233280) / 233280.0;
-
-                            if (fxs.length > 0 && seededRand <= fxRatio) {
-                                loadAiShader(fxs[fxIdx % fxs.length]);
-                            } else if (fxMeshRef.current) {
-                                fxMeshRef.current.visible = false;
                             }
                         }
                     }
@@ -1244,12 +1306,7 @@ export default function App() {
             uniformsRef.current.u_blackout.value = isBlackout ? 1.0 : 0.0;
             if (isBlackout) {
                 if (baseMeshRef.current) baseMeshRef.current.visible = false;
-                if (fxMeshRef.current) fxMeshRef.current.visible = false;
             } else {
-                if (baseMeshRef.current) baseMeshRef.current.visible = true;
-                // FX visibility is usually managed by its own logic, but we must restore it if it was visible
-                // Actually, just let the next binary packet restore it or check if it should be visible.
-                // For simplicity, restore base and let fx be managed by indices logic
                 if (baseMeshRef.current) baseMeshRef.current.visible = true;
             }
             // Handle Strobe
@@ -1258,7 +1315,7 @@ export default function App() {
                 uniformsRef.current.u_strobe.value = strobeState;
                 if (strobeState === 0) {
                     if (baseMeshRef.current) baseMeshRef.current.visible = false;
-                    if (fxMeshRef.current) fxMeshRef.current.visible = false;
+
                 }
             } else {
                 uniformsRef.current.u_strobe.value = 0;
@@ -1279,7 +1336,7 @@ export default function App() {
                 }
             }
 
-            // Handle Color FX
+            // Handle Color Mods
             currentHueRef.current += (hueTargetRef.current - currentHueRef.current) * sf;
             currentInvertRef.current += ((invertActiveRef.current ? 1.0 : 0.0) - currentInvertRef.current) * sf;
 
@@ -1295,17 +1352,10 @@ export default function App() {
                 // Add a subtle 5% "pump" to the global scale based on the beat pulse
                 const beatScale = currentScaleRef.current * (1.0 + uniformsRef.current.u_beat_pulse.value * 0.05);
                 baseMeshRef.current.scale.set(beatScale, beatScale, 1);
-            }
-            if (fxMeshRef.current) {
-                fxMeshRef.current.rotation.z = rotationZ;
-                const beatScale = currentScaleRef.current * (1.0 + uniformsRef.current.u_beat_pulse.value * 0.05);
-                fxMeshRef.current.scale.set(beatScale, beatScale, 1);
-            }
-
-            // Apply global opacity based on eff_intensity (0..1 range expected for opacity)
+            }            // Apply global opacity based on eff_intensity (0..1 range expected for opacity)
             const globalOpacity = Math.max(0, Math.min(1.0, masterAlpha));
             if (baseMeshRef.current) (baseMeshRef.current.material as THREE.ShaderMaterial).opacity = globalOpacity;
-            if (fxMeshRef.current) (fxMeshRef.current.material as THREE.ShaderMaterial).opacity = globalOpacity;
+
 
             requestAnimationFrame(updateLoop);
         };
@@ -1347,7 +1397,7 @@ export default function App() {
                         </div>
 
                         <AnimatePresence>
-                            {showAiInput && (filterTab === 'base' || filterTab === 'fx') && (
+                            {showAiInput && (filterTab === 'base') && (
                                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-black/60 border-b border-zinc-800">
                                     <div className="p-3 flex flex-col gap-2">
                                         <textarea
@@ -1372,7 +1422,7 @@ export default function App() {
                         </AnimatePresence>
 
                         <div className="flex bg-black">
-                            {['tex', 'base', 'fx'].map(tab => (
+                            {['tex', 'base'].map(tab => (
                                 <button key={tab} onClick={() => { setFilterTab(tab as any); setShowAiInput(false); }} className={`flex-1 py-3 text-[10px] font-black tracking-widest ${filterTab === tab ? 'text-white border-b-2 border-indigo-500 bg-indigo-900/20' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/50'}`}>
                                     {tab === 'tex' ? 'TEX' : tab.toUpperCase()}
                                 </button>
@@ -1397,13 +1447,18 @@ export default function App() {
                                     </div>
                                 ) : filterTab === 'tex' ? (
                                     <div key={idx} className={`relative group aspect-square rounded-xl overflow-hidden border cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-zinc-800 hover:border-indigo-400'}`} onClick={() => loadFromLibrary(item)}>
-                                        <img src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" />
+                                        {item.file.match(/\.(mp4|webm|ogg)$/i) ? (
+                                            <video src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                                        ) : (
+                                            <img src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" />
+                                        )}
                                         <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-rose-500 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity backdrop-blur-md"><X size={14} /></button>
+
                                     </div>
                                 ) : (
                                     <div
                                         key={idx}
-                                        className={`relative group aspect-square rounded-xl border flex flex-col items-center justify-center p-3 cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-fuchsia-500 bg-fuchsia-500/10' : 'border-zinc-800 bg-black hover:border-zinc-600 hover:bg-zinc-900'}`}
+                                        className={`relative group aspect-square rounded-xl border flex flex-col items-center justify-center p-3 cursor-pointer shadow-lg transition-all overflow-hidden ${activeShaderId === item.file ? 'border-fuchsia-500 ring-2 ring-fuchsia-500/20' : 'border-zinc-800 bg-black hover:border-zinc-600 hover:bg-zinc-900'}`}
                                         onClick={() => {
                                             if (activeShaderId === item.file) {
                                                 renameLibraryItem(item);
@@ -1412,35 +1467,55 @@ export default function App() {
                                             }
                                         }}
                                     >
-                                        <Sparkles size={24} className={`${activeShaderId === item.file ? 'text-fuchsia-400' : 'text-zinc-600 group-hover:text-fuchsia-400'} mb-2 transition-colors`} />
-                                        <div className="text-[9px] text-zinc-500 font-bold text-center line-clamp-3 leading-relaxed">{item.prompt || item.file}</div>
-                                        <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black hover:bg-rose-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity"><X size={14} /></button>
+                                        {localStorage.getItem(`thumb_${item.file}`) ? (
+                                            <>
+                                                <img src={localStorage.getItem(`thumb_${item.file}`)!} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity" />
+                                                <div className="relative z-10 text-[9px] text-white font-bold text-center line-clamp-3 leading-relaxed drop-shadow-md">{item.prompt || item.file}</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles size={24} className={`${activeShaderId === item.file ? 'text-fuchsia-400' : 'text-zinc-600 group-hover:text-fuchsia-400'} mb-2 transition-colors`} />
+                                                <div className="text-[9px] text-zinc-500 font-bold text-center line-clamp-3 leading-relaxed">{item.prompt || item.file}</div>
+                                            </>
+                                        )}
+                                        <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black hover:bg-rose-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"><X size={14} /></button>
                                         {activeShaderId === item.file && (
-                                            <button
-                                                onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    const libPath = 'library';
-                                                    const res = await fetch(`${apiBase}/${libPath}/${item.file}`);
-                                                    const code = await res.text();
-                                                    const blob = new Blob([code], { type: 'text/plain' });
-                                                    const a = document.createElement('a');
-                                                    a.href = URL.createObjectURL(blob);
-                                                    a.download = item.file.split('/').pop() || 'shader.frag';
-                                                    a.click();
-                                                    URL.revokeObjectURL(a.href);
-                                                }}
-                                                className="absolute bottom-2 inset-x-2 py-1 bg-fuchsia-600/80 hover:bg-fuchsia-500 rounded-lg text-white text-[8px] font-black tracking-widest flex items-center justify-center gap-1 transition-colors"
-                                            >
-                                                <Download size={10} /> SAVE .FRAG
-                                            </button>
+                                            <>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        captureThumbnailForRef.current = item.file;
+                                                    }}
+                                                    className="absolute top-2 left-2 p-1.5 bg-black hover:bg-emerald-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"
+                                                    title="Capture Thumbnail"
+                                                >
+                                                    <Camera size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        const libPath = 'library';
+                                                        const res = await fetch(`${apiBase}/${libPath}/${item.file}`);
+                                                        const code = await res.text();
+                                                        const blob = new Blob([code], { type: 'text/plain' });
+                                                        const a = document.createElement('a');
+                                                        a.href = URL.createObjectURL(blob);
+                                                        a.download = item.file.split('/').pop() || 'shader.frag';
+                                                        a.click();
+                                                        URL.revokeObjectURL(a.href);
+                                                    }}
+                                                    className="absolute bottom-2 inset-x-2 py-1 bg-fuchsia-600/80 hover:bg-fuchsia-500 rounded-lg text-white text-[8px] font-black tracking-widest flex items-center justify-center gap-1 transition-colors z-20"
+                                                >
+                                                    <Download size={10} /> SAVE .FRAG
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                 )
                             ))}
                         </div>
 
-                        {filterTab === 'tex' && (
-                            <div className="flex-none p-4 border-t border-zinc-800 bg-black/60 backdrop-blur-md">
+                        <div className="flex-none p-4 border-t border-zinc-800 bg-black/60 backdrop-blur-md">
                                 <div className="text-[9px] font-black text-indigo-400 mb-3 tracking-widest uppercase flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" /> Modifiers
                                 </div>
@@ -1451,7 +1526,30 @@ export default function App() {
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setActiveWarpIndex(i);
-                                                applyNewShader(warp.code, 'tex');
+                                                if (warp.name === 'NONE' && filterTab === 'base') {
+                                                    setHighPerformance(true);
+                                                    localStorage.setItem('vj_high_perf', 'true');
+                                                } else if (filterTab === 'base' && highPerformance && warp.name !== 'NONE') {
+                                                    setHighPerformance(false);
+                                                    localStorage.setItem('vj_high_perf', 'false');
+                                                }
+
+                                                if (filterTab === 'base' && (warp.name !== 'NONE' || !highPerformance)) {
+                                                    if (warpMeshRef.current) {
+                                                        const safeCode = ensureUniforms(warp.code);
+                                                        warpMeshRef.current.material.dispose();
+                                                        warpMeshRef.current.material = new THREE.ShaderMaterial({
+                                                            vertexShader: VERTEX_SHADER,
+                                                            fragmentShader: safeCode,
+                                                            uniforms: uniformsRef.current,
+                                                            transparent: false,
+                                                            blending: THREE.NormalBlending,
+                                                            depthWrite: false,
+                                                        });
+                                                    }
+                                                } else {
+                                                    applyNewShader(warp.code, 'tex');
+                                                }
                                             }}
                                             className={`flex-none px-4 py-2 rounded-xl text-[9px] font-black tracking-widest transition-all border whitespace-nowrap ${activeWarpIndex === i ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'}`}
                                         >
@@ -1460,7 +1558,6 @@ export default function App() {
                                     ))}
                                 </div>
                             </div>
-                        )}
                     </motion.div>
                 )}
 
@@ -1505,6 +1602,21 @@ export default function App() {
                                     <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
                                     <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
                                 </select>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-zinc-500 tracking-wider flex items-center justify-between px-1 cursor-pointer" onClick={() => {
+                                    const newVal = !highPerformance;
+                                    setHighPerformance(newVal);
+                                    localStorage.setItem('vj_high_perf', String(newVal));
+                                }}>
+                                    <div className="flex items-center gap-2">
+                                        <Zap size={10} /> HIGH PERFORMANCE (1-PASS)
+                                    </div>
+                                    <div className={`w-8 h-4 rounded-full flex items-center p-0.5 transition-colors ${highPerformance ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
+                                        <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${highPerformance ? 'translate-x-4' : 'translate-x-0'}`} />
+                                    </div>
+                                </label>
                             </div>
                         </div>
 
@@ -1564,7 +1676,7 @@ export default function App() {
                 {/* DEBUG OVERLAY - Enhanced for visibility, only shows when toolbar is active */}
                 {showToolbar && (
                     <div className="fixed top-24 left-8 pointer-events-none font-mono text-[12px] space-y-2 z-[100] bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/5 shadow-2xl">
-                        <div className="text-zinc-500 mb-2 border-b border-white/10 pb-1 text-[10px] font-black uppercase tracking-wider">Visual FX Debug</div>
+                        <div className="text-zinc-500 mb-2 border-b border-white/10 pb-1 text-[10px] font-black uppercase tracking-wider">Visual Debug</div>
                         <div className="flex items-center gap-3">
                             <div className={`w-2 h-2 rounded-full ${strobeActiveRef.current ? "bg-amber-400 animate-pulse shadow-[0_0_10px_#fbbf24]" : "bg-zinc-800"}`} />
                             <span className={strobeActiveRef.current ? "text-amber-200" : "text-zinc-600"}>STROBE</span>

@@ -20,6 +20,8 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            overscroll-behavior: none;
+            touch-action: pan-y;
         }
         #standalone-overlay {
             position: absolute;
@@ -80,7 +82,7 @@
 
     <iframe id="viz-frame" src="visualdmx.html"></iframe>
 
-    <div id="info-peek">Standalone Mode // No Backend Required // VJ Standalone v53261507</div>
+    <div id="info-peek">Standalone Mode // No Backend Required // VJ Standalone v56261042</div>
 
     <script>
         function launchDemo() {

@@ -531,8 +531,13 @@ class DMXEngine:
         # --- MERGE MANUAL PRESETS ---
         manual_presets_list = []
         for p_data in self.presets:
-            p_id = p_data.get('id', p_data.get('name'))
-            if p_id in self.manual_active_presets:
+            p_id = str(p_data.get('id', ''))
+            p_name = str(p_data.get('name', ''))
+            # Strict identifier matching
+            if (p_id and p_id in self.manual_active_presets) or (p_name and p_name in self.manual_active_presets):
+                manual_presets_list.append(p_data)
+            elif (p_id.lower() in self.manual_active_presets) or (p_name.lower() in self.manual_active_presets):
+                # Fallback to lowered only if exact match fails
                 manual_presets_list.append(p_data)
 
         # Update combined list for external observers
@@ -777,14 +782,19 @@ class DMXEngine:
                     matched_ov_ch = None
                     
                     if ov_type == 'instance':
-                        is_match = (target_id == inst['id'] or 
-                                   target_id == inst.get('profileName') or 
+                        is_match = (str(target_id).lower() == str(inst['id']).lower() or 
+                                   str(target_id).lower() == str(inst.get('profileName', '')).lower() or 
                                    (inst.get('zone') and str(inst.get('zone')).lower() == str(target_id).lower()))
                         
                         if is_match:
                             for ov_ch in ov.get('channels', []):
-                                if ov_ch.get('name') == target_role:
+                                ov_name = ov_ch.get('name')
+                                ov_role = ov_ch.get('role')
+                                # Strict match: Does the override role match the target role? 
+                                # Or does the override name match the target role/name?
+                                if (ov_role and ov_role == target_role) or ov_name == target_role or ov_name == ch_def.get('name'):
                                     matched_ov_ch = ov_ch
+                                    break
                     elif ov_type == 'global':
                         if target_id == target_role or target_id == f"Global: {target_role}" or ov.get('name') == target_role:
                             for ov_ch in ov.get('channels', []):
@@ -1140,6 +1150,7 @@ class DMXEngine:
         """Force a preset to be active or inactive regardless of audio triggers.
            If exclusive is True and we are turning a preset ON, clear all other manual presets.
         """
+        preset_id = str(preset_id).lower()
         is_on = preset_id in self.manual_active_presets
         target_state = state if state is not None else not is_on
 

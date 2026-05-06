@@ -48,7 +48,7 @@
             </div>
             <div class="sidebar-title">
                 <div class="brand">RAVE<span>BOX</span></div>
-                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v53261507</span></div>
+                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v56261042</span></div>
             </div>
         </div>
 
@@ -65,15 +65,12 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
             <span class="nav-text">Presets</span>
         </div>
-        <div class="nav-btn" id="nav-btn-engine" data-target="tab-engine" title="Engine">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-            <span class="nav-text">Engine</span>
-        </div>
+        
 
 
-        <div class="nav-btn" id="nav-btn-test" data-target="tab-test" title="Test Hub">
+        <div class="nav-btn" id="nav-btn-test" data-target="tab-test" title="Tune Hub">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-            <span class="nav-text">Test</span>
+            <span class="nav-text">Tune</span>
         </div>
 
         <div class="nav-btn desktop-only" onclick="sendIt(event)" title="Send It">
@@ -185,6 +182,7 @@
                     <button class="btn btn-primary btn-sm" id="preset-gen-btn-top" style="height:28px; padding:0 12px; font-size:11px; background:var(--secondary); border-color:var(--secondary);" onclick="event.stopPropagation(); openPresetAiChat(); togglePresetEditor(true)">Generate</button>
                     
                     <div id="preset-editor-actions-top" class="hidden" style=" gap:10px; align-items:center;">
+                        <button class="btn btn-sm" id="preset-test-btn" style="height:28px; padding:0 12px; font-size:11px; border:1px solid var(--accent); color:var(--accent-alt); background:transparent;" onclick="event.stopPropagation(); testPreset()">Test</button>
                         <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background:var(--success); border-color:var(--success);" onclick="event.stopPropagation(); savePreset()">Save Preset</button>
                         <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="event.stopPropagation(); togglePresetEditor(false)">Cancel</button>
                     </div>
@@ -287,10 +285,268 @@
 
     <!-- AI PRESET CHAT MODAL -->
     
-    <div id="tab-engine" class="tab-content">
-        <h2>Engine & Analysis</h2>
-        <p style="color:var(--text-dim)">Sanity checks, live laboratory, and training data collection.</p>
-        
+    <div id="ai-preset-modal" class="ai-modal-overlay"
+        onclick="closePresetAiModal()">
+        <div class="ai-modal-content chat-optimized" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
+                    <span style="font-size: 1.4rem;">🤖</span>
+                    <span id="ai-preset-modal-title-text">AI Preset Generator</span>
+                    <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
+                <button class="btn btn-sm" onclick="closePresetAiModal()">×</button>
+            </div>
+
+            <div class="ai-modal-body chat-body">
+                <div id="ai-preset-chat-history" style="display: flex; flex-direction: column; gap: 12px; min-height: 50px;">
+                    <div class="chat-bubble ai">
+                        Describe the preset you want to create. For example: "blackout all fixtures when volume drops below 5%" or "when vibe goes high, crank dimmers to max on the rhythm fixtures."
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-modal-footer chat-footer">
+                <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
+                    <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
+                        onclick="clearPresetAiChatHistory()">🗑️ Clear</button>
+                    <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">[FIX]</button>
+                    <button class="btn-suggestion" id="ai-zone-picker-btn" onclick="toggleZonePicker()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[ZONE]</button>
+                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[X/Y]</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
+                </div>
+
+                <div id="ai-preset-xy-panel" 
+                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
+                    <!-- X/Y Calibration UI injected here -->
+                </div>
+
+                <div id="ai-fixture-picker" 
+                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
+                    <!-- Fixture items injected here -->
+                </div>
+
+                <div id="ai-zone-picker" 
+                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent-alt); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
+                    <!-- Zone items injected here -->
+                </div>
+
+                <div style="display: flex; gap: 10px; position: relative;">
+                    <textarea id="ai-preset-textarea"
+                        style="width: 100%; height: 60px !important; border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.05); resize: none; border: 1px solid rgba(255,255,255,0.1); color: #ffffff !important; font-size: 14px !important; caret-color: #ffffff;"
+                        placeholder="Describe your preset..."
+                        onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendPresetAiPrompt(); }"></textarea>
+
+                    <button class="btn btn-primary" id="ai-preset-send-btn" onclick="sendPresetAiPrompt()"
+                        style="height: 60px; width: 60px; padding:0; border-radius: 12px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <div style="font-size:0.7rem; color:var(--text-dim); display:flex; align-items:center; gap:5px;">
+                        Using <span class="active-model-name"
+                            style="color:var(--accent-alt); font-weight:bold;">...</span>
+                        <div class="hover-opacity" onclick="openAiSettings()" title="AI Settings" style="cursor:pointer; display:flex; align-items:center;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                </path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary btn-sm hidden" id="ai-preset-view-diff-btn" onclick="showPresetAiDiff()"
+                            style=" border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
+                        <button class="btn btn-accent btn-sm hidden" id="ai-preset-save-btn"
+                            onclick="savePreset()"
+                            style=" background:var(--accent);">💾 Save Preset</button>
+                        <button class="btn btn-primary btn-sm hidden" id="ai-preset-apply-btn"
+                            onclick="acceptPresetAi()"
+                            style=" background:var(--success);">Apply & Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI PRESET DIFF MODAL -->
+    <div id="ai-preset-diff-modal" class="ai-modal-overlay"
+        class="hidden" style=" z-index:11000;"
+        onclick="closePresetAiDiff()">
+        <div class="ai-modal-content" style="max-width:600px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800;">Preset Diff</div>
+                <button class="btn btn-sm" onclick="closePresetAiDiff()">×</button>
+            </div>
+            <div class="ai-modal-body diff-modal-body" id="ai-preset-diff-body">
+                <!-- Diff rows injected here -->
+            </div>
+            <div class="ai-modal-footer" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="undoPresetAi()">Undo &
+                    Revert</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="acceptPresetAi()">Accept
+                    Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI STAGED PRESETS REVIEW MODAL -->
+    <div id="ai-preset-staged-modal" class="ai-modal-overlay"
+        class="hidden" style=" z-index:12000;"
+        onclick="closeStagedPresetsReview()">
+        <div class="ai-modal-content" style="max-width:500px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800;">Review Generated Extras</div>
+                <button class="btn btn-sm" onclick="closeStagedPresetsReview()">×</button>
+            </div>
+            <div class="ai-modal-body" id="ai-preset-staged-body" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Staged presets list -->
+            </div>
+            <div class="ai-modal-footer" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="closeStagedPresetsReview()">Close</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="saveAllStagedPresets()">Save All to Library</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI SETTINGS MODAL -->
+    <div id="ai-settings-modal" class="ai-modal-overlay"
+        class="hidden" style=" z-index:10000;"
+        onclick="closeAiSettings()">
+        <div class="ai-modal-content" style="max-width:400px;" onclick="event.stopPropagation()">
+            <div class="ai-modal-header">
+                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    AI Engine Settings
+                </div>
+                <button class="btn btn-sm" onclick="closeAiSettings()">×</button>
+            </div>
+            <div class="ai-modal-body" style="display:flex; flex-direction:column; gap:20px;">
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Gemini
+                        API Key</label>
+                    <input type="text" id="gemini-key-input" placeholder="AI_Studio_Key_Here"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                    <div style="font-size: 10px; color: #666; margin-top:5px;">Shared across Profiler tools.</div>
+                </div>
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Model
+                        Selection</label>
+                    <select id="ai-model-select-settings"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;"
+                        onchange="updateModelLabelDisplay()">
+                        <option value="gemini-flash-latest">Gemini Flash Latest</option>
+                        <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                        <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite Preview</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Backend
+                        Host / IP</label>
+                    <input type="text" id="backend-host-input" placeholder="e.g. ravebox.local"
+                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
+                </div>
+                <button class="btn btn-primary" onclick="saveAiSettings()"
+                    style="width:100%; height:45px; font-weight:800; border-radius:12px; box-shadow: 0 4px 15px var(--accent-glow);">Save
+                    Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- --- SIM TAB --- -->
+
+
+    <div id="tab-test" class="tab-content">
+
+        <h2>Tune & Engine</h2>
+        <p style="color:var(--text-dim)">Sanity checks, live laboratory, training data collection, and live tuning.</p>
+
+        <details class="engine-accordion" open>
+            <summary>📹 Live Feed Tune</summary>
+            <div class="accordion-content">
+<div class="test-hub-header-sticky">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <h2 style="margin:0;">Live Tune Hub</h2>
+                    <div id="rec-status" class="rec-status">
+                        <span class="rec-dot"></span> REC <span id="rec-timer" style="margin-left:8px; font-family:monospace;">00:00</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button id="btn-mute-others" class="btn btn-sm" onclick="toggleMuteOthers()" 
+                            style="background:#222; border-color:#444; transition: all 0.2s;">🔕 Mute Others</button>
+                    <button id="btn-record" class="btn btn-sm" onclick="toggleRecording()" style="background:#222; border-color:#444;">🔴 Record</button>
+                    <button id="btn-toggle-feed" class="btn btn-sm" onclick="toggleTestFeed()">📷 Live Feed: OFF</button>
+                    <button class="btn btn-sm" onclick="openAudioTimelineModal()" style="background:#222; border-color:#444;">📈 Timeline</button>
+                    <button class="btn btn-sm" onclick="window.open('player.html', '_blank')" style="background:#222; border-color:#444;">🎬 Player</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearAllGlobalOverrides()">Release All</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="test-live-feed-container">
+            <div style="position:absolute; top:25px; left:25px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:4px; font-size:10px; color:var(--accent); z-index:10; border:1px solid var(--accent); backdrop-filter:blur(10px);">● LIVE FEED</div>
+            <img id="test-live-feed-img" src="" alt="Camera Stream Disconnected">
+        </div>
+
+        <p style="color:var(--text-dim); margin-bottom:20px;">Real-time DMX tactile control with visual verification.
+        </p>
+
+        <!-- PRESET OVERRIDES -->
+        <div id="active-presets-bar" class="active-presets-bar"></div>
+
+        <!-- ENSEMBLE PICKER -->
+        <div class="test-controls-bar">
+                Available Fixtures
+                <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:10px; color:#666;">ADD BY FUNCTION:</span>
+                    <select id="test-function-picker" class="function-picker" onchange="updateTestFunctions(this.value)">
+                        <option value="">-- Add Role --</option>
+                    </select>
+                    <button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:#333;" onclick="clearTestFunctions()">Clear</button>
+                </div>
+            </div>
+            <div id="test-fixture-picker" class="test-fixture-picker">
+                <!-- Picks will be rendered here -->
+            </div>
+
+
+        <!-- ENSEMBLE STRIPS -->
+        <div id="test-ensemble-strips" style="margin-top: 10px;">
+            <div id="test-empty-state"
+                style="padding:40px; text-align:center; color:#444; border:2px dashed #222; border-radius:12px;">
+                Select fixtures above to watch and live adjust.
+            </div>
+        </div>
+            </div>
+        </details>
+
         <details class="engine-accordion" ontoggle="if(this.open) { if(typeof openBehaviorLab === 'function') openBehaviorLab(); } else { window.labRunning = false; }">
 
             <summary>🔬 Live Behavior Laboratory</summary>
@@ -482,263 +738,10 @@
     
             </div>
         </details>
-    </div>
-<div id="ai-preset-modal" class="ai-modal-overlay"
-        onclick="closePresetAiModal()">
-        <div class="ai-modal-content chat-optimized" onclick="event.stopPropagation()">
-            <div class="ai-modal-header">
-                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
-                    <span style="font-size: 1.4rem;">🤖</span>
-                    <span id="ai-preset-modal-title-text">AI Preset Generator</span>
-                    <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path
-                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                            </path>
-                        </svg>
-                    </div>
-                </div>
-                <button class="btn btn-sm" onclick="closePresetAiModal()">×</button>
-            </div>
-
-            <div class="ai-modal-body chat-body">
-                <div id="ai-preset-chat-history" style="display: flex; flex-direction: column; gap: 12px; min-height: 50px;">
-                    <div class="chat-bubble ai">
-                        Describe the preset you want to create. For example: "blackout all fixtures when volume drops below 5%" or "when vibe goes high, crank dimmers to max on the rhythm fixtures."
-                    </div>
-                </div>
-            </div>
-
-            <div class="ai-modal-footer chat-footer">
-                <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
-                    <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
-                        onclick="clearPresetAiChatHistory()">🗑️ Clear</button>
-                    <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">[FIX]</button>
-                    <button class="btn-suggestion" id="ai-zone-picker-btn" onclick="toggleZonePicker()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[ZONE]</button>
-                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[X/Y]</button>
-                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
-                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
-                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
-                </div>
-
-                <div id="ai-preset-xy-panel" 
-                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
-                    <!-- X/Y Calibration UI injected here -->
-                </div>
-
-                <div id="ai-fixture-picker" 
-                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
-                    <!-- Fixture items injected here -->
-                </div>
-
-                <div id="ai-zone-picker" 
-                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent-alt); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
-                    <!-- Zone items injected here -->
-                </div>
-
-                <div style="display: flex; gap: 10px; position: relative;">
-                    <textarea id="ai-preset-textarea"
-                        style="width: 100%; height: 60px !important; border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.05); resize: none; border: 1px solid rgba(255,255,255,0.1); color: #ffffff !important; font-size: 14px !important; caret-color: #ffffff;"
-                        placeholder="Describe your preset..."
-                        onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendPresetAiPrompt(); }"></textarea>
-
-                    <button class="btn btn-primary" id="ai-preset-send-btn" onclick="sendPresetAiPrompt()"
-                        style="height: 60px; width: 60px; padding:0; border-radius: 12px;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                    </button>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                    <div style="font-size:0.7rem; color:var(--text-dim); display:flex; align-items:center; gap:5px;">
-                        Using <span class="active-model-name"
-                            style="color:var(--accent-alt); font-weight:bold;">...</span>
-                        <div class="hover-opacity" onclick="openAiSettings()" title="AI Settings" style="cursor:pointer; display:flex; align-items:center;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;">
-                                <circle cx="12" cy="12" r="3"></circle>
-                                <path
-                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                                </path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn btn-secondary btn-sm" id="ai-preset-view-diff-btn" onclick="showPresetAiDiff()"
-                            class="hidden" style=" border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
-                        <button class="btn btn-accent btn-sm" id="ai-preset-save-btn"
-                            onclick="savePreset()"
-                            class="hidden" style=" background:var(--accent);">💾 Save Preset</button>
-                        <button class="btn btn-primary btn-sm" id="ai-preset-apply-btn"
-                            onclick="acceptPresetAi()"
-                            class="hidden" style=" background:var(--success);">Apply & Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AI PRESET DIFF MODAL -->
-    <div id="ai-preset-diff-modal" class="ai-modal-overlay"
-        class="hidden" style=" z-index:11000;"
-        onclick="closePresetAiDiff()">
-        <div class="ai-modal-content" style="max-width:600px;" onclick="event.stopPropagation()">
-            <div class="ai-modal-header">
-                <div style="font-weight: 800;">Preset Diff</div>
-                <button class="btn btn-sm" onclick="closePresetAiDiff()">×</button>
-            </div>
-            <div class="ai-modal-body diff-modal-body" id="ai-preset-diff-body">
-                <!-- Diff rows injected here -->
-            </div>
-            <div class="ai-modal-footer" style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" style="flex:1;" onclick="undoPresetAi()">Undo &
-                    Revert</button>
-                <button class="btn btn-primary" style="flex:1;" onclick="acceptPresetAi()">Accept
-                    Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- AI STAGED PRESETS REVIEW MODAL -->
-    <div id="ai-preset-staged-modal" class="ai-modal-overlay"
-        class="hidden" style=" z-index:12000;"
-        onclick="closeStagedPresetsReview()">
-        <div class="ai-modal-content" style="max-width:500px;" onclick="event.stopPropagation()">
-            <div class="ai-modal-header">
-                <div style="font-weight: 800;">Review Generated Extras</div>
-                <button class="btn btn-sm" onclick="closeStagedPresetsReview()">×</button>
-            </div>
-            <div class="ai-modal-body" id="ai-preset-staged-body" style="display:flex; flex-direction:column; gap:10px;">
-                <!-- Staged presets list -->
-            </div>
-            <div class="ai-modal-footer" style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" style="flex:1;" onclick="closeStagedPresetsReview()">Close</button>
-                <button class="btn btn-primary" style="flex:1;" onclick="saveAllStagedPresets()">Save All to Library</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- AI SETTINGS MODAL -->
-    <div id="ai-settings-modal" class="ai-modal-overlay"
-        class="hidden" style=" z-index:10000;"
-        onclick="closeAiSettings()">
-        <div class="ai-modal-content" style="max-width:400px;" onclick="event.stopPropagation()">
-            <div class="ai-modal-header">
-                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                        </path>
-                    </svg>
-                    AI Engine Settings
-                </div>
-                <button class="btn btn-sm" onclick="closeAiSettings()">×</button>
-            </div>
-            <div class="ai-modal-body" style="display:flex; flex-direction:column; gap:20px;">
-                <div>
-                    <label
-                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Gemini
-                        API Key</label>
-                    <input type="text" id="gemini-key-input" placeholder="AI_Studio_Key_Here"
-                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
-                    <div style="font-size: 10px; color: #666; margin-top:5px;">Shared across Profiler tools.</div>
-                </div>
-                <div>
-                    <label
-                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Model
-                        Selection</label>
-                    <select id="ai-model-select-settings"
-                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;"
-                        onchange="updateModelLabelDisplay()">
-                        <option value="gemini-flash-latest">Gemini Flash Latest</option>
-                        <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-                        <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite Preview</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                    </select>
-                </div>
-                <div>
-                    <label
-                        style="font-size: 11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Backend
-                        Host / IP</label>
-                    <input type="text" id="backend-host-input" placeholder="e.g. ravebox.local"
-                        style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
-                </div>
-                <button class="btn btn-primary" onclick="saveAiSettings()"
-                    style="width:100%; height:45px; font-weight:800; border-radius:12px; box-shadow: 0 4px 15px var(--accent-glow);">Save
-                    Configuration</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- --- SIM TAB --- -->
-
-
-    <div id="tab-test" class="tab-content">
-        <div class="test-hub-header-sticky">
-            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <h2 style="margin:0;">Live Test Hub</h2>
-                    <div id="rec-status" class="rec-status">
-                        <span class="rec-dot"></span> REC <span id="rec-timer" style="margin-left:8px; font-family:monospace;">00:00</span>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <button id="btn-mute-others" class="btn btn-sm" onclick="toggleMuteOthers()" 
-                            style="background:#222; border-color:#444; transition: all 0.2s;">🔕 Mute Others</button>
-                    <button id="btn-record" class="btn btn-sm" onclick="toggleRecording()" style="background:#222; border-color:#444;">🔴 Record</button>
-                    <button id="btn-toggle-feed" class="btn btn-sm" onclick="toggleTestFeed()">📷 Live Feed: OFF</button>
-                    <button class="btn btn-sm" onclick="openAudioTimelineModal()" style="background:#222; border-color:#444;">📈 Timeline</button>
-                    <button class="btn btn-sm" onclick="window.open('player.html', '_blank')" style="background:#222; border-color:#444;">🎬 Player</button>
-                    <button class="btn btn-danger btn-sm" onclick="clearAllGlobalOverrides()">Release All</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="test-live-feed-container">
-            <div style="position:absolute; top:25px; left:25px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:4px; font-size:10px; color:var(--accent); z-index:10; border:1px solid var(--accent); backdrop-filter:blur(10px);">● LIVE FEED</div>
-            <img id="test-live-feed-img" src="" alt="Camera Stream Disconnected">
-        </div>
-
-        <p style="color:var(--text-dim); margin-bottom:20px;">Real-time DMX tactile control with visual verification.
-        </p>
-
-        <!-- PRESET OVERRIDES -->
-        <div id="active-presets-bar" class="active-presets-bar"></div>
-
-        <!-- ENSEMBLE PICKER -->
-        <div class="test-controls-bar">
-                Available Fixtures
-                <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:10px; color:#666;">ADD BY FUNCTION:</span>
-                    <select id="test-function-picker" class="function-picker" onchange="updateTestFunctions(this.value)">
-                        <option value="">-- Add Role --</option>
-                    </select>
-                    <button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:#333;" onclick="clearTestFunctions()">Clear</button>
-                </div>
-            </div>
-            <div id="test-fixture-picker" class="test-fixture-picker">
-                <!-- Picks will be rendered here -->
-            </div>
-
-
-        <!-- ENSEMBLE STRIPS -->
-        <div id="test-ensemble-strips" style="margin-top: 10px;">
-            <div id="test-empty-state"
-                style="padding:40px; text-align:center; color:#444; border:2px dashed #222; border-radius:12px;">
-                Select fixtures above to watch and live adjust.
-            </div>
-        </div>
-    </div>
 
     </div>
 
+    </div>
     <script>
         // Global Safeguards: Prevent crashes if shared_setup.js fails to load
         window.isOriginalCloud = window.isOriginalCloud || false;

@@ -38,7 +38,7 @@
             /* Prevent scrolling */
             touch-action: none;
             /* Disable browser gestures like pull-to-refresh */
-            overscroll-behavior-x: none;
+            overscroll-behavior: none;
         }
 
         /* Ken Burns Tunnel Background */
@@ -60,7 +60,7 @@
             height: 100%;
             object-fit: cover;
             opacity: 0;
-            filter: brightness(0.6);
+            filter: brightness(0.85) saturate(1.2);
             /* 32s total cycle for 4 images (8s each) */
             animation: tunnel-move 32s infinite linear;
         }
@@ -71,7 +71,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8));
+            background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
             z-index: 1;
         }
 
@@ -107,7 +107,7 @@
             );
             background-size: 100% 4px;
             animation: scroll-lines 10s linear infinite;
-            opacity: 0.8;
+            opacity: 0.4;
         }
 
         @keyframes scroll-lines {
@@ -122,7 +122,7 @@
             height: 100%;
             object-fit: cover;
             opacity: 0;
-            filter: brightness(0.6);
+            filter: brightness(0.85) saturate(1.2);
             animation: spotify-move 60s infinite linear;
             transition: opacity 1s ease;
         }
@@ -816,6 +816,26 @@
             color: var(--primary);
             font-weight: bold;
         }
+
+        /* Vibe Splits Styling */
+        .proportion-container {
+            height: 42px; background: #09090b; border-radius: 8px; position: relative;
+            display: flex; overflow: hidden; margin-bottom: 8px; border: 1px solid #27272a;
+            touch-action: none;
+        }
+        .vibe-segment {
+            height: 100%; display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.9);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: width 0.05s;
+        }
+        .chill-seg { background: #2dd4bf; }
+        .mid-seg { background: #0ea5e9; }
+        .high-seg { background: #8b5cf6; }
+        .handle {
+            position: absolute; top: 0; bottom: 0; width: 10px; background: #fff;
+            cursor: ew-resize; z-index: 10; border-radius: 1px; box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            touch-action: none;
+        }
     </style>
 
 </head>
@@ -844,7 +864,7 @@
 
     <div class="container">
         <h1>RaveBox <a href="console.html"
-                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v53261507</span></h1>
+                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v56261042</span></h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
@@ -924,20 +944,17 @@
                     <input type="range" id="masterSens" min="0.0" max="2.0" step="0.05" value="1.0">
                 </div>
 
-                <div class="slider-group">
-                    <div class="slider-label">
-                        <span>Reactivity</span>
-                        <span class="slider-value" id="masterFluxVal">0.7</span>
+                <div class="slider-group" style="padding-bottom:10px;">
+                    <div class="slider-label" style="margin-bottom:8px;">
+                        <span>Vibe Mapping Spectrum</span>
                     </div>
-                    <input type="range" id="masterFlux" min="0.0" max="1.5" step="0.05" value="0.7">
-                </div>
-
-                <div class="slider-group">
-                    <div class="slider-label">
-                        <span>Vibe Bias</span>
-                        <span class="slider-value" id="masterBiasVal">0.5</span>
+                    <div class="proportion-container" id="master-prop-cont">
+                        <div class="vibe-segment chill-seg" style="width: 33%">CHILL</div>
+                        <div class="handle" id="master-handle1" style="left: calc(33% - 6px);"></div>
+                        <div class="vibe-segment mid-seg" style="width: 33%">MID</div>
+                        <div class="handle" id="master-handle2" style="left: calc(66% - 6px);"></div>
+                        <div class="vibe-segment high-seg" style="width: 34%">HIGH</div>
                     </div>
-                    <input type="range" id="masterBias" min="0.0" max="1.0" step="0.05" value="0.5">
                 </div>
 
                 <div class="slider-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -1201,30 +1218,43 @@
             const spotifyBg = document.getElementById('spotifyBg');
             
             if (lastSpotifyData && bgPreference === 'spotify') {
-                if (lastSpotifyData.image_high !== spotifyBg.src) {
+                if (lastSpotifyData.image_high && lastSpotifyData.image_high !== spotifyBg.src) {
                     spotifyBg.src = lastSpotifyData.image_high;
                 }
                 spotifyBg.style.opacity = '1';
+                spotifyBg.style.zIndex = '-1';
                 tunnelLayer.style.opacity = '0';
+                tunnelLayer.style.zIndex = '-2';
             } else {
                 spotifyBg.style.opacity = '0';
+                spotifyBg.style.zIndex = '-2';
                 tunnelLayer.style.opacity = '1';
+                tunnelLayer.style.zIndex = '-1';
             }
         }
 
-        // Background Rotation Timer
-        setInterval(() => {
+        // Background Rotation Timer (Randomized)
+        function rotateBackground() {
+            // Alternate between Spotify and Tunnel
             bgPreference = (bgPreference === 'spotify' ? 'tunnel' : 'spotify');
-            console.log("🔄 Background Preference:", bgPreference.toUpperCase());
+            
+            // Random interval between 30s and 60s for more frequent switching during testing
+            const nextInterval = 30000 + Math.random() * 30000;
+            
+            console.log("🔄 [BG] Switching to:", bgPreference.toUpperCase(), "| Next in:", Math.round(nextInterval/1000), "s");
             updateBackgroundUI();
-        }, 60000);
+            
+            setTimeout(rotateBackground, nextInterval);
+        }
+
+        // Initialize rotation sooner (10s) so the user sees it working
+        setTimeout(rotateBackground, 10000);
 
         const FREQ_LABELS = ['Beat', '1 Bar', '2 Bars', '4 Bars', 'Vibe'];
         const state = {
             speed: 1.0,
             gain: 1.0,
-            sensitivity: 0.7,
-            bias: 0.5,
+            vibe_splits: { chillMid: 33, midHigh: 66 },
             vibe: 'Chill'
         };
 
@@ -1301,9 +1331,7 @@
 
             function setupControlListeners() {
                 const sliders = [
-                    { id: 'masterSens', key: 'gain', suffix: '' },
-                    { id: 'masterFlux', key: 'sensitivity', suffix: '' },
-                    { id: 'masterBias', key: 'vibe_bias', suffix: '' }
+                    { id: 'masterSens', key: 'gain', suffix: '' }
                 ];
 
                 sliders.forEach(def => {
@@ -1315,6 +1343,60 @@
                         sendParams();
                     };
                 });
+
+                // Vibe Splits Drag Logic
+                const attachMasterHandleDrag = (handleNum) => {
+                    const handle = document.getElementById('master-handle' + handleNum);
+                    const cont = document.getElementById('master-prop-cont');
+                    if(!handle || !cont) return;
+                    
+                    const startDrag = (e) => {
+                        e.preventDefault();
+                        const onMove = (moveEvent) => {
+                            const clientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+                            const rect = cont.getBoundingClientRect();
+                            let pct = ((clientX - rect.left) / rect.width) * 100;
+                            pct = Math.max(0, Math.min(100, pct));
+                            
+                            if (handleNum === 1) {
+                                pct = Math.min(pct, state.vibe_splits.midHigh - 5);
+                                state.vibe_splits.chillMid = pct;
+                            } else {
+                                pct = Math.max(pct, state.vibe_splits.chillMid + 5);
+                                state.vibe_splits.midHigh = pct;
+                            }
+                            
+                            // Real-time UI updates
+                            cont.querySelector('.chill-seg').style.width = state.vibe_splits.chillMid + '%';
+                            cont.querySelector('.mid-seg').style.width = (state.vibe_splits.midHigh - state.vibe_splits.chillMid) + '%';
+                            cont.querySelector('.high-seg').style.width = (100 - state.vibe_splits.midHigh) + '%';
+                            
+                            const h1 = document.getElementById('master-handle1');
+                            const h2 = document.getElementById('master-handle2');
+                            if (h1) h1.style.left = 'calc(' + state.vibe_splits.chillMid + '% - 6px)';
+                            if (h2) h2.style.left = 'calc(' + state.vibe_splits.midHigh + '% - 6px)';
+                            
+                            sendParams();
+                        };
+                        
+                        const stopDrag = () => {
+                            document.removeEventListener('mousemove', onMove);
+                            document.removeEventListener('touchmove', onMove);
+                            document.removeEventListener('mouseup', stopDrag);
+                            document.removeEventListener('touchend', stopDrag);
+                        };
+                        
+                        document.addEventListener('mousemove', onMove);
+                        document.addEventListener('touchmove', onMove);
+                        document.addEventListener('mouseup', stopDrag);
+                        document.addEventListener('touchend', stopDrag);
+                    };
+                    
+                    handle.onmousedown = startDrag;
+                    handle.ontouchstart = startDrag;
+                };
+                attachMasterHandleDrag(1);
+                attachMasterHandleDrag(2);
 
                 document.getElementById('masterSceneFreq').onchange = (e) => {
                     state.sceneFreq = parseInt(e.target.value);
@@ -1346,9 +1428,8 @@
                     type: 'master_params',
                     speed: state.speed,
                     sensitivity: state.gain,
-                    flux_sensitivity: state.sensitivity,
                     audio_source: state.audio_source || 'auto',
-                    vibe_bias: state.vibe_bias,
+                    vibe_splits: state.vibe_splits,
                     sceneFreq: state.sceneFreq
                 }));
 
@@ -1357,7 +1438,6 @@
                     type: 'remote_params',
                     target: 'laser',
                     speed: state.speed,
-                    audioSensitivity: state.sensitivity,
                     pattern: 'auto',
                     color: 'auto'
                 }));
@@ -1368,7 +1448,6 @@
                     target: 'visual',
                     speed: state.speed,
                     amplitude: 1.0,
-                    sensitivity: state.sensitivity,
                     baseLayer: 'auto',
                     effect: 'auto'
                 }));
@@ -1379,15 +1458,25 @@
                     const m = params.master;
                     state.speed = m.speed || 1.0;
                     state.gain = m.sensitivity || 1.0;
-                    state.sensitivity = m.flux_sensitivity || 0.7;
-                    state.vibe_bias = m.vibe_bias || 0.5;
+                    state.vibe_splits = m.vibe_splits || { chillMid: 33, midHigh: 66 };
                     state.sceneFreq = m.sceneFreq !== undefined ? m.sceneFreq : 1;
                     state.audio_source = m.audio_source || 'auto';
 
                     updateSliderUI('masterSpeed', state.speed, 'x');
                     updateSliderUI('masterSens', state.gain);
-                    updateSliderUI('masterFlux', state.sensitivity);
-                    updateSliderUI('masterBias', state.vibe_bias);
+                    
+                    const cont = document.getElementById('master-prop-cont');
+                    if (cont) {
+                        cont.querySelector('.chill-seg').style.width = state.vibe_splits.chillMid + '%';
+                        cont.querySelector('.mid-seg').style.width = (state.vibe_splits.midHigh - state.vibe_splits.chillMid) + '%';
+                        cont.querySelector('.high-seg').style.width = (100 - state.vibe_splits.midHigh) + '%';
+                        
+                        const h1 = document.getElementById('master-handle1');
+                        const h2 = document.getElementById('master-handle2');
+                        if (h1) h1.style.left = 'calc(' + state.vibe_splits.chillMid + '% - 6px)';
+                        if (h2) h2.style.left = 'calc(' + state.vibe_splits.midHigh + '% - 6px)';
+                    }
+                    
                     document.getElementById('masterSceneFreq').value = state.sceneFreq;
                     const audioEl = document.getElementById('masterAudioSource');
                     if (audioEl) audioEl.value = state.audio_source;

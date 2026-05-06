@@ -2,7 +2,7 @@ const isDev = self.location.hostname === 'localhost' ||
               self.location.hostname.includes('vj-') || 
               self.location.hostname.includes('.ravebox.love') || 
               self.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
-const CACHE_NAME = 'ravebox-vj-1777846047'; // Bumping version
+const CACHE_NAME = 'ravebox-vj-1778089357'; // Bumping version
 
 self.addEventListener('install', (event) => {
     // Cache each asset individually — skip any that fail (e.g. missing on GCS)

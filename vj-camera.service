@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=sumof2
 WorkingDirectory=/home/sumof2/vj
-ExecStart=/home/sumof2/vj/venv/bin/python3 scripts/calibration_server.py
+ExecStart=/home/sumof2/vj/venv/bin/python3 -u scripts/calibration_server.py
 Restart=always
 RestartSec=3
 

@@ -25,17 +25,17 @@ var switchTab = window.switchTab || function() { };
             const card = document.getElementById('all-profiles-card');
             const content = document.getElementById('all-profiles-content');
             const arrow = document.getElementById('all-profiles-arrow');
-            const isCollapsed = card.classList.contains('collapsed');
+            if (!card || !content) return;
+
+            const isCollapsed = content.classList.contains('hidden');
 
             if (isCollapsed) {
-                card.classList.remove('collapsed');
-                content.style.display = 'block';
-                arrow.style.transform = 'rotate(180deg)';
+                content.classList.remove('hidden');
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
                 renderAllProfilesList();
             } else {
-                card.classList.add('collapsed');
-                content.style.display = 'none';
-                arrow.style.transform = 'rotate(0deg)';
+                content.classList.add('hidden');
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
             }
         };
 
@@ -309,32 +309,179 @@ var switchTab = window.switchTab || function() { };
 
             const presList = document.getElementById('saved-presets-list');
             if (presList) {
-                presList.innerHTML = (db.presets || []).map(p => {
+                const stage = db.stage || [];
+                const stageIds = new Set(stage.map(s => String(s.id || '').trim().toLowerCase()));
+                const stageProfNames = new Set(stage.map(s => String(s.profileName || '').trim().toLowerCase()));
+                const stageProfIds = new Set(stage.map(s => String(s.profileId || '').trim().toLowerCase()));
+                const stageZones = new Set(stage.map(s => String(s.zone || '').trim().toLowerCase()));
+                
+                const presets = db.presets || [];
+                const broken = [];
+                const active = [];
+                
+                presets.forEach(p => {
+                    const isBroken = (p.overrides || []).some(o => {
+                        if (o.type !== 'instance' && o.type !== 'stage_instance' && o.type !== 'fixture') return false;
+                        let target = String(o.target || o.fixture || o.id || '').trim().toLowerCase();
+                        if (!target || target === 'visualdmx' || target === 'global' || target === 'system') return false;
+                        
+                        // Resilient matching: ID, Profile Name, Profile ID, or Zone
+                        const match = stageIds.has(target) || 
+                                      stageProfNames.has(target) || 
+                                      stageProfIds.has(target) || 
+                                      stageZones.has(target);
+                        return !match;
+                    });
+                    if (isBroken) broken.push(p);
+                    else active.push(p);
+                });
+
+                let html = '';
+                
+                function renderPresetRow(p, isBroken) {
                     let triggerDesc = (p.triggers || []).map(t => {
                         if (t.type === 'vibe') return `Vibe=${t.value}`;
                         if (t.type === 'state') return `State=${t.value}`;
                         if (t.type === 'volume') return `${t.greater_than}≤Vol≤${t.less_than}`;
                         if (t.type === 'bin') return `${t.greater_than}≤${t.target}≤${t.less_than}`;
-                        if (t.type === 'channel') return `${t.greater_than}≤Ch[${t.target}]≤${t.less_than}`;
+                        if (t.type === 'channel') return `${t.greater_than}≤Ch[${t.fixture || t.target}]≤${t.less_than}`;
                         return t.type;
                     }).join(', ') || 'Manual';
 
-                    const overrideCount = (p.overrides || []).reduce((acc, ov) => acc + ov.channels.length, 0);
+                    let overrideSummary = (p.overrides || []).map(o => {
+                        const target = String(o.target || o.fixture || '').toLowerCase();
+                        if (target === 'visualdmx') return `🎨 ${o.role}=${o.value}`;
+                        if (target === 'global' || o.type === 'global') return `⚙️ ${o.role}=${o.value}`;
+                        return `${o.role}=${o.value}`;
+                    }).filter(x => x).join(', ');
+                    if (overrideSummary) overrideSummary = `<div style="font-size:10px; color:var(--accent); margin-top:2px; font-weight:bold;">${overrideSummary}</div>`;
 
-                    return `<div class="item-row" style="flex-wrap:wrap; gap:10px; padding:12px;">
+                    let targetLabels = [];
+                    (p.overrides || []).forEach(o => {
+                        let t = String(o.target || o.fixture || o.id || '').toUpperCase();
+                        if (t && t !== 'SYSTEM' && !targetLabels.includes(t)) {
+                            targetLabels.push(t);
+                        }
+                    });
+                    
+                    let targetBadges = targetLabels.map(t => `<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:var(--accent-alt); font-size:9px; font-weight:900; letter-spacing:0.5px; padding:2px 6px; border-radius:3px; text-transform:uppercase; white-space:nowrap;">${t}</div>`).join('');
+
+                    const missingTargets = (p.overrides || []).filter(o => {
+                        if (o.type !== 'instance' && o.type !== 'stage_instance' && o.type !== 'fixture') return false;
+                        const target = String(o.target || o.fixture || o.id || '').trim().toLowerCase();
+                        if (!target || target === 'visualdmx' || target === 'global' || target === 'system') return false;
+                        return !stageIds.has(target) && !stageProfNames.has(target) && !stageProfIds.has(target) && !stageZones.has(target);
+                    }).map(o => o.target || o.fixture || o.id);
+
+                    const brokenStatus = isBroken ? `<div style="font-size:9px; color:#ff5555; margin-top:2px; font-weight:bold; letter-spacing:0.5px;">⚠️ MISSING REFERENCES: ${missingTargets.join(', ')}</div>` : '';
+
+                    return `<div class="item-row" style="flex-wrap:wrap; gap:10px; padding:12px; border-top:1px solid rgba(255,255,255,0.02); background:rgba(0,0,0,0.2); ${isBroken ? 'border-left: 4px solid #ff3366; background: rgba(255,51,102,0.05);' : ''}">
                         <div style="flex:1; min-width:150px;">
-                            <div style="font-weight:bold; font-size:1.1rem; color:#fff; display:flex; align-items:center; gap:8px;">
+                            <div style="font-weight:bold; font-size:1.1rem; color:#fff; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                 ${p.name}
-                                <span style="font-size:10px; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; color:#888;">${p.overrides?.length || 0} Targets</span>
+                                ${targetBadges}
                             </div>
-                            <div style="font-size:11px; color:var(--accent-alt); margin-top:4px; font-family:monospace; opacity:0.8;">${triggerDesc}</div>
+                            <div style="font-size:11px; color:var(--text-dim); margin-top:4px; font-family:monospace; opacity:0.8;">${triggerDesc}</div>
+                            ${overrideSummary || ''}
+                            ${brokenStatus}
                         </div>
-                        <div style="display:flex; gap:8px;">
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            ${isBroken ? `<button class="btn btn-sm" style="background:#555;" onclick="console.log('Broken Preset JSON:', JSON.parse('${JSON.stringify(p).replace(/'/g, "\\'")}'))">Debug</button>` : ''}
                             <button class="btn btn-sm" onclick="editPreset('${p.id}')">Edit</button>
                             <button class="btn btn-sm btn-danger" onclick="deletePreset('${p.id}')">Delete</button>
                         </div>
                     </div>`;
-                }).join('') || '<div style="padding:20px; text-align:center; color:#444;">No presets created. Combine triggers + actions to automate the show.</div>';
+                }
+
+                if (broken.length > 0) {
+                    html += `<div class="zone-header" style="padding:8px 12px; background:rgba(255,51,102,0.15); color:#ff3366; border-bottom:1px solid rgba(255,51,102,0.2); margin-top:0; margin-bottom:5px; border-radius:8px 8px 0 0; font-weight:900;">⚠️ BROKEN PRESETS (FIX REFERENCES)</div>`;
+                    html += broken.map(p => renderPresetRow(p, true)).join('');
+                    html += `<div style="height:25px;"></div>`;
+                }
+
+                const categorized = {
+                    global: [],
+                    visualizer: [],
+                    zone: [],
+                    multiple: [],
+                    single: []
+                };
+
+                active.forEach(p => {
+                    let hasGlobal = false;
+                    let hasVisualizer = false;
+                    let targets = new Set();
+                    (p.overrides || []).forEach(o => {
+                        let target = String(o.target || o.fixture || o.id || '').trim().toLowerCase();
+                        if (target === 'global') hasGlobal = true;
+                        else if (target === 'visualdmx') hasVisualizer = true;
+                        else if (target && target !== 'system') targets.add(target);
+                    });
+
+                    if (hasGlobal) {
+                        categorized.global.push(p);
+                    } else if (hasVisualizer) {
+                        categorized.visualizer.push(p);
+                    } else {
+                        let isSingleFixture = false;
+                        let isZone = false;
+                        let uniqueZones = new Set();
+                        
+                        if (targets.size === 1) {
+                            let t = Array.from(targets)[0];
+                            if (stageZones.has(t)) {
+                                isZone = true;
+                            } else {
+                                isSingleFixture = true;
+                            }
+                        } else if (targets.size > 1) {
+                            targets.forEach(t => {
+                                if (stageZones.has(t)) {
+                                    uniqueZones.add(t);
+                                } else {
+                                    const inst = stage.find(s => String(s.id).toLowerCase() === t);
+                                    if (inst && inst.zone) {
+                                        uniqueZones.add(String(inst.zone).toLowerCase());
+                                    } else {
+                                        uniqueZones.add('UNZONED_' + t);
+                                    }
+                                }
+                            });
+                            if (uniqueZones.size === 1) {
+                                isZone = true;
+                            }
+                        }
+                        
+                        if (isSingleFixture || targets.size === 0) {
+                            categorized.single.push(p);
+                        } else if (isZone) {
+                            categorized.zone.push(p);
+                        } else {
+                            categorized.multiple.push(p);
+                        }
+                    }
+                });
+
+                const catOrder = [
+                    { key: 'global', label: 'Global' },
+                    { key: 'visualizer', label: 'Visualizer' },
+                    { key: 'zone', label: 'Zone' },
+                    { key: 'multiple', label: 'Multiple' },
+                    { key: 'single', label: 'Single' }
+                ];
+                
+                catOrder.forEach(cat => {
+                    const group = categorized[cat.key];
+                    if (group && group.length > 0) {
+                        html += `<div class="zone-header" style="padding:8px 12px; background:rgba(255,255,255,0.05); font-weight:900; font-size:10px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-top:10px; border-radius:8px 8px 0 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; align-items:center;">
+                            ${cat.label}
+                            <span style="opacity:0.4; font-size:9px; margin-left:10px;">${group.length} PRESETS</span>
+                        </div>`;
+                        html += group.map(p => renderPresetRow(p, false)).join('');
+                    }
+                });
+
+                presList.innerHTML = html || '<div style="padding:20px; text-align:center; color:#444;">No presets created. Combine triggers + actions to automate the show.</div>';
             }
 
             // Sync numerical DMX values to Test Tab if active
@@ -959,7 +1106,7 @@ var switchTab = window.switchTab || function() { };
                         if (msg.blackout !== undefined) latestAudioState.blackout = msg.blackout;
                         if (msg.overrides) latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
                         if (msg.active_presets) {
-                            activePresets = msg.active_presets;
+                            window.activePresets = msg.active_presets;
                             latestAudioState.manual_active_presets = msg.manual_active_presets || [];
                             msg.active_presets.forEach(p => everActivatedPresets.add(p));
                             if (typeof window.updateUniversalHUD === 'function') window.updateUniversalHUD();

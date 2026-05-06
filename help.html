@@ -10,7 +10,7 @@
         // Inject cache buster for shared_setup.js
         const v = new URLSearchParams(window.location.search).get('v') || Date.now();
         const script = document.createElement('script');
-        script.src = `shared_setup.js
+        script.src = `shared_setup.js?v=${v}`;
         document.head.appendChild(script);
     </script>
 
@@ -44,7 +44,7 @@
             justify-content: center;
             min-height: 100vh;
             padding: 20px;
-            overscroll-behavior-x: none;
+            overscroll-behavior: none;
             touch-action: pan-y;
         }
 
@@ -727,34 +727,34 @@ dtoverlay=hifiberry-dacplus</pre>
                 </div>
 
                 <div class="help-card" style="border-color: var(--accent);">
-                    <h3>🌐 Node Mode (DMX Repeater)</h3>
-                    <p style="font-size:0.8rem;">Maintenance for remote repeater devices. Only use these on the <b>Node</b> hardware.</p>
+                    <h3>🌐 Node Management</h3>
+                    <p style="font-size:0.8rem;">Maintenance for remote repeater devices. Run these commands from the <b>Master</b> to manage a Node over SSH.</p>
                     
                     <div style="margin-bottom: 20px;">
-                        <label style="font-size: 0.65rem; color: var(--text-dim);">Master Controller (IP or Code)</label>
+                        <label style="font-size: 0.65rem; color: var(--text-dim);">Target Node IP (or user@ip)</label>
                         <div style="display:flex; gap:10px;">
-                            <input type="text" id="nodeMasterHost" placeholder="e.g. 192.168.1.50 or mybox" style="padding: 10px; font-size: 0.9rem; height: 38px;">
-                            <button class="btn btn-save" style="width: auto; padding: 0 20px; height: 38px;" onclick="saveNodeMaster()">Save</button>
+                            <input type="text" id="nodeTargetIP" placeholder="e.g. 192.168.1.50" style="padding: 10px; font-size: 0.9rem; height: 38px;">
+                            <button class="btn btn-save" style="width: auto; padding: 0 20px; height: 38px;" onclick="saveNodeTarget()">Save</button>
                         </div>
-                        <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 5px;">This tells the node's UI and visualizer where to find the Master signal.</p>
+                        <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 5px;">This IP is used for SSH commands and pushing code updates.</p>
                     </div>
 
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <button class="btn"
                             style="background:rgba(0, 242, 255, 0.2); color:var(--accent); font-size:0.75rem;"
-                            onclick="runDebug('sudo systemctl restart vj-node')">Restart Node</button>
+                            onclick="runNodeDebug('sudo systemctl restart vj-node')">Restart Node</button>
                         <button class="btn"
                             style="background:rgba(255,255,255,0.05); color:var(--text-dim); font-size:0.75rem;"
-                            onclick="runDebug('sudo systemctl status vj-node')">Check Status</button>
+                            onclick="runNodeDebug('sudo systemctl status vj-node')">Check Status</button>
                         <button class="btn"
                             style="background:rgba(255, 255, 255, 0.05); color:var(--text-dim); font-size:0.75rem;"
-                            onclick="runDebug('sudo journalctl -u vj-node -n 50')">View Logs</button>
+                            onclick="runNodeDebug('sudo journalctl -u vj-node -n 50')">View Logs</button>
                         <button class="btn"
                             style="background:rgba(29, 185, 84, 0.1); color:var(--primary); font-size:0.75rem; border:1px solid rgba(29, 185, 84, 0.2);"
-                            onclick="updateNodeFromMaster()">⚡ UPDATE CODE</button>
+                            onclick="pushUpdateToNode()">⚡ UPDATE CODE</button>
                         <button class="btn"
                             style="background:rgba(255, 51, 102, 0.1); color:#ff3366; font-size:0.75rem;"
-                            onclick="runDebug('sudo reboot')">🚀 Reboot OS</button>
+                            onclick="runNodeDebug('sudo reboot')">🚀 Reboot OS</button>
                     </div>
                 </div>
             </div>
@@ -1014,78 +1014,47 @@ dtoverlay=hifiberry-dacplus</pre>
             }
         }
 
-        function saveNodeMaster() {
-            const host = document.getElementById('nodeMasterHost').value;
-            if (host) {
-                localStorage.setItem('vj_backend_host', host);
-                // Also notify the server to save it globally for this node
-                fetch('/api/remote_settings')
-                    .then(r => r.json())
-                    .then(data => {
-                        if (!data.node) data.node = {};
-                        data.node.master_host = host;
-                        return fetch('/vj_remote_settings.json', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(data)
-                        });
-                    })
-                    .then(() => {
-                        alert("✅ Master Controller Saved!");
-                        location.reload();
-                    })
-                    .catch(e => console.error("Failed to save master host:", e));
+        function saveNodeTarget() {
+            const ip = document.getElementById('nodeTargetIP').value;
+            if (ip) {
+                localStorage.setItem('vj_node_target', ip);
+                alert("✅ Target Node IP Saved!");
             }
         }
 
-        function loadNodeMaster() {
-            const input = document.getElementById('nodeMasterHost');
+        function loadNodeTarget() {
+            const input = document.getElementById('nodeTargetIP');
             if (!input) return;
-            
-            // Try local storage first
-            const saved = localStorage.getItem('vj_backend_host');
-            if (saved && !saved.includes('ravebox.love')) {
-                input.value = saved;
-            }
-
-            // Fallback to server config
-            fetch('/api/remote_settings')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.node && data.node.master_host) {
-                        input.value = data.node.master_host;
-                    }
-                })
-                .catch(() => {});
+            const saved = localStorage.getItem('vj_node_target');
+            if (saved) input.value = saved;
         }
 
-        async function updateNodeFromMaster() {
-            const master = document.getElementById('nodeMasterHost').value;
-            if (!master) {
-                alert("Please set a Master Controller IP/Host first.");
+        async function runNodeDebug(cmd) {
+            const ip = document.getElementById('nodeTargetIP').value;
+            if (!ip) {
+                alert("Please enter a Target Node IP first.");
+                return;
+            }
+            const sshCmd = `ssh -o StrictHostKeyChecking=no ${ip} "${cmd}"`;
+            runDebug(sshCmd);
+        }
+
+        async function pushUpdateToNode() {
+            const ip = document.getElementById('nodeTargetIP').value;
+            if (!ip) {
+                alert("Please set a Target Node IP first.");
                 return;
             }
             
             const btn = event.currentTarget;
             const originalText = btn.innerText;
-            btn.innerText = "REQUESTING...";
+            btn.innerText = "PUSHING...";
             btn.disabled = true;
 
+            const cmd = `./push_update.sh ${ip} --node`;
+            const url = `${LAUNCHER_API}/shell?cmd=${encodeURIComponent(cmd)}`;
+
             try {
-                // Determine our own IP (best guess is current hostname)
-                const myIp = window.location.hostname;
-                
-                // Construct the Master's Launcher API URL
-                let masterLauncher = "";
-                if (master.includes('.') || master === 'localhost') {
-                    masterLauncher = `http://${master}:8001`;
-                } else {
-                    masterLauncher = `https://api-${master}.ravebox.love`;
-                }
-                
-                const cmd = `./push_update.sh ${myIp} --node`;
-                const url = `${masterLauncher}/shell?cmd=${encodeURIComponent(cmd)}`;
-                
                 const res = await fetch(url);
                 const data = await res.json();
                 
@@ -1093,11 +1062,11 @@ dtoverlay=hifiberry-dacplus</pre>
                     btn.innerText = "SUCCESS";
                     btn.style.background = "var(--primary)";
                 } else {
-                    alert("Update Failed: " + (data.stderr || "Check Master console"));
+                    alert("Update Failed: " + (data.stderr || "Check console"));
                     btn.innerText = "FAILED";
                 }
             } catch (e) {
-                alert("Error reaching Master: " + e.message);
+                alert("Error running push_update: " + e.message);
                 btn.innerText = "ERROR";
             } finally {
                 setTimeout(() => {
@@ -1206,8 +1175,12 @@ dtoverlay=hifiberry-dacplus</pre>
             LAUNCHER_API = window.BACKEND_ROOT;
             connectWS();
             loadCreds();
-            loadNodeMaster();
+            loadNodeTarget();
             showSection('setup', document.querySelector('.nav-item'));
+            
+            // Hide Loading Overlay
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.classList.add('hidden');
             
             // Start checking for selects
             

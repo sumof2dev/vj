@@ -80,6 +80,7 @@
 </head>
 
 <body class="setup-bg">
+    <div id="bg-layer" aria-hidden="true"></div>
     <button class="theme-toggle-fixed" onclick="cycleTheme()" title="Cycle UI Theme">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -112,18 +113,7 @@
             <span class="nav-text">Profile</span>
         </div>
 
-        <div class="nav-btn" id="nav-btn-live" data-target="tab-live"
-            title="Live Console">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
-                <circle cx="7" cy="7" r="2"></circle>
-                <circle cx="17" cy="7" r="2"></circle>
-                <circle cx="7" cy="17" r="2"></circle>
-                <circle cx="17" cy="17" r="2"></circle>
-            </svg>
-            <span class="nav-text">Live</span>
-        </div>
+
 
         <div class="nav-btn" id="nav-btn-presets" data-target="tab-presets"
             title="Presets">
@@ -137,12 +127,12 @@
         </div>
 
         <div class="nav-btn" id="nav-btn-test" data-target="tab-test"
-            title="Test Hub">
+            title="Tune Hub">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
-            <span class="nav-text">Test</span>
+            <span class="nav-text">Tune</span>
         </div>
 
         <div class="nav-btn desktop-only" onclick="sendIt(event)" title="Send It">
@@ -213,6 +203,7 @@
                     </div>
                 </div>
 
+                <div id="profile-calibration-container"></div>
                 <div id="prof-mappings" style="margin-top: 10px;"></div>
                 
                 <div style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:10px;">
@@ -220,19 +211,26 @@
                     <div class="syntax-help-trigger">
                         <span class="help-icon" style="background:var(--accent); color:#000; border:none; width:30px; height:30px; font-size:16px;">?</span>
                         <div class="syntax-guide" style="bottom: 45px; right: 0; left: auto;">
-                            <strong>Profile AI Standards</strong>
-                            <div class="syntax-header">Sequencing Values</div>
-                            <div class="syntax-item">"32-96" = Sweep (Linear)</div>
-                            <div class="syntax-item">"32-96-32" = Triangle Loop</div>
-                            <div class="syntax-item">"255, 0, 127" = 3-Step Loop</div>
-                            
-                            <div class="syntax-header">Standard Drivers</div>
-                            <div class="syntax-item"><span>Liquid:</span> Spectral Flux driver, low react</div>
-                            <div class="syntax-item"><span>Rhythm:</span> Impact (Attack) driver, high react</div>
-                            
-                            <div style="margin-top:8px; font-size:9px; color:var(--accent); border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
-                                Pro: Target System/Speed for room warps.
-                            </div>
+                            <strong>Quick Reference</strong>
+
+                            <div class="syntax-header">Premade Behaviors</div>
+                            <div class="syntax-item"><span>Pulse with Beat:</span> Hard-sync dimmer to kick drum</div>
+                            <div class="syntax-item"><span>Smooth Drift:</span> Slow sine wave on bass energy</div>
+                            <div class="syntax-item"><span>Bass Pump:</span> Channel mirrors bass hits directly</div>
+                            <div class="syntax-item"><span>Snap Phrase:</span> Random jump on each musical phrase</div>
+                            <div class="syntax-item"><span>Static Hold:</span> Fixed DMX value, ignores audio</div>
+                            <div class="syntax-item"><span>Random Bar Hold:</span> New random value every bar</div>
+
+                            <div class="syntax-header">Speed &amp; Reactivity</div>
+                            <div class="syntax-item"><span>Speed:</span> How fast the shape cycles (LFO rate)</div>
+                            <div class="syntax-item"><span>Reactivity:</span> How strongly audio moves the value</div>
+
+                            <div class="syntax-header">Vibe Dropdown</div>
+                            <div class="syntax-item"><span>Any:</span> Rule fires in all vibe states</div>
+                            <div class="syntax-item"><span>Chill / Mid / High:</span> Fires only in that energy tier</div>
+                            <div class="syntax-item"><span>Build / Drop:</span> Fires during a detected transition</div>
+                            <div class="syntax-item"><span>Chill 1, Mid 2…:</span> Variant sub-states within a tier — set ranges with the colored slider above</div>
+                            <div class="syntax-item"><span>Never:</span> Disables the rule without deleting it</div>
                         </div>
                     </div>
             </div>
@@ -448,10 +446,25 @@
             return;
         }
 
-        console.log("🚀 VJ Profile Editor starting (v53261507)...");
-        if (typeof renderProfileMappings === 'function') {
-            renderProfileMappings();
+        console.log("🚀 VJ Profile Editor starting...");
+
+        // Re-run the full profile load once the async DB sync has finished.
+        // This ensures calibration data (and all profile fields) are populated
+        // from the server-side file rather than an empty pre-sync DB.
+        const initEditor = () => {
+            if (typeof editProfile === 'function') {
+                editProfile(profileId);
+            }
             if (typeof updateUniqueFunctions === 'function') updateUniqueFunctions();
+        };
+
+        // (First pass removed to ensure we wait for RAVEBOX_READY to load authoritative data)
+
+        // Second pass: authoritative render after server sync completes
+        if (window.RAVEBOX_READY) {
+            initEditor();
+        } else {
+            window.addEventListener('RAVEBOX_READY', initEditor, { once: true });
         }
     };</script>
 </body>

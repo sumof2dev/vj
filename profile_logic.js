@@ -144,55 +144,9 @@ function loadProfileChannels() {
         return rules;
     });
 
-    container.innerHTML = channels.map((ch, chIdx) => {
-        const rules = currentProfileMappings[chIdx] || [];
-        const isCollapsed = collapsedChannels.has(chIdx);
-
-        return `
-        <div class="card channel-card ${isCollapsed ? 'collapsed' : ''}" style="margin-bottom: 8px; padding: 10px; border-left: 5px solid var(--accent); background:rgba(255,255,255,0.015); border-radius:10px;">
-            <div class="channel-card-header" onclick="toggleChannelCollapse(${chIdx})" style="display:flex; flex-direction:column; cursor:pointer;">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:8px;">
-                    <div style="display:flex; align-items:center; gap:10px; flex:1;">
-                        <input type="text" value="${ch.name}" 
-                               oninput="currentProfileChannels[${chIdx}].name=this.value; event.stopPropagation()" 
-                               class="glass-input" style="font-weight:900; color:var(--text); font-size:15px; border:none; background:transparent; width:130px;"
-                               onclick="event.stopPropagation()">
-                        <span class="collapse-icon" style="transition: transform 0.2s; transform: rotate(${isCollapsed ? '-90deg' : '0deg'})">▼</span>
-                    </div>
-                     <div style="display:flex; align-items:center; gap:8px;">
-                         <button class="btn btn-sm btn-danger-soft" onclick="event.stopPropagation(); removeProfileChannel(${chIdx})" style="background:rgba(255,85,85,0.1); border:1px solid rgba(255,85,85,0.2); color:#ff5555; padding:3px 6px; border-radius:4px; font-size:10px;">Remove</button>
-                     </div>
-                </div>
-                <div class="mobile-role-row" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                    <div style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px; flex:1;">
-                        <span style="font-size:9px; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">ROLE:</span>
-                        <select onchange="currentProfileChannels[${chIdx}].role=this.value; event.stopPropagation()" 
-                                onclick="event.stopPropagation()"
-                                class="glass-select" style="font-size:12px; border:none; background:transparent; color:var(--accent); font-weight:bold; padding:0; flex:1;">
-                            <option value="none">UNMAPPED</option>
-                            ${KNOWN_ROLES.map(r => `<option value="${r}" ${ch.role === r ? 'selected' : ''}>${r.toUpperCase()}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px; width:80px;">
-                        <span style="font-size:9px; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">DEF:</span>
-                        <input type="text" value="${ch.default || 0}" 
-                               oninput="enforceDmxLimit(this); currentProfileChannels[${chIdx}].default=parseInt(this.value); event.stopPropagation()"
-                               onclick="event.stopPropagation()"
-                               style="background:none; border:none; color:#fff; width:50px; text-align:center; padding:0; font-size:12px; font-weight:bold;">
-                    </div>
-                    <div style="display:flex; gap:5px;">
-                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addVibeRule(${chIdx})" title="Add Vibe Rule" style="width:36px; height:32px; padding:0; font-size:18px; font-weight:bold; display:flex; align-items:center; justify-content:center;">+</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="channel-card-body">
-                <div id="rules-container-${chIdx}">
-                    ${rules.map((rule, ruleIdx) => renderVibeRuleHtml(chIdx, ruleIdx, rule, rules.length)).join('')}
-                </div>
-            </div>
-        </div>`;
-    }).join('');
+    if (typeof window.renderProfileMappings === 'function') {
+        window.renderProfileMappings();
+    }
 }
 
 function updateProfileMapping(chIdx, ruleIdx, path, val) {
@@ -314,7 +268,7 @@ function renderVibeRuleHtml(chIdx, ruleIdx, rule, rulesCount) {
     
     // REDESIGNED TIGHT LAYOUT
     return `
-        <div class="rule-card" style="background:${isNever ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.02)'}; border:1px solid ${isNever ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.04)'}; opacity:${isNever ? 0.35 : 1}; padding:6px 10px; border-radius:10px; margin-bottom:4px; position:relative; ${(isNever) ? 'filter: grayscale(1);' : ''}">
+        <div class="rule-card" style="background:${isNever ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)'}; border:1px solid ${isNever ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.04)'}; opacity:${isNever ? 0.35 : 1}; padding:6px 10px; border-radius:10px; margin-bottom:4px; position:relative; ${(isNever) ? 'filter: grayscale(1);' : ''}">
             
             <!-- LINE 1: DESCRIPTION (PRIORITY) -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -325,7 +279,7 @@ function renderVibeRuleHtml(chIdx, ruleIdx, rule, rulesCount) {
             </div>
 
             <!-- LINE 2: VIBE | PREMADE | RANGE -->
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; background:rgba(255,255,255,0.02); padding:3px 6px; border-radius:6px; border:1px solid rgba(255,255,255,0.03);">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; background:rgba(0,0,0,0.25); padding:3px 6px; border-radius:6px; border:1px solid rgba(255,255,255,0.03);">
                 <!-- VIBE: NARROWER FIXED WIDTH -->
                 <select onchange="updateProfileMapping(${chIdx}, ${ruleIdx}, 'vibe', this.value)" ${vibeDisabled ? 'disabled' : ''} 
                         style="font-size:10px; font-weight:bold; padding:2px 5px; border-radius:4px; text-transform:uppercase; color:var(--accent-alt); background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); width:75px;">
@@ -539,7 +493,8 @@ async function saveProfile(silent = false) {
         name: name,
         channels: JSON.parse(JSON.stringify(currentProfileChannels)),
         mappings: JSON.parse(JSON.stringify(currentProfileMappings)),
-        vibeSplits: JSON.parse(JSON.stringify(window.vibeSplits || {}))
+        vibeSplits: JSON.parse(JSON.stringify(window.vibeSplits || {})),
+        calibration: activeProfile && activeProfile.calibration ? JSON.parse(JSON.stringify(activeProfile.calibration)) : undefined
     };
 
     // Use centralized saving logic in shared_setup.js
@@ -751,7 +706,7 @@ function addConditionFromUI() {
     else if (type === 'state') trigger = { ...trigger, value: 'building' };
     else if (type === 'volume') trigger = { ...trigger, less_than: 100, greater_than: 0 };
     else if (type === 'bin') trigger = { ...trigger, target: 'BIN 0', less_than: 100, greater_than: 0 };
-    else if (type === 'channel') trigger = { ...trigger, target: 1, less_than: 255, greater_than: 0 };
+    else if (type === 'channel') trigger = { type: 'channel', fixture: (db.stage[0]?.id || ""), role: "dimmer", greater_than: 0, less_than: 255 };
 
     currentPresetTriggers.push(trigger);
     renderPresetTriggers();
@@ -956,6 +911,11 @@ function resetPresetForm() {
     const aiBtn = document.getElementById('preset-ai-gen-btn');
     if (aiBtn) aiBtn.innerText = "Generate";
 
+    // Deactivate test mode if active
+    if (window.presetTestActive) {
+        testPreset(false);
+    }
+
     renderPresetTriggers();
     renderPresetOverrides();
 
@@ -1067,8 +1027,53 @@ window.duplicateProfileById = duplicateProfileById;
 window.removeProfileChannel = removeProfileChannel;
 window.addProfileChannel = addProfileChannel;
 window.updateProfileMapping = updateProfileMapping;
+window.testPreset = testPreset;
 
 // --- PRESET CRUD LOGIC (Consolidated from stage_logic.js) ---
+window.presetTestActive = false;
+function testPreset(forceState) {
+    const btn = document.getElementById('preset-test-btn');
+    window.presetTestActive = (forceState !== undefined) ? forceState : !window.presetTestActive;
+
+    if (window.presetTestActive) {
+        if (btn) {
+            btn.innerText = "Deactivate";
+            btn.style.background = "var(--accent)";
+            btn.style.color = "#000";
+            btn.style.borderColor = "var(--accent)";
+            btn.style.boxShadow = "0 0 15px var(--accent)";
+        }
+        
+        // Broadcast overrides
+        if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+            const tempPreset = {
+                id: current_editing_preset_id || 'temp_test',
+                name: 'TESTING',
+                overrides: JSON.parse(JSON.stringify(currentPresetOverrides))
+            };
+            window.ws.send(JSON.stringify({ 
+                type: 'toggle_preset', 
+                preset: tempPreset, 
+                state: true, 
+                exclusive: true 
+            }));
+        }
+    } else {
+        if (btn) {
+            btn.innerText = "Test";
+            btn.style.background = "transparent";
+            btn.style.color = "var(--accent-alt)";
+            btn.style.borderColor = "var(--accent)";
+            btn.style.boxShadow = "none";
+        }
+        
+        // Clear overrides
+        if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+            window.ws.send(JSON.stringify({ type: 'clear_overrides' }));
+        }
+    }
+}
+
 async function savePreset(silent = false) {
     const name = document.getElementById('pres-name').value;
     if (!name) return alert("Enter preset name");
@@ -1295,6 +1300,7 @@ function getFixtureRoles(fixtureId) {
     
     // --- 2. MAIN RENDERER ---
     window.renderProfileMappings = function() {
+        renderProfileCalibration();
         const container = document.getElementById('prof-mappings');
         if (!container) return;
         
@@ -1385,11 +1391,14 @@ function getFixtureRoles(fixtureId) {
                 '</div>';
             });
             
-            html += '<div class="channel-card" data-chidx="' + chIdx + '">' +
-                '<div class="channel-header">' +
-                    '<div class="channel-title">CH ' + (chIdx + 1) + ': ' + (ch.name || ch.role || 'Unassigned') + '</div>' +
-                    '<button class="btn btn-sm btn-danger" onclick="removeProfileChannel(' + chIdx + ')" style="background:transparent; border:1px solid #ff4757; color:#ff4757;">Remove</button>' +
+            const isCollapsed = collapsedChannels && collapsedChannels.has(chIdx);
+            
+            html += '<div class="channel-card ' + (isCollapsed ? 'collapsed' : '') + '" data-chidx="' + chIdx + '">' +
+                '<div class="channel-header channel-card-header" onclick="toggleChannelCollapse(' + chIdx + ')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05);">' +
+                    '<div class="channel-title" style="margin:0; font-size:12px; font-weight:800; color:var(--accent);"><span class="collapse-icon" style="margin-right:8px; display:inline-block; transition:transform 0.2s;">▼</span>CH ' + (chIdx + 1) + ': ' + (ch.name || ch.role || 'Unassigned') + '</div>' +
+                    '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); removeProfileChannel(' + chIdx + ')" style="background:transparent; border:1px solid #ff4757; color:#ff4757;">Remove</button>' +
                 '</div>' +
+                '<div class="channel-card-body">' +
                 '<div class="section-title">BEHAVIOR PRESET</div>' +
                 '<select id="preset-select-' + chIdx + '" class="logic-selector" style="border-color:var(--accent); color:var(--accent); font-weight:bold;" onchange="applyEasyBehaviorToChannel(' + chIdx + ', this.value)">' + libOptions + '</select>' +
                 '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">' +
@@ -1417,7 +1426,7 @@ function getFixtureRoles(fixtureId) {
                     '<div class="control-group"><label>Base Speed</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.speed + '" onchange="updateChannelConfig(' + chIdx + ', \'speed\', this.value)"></div>' +
                     '<div class="control-group"><label>Reactivity</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.react + '" onchange="updateChannelConfig(' + chIdx + ', \'react\', this.value)"></div>' +
                 '</div>' +
-            '</div>';
+            '</div></div>';
         });
         
         container.innerHTML = html;
@@ -1891,10 +1900,11 @@ window.renderSliderSetup = function() {
                                 <div class="vertical-slider-container">
                                     <div class="dmx-fader-track"></div>
                                     <input type="range" min="0" max="255" step="1" value="${val}" 
+                                        id="slider-setup-${id}-${chIdx}"
                                         oninput="adjustSliderSetupValue('${id}', ${chIdx}, parseInt(this.value))">
-                                    <div class="dmx-fader-cap" style="bottom: ${Math.round((val / 255) * (120 - 18))}px;"></div>
+                                    <div class="dmx-fader-cap" id="cap-setup-${id}-${chIdx}" style="bottom: ${Math.round((val / 255) * (120 - 18))}px;"></div>
                                 </div>
-                                <div style="font-size: 10px; font-weight: bold; color: #fff; font-family: monospace;">${val}</div>
+                                <div id="val-setup-${id}-${chIdx}" style="font-size: 10px; font-weight: bold; color: #fff; font-family: monospace;">${val}</div>
                             </div>
                         `;
                     }).join('')}
@@ -1918,22 +1928,29 @@ window.toggleFixtureInSliderSetup = function(id) {
 window.adjustSliderSetupValue = function(id, chIdx, val) {
     if (!window.sliderSetupValues[id]) window.sliderSetupValues[id] = {};
     window.sliderSetupValues[id][chIdx] = val;
-    window.renderSliderSetup();
+
+    // Update visuals inline — do NOT rebuild DOM (renderSliderSetup) during interaction
+    const cap = document.getElementById(`cap-setup-${id}-${chIdx}`);
+    const valDisplay = document.getElementById(`val-setup-${id}-${chIdx}`);
+    if (cap) cap.style.bottom = Math.round((val / 255) * (120 - 18)) + 'px';
+    if (valDisplay) valDisplay.innerText = val;
+
     window.sendSliderSetupOverride(id, chIdx, val);
 }
 
 window.sendSliderSetupOverride = function(id, chIdx, val) {
     const inst = window.db.stage.find(s => s.id === id);
     if (!inst) return;
-    const baseAddr = parseInt(inst.address) || 0;
-    const offset = parseInt(inst.offset || 0);
-    const addr = baseAddr + offset + chIdx;
+    const prof = window.db.profiles.find(p => p.id === inst.profileId);
+    if (!prof) return;
+    const ch = (prof.channels || [])[chIdx] || {};
+    const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+    const addr = baseAddr + (parseInt(ch.addrOffset) || chIdx);
 
     if (window.ws && window.ws.readyState === WebSocket.OPEN) {
         window.ws.send(JSON.stringify({
-            type: 'manual_override',
-            address: addr,
-            value: val
+            type: 'laser_override',
+            overrides: [{ address: addr, value: val }]
         }));
     }
 }
@@ -1943,12 +1960,11 @@ window.clearSliderSetup = function() {
     window.activeSliderSetupFixtures.forEach(id => {
         const inst = window.db.stage.find(s => s.id === id);
         if (!inst) return;
-        const baseAddr = parseInt(inst.address) || 0;
-        const offset = parseInt(inst.offset || 0);
+        const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
         const prof = window.db.profiles.find(p => p.id === inst.profileId);
         if (!prof) return;
-        (prof.channels || []).forEach((_, chIdx) => {
-            addresses.push(baseAddr + offset + chIdx);
+        (prof.channels || []).forEach((ch, chIdx) => {
+            addresses.push(baseAddr + (parseInt(ch.addrOffset) || chIdx));
         });
     });
 
@@ -2006,3 +2022,120 @@ window.recordSliderSetup = function() {
         else console.warn("No sliders have been adjusted to capture.");
     }
 }
+function renderProfileCalibration() {
+    const profileId = new URLSearchParams(window.location.search).get('id');
+    const prof = db.profiles.find(p => p.id === profileId);
+    if (!prof) return;
+
+    const roles = (prof.channels || []).map(ch => ch.role || ch.name || '');
+    const hasXY = roles.some(r => ['pos_x', 'pos_y', 'pan', 'tilt'].includes(r.toLowerCase()));
+    const hasZoom = roles.some(r => r.toLowerCase().includes('zoom'));
+
+    const container = document.getElementById('profile-calibration-container');
+    if (!container) return;
+
+    if (!hasXY && !hasZoom) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const cal = prof.calibration || {};
+    const x = cal.x || {};
+    const y = cal.y || {};
+    const zoom = cal.zoom || {};
+
+    const xLeft = (x.left !== undefined && x.left !== null) ? x.left : (x.min !== undefined ? x.min : '');
+    const xRight = (x.right !== undefined && x.right !== null) ? x.right : (x.max !== undefined ? x.max : '');
+    const yTop = (y.top !== undefined && y.top !== null) ? y.top : '';
+    const yBottom = (y.bottom !== undefined && y.bottom !== null) ? y.bottom : '';
+    const zSmall = (zoom.smallest !== undefined && zoom.smallest !== null) ? zoom.smallest : '';
+    const zLarge = (zoom.largest !== undefined && zoom.largest !== null) ? zoom.largest : '';
+
+    container.innerHTML = `
+        <div class="card" style="margin-bottom: 20px; border: 1px solid var(--accent-alt); background: rgba(0, 242, 255, 0.05); padding:15px; border-radius:12px;">
+            <div style="font-weight: 900; font-size: 11px; margin-bottom: 15px; color: var(--accent-alt); text-transform: uppercase; letter-spacing: 1px; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:14px;">🎯</span> Positional Calibration
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                ${hasXY ? `
+                <div>
+                    <label style="font-size: 9px; color: var(--text-dim); display: block; margin-bottom: 5px; font-weight:bold;">X RANGE (LEFT - RIGHT)</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" value="${xLeft}" onchange="updateCalibration('${prof.id}', 'x', 'left', this.value)" style="width: 100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px 8px;">
+                        <span style="opacity: 0.3;">-</span>
+                        <input type="number" value="${xRight}" onchange="updateCalibration('${prof.id}', 'x', 'right', this.value)" style="width: 100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px 8px;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size: 9px; color: var(--text-dim); display: block; margin-bottom: 5px; font-weight:bold;">Y RANGE (TOP - BOTTOM)</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" value="${yTop}" onchange="updateCalibration('${prof.id}', 'y', 'top', this.value)" style="width: 100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px 8px;">
+                        <span style="opacity: 0.3;">-</span>
+                        <input type="number" value="${yBottom}" onchange="updateCalibration('${prof.id}', 'y', 'bottom', this.value)" style="width: 100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px 8px;">
+                    </div>
+                </div>
+                ` : ''}
+                ${hasZoom ? `
+                <div>
+                    <label style="font-size: 9px; color: var(--text-dim); display: block; margin-bottom: 5px; font-weight:bold;">ZOOM (SMALLEST - LARGEST)</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" value="${zSmall}" onchange="updateCalibration('${prof.id}', 'zoom', 'smallest', this.value)" style="width: 100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px 8px;">
+                        <span style="opacity: 0.3;">-</span>
+                        <input type="number" value="${zLarge}" onchange="updateCalibration('${prof.id}', 'zoom', 'largest', this.value)" style="width: 100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:6px; padding:4px 8px;">
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function updateCalibration(profId, axis, side, val) {
+    const prof = db.profiles.find(p => p.id === profId);
+    if (!prof) return;
+    if (!prof.calibration) prof.calibration = {};
+    if (!prof.calibration[axis]) {
+         prof.calibration[axis] = {};
+    }
+    let num = parseInt(val, 10);
+    prof.calibration[axis][side] = isNaN(num) ? null : num;
+    saveProfileToServer(prof);
+}
+
+/**
+ * High-frequency UI update for Preset Slider Setup.
+ * Updates slider values and labels from window.latestDmxUniverse.
+ */
+window.updateSliderSetupVisuals = function() {
+    const strips = document.getElementById('pres-slider-setup-strips');
+    if (!strips || strips.innerHTML.includes('Select fixtures above')) return;
+
+    window.activeSliderSetupFixtures.forEach(id => {
+        const inst = window.db.stage.find(s => s.id === id);
+        if (!inst) return;
+        const prof = window.db.profiles.find(p => p.id === inst.profileId);
+        if (!prof) return;
+
+        const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+        const channels = prof.channels || [];
+
+        channels.forEach((ch, chIdx) => {
+            const addr = baseAddr + (parseInt(ch.addrOffset) || chIdx);
+            const val = window.latestDmxUniverse[addr];
+            
+            const slider = document.getElementById(`slider-setup-${id}-${chIdx}`);
+            const cap = document.getElementById(`cap-setup-${id}-${chIdx}`);
+            const valDisplay = document.getElementById(`val-setup-${id}-${chIdx}`);
+
+            if (slider && !slider.matches(':active')) { // Don't override if user is dragging
+                slider.value = val;
+            }
+            if (cap) {
+                cap.style.bottom = Math.round((val / 255) * (120 - 18)) + 'px';
+            }
+            if (valDisplay) {
+                valDisplay.innerText = val;
+            }
+        });
+    });
+};

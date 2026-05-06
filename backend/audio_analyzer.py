@@ -43,7 +43,6 @@ class AudioAnalyzer:
         self.prev_bins = [0.0] * 6
         self.prev_raw_bins = [0.0] * 6
         self.beat_count = 0
-        self.flux_sensitivity_percentage = 0.5 # Track raw slider percentage (0-1)
         self.cumulative_max = 3.0 # LOW Initial Baseline (allows quick adaptation to quiet starts)
         
         # FIXED GOLD STANDARDS (Smoothing)
@@ -73,17 +72,6 @@ class AudioAnalyzer:
     def set_gain(self, val: float):
         """Set normalization gain (Sensitivity)"""
         self.gain = max(0.01, min(5.0, float(val)))
-
-    def set_flux_sensitivity(self, val: float):
-        """Set flux threshold multiplier (Higher = more sensitive to beats)"""
-        self.flux_sensitivity_percentage = float(val)
-        # Optimized formula: 
-        # val=0.0 -> mult=4.0 (Very conservative)
-        # val=0.5 -> mult=2.0 (Balanced)
-        # val=1.0 -> mult=1.2 (Sensitive)
-        # val=1.5 -> mult=0.8 (Aggressive but not insane)
-        self.flux_threshold_mult = max(0.6, 4.0 - (float(val) * 2.1))
-        self.flux_threshold_abs = max(0.1, 0.6 - (float(val) * 0.45))
 
     def _normalize(self, val, history):
         """Perform rolling normalization (val - history_min) / (history_max - history_min)"""
@@ -237,9 +225,6 @@ class AudioAnalyzer:
             
             out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * s_factor + normalized * (1.0 - s_factor)))
         self.prev_bins = out_bins
-        
-        self.history_flux.append(flux)
-        
         # 7. ADAPTIVE BEAT DETECTION
         is_beat = False
         if len(self.history_flux) > 0:

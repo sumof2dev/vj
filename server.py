@@ -102,7 +102,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
 
         if path == '/node':
              self.send_response(302)
-             self.send_header("Location", "/node_visualizer.html")
+             self.send_header("Location", "/visualdmx.html?mode=node")
              self.end_headers()
              return
 

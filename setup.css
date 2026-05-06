@@ -90,14 +90,23 @@
         }
 
         .hud-preset-badge {
-            font-size: 8px;
+            font-size: 7px;
             font-weight: 900;
             text-transform: uppercase;
             background: var(--accent);
             color: #000;
-            padding: 1px 6px;
-            border-radius: 4px;
+            padding: 1px 4px;
+            border-radius: 2px;
             letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .hud-preset-badge.dim {
+            background: transparent;
+            color: var(--accent-alt);
+            border: 1px solid var(--accent);
+            opacity: 0.6;
+            padding: 0px 3px;
         }
 
         .hud-vibe-log {
@@ -304,7 +313,7 @@
             height: 100dvh;
             overflow: hidden;
             font-size: 14px;
-            overscroll-behavior-x: none;
+            overscroll-behavior: none;
             touch-action: pan-y;
         }
 
@@ -1828,6 +1837,13 @@
             cursor: pointer;
             transition: all 0.2s;
             white-space: nowrap;
+        }
+
+        .btn-suggestion.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
         }
 
         .chat-bubble {

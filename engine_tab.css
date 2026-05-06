@@ -81,11 +81,13 @@
 
 /* Engine Accordion Styles */
 .engine-accordion {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     margin-bottom: 15px;
     overflow: hidden;
+    box-shadow: var(--card-shadow, 0 8px 32px rgba(0, 0, 0, 0.45));
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .engine-accordion summary {

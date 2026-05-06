@@ -64,7 +64,7 @@ var saveDB = window.saveDB || function() { };
                     btn.disabled = false;
                 }
                 const loadingContainer = document.getElementById('ai-loading-container');
-                if (loadingContainer) loadingContainer.style.display = 'none';
+                if (loadingContainer) loadingContainer.classList.add('hidden');
                 if (window.aiProgressInterval) clearInterval(window.aiProgressInterval);
                 pendingAiInstructions = {};
                 updateAiReviewBar();
@@ -100,8 +100,8 @@ var saveDB = window.saveDB || function() { };
             window.preAiMappings = JSON.parse(JSON.stringify(currentProfileMappings));
 
             if (loadingContainer) {
-                loadingContainer.style.display = 'block';
-                if (diffBtn) diffBtn.style.display = 'none';
+                loadingContainer.classList.remove('hidden');
+                if (diffBtn) diffBtn.classList.add('hidden');
                 loadingBar.style.width = '10%';
                 loadingBar.style.background = 'var(--accent)';
                 loadingText.innerText = 'Consulting Architect...';
@@ -248,8 +248,8 @@ Output: Valid raw JSON object only.
                 // Show final buttons in chat footer
                 const chatDiffBtn = document.getElementById('ai-chat-view-diff-btn');
                 const chatApplyBtn = document.getElementById('ai-apply-final-btn');
-                if (chatDiffBtn) chatDiffBtn.style.display = 'block';
-                if (chatApplyBtn) chatApplyBtn.style.display = 'block';
+                if (chatDiffBtn) chatDiffBtn.classList.remove('hidden');
+                if (chatApplyBtn) chatApplyBtn.classList.remove('hidden');
 
                 // STAGING: Update the live mappings for preview, but DO NOT save to DB yet.
                 window.stagedAiMappings = JSON.parse(JSON.stringify(newMappings));
@@ -264,7 +264,7 @@ Output: Valid raw JSON object only.
                     loadingBar.style.background = 'var(--success)';
                     loadingText.innerText = 'Done!';
                     loadingText.style.color = 'var(--success)';
-                    if (diffBtn) diffBtn.style.display = 'block';
+                    if (diffBtn) diffBtn.classList.remove('hidden');
                 }
             } catch (err) {
                 console.error(err);
@@ -293,7 +293,7 @@ Output: Valid raw JSON object only.
                 setTimeout(() => {
                     if (loadingContainer) {
                         if (loadingText.innerText !== 'Done!') {
-                            loadingContainer.style.display = 'none';
+                            loadingContainer.classList.add('hidden');
                             loadingBar.style.width = '0%';
                         }
                     }
@@ -455,7 +455,7 @@ Output: Valid raw JSON object only.
 
         function closeAiDiff() {
             document.getElementById('ai-diff-modal').classList.remove('active');
-            document.getElementById('ai-loading-container').style.display = 'none';
+            document.getElementById('ai-loading-container').classList.add('hidden');
         }
 
         function toggleChannelAiInput(chIdx) {
@@ -473,12 +473,12 @@ Output: Valid raw JSON object only.
             document.body.classList.remove('ai-modal-open');
             // Hide the channel picker if open
             const picker = document.getElementById('ai-channel-picker');
-            if (picker) picker.style.display = 'none';
+            if (picker) picker.classList.add('hidden');
             // Hide the extra UI buttons if they were visible
             const diffBtn = document.getElementById('ai-chat-view-diff-btn');
             const applyBtn = document.getElementById('ai-apply-final-btn');
-            if (diffBtn) diffBtn.style.display = 'none';
-            if (applyBtn) applyBtn.style.display = 'none';
+            if (diffBtn) diffBtn.classList.add('hidden');
+            if (applyBtn) applyBtn.classList.add('hidden');
         }
 
         function clearAiChatHistory() {
@@ -494,19 +494,19 @@ Output: Valid raw JSON object only.
             // Hide diff buttons if they were open
             const diffBtn = document.getElementById('ai-chat-view-diff-btn');
             const applyBtn = document.getElementById('ai-apply-final-btn');
-            if (diffBtn) diffBtn.style.display = 'none';
-            if (applyBtn) applyBtn.style.display = 'none';
+            if (diffBtn) diffBtn.classList.add('hidden');
+            if (applyBtn) applyBtn.classList.add('hidden');
         }
 
         function toggleChannelPicker() {
             const picker = document.getElementById('ai-channel-picker');
             if (!picker) return;
             
-            if (picker.style.display === 'block') {
-                picker.style.display = 'none';
+            if (!picker.classList.contains('hidden')) {
+                picker.classList.add('hidden');
             } else {
                 populateChannelPicker();
-                picker.style.display = 'block';
+                picker.classList.remove('hidden');
             }
         }
 
@@ -563,7 +563,7 @@ Output: Valid raw JSON object only.
             textarea.focus();
             
             // Close picker
-            document.getElementById('ai-channel-picker').style.display = 'none';
+            document.getElementById('ai-channel-picker').classList.add('hidden');
         }
 
         function addAiChatMessage(role, text) {
@@ -635,7 +635,7 @@ Output: Valid raw JSON object only.
             const modal = document.getElementById('ai-refine-modal');
             const textarea = document.getElementById('ai-master-textarea');
             const logEl = document.getElementById('ai-response-log');
-            if (logEl) logEl.style.display = 'none';
+            if (logEl) logEl.classList.add('hidden');
             document.body.classList.add('ai-modal-open');
 
             // Build the aggregated prompt (for conversion from review bar)
@@ -678,8 +678,8 @@ Output: Valid raw JSON object only.
             const diffBtn = document.getElementById('ai-view-diff-btn');
 
             if (loadingContainer) {
-                loadingContainer.style.display = 'block';
-                if (diffBtn) diffBtn.style.display = 'none';
+                loadingContainer.classList.remove('hidden');
+                if (diffBtn) diffBtn.classList.add('hidden');
                 loadingBar.style.width = '10%';
                 loadingBar.style.background = 'var(--accent)';
                 loadingText.innerText = 'Applying Mutation...';
@@ -700,7 +700,7 @@ Output: Valid raw JSON object only.
                     loadingBar.style.background = 'var(--success)';
                     loadingText.innerText = 'Mutation Applied!';
                     loadingText.style.color = 'var(--success)';
-                    if (diffBtn) diffBtn.style.display = 'block';
+                    if (diffBtn) diffBtn.classList.remove('hidden');
 
                     // Show in chat too
                     const desc = type === 'bside' ? "Applied B-Side alternate variation." : 
@@ -710,8 +710,8 @@ Output: Valid raw JSON object only.
                     // Show final buttons in chat footer
                     const chatDiffBtn = document.getElementById('ai-chat-view-diff-btn');
                     const chatApplyBtn = document.getElementById('ai-apply-final-btn');
-                    if (chatDiffBtn) chatDiffBtn.style.display = 'block';
-                    if (chatApplyBtn) chatApplyBtn.style.display = 'block';
+                    if (chatDiffBtn) chatDiffBtn.classList.remove('hidden');
+                    if (chatApplyBtn) chatApplyBtn.classList.remove('hidden');
 
                     // Clear review bar instructions
                     pendingAiInstructions = {};
@@ -880,7 +880,7 @@ Output: Valid raw JSON object only.
 
                 // Hide loading bar if it's there
                 const loadingContainer = document.getElementById('ai-loading-container');
-                if (loadingContainer) loadingContainer.style.display = 'none';
+                if (loadingContainer) loadingContainer.classList.add('hidden');
             }
         }
 
@@ -920,7 +920,7 @@ Output: Valid raw JSON object only.
                 
                 // Optional: Hide loading bar immediately on accept
                 const loadingContainer = document.getElementById('ai-loading-container');
-                if (loadingContainer) loadingContainer.style.display = 'none';
+                if (loadingContainer) loadingContainer.classList.add('hidden');
                 
                 loadProfileChannels();
             }, 500);
@@ -985,8 +985,8 @@ Output: Valid raw JSON object only.
             // Reset footer buttons
             const diffBtn = document.getElementById('ai-preset-view-diff-btn');
             const applyBtn = document.getElementById('ai-preset-apply-btn');
-            if (diffBtn) diffBtn.style.display = 'none';
-            if (applyBtn) applyBtn.style.display = 'none';
+            if (diffBtn) diffBtn.classList.add('hidden');
+            if (applyBtn) applyBtn.classList.add('hidden');
 
             // Snapshot current state for diff/undo
             window.preAiPresetTriggers = JSON.parse(JSON.stringify(currentPresetTriggers || []));
@@ -1019,19 +1019,28 @@ Output: Valid raw JSON object only.
             const history = document.getElementById('ai-preset-chat-history');
             const xyPanel = document.getElementById('ai-preset-xy-panel');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
+            const fixBtn = document.getElementById('ai-fix-picker-btn');
+            const zoneBtn = document.getElementById('ai-zone-picker-btn');
             const fixPicker = document.getElementById('ai-fixture-picker');
             const zonePicker = document.getElementById('ai-zone-picker');
-            if (history) history.style.display = 'flex';
-            if (xyPanel) xyPanel.style.display = 'none';
-            if (fixPicker) fixPicker.style.display = 'none';
-            if (zonePicker) zonePicker.style.display = 'none';
+
+            if (history) history.classList.remove('hidden');
+            if (xyPanel) xyPanel.classList.add('hidden');
+            if (fixPicker) fixPicker.classList.add('hidden');
+            if (zonePicker) zonePicker.classList.add('hidden');
+            
             if (xyBtn) xyBtn.classList.remove('active');
+            if (fixBtn) fixBtn.classList.remove('active');
+            if (zoneBtn) zoneBtn.classList.remove('active');
         }
 
         function toggleAiXyMode() {
+            console.log("🖱️ toggleAiXyMode clicked");
             const history = document.getElementById('ai-preset-chat-history');
             const xyPanel = document.getElementById('ai-preset-xy-panel');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
+            const fixBtn = document.getElementById('ai-fix-picker-btn');
+            const zoneBtn = document.getElementById('ai-zone-picker-btn');
             if (!history || !xyPanel || !xyBtn) return;
 
             // Close other pickers
@@ -1039,16 +1048,18 @@ Output: Valid raw JSON object only.
             const zonePicker = document.getElementById('ai-zone-picker');
             if (fixPicker) fixPicker.classList.add('hidden');
             if (zonePicker) zonePicker.classList.add('hidden');
+            if (fixBtn) fixBtn.classList.remove('active');
+            if (zoneBtn) zoneBtn.classList.remove('active');
 
             const isHidden = xyPanel.classList.contains('hidden');
 
             if (isHidden) {
-                history.style.display = 'none';
+                history.classList.add('hidden');
                 xyPanel.classList.remove('hidden');
                 xyBtn.classList.add('active');
                 renderAiXyPanel();
             } else {
-                history.style.display = 'flex';
+                history.classList.remove('hidden');
                 xyPanel.classList.add('hidden');
                 xyBtn.classList.remove('active');
             }
@@ -1082,10 +1093,20 @@ Output: Valid raw JSON object only.
                         const hasXY = roles.includes('pos_x') && roles.includes('pos_y');
                         const hasZoom = roles.includes('zoom');
                         
+                        window.aiSessionCalibrationOverrides = window.aiSessionCalibrationOverrides || {};
                         const cal = p.calibration || {};
-                        const x = cal.x || { left: 0, right: 255 };
-                        const y = cal.y || { top: 0, bottom: 255 };
-                        const zoom = cal.zoom || { smallest: 0, largest: 255 };
+                        const override = window.aiSessionCalibrationOverrides[p.id] || {};
+                        
+                        const x = override.x || cal.x || {};
+                        const y = override.y || cal.y || {};
+                        const zoom = override.zoom || cal.zoom || {};
+
+                        const xLeft = (x.left !== undefined && x.left !== null) ? x.left : (x.min !== undefined ? x.min : '');
+                        const xRight = (x.right !== undefined && x.right !== null) ? x.right : (x.max !== undefined ? x.max : '');
+                        const yTop = (y.top !== undefined && y.top !== null) ? y.top : '';
+                        const yBottom = (y.bottom !== undefined && y.bottom !== null) ? y.bottom : '';
+                        const zSmall = (zoom.smallest !== undefined && zoom.smallest !== null) ? zoom.smallest : '';
+                        const zLarge = (zoom.largest !== undefined && zoom.largest !== null) ? zoom.largest : '';
 
                         return `
                             <div class="card" style="margin:0; padding:10px; background:rgba(255,255,255,0.03);">
@@ -1096,11 +1117,11 @@ Output: Valid raw JSON object only.
                                         <div>
                                             <label style="font-size:8px; color:var(--text-dim);">X RANGE (LEFT - RIGHT)</label>
                                             <div style="display:flex; align-items:center; gap:5px;">
-                                                <input type="number" value="${x.left}" placeholder="Left" 
+                                                <input type="number" value="${xLeft}" placeholder="Left" 
                                                     onchange="saveProfileCalibration('${p.id}', 'x', 'left', this.value)"
                                                     style="height:24px; font-size:10px; padding:0 5px;">
                                                 <span style="opacity:0.3">-</span>
-                                                <input type="number" value="${x.right}" placeholder="Right" 
+                                                <input type="number" value="${xRight}" placeholder="Right" 
                                                     onchange="saveProfileCalibration('${p.id}', 'x', 'right', this.value)"
                                                     style="height:24px; font-size:10px; padding:0 5px;">
                                             </div>
@@ -1108,11 +1129,11 @@ Output: Valid raw JSON object only.
                                         <div>
                                             <label style="font-size:8px; color:var(--text-dim);">Y RANGE (TOP - BOTTOM)</label>
                                             <div style="display:flex; align-items:center; gap:5px;">
-                                                <input type="number" value="${y.top}" placeholder="Top" 
+                                                <input type="number" value="${yTop}" placeholder="Top" 
                                                     onchange="saveProfileCalibration('${p.id}', 'y', 'top', this.value)"
                                                     style="height:24px; font-size:10px; padding:0 5px;">
                                                 <span style="opacity:0.3">-</span>
-                                                <input type="number" value="${y.bottom}" placeholder="Bottom" 
+                                                <input type="number" value="${yBottom}" placeholder="Bottom" 
                                                     onchange="saveProfileCalibration('${p.id}', 'y', 'bottom', this.value)"
                                                     style="height:24px; font-size:10px; padding:0 5px;">
                                             </div>
@@ -1123,11 +1144,11 @@ Output: Valid raw JSON object only.
                                     <div>
                                         <label style="font-size:8px; color:var(--text-dim);">ZOOM RANGE (SMALLEST - LARGEST)</label>
                                         <div style="display:flex; align-items:center; gap:5px;">
-                                            <input type="number" value="${zoom.smallest}" placeholder="Smallest" 
+                                            <input type="number" value="${zSmall}" placeholder="Smallest" 
                                                 onchange="saveProfileCalibration('${p.id}', 'zoom', 'smallest', this.value)"
                                                 style="height:24px; font-size:10px; padding:0 5px; width:70px;">
                                             <span style="opacity:0.3">-</span>
-                                            <input type="number" value="${zoom.largest}" placeholder="Largest" 
+                                            <input type="number" value="${zLarge}" placeholder="Largest" 
                                                 onchange="saveProfileCalibration('${p.id}', 'zoom', 'largest', this.value)"
                                                 style="height:24px; font-size:10px; padding:0 5px; width:70px;">
                                         </div>
@@ -1144,26 +1165,18 @@ Output: Valid raw JSON object only.
             `;
         }
 
+        window.aiSessionCalibrationOverrides = window.aiSessionCalibrationOverrides || {};
+        
         window.saveProfileCalibration = function(profId, axis, side, val) {
-            const prof = db.profiles.find(p => p.id === profId);
-            if (!prof) return;
-            
-            if (!prof.calibration) {
-                prof.calibration = { 
-                    x: { left: 0, right: 255 }, 
-                    y: { top: 0, bottom: 255 },
-                    zoom: { smallest: 0, largest: 255 }
-                };
+            if (!window.aiSessionCalibrationOverrides[profId]) {
+                window.aiSessionCalibrationOverrides[profId] = {};
             }
-            if (!prof.calibration[axis]) {
-                if (axis === 'zoom') prof.calibration.zoom = { smallest: 0, largest: 255 };
-                else if (axis === 'x') prof.calibration.x = { left: 0, right: 255 };
-                else if (axis === 'y') prof.calibration.y = { top: 0, bottom: 255 };
-                else prof.calibration[axis] = {};
-            }
+            const overrides = window.aiSessionCalibrationOverrides[profId];
             
-            prof.calibration[axis][side] = parseInt(val);
-            saveDB(); // Persist to local & server
+            if (!overrides[axis]) overrides[axis] = {};
+            
+            let num = parseInt(val, 10);
+            overrides[axis][side] = isNaN(num) ? null : num;
         }
 
         function closePresetAiModal() {
@@ -1171,63 +1184,82 @@ Output: Valid raw JSON object only.
             if (modal) modal.classList.remove('active');
             document.body.classList.remove('ai-modal-open');
 
-            if (diffBtn) diffBtn.style.display = 'none';
-            if (applyBtn) applyBtn.style.display = 'none';
+            const diffBtn = document.getElementById('ai-preset-view-diff-btn');
+            const applyBtn = document.getElementById('ai-preset-apply-btn');
+            if (diffBtn) diffBtn.classList.add('hidden');
+            if (applyBtn) applyBtn.classList.add('hidden');
             const saveBtn = document.getElementById('ai-preset-save-btn');
-            if (saveBtn) saveBtn.style.display = 'none';
+            if (saveBtn) saveBtn.classList.add('hidden');
 
             // Hide the fixture picker if open
             const picker = document.getElementById('ai-fixture-picker');
-            if (picker) picker.style.display = 'none';
+            if (picker) picker.classList.add('hidden');
         }
 
         function toggleFixturePicker() {
+            console.log("🖱️ toggleFixturePicker clicked");
             const history = document.getElementById('ai-preset-chat-history');
             const picker = document.getElementById('ai-fixture-picker');
             const zonePicker = document.getElementById('ai-zone-picker');
             const xyPanel = document.getElementById('ai-preset-xy-panel');
+            
+            const fixBtn = document.getElementById('ai-fix-picker-btn');
+            const zoneBtn = document.getElementById('ai-zone-picker-btn');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
+            
             if (!picker) return;
             
             // Close other pickers
             if (zonePicker) zonePicker.classList.add('hidden');
             if (xyPanel) xyPanel.classList.add('hidden');
+            if (zoneBtn) zoneBtn.classList.remove('active');
             if (xyBtn) xyBtn.classList.remove('active');
 
             if (!picker.classList.contains('hidden')) {
                 picker.classList.add('hidden');
-                if (history) history.style.display = 'flex';
+                if (fixBtn) fixBtn.classList.remove('active');
+                if (history) history.classList.remove('hidden');
             } else {
                 populateFixturePicker();
                 picker.classList.remove('hidden');
-                if (history) history.style.display = 'none';
+                if (fixBtn) fixBtn.classList.add('active');
+                if (history) history.classList.add('hidden');
             }
         }
 
         function toggleZonePicker() {
+            console.log("🖱️ toggleZonePicker clicked");
             const history = document.getElementById('ai-preset-chat-history');
             const picker = document.getElementById('ai-zone-picker');
             const fixPicker = document.getElementById('ai-fixture-picker');
             const xyPanel = document.getElementById('ai-preset-xy-panel');
+            
+            const fixBtn = document.getElementById('ai-fix-picker-btn');
+            const zoneBtn = document.getElementById('ai-zone-picker-btn');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
+            
             if (!picker) return;
             
             // Close other pickers
             if (fixPicker) fixPicker.classList.add('hidden');
             if (xyPanel) xyPanel.classList.add('hidden');
+            if (fixBtn) fixBtn.classList.remove('active');
             if (xyBtn) xyBtn.classList.remove('active');
 
             if (!picker.classList.contains('hidden')) {
                 picker.classList.add('hidden');
-                if (history) history.style.display = 'flex';
+                if (zoneBtn) zoneBtn.classList.remove('active');
+                if (history) history.classList.remove('hidden');
             } else {
                 populateZonePicker();
                 picker.classList.remove('hidden');
-                if (history) history.style.display = 'none';
+                if (zoneBtn) zoneBtn.classList.add('active');
+                if (history) history.classList.add('hidden');
             }
         }
 
         function populateZonePicker() {
+            console.log("📂 Populating AI Zone Picker...");
             const picker = document.getElementById('ai-zone-picker');
             if (!picker) return;
             
@@ -1256,6 +1288,7 @@ Output: Valid raw JSON object only.
         }
 
         function populateFixturePicker() {
+            console.log("📂 Populating AI Fixture Picker...");
             const picker = document.getElementById('ai-fixture-picker');
             if (!picker) return;
             
@@ -1303,9 +1336,13 @@ Output: Valid raw JSON object only.
             textarea.focus();
             
             // Close picker
-            document.getElementById('ai-fixture-picker').style.display = 'none';
+            const picker = document.getElementById('ai-fixture-picker');
+            if (picker) picker.classList.add('hidden');
+            const fixBtn = document.getElementById('ai-fix-picker-btn');
+            if (fixBtn) fixBtn.classList.remove('active');
+            
             const history = document.getElementById('ai-preset-chat-history');
-            if (history) history.style.display = 'flex';
+            if (history) history.classList.remove('hidden');
         }
 
         function insertZoneTag(zoneName) {
@@ -1324,9 +1361,13 @@ Output: Valid raw JSON object only.
             textarea.focus();
             
             // Close picker
-            document.getElementById('ai-zone-picker').style.display = 'none';
+            const picker = document.getElementById('ai-zone-picker');
+            if (picker) picker.classList.add('hidden');
+            const zoneBtn = document.getElementById('ai-zone-picker-btn');
+            if (zoneBtn) zoneBtn.classList.remove('active');
+            
             const history = document.getElementById('ai-preset-chat-history');
-            if (history) history.style.display = 'flex';
+            if (history) history.classList.remove('hidden');
         }
 
         function addPresetAiChatMessage(role, text) {
@@ -1360,24 +1401,39 @@ Output: Valid raw JSON object only.
             }
             const diffBtn = document.getElementById('ai-preset-view-diff-btn');
             const applyBtn = document.getElementById('ai-preset-apply-btn');
-            if (diffBtn) diffBtn.style.display = 'none';
-            if (applyBtn) applyBtn.style.display = 'none';
+            if (diffBtn) diffBtn.classList.add('hidden');
+            if (applyBtn) applyBtn.classList.add('hidden');
         }
 
         function _buildStageContext() {
             const stageInstances = db.stage || [];
             const profiles = db.profiles || [];
 
+            window.aiSessionCalibrationOverrides = window.aiSessionCalibrationOverrides || {};
+
             return stageInstances.map(inst => {
                 const prof = profiles.find(p => p.id === inst.profileId);
                 const channels = prof ? (prof.channels || []) : [];
+                
+                let combinedCalibration = null;
+                if (prof && prof.calibration) {
+                    combinedCalibration = JSON.parse(JSON.stringify(prof.calibration));
+                }
+                const overrides = window.aiSessionCalibrationOverrides[inst.profileId];
+                if (overrides) {
+                    if (!combinedCalibration) combinedCalibration = {};
+                    if (overrides.x) combinedCalibration.x = { ...combinedCalibration.x, ...overrides.x };
+                    if (overrides.y) combinedCalibration.y = { ...combinedCalibration.y, ...overrides.y };
+                    if (overrides.zoom) combinedCalibration.zoom = { ...combinedCalibration.zoom, ...overrides.zoom };
+                }
+
                 return {
                     id: inst.id,
                     address: inst.address,
                     zone: inst.zone || 'center',
                     profileName: prof ? prof.name : 'Unknown',
                     roles: channels.map(ch => ch.role || ch.name || 'unknown'),
-                    calibration: (prof && prof.calibration) ? prof.calibration : null
+                    calibration: combinedCalibration
                 };
             });
         }
@@ -1437,13 +1493,14 @@ Output: Valid raw JSON object only.
             const systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox Preset System.
 Task: ${current_editing_preset_id ? 'Refine an existing' : 'Generate a new'} preset based on the user's description.
 
-${spatialContext ? `CALIBRATION (Safe Zones):
+${spatialContext ? `REAL-WORLD FIXTURE CALIBRATION (CRITICAL):
+The following fixtures are physically calibrated. Use these specific values for spatial effects (Circle, Figure-8, Pulse):
 ${spatialContext}
-CRITICAL: Use these specific Left, Right, Top, Bottom, Smallest, and Largest values exactly as labeled. 
-Follow labels strictly. If "Smallest" is 255 and "Largest" is 0, then 255 is the small state.` : "NOTICE: No fixtures are calibrated. DO NOT use spatial keywords (Left, Right, Circle, etc) unless you use generic 0-255 ranges."}
+- Instruction: When generating X/Y sweeps or behaviors for these fixtures, ONLY use values between the labeled boundaries.
+- Example: If Fixture s1 is X(Left:10, Right:90), use '10-90-10' for a full horizontal sweep.` : "NOTICE: No fixtures are calibrated. Use generic 0-255 ranges for movement."}
 
 ROLE MAPPING:
-KNOWN_ROLES: ${window.KNOWN_ROLES ? window.KNOWN_ROLES.join(', ') : 'pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, generic, dimmer, mode, clip, group'}
+KNOWN_ROLES: ${window.KNOWN_ROLES ? window.KNOWN_ROLES.join(', ') : 'pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, generic, dimmer, mode, clip, group, background, tex, shader, speed'}
 
 SPATIAL FORMULA COOKBOOK:
 1. CIRCLE: pos_x: "[Left]-[Right]-[Left]", pos_y: "[Top]-[Bottom]-[Top] + 16"
@@ -1456,10 +1513,10 @@ TRIGGER LOGIC:
 - All conditions (e.g. Vibe is High AND Volume > 50%) must be met for the preset to activate.
 
 OVERRIDE SCHEMA:
-- "mode": "value" (Static DMX) or "behavior" (Live mapping change).
-- If mode is "behavior", the "value" field should be a behavior name (sine, direct, etc) and "source" should be an audio source (bass, volume, etc).
-- Instance: {id: "<fixture_id>", target: "<fixture_id>", type: "instance", name: "<role>", role: "<role>", value: <string_or_num>, channels: [{name: "<role>", value: <val>, mode: "value"}]}
-- Global: {id: "global", target: "global", type: "global", name: "<role>", role: "<role>", value: <string_or_num>, channels: [{name: "<role>", value: <val>, mode: "value"}]}
+- "mode": "value" (Static DMX OR Coordinate Sequences like '10-90-10')
+- "mode": "behavior" (Oscillators like 'sine', 'saw', 'pulse', 'sparkle')
+- If mode is "behavior", "source" should be an audio source (bass, volume, global_time).
+- Instance JSON: {id: "<target>", target: "<target>", type: "instance", role: "<role>", value: <val>, channels: [{name: "<role>", value: <val>, mode: "value"}]}
 
 - CURRENT LIVE UI STATE:
 - Preset Label: "${document.getElementById('pres-name')?.value || 'Unnamed Preset'}"
@@ -1474,8 +1531,14 @@ Output: Return a JSON object with EXACTLY this structure:
   "presets": [
     {
       "name": "Descriptive Name",
-      "triggers": [...],
-      "overrides": [...]
+      "triggers": [
+         { "type": "channel", "fixture": "fixture_id", "role": "dimmer", "greater_than": 200 },
+         { "type": "volume", "greater_than": 80 }
+      ],
+      "overrides": [
+         { "type": "instance", "fixture": "fixture_id", "role": "dimmer", "value": 255 },
+         { "type": "global", "role": "strobe", "value": "sine", "channels": [{ "name": "strobe", "value": "sine", "mode": "behavior", "source": "bass" }] }
+      ]
     }
   ],
   "logic_explanation": "Compact summary of the strategy"
@@ -1485,28 +1548,60 @@ Output: Valid raw JSON object only.`;
 
 
             try {
-                const model = localStorage.getItem('vj_gemini_model') || 'gemini-2.5-flash';
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: systemPrompt }] }]
-                    })
-                });
+            let retries = 0;
+            const maxRetries = 3;
+            let response, data;
 
-                const data = await response.json();
-                if (data.error) throw new Error(data.error.message);
-
-                const responseText = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/^```json|```$/g, "").trim();
-                let aiResult = null;
+            while (retries < maxRetries) {
                 try {
-                    aiResult = JSON.parse(responseText);
-                } catch (e) {
-                    const match = responseText.match(/\{.*\}/s);
-                    if (match) aiResult = JSON.parse(match[0]);
-                }
+                    const model = localStorage.getItem('vj_gemini_model') || 'gemini-2.5-flash';
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: systemPrompt }] }]
+                        })
+                    });
 
-                if (!aiResult) throw new Error("AI returned invalid JSON.");
+                    data = await response.json();
+                    
+                    if (response.status === 503) {
+                        retries++;
+                        console.warn(`⚠️ Gemini 503 (High Demand). Retrying (${retries}/${maxRetries})...`);
+                        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, retries))); // Exponential backoff
+                        continue;
+                    }
+                    
+                    if (data.error) {
+                         if (data.error.code === 503 || data.error.message.includes('overloaded')) {
+                            retries++;
+                            await new Promise(r => setTimeout(r, 1000 * Math.pow(2, retries)));
+                            continue;
+                         }
+                         throw new Error(data.error.message);
+                    }
+                    break; // Success
+                } catch (e) {
+                    if (retries >= maxRetries - 1) throw e;
+                    retries++;
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, retries)));
+                }
+            }
+
+            if (!response || !response.ok) {
+                throw new Error(`AI Service Error: ${response?.status || 'Unknown'}. The model may be experiencing high demand. Try switching models in AI Settings.`);
+            }
+
+            const responseText = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/^```json|```$/g, "").trim();
+            let aiResult = null;
+            try {
+                aiResult = JSON.parse(responseText);
+            } catch (e) {
+                const match = responseText.match(/\{.*\}/s);
+                if (match) aiResult = JSON.parse(match[0]);
+            }
+
+            if (!aiResult) throw new Error("AI returned invalid JSON.");
 
                 const presets = aiResult.presets || [aiResult];
                 const logicLog = aiResult.logic_explanation || "";
@@ -1524,29 +1619,56 @@ Output: Valid raw JSON object only.`;
                 const sanitizedPresets = presets.map(p => {
                     return {
                         name: p.name || "Untitled Preset",
-                        triggers: (p.triggers || []).map(t => ({
-                            type: t.type || 'manual',
-                            value: t.value || '',
-                            target: t.target || '',
-                            greater_than: t.greater_than ?? 0,
-                            less_than: t.less_than ?? 100
-                        })),
+                        triggers: (p.triggers || []).map(t => {
+                            const fixtureId = t.fixture || t.target || t.id || '';
+                            const role = t.role || t.name || '';
+                            return {
+                                type: t.type || 'manual',
+                                value: t.value || '',
+                                fixture: fixtureId,
+                                target: fixtureId,
+                                role: role,
+                                greater_than: t.greater_than ?? 0,
+                                less_than: t.less_than ?? 100
+                            };
+                        }),
                         overrides: (p.overrides || []).map(o => {
+                            const fixtureId = o.fixture || o.target || o.id || 'global';
                             const role = o.role || o.name || 'dimmer';
                             const val = o.value ?? 0;
-                            return {
-                                id: o.id || 'global',
-                                target: o.target || 'global',
-                                type: o.type || (o.id === 'global' ? 'global' : 'instance'),
-                                name: role,
-                                role: role,
-                                value: val,
-                                channels: (o.channels && o.channels.length > 0) ? o.channels.map(ch => ({
-                                    name: ch.name || role,
-                                    value: ch.value ?? val,
-                                    mode: ch.mode || 'value'
-                                })) : [{ name: role, value: val }]
-                            };
+                            const type = o.type || (fixtureId === 'global' ? 'global' : 'instance');
+                            
+                                const channels = (o.channels && o.channels.length > 0) ? o.channels.map(ch => {
+                                    let chVal = ch.value ?? val;
+                                    let chMode = ch.mode || 'value';
+                                    
+                                    // AUTO-CORRECT: Sequences must be in 'value' mode
+                                    if (typeof chVal === 'string' && chVal.includes('-') && chMode === 'behavior') {
+                                        chMode = 'value';
+                                    }
+                                    
+                                    return {
+                                        name: ch.name || role,
+                                        value: chVal,
+                                        mode: chMode,
+                                        source: ch.source || 'volume'
+                                    };
+                                }) : [{ 
+                                    name: role, 
+                                    value: val, 
+                                    mode: (typeof val === 'string' && val.includes('-')) ? 'value' : 'value' 
+                                }];
+
+                                return {
+                                    id: fixtureId,
+                                    target: fixtureId,
+                                    fixture: fixtureId,
+                                    type: type,
+                                    name: role,
+                                    role: role,
+                                    value: val,
+                                    channels: channels
+                                };
                         })
                     };
                 });
@@ -1574,9 +1696,9 @@ Output: Valid raw JSON object only.`;
                 const diffBtn = document.getElementById('ai-preset-view-diff-btn');
                 const applyBtn = document.getElementById('ai-preset-apply-btn');
                 const saveBtn = document.getElementById('ai-preset-save-btn');
-                if (diffBtn) diffBtn.style.display = 'block';
-                if (applyBtn) applyBtn.style.display = 'block';
-                if (saveBtn) saveBtn.style.display = 'block';
+                if (diffBtn) diffBtn.classList.remove('hidden');
+                if (applyBtn) applyBtn.classList.remove('hidden');
+                if (saveBtn) saveBtn.classList.remove('hidden');
 
                 // If multiple presets were generated (OR logic), notify user
                 if (presets.length > 1) {
@@ -1757,12 +1879,12 @@ Output: Valid raw JSON object only.`;
                 </div>
             `).join('');
 
-            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
         }
 
         function closeStagedPresetsReview() {
             const modal = document.getElementById('ai-preset-staged-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) modal.classList.add('hidden');
         }
 
         function loadStagedPreset(idx) {
@@ -1871,8 +1993,8 @@ Output: Valid raw JSON object only.`;
 
                 const diffBtn = document.getElementById('ai-preset-view-diff-btn');
                 const applyBtn = document.getElementById('ai-preset-apply-btn');
-                if (diffBtn) diffBtn.style.display = 'block';
-                if (applyBtn) applyBtn.style.display = 'block';
+                if (diffBtn) diffBtn.classList.remove('hidden');
+                if (applyBtn) applyBtn.classList.remove('hidden');
                 return;
 
             } else if (type === 'drop_punch') {

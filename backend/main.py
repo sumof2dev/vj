@@ -382,9 +382,8 @@ def save_live_defaults():
         data = {
             "master": {
                 "sensitivity": analyzer.gain,
-                "flux_sensitivity": analyzer.flux_sensitivity_percentage,
                 "audio_source": current_audio_mode,
-                "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
+                "vibe_splits": vibe_engine.vibe_splits if vibe_engine else {"chillMid": 33, "midHigh": 66},
                 "speed": dmx_engine.base_speed if dmx_engine else 1.0,
                 "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
                 "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
@@ -415,11 +414,10 @@ def load_live_defaults():
             # 1. Master Section
             m_data = data.get("master", {})
             if "sensitivity" in m_data: analyzer.set_gain(m_data["sensitivity"])
-            if "flux_sensitivity" in m_data: analyzer.set_flux_sensitivity(m_data["flux_sensitivity"])
             if "audio_source" in m_data: 
                 global current_audio_mode
                 current_audio_mode = m_data["audio_source"]
-            if "vibe_bias" in m_data and vibe_engine: vibe_engine.mid_vibe_bias = m_data["vibe_bias"]
+            if "vibe_splits" in m_data and vibe_engine: vibe_engine.vibe_splits = m_data["vibe_splits"]
             if "speed" in m_data and dmx_engine: dmx_engine.set_speed(m_data["speed"])
             if "intensity" in m_data and dmx_engine: dmx_engine.set_intensity(m_data["intensity"])
             if "sceneFreq" in m_data and dmx_engine: dmx_engine.scene_freq = m_data["sceneFreq"]
@@ -1138,9 +1136,9 @@ async def ws_handler(websocket):
                                 dmx_engine.apply_overrides(overrides, data.get("style_overrides", []))
 
                         elif msg_type == "clear_overrides":
-                            # Clear overrides for a specific device (zone)
-                            dev_name = data.get("device")
-                            if dmx_engine and dev_name:
+                            # Clear overrides for a specific device (zone) or ALL
+                            dev_name = data.get("device") or "all"
+                            if dmx_engine:
                                 dmx_engine.clear_device_overrides(dev_name)
                         
                         elif msg_type == "clear_channel_overrides":
@@ -1176,8 +1174,16 @@ async def ws_handler(websocket):
                             preset_id = data.get("preset_id")
                             state = data.get("state") # optional
                             exclusive = data.get("exclusive", False)
-                            if dmx_engine and preset_id:
-                                dmx_engine.toggle_manual_preset(preset_id, state, exclusive)
+                            inject_preset = data.get("preset") # For testing unsaved presets
+
+                            if dmx_engine:
+                                if inject_preset and state is True:
+                                    # Temporary injection for testing
+                                    dmx_engine.presets = [p for p in dmx_engine.presets if p.get('id') != inject_preset.get('id')]
+                                    dmx_engine.presets.append(inject_preset)
+                                    dmx_engine.toggle_manual_preset(inject_preset.get('id'), True, exclusive)
+                                elif preset_id:
+                                    dmx_engine.toggle_manual_preset(preset_id, state, exclusive)
                         
                         elif msg_type == "visual_states":
                             # Update synchronized visual layer indices
@@ -1243,11 +1249,9 @@ async def ws_handler(websocket):
                             # Handle Global Performance Tuning
                             if "sensitivity" in data:
                                 analyzer.set_gain(float(data["sensitivity"]))
-                            if "flux_sensitivity" in data:
-                                analyzer.set_flux_sensitivity(float(data["flux_sensitivity"]))
-                            if "vibe_bias" in data:
+                            if "vibe_splits" in data:
                                 if vibe_engine:
-                                    vibe_engine.mid_vibe_bias = float(data["vibe_bias"])
+                                    vibe_engine.vibe_splits = data["vibe_splits"]
                             if "speed" in data and dmx_engine:
                                 dmx_engine.set_speed(float(data["speed"]))
                             if "sceneFreq" in data and dmx_engine:
@@ -1301,9 +1305,8 @@ async def ws_handler(websocket):
                                 "master": {
                                     "speed": dmx_engine.base_speed if dmx_engine else 1.0,
                                     "sensitivity": analyzer.gain,
-                                    "flux_sensitivity": analyzer.flux_sensitivity_percentage,
                                     "audio_source": current_audio_mode,
-                                    "vibe_bias": vibe_engine.mid_vibe_bias if vibe_engine else 0.5,
+                                    "vibe_splits": vibe_engine.vibe_splits if vibe_engine else {"chillMid": 33, "midHigh": 66},
                                     "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
                                     "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
                                 },
@@ -1466,10 +1469,9 @@ async def run_calibration_task(websocket):
         # Sync with LIVE settings to test the current environment
         cal_analyzer = AudioAnalyzer()
         cal_analyzer.set_gain(analyzer.gain)
-        cal_analyzer.set_flux_sensitivity(analyzer.flux_sensitivity_percentage)
         
         cal_vibe = VibeEngine()
-        cal_vibe.mid_vibe_bias = vibe_engine.mid_vibe_bias
+        cal_vibe.vibe_splits = vibe_engine.vibe_splits
         
         results = {"beats": [], "vibe_states": [], "transients": [], "bpm": []}
         processed_frames = 0
@@ -1565,8 +1567,7 @@ async def run_calibration_task(websocket):
             },
             "signal_health": health, # Tell the user if their Spotify/Main vol is the issue
             "settings": {
-                "gain": analyzer.gain,
-                "reactivity": analyzer.flux_sensitivity_percentage
+                "gain": analyzer.gain
             }
         }))
 

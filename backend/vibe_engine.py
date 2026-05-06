@@ -8,7 +8,7 @@ class VibeEngine:
         self.beat_history = collections.deque(maxlen=20)
         self.current_vibe = "mid" # Default
         self.last_vibe_change = 0
-        self.mid_vibe_bias = 0.4 # Requested Default
+        self.vibe_splits = {"chillMid": 33, "midHigh": 66} # Requested Default
         
         # Smoothers
         self.smooth_bass = 0.0
@@ -65,16 +65,22 @@ class VibeEngine:
         # for vibe_hysteresis (5s) to prevent lighting "indecision" in complex tracks.
         target = self.current_vibe
         
-        # HIGH Thresholds: Enhanced to distinguish "Groove" from "Peak"
-        # 1. Extreme Beat Density (BPM > 160 or very active rhythm)
-        # 2. Combination of Volume AND Spectral Complexity (The Shimmer)
-        high_vol = 0.55 + (0.35 * self.mid_vibe_bias)
-        high_density = 5.6 + (6.0 * self.mid_vibe_bias)
-        # Spectral threshold is biased to protect the Mid core
-        high_spectral = 0.38 + (0.15 * (1.0 - self.mid_vibe_bias)) 
+        chill_threshold = self.vibe_splits.get("chillMid", 33) / 100.0
+        high_threshold = self.vibe_splits.get("midHigh", 66) / 100.0
         
-        chill_vol = 0.20 * (1.0 - self.mid_vibe_bias)
-        chill_density = 2.0 * (1.0 - self.mid_vibe_bias)
+        # Map boundaries directly to audio signal ranges so the UI sliders
+        # have full authority over the vibe buckets.
+        
+        # HIGH:
+        # Vol ranges from ~0.2 (easy) to 1.0+ (impossible)
+        high_vol = 0.2 + (high_threshold * 0.8)
+        high_density = high_threshold * 12.0
+        high_spectral = high_threshold * 0.8 
+        
+        # CHILL:
+        # Vol ranges from 0.0 (impossible) to 1.2+ (always chill)
+        chill_vol = chill_threshold * 1.2
+        chill_density = chill_threshold * 10.0
         
         # Vibe Logic
         is_high = (density >= high_density) or (vol > high_vol and spectral > high_spectral)
