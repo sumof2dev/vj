@@ -1,1 +1,6 @@
-{"prompt": "Crystal Burst", "type": "base"}
+{
+    "prompt": "Crystal Burst",
+    "type": "base",
+    "luminance": 0.299,
+    "contrast": 0.188
+}

@@ -292,6 +292,7 @@ dmx_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 dmx_ready = True
 audio_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 is_usb_dmx = False
+dmx_interface = "HAT" # "HAT" or "USB"
 last_binary_payload = b""
 last_state_payload = "{}"
 last_broadcast_time = 0.0 # Signal all handlers to send when updated
@@ -388,7 +389,8 @@ def save_live_defaults():
                 "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
                 "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
                 "node_ip": network_dmx_node.ip if network_dmx_node else getattr(main, 'node_ip_cache', ""),
-                "node_active": network_dmx_node is not None
+                "node_active": network_dmx_node is not None,
+                "dmx_interface": dmx_interface
             },
             "laser": {
                 "speed": dmx_engine.base_speed if dmx_engine else 1.0,
@@ -423,6 +425,9 @@ def load_live_defaults():
             if "sceneFreq" in m_data and dmx_engine: dmx_engine.scene_freq = m_data["sceneFreq"]
             node_ip = m_data.get("node_ip")
             node_active = m_data.get("node_active", True)
+            
+            global dmx_interface
+            dmx_interface = m_data.get("dmx_interface", "HAT")
             
             # Cache the IP even if not active, so save_live_defaults doesn't lose it
             import __main__ as main
@@ -623,21 +628,30 @@ def setup_dmx():
     global dmx_port
     ports = list(serial.tools.list_ports.comports())
     
-    # Prioritize candidates (User requested HAT priority)
+    # Prioritize candidates based on preference
     candidates = []
     
-    # 1. Raspberry Pi Native UARTs (RS485 HATs) - HIGH PRIORITY
     raspberry_pi_uarts = ['/dev/ttyAMA0', '/dev/serial0', '/dev/ttyS0']
-    for uart in raspberry_pi_uarts:
-        if os.path.exists(uart):
-            candidates.append(uart)
-            
-    # 2. Fallback to USB Serial
+    usb_ports = []
     for p in ports:
         desc_lower = p.description.lower()
         if any(x in desc_lower for x in ['ftdi', 'ft232', 'usb', 'serial', 'ch340', 'cp210']) or 'ttyUSB' in p.device:
-            if p.device not in candidates:
-                candidates.append(p.device)
+            usb_ports.append(p.device)
+
+    if dmx_interface == "USB":
+        print("🔌 DMX Priority: USB Preferred")
+        candidates.extend(usb_ports)
+        for uart in raspberry_pi_uarts:
+            if os.path.exists(uart) and uart not in candidates:
+                candidates.append(uart)
+    else:
+        print("🔌 DMX Priority: RS485 HAT Preferred")
+        for uart in raspberry_pi_uarts:
+            if os.path.exists(uart):
+                candidates.append(uart)
+        for p in usb_ports:
+            if p not in candidates:
+                candidates.append(p)
 
     for dmx_dev in candidates:
         try:
@@ -1261,6 +1275,10 @@ async def ws_handler(websocket):
                                 if new_mode != current_audio_mode:
                                     print(f"🔄 Audio Source change requested: {current_audio_mode} -> {new_mode}")
                                     restart_audio_stream(new_mode)
+                            if "dmx_interface" in data:
+                                global dmx_interface
+                                dmx_interface = str(data["dmx_interface"])
+                                print(f"🔌 DMX Interface Preference Updated: {dmx_interface}")
                         
                         elif msg_type == "force_refresh":
                             # Broadcast refresh signal to all clients
@@ -1578,6 +1596,9 @@ async def run_calibration_task(websocket):
         except: pass
 
 async def main():
+    # Load persisted defaults early (for hardware preference, audio mode, etc)
+    load_live_defaults()
+    
     setup_dmx()    
 
     # Initialize Vibe Engine
@@ -1591,7 +1612,7 @@ async def main():
         dmx_engine = DMXEngine()
         print("✅ DMX Engine initialized with Laser Profile")
         
-        # Now that engines are ready, load persisted defaults
+        # Re-apply defaults now that engines are initialized (speed, vibe splits, etc)
         load_live_defaults()
         
         # Initialize Synth Easter Egg

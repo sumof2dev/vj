@@ -98,8 +98,19 @@ class VibeEngine:
                 target = "mid"
             
         if target != self.current_vibe:
-            self.current_vibe = target
-            self.last_vibe_change = now
+            # Add debounce for all transitions to prevent 60Hz oscillation
+            is_upgrade = (self.current_vibe == "chill" and target in ["mid", "high"]) or (self.current_vibe == "mid" and target == "high")
+            if is_upgrade:
+                # Upgrades can be fast, but add a tiny 0.25s debounce to avoid threshold flickering
+                if target == "high" or (now - self.last_vibe_change > 0.25):
+                    self.current_vibe = target
+                    self.last_vibe_change = now
+            else:
+                # Downgrades
+                required_hold = self.vibe_hysteresis if self.current_vibe == "high" else 2.0
+                if now - self.last_vibe_change > required_hold:
+                    self.current_vibe = target
+                    self.last_vibe_change = now
 
         # Restored "Snappier" Smoothing (Reverted from Liquid Smoothing)
         # Explicitly cast to float to prevent numpy type leakage

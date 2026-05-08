@@ -1,1 +1,8 @@
-{"prompt": "sacred gemoetry, flower of life, metadons cube", "timestamp": 1774723795528, "id": 1774723795528, "type": "base"}
+{
+    "prompt": "sacred gemoetry, flower of life, metadons cube",
+    "timestamp": 1774723795528,
+    "id": 1774723795528,
+    "type": "base",
+    "luminance": 0.054,
+    "contrast": 0.146
+}

@@ -1,1 +1,8 @@
-{"prompt": "Fractal tentacles growing inwards to the center", "timestamp": 1775721840167, "id": 1775721840167, "type": "base"}
+{
+    "prompt": "Fractal tentacles growing inwards to the center",
+    "timestamp": 1775721840167,
+    "id": 1775721840167,
+    "type": "base",
+    "luminance": 0.768,
+    "contrast": 0.19
+}

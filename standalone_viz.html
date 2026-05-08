@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RaveBox::Visualizer<|>DMX</title>
+  <style>
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 10s linear infinite;
+    }
+  </style>
+  <script>
+    // Standalone WebSocket Shim
+    // Patches WebSocket BEFORE the React bundle loads so all WS connections
+    // are intercepted and driven by the parent frame's standalone_engine.js
+    (function() {
+        var mockSockets = [];
+
+        function MockWebSocket(url) {
+            this.url = url;
+            this.readyState = 0;
+            this.binaryType = 'arraybuffer';
+            this.onopen = null;
+            this.onmessage = null;
+            this.onclose = null;
+            this.onerror = null;
+            mockSockets.push(this);
+
+            var self = this;
+            setTimeout(function() {
+                self.readyState = 1;
+                if (self.onopen) self.onopen({ type: 'open' });
+            }, 100);
+        }
+        MockWebSocket.prototype.send = function() {};
+        MockWebSocket.prototype.close = function() {
+            this.readyState = 3;
+            var idx = mockSockets.indexOf(this);
+            if (idx !== -1) mockSockets.splice(idx, 1);
+        };
+        MockWebSocket.CONNECTING = 0;
+        MockWebSocket.OPEN = 1;
+        MockWebSocket.CLOSING = 2;
+        MockWebSocket.CLOSED = 3;
+
+        window.WebSocket = MockWebSocket;
+
+        window._mockSockets = mockSockets;
+        window._broadcastToMocks = function(data) {
+            // When an ArrayBuffer is passed from the parent frame, it belongs to
+            // the parent's realm. The React app checks `instanceof ArrayBuffer`
+            // using THIS frame's ArrayBuffer constructor, which fails cross-realm.
+            // Fix: copy into a local ArrayBuffer so instanceof succeeds.
+            var payload = data;
+            if (data && data.byteLength !== undefined && !(data instanceof ArrayBuffer)) {
+                var copy = new ArrayBuffer(data.byteLength);
+                new Uint8Array(copy).set(new Uint8Array(data));
+                payload = copy;
+            }
+            for (var i = 0; i < mockSockets.length; i++) {
+                if (mockSockets[i].onmessage) {
+                    mockSockets[i].onmessage({ data: payload });
+                }
+            }
+        };
+    })();
+
+    // Standalone Library System
+    // Default library loaded from GCS manifest, user additions stored in localStorage
+    (function() {
+        var GCS_BASE = 'https://storage.googleapis.com/ravebox';
+        var LS_KEY_SHADERS = 'vj_standalone_shaders';
+        var LS_KEY_IMAGES = 'vj_standalone_images';
+        var manifestCache = null;
+
+        function getLocalShaders() {
+            try { return JSON.parse(localStorage.getItem(LS_KEY_SHADERS) || '[]'); }
+            catch(e) { return []; }
+        }
+
+        function getLocalImages() {
+            try { return JSON.parse(localStorage.getItem(LS_KEY_IMAGES) || '[]'); }
+            catch(e) { return []; }
+        }
+
+        function saveLocalShader(item) {
+            var list = getLocalShaders();
+            list.unshift(item);
+            localStorage.setItem(LS_KEY_SHADERS, JSON.stringify(list));
+        }
+
+        function saveLocalImage(item) {
+            var list = getLocalImages();
+            list.unshift(item);
+            localStorage.setItem(LS_KEY_IMAGES, JSON.stringify(list));
+        }
+
+        function deleteLocalShader(file) {
+            var list = getLocalShaders().filter(function(s) { return s.file !== file; });
+            localStorage.setItem(LS_KEY_SHADERS, JSON.stringify(list));
+        }
+
+        function deleteLocalImage(name) {
+            var list = getLocalImages().filter(function(i) { return i.name !== name; });
+            localStorage.setItem(LS_KEY_IMAGES, JSON.stringify(list));
+        }
+
+        async function getManifest() {
+            if (manifestCache) return manifestCache;
+            try {
+                var res = await fetch(GCS_BASE + '/library_manifest.json');
+                if (res.ok) {
+                    manifestCache = await res.json();
+                    return manifestCache;
+                }
+            } catch(e) { console.warn('GCS manifest fetch failed:', e); }
+            return { base: [], tex: [] };
+        }
+
+        var realFetch = window.fetch;
+        window.fetch = async function(url, options) {
+            var urlStr = url.toString();
+            var method = (options && options.method) ? options.method.toUpperCase() : 'GET';
+
+            // GET /api/usergen/list — merge GCS base shaders + localStorage shaders
+            if (urlStr.includes('/api/usergen/list')) {
+                var manifest = await getManifest();
+                var gcsShaders = (manifest.base || []).map(function(s) {
+                    return {
+                        file: s.file,
+                        prompt: s.prompt,
+                        type: s.type || 'base',
+                        mtime: s.mtime,
+                        has_thumb: s.has_thumb || false,
+                        path: 'library'
+                    };
+                });
+                var localShaders = getLocalShaders();
+                var combined = localShaders.concat(gcsShaders);
+                return new Response(JSON.stringify(combined), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // GET /api/images/list — merge GCS textures + localStorage images
+            if (urlStr.includes('/api/images/list')) {
+                var manifest = await getManifest();
+                var gcsImages = (manifest.tex || []).map(function(t) {
+                    // Rewrite file path to point at GCS
+                    return {
+                        file: t.file,
+                        name: t.name,
+                        mtime: t.mtime
+                    };
+                });
+                var localImages = getLocalImages();
+                var combined = localImages.concat(gcsImages);
+                return new Response(JSON.stringify(combined), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // POST /api/usergen/save — save to localStorage
+            if (urlStr.includes('/api/usergen/save') && method === 'POST') {
+                try {
+                    var body = JSON.parse(await new Response(options.body).text());
+                    var ts = Date.now();
+                    var item = {
+                        file: 'local/vj_shader_' + ts + '.frag',
+                        prompt: body.prompt || 'Untitled',
+                        type: body.layer_type || 'base',
+                        mtime: ts / 1000,
+                        has_thumb: false,
+                        code: body.code,
+                        path: 'local'
+                    };
+                    saveLocalShader(item);
+                    return new Response(JSON.stringify({ status: 'ok', file: item.file }), {
+                        status: 200, headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch(e) {
+                    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+                }
+            }
+
+            // POST /api/images/save — save to localStorage (base64 data URL)
+            if (urlStr.includes('/api/images/save') && method === 'POST') {
+                try {
+                    var body = JSON.parse(await new Response(options.body).text());
+                    var ts = Date.now();
+                    var item = {
+                        file: body.image,
+                        name: 'vj_image_' + ts + '.png',
+                        mtime: ts / 1000
+                    };
+                    saveLocalImage(item);
+                    return new Response(JSON.stringify({ status: 'ok' }), {
+                        status: 200, headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch(e) {
+                    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+                }
+            }
+
+            // DELETE /api/usergen/delete — remove from localStorage
+            if (urlStr.includes('/api/usergen/delete') && method === 'DELETE') {
+                var match = urlStr.match(/file=([^&]+)/);
+                if (match) deleteLocalShader(decodeURIComponent(match[1]));
+                return new Response(JSON.stringify({ status: 'ok' }), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // DELETE /api/images/delete — remove from localStorage
+            if (urlStr.includes('/api/images/delete') && method === 'DELETE') {
+                var match = urlStr.match(/file=([^&]+)/);
+                if (match) deleteLocalImage(decodeURIComponent(match[1]));
+                return new Response(JSON.stringify({ status: 'ok' }), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // POST /api/usergen/thumbnail — no-op in standalone
+            if (urlStr.includes('/api/usergen/thumbnail')) {
+                return new Response(JSON.stringify({ status: 'ok' }), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // POST /api/usergen/rename — update in localStorage
+            if (urlStr.includes('/api/usergen/rename') && method === 'POST') {
+                try {
+                    var body = JSON.parse(await new Response(options.body).text());
+                    var list = getLocalShaders();
+                    for (var i = 0; i < list.length; i++) {
+                        if (list[i].file === body.file) {
+                            list[i].prompt = body.new_prompt;
+                            break;
+                        }
+                    }
+                    localStorage.setItem(LS_KEY_SHADERS, JSON.stringify(list));
+                    return new Response(JSON.stringify({ status: 'ok' }), {
+                        status: 200, headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch(e) {
+                    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+                }
+            }
+
+            // GET library/<file>.frag — serve from localStorage code or GCS
+            if (urlStr.includes('/library/') && urlStr.endsWith('.frag')) {
+                // Check localStorage first for local saves
+                var localShaders = getLocalShaders();
+                for (var i = 0; i < localShaders.length; i++) {
+                    if (urlStr.includes(localShaders[i].file) && localShaders[i].code) {
+                        return new Response(localShaders[i].code, {
+                            status: 200, headers: { 'Content-Type': 'text/plain' }
+                        });
+                    }
+                }
+                // Fall through to GCS for default shaders
+                var gcsUrl = GCS_BASE + urlStr.substring(urlStr.indexOf('/library'));
+                return realFetch(gcsUrl, options);
+            }
+
+            // GET library/images/* — redirect to GCS for default textures
+            // Catches both relative (/library/images/...) and absolute (https://host/library/images/...) URLs
+            if (urlStr.includes('/library/images/')) {
+                // Check if it's a localStorage data URL image first
+                var localImgs = getLocalImages();
+                for (var j = 0; j < localImgs.length; j++) {
+                    if (localImgs[j].name && urlStr.includes(localImgs[j].name) && localImgs[j].file && localImgs[j].file.startsWith('data:')) {
+                        return realFetch(localImgs[j].file, options);
+                    }
+                }
+                var gcsUrl = GCS_BASE + urlStr.substring(urlStr.indexOf('/library'));
+                return realFetch(gcsUrl, options);
+            }
+
+            return realFetch.apply(this, arguments);
+        };
+
+        // Expose for debugging
+        window._standaloneLib = {
+            getLocalShaders: getLocalShaders,
+            getLocalImages: getLocalImages,
+            getManifest: getManifest
+        };
+    })();
+  </script>
+  <script type="module" crossorigin src="./assets/index-AGVsh3pp.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-B7HKXNwo.css">
+</head>
+
+<body>
+  <div id="root"></div>
+</body>
+
+</html>

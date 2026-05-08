@@ -233,7 +233,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "56261042";
+window.APP_VERSION = "58260219";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -334,7 +334,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v56261042)");
+    console.log("✅ RaveBox Core Ready (v58260219)");
 }
 
 // Kick off sync immediately
@@ -653,7 +653,7 @@ window.togglePresetEditor = function(show) {
     }
 };
 
-window.APP_VERSION = "56261042";
+window.APP_VERSION = "58260219";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
@@ -861,3 +861,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+/**
+ * LOCK DOWN MOBILE NAVIGATION GESTURES
+ * Combined with overscroll-behavior: none in CSS, this intercepts horizontal swipes
+ * starting from the screen edges to prevent accidental "Back" navigation in Chrome/Safari.
+ */
+(function() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            touchStartX = e.touches[0].pageX;
+            touchStartY = e.touches[0].pageY;
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 1) return;
+        const x = e.touches[0].pageX;
+        const y = e.touches[0].pageY;
+        const deltaX = Math.abs(x - touchStartX);
+        const deltaY = Math.abs(y - touchStartY);
+        
+        const edgeThreshold = 40;
+        const isNearEdge = touchStartX < edgeThreshold || touchStartX > (window.innerWidth - edgeThreshold);
+        
+        // If primarily horizontal and from the edge, block it to stop back/forward navigation
+        if (isNearEdge && deltaX > deltaY && deltaX > 10) {
+            if (e.cancelable) e.preventDefault();
+        }
+    }, { passive: false });
+})();

@@ -58,21 +58,8 @@
             height: 100vh;
             border: none;
         }
-        #info-peek {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.3);
-            pointer-events: none;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+
     </style>
-    <!-- Core logic dependencies (stubbed for standalone) -->
-    <script src="shared_setup.js"></script>
-    <script src="profile_logic.js"></script>
-    <script src="stage_logic.js"></script>
     <script src="standalone_engine.js"></script>
 </head>
 <body>
@@ -80,9 +67,10 @@
         <button id="launch-btn" onclick="launchDemo()">🚀 Launch Visualizer</button>
     </div>
 
-    <iframe id="viz-frame" src="visualdmx.html"></iframe>
+    <!-- Loads standalone_viz.html which patches WebSocket before the React bundle -->
+    <iframe id="viz-frame" src="standalone_viz.html"></iframe>
 
-    <div id="info-peek">Standalone Mode // No Backend Required // VJ Standalone v56261042</div>
+
 
     <script>
         function launchDemo() {

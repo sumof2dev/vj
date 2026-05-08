@@ -163,6 +163,16 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         if path.startswith('/api/usergen/save'):
             self._handle_save_shader()
             return
+            
+        # API: Save Shader Thumbnail
+        if path == '/api/usergen/thumbnail':
+            self._handle_save_thumbnail()
+            return
+
+        # API: Flag Shader Performance
+        if path == '/api/usergen/flag':
+            self._handle_flag_shader()
+            return
 
         # API: Save Image
         if path == '/api/images/save':
@@ -434,7 +444,11 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                         "file": rel_file, 
                         "prompt": prompt, 
                         "type": ltype,
-                        "mtime": os.path.getmtime(fpath)
+                        "luminance": meta.get('luminance', 0.5),
+                        "contrast": meta.get('contrast', 0.5),
+                        "heavy": meta.get('heavy', False),
+                        "mtime": os.path.getmtime(fpath),
+                        "has_thumb": os.path.exists(fpath + ".jpg")
                     })
             
             # Sort by most recent
@@ -524,6 +538,89 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._send_json({"status": "ok"})
         except Exception as e:
             print(f"❌ Error renaming shader: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_flag_shader(self):
+        """Mark a shader as 'heavy' or 'light' based on performance metrics"""
+        length = int(self.headers['Content-Length'])
+        body = self.rfile.read(length)
+        try:
+            data = json.loads(body)
+            fname = data.get('file')
+            heavy = data.get('heavy', True)
+            
+            if not fname or '..' in fname:
+                self.send_error(400, "Invalid request")
+                return
+
+            lib_root = os.path.join(BASE_DIR, 'library')
+            fpath = os.path.join(lib_root, fname)
+            meta_path = fpath + ".json"
+            
+            if os.path.exists(meta_path):
+                with open(meta_path, 'r') as m:
+                    meta = json.load(m)
+                meta['heavy'] = heavy
+                with open(meta_path, 'w') as m:
+                    json.dump(meta, m, indent=4)
+                print(f"🚩 Flagged {fname} as {'HEAVY' if heavy else 'LIGHT'}")
+                self._send_json({"status": "ok"})
+            else:
+                self.send_error(404, "Shader metadata not found")
+        except Exception as e:
+            print(f"❌ Error flagging shader: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_save_thumbnail(self):
+        """Save a thumbnail image next to a shader file"""
+        length = int(self.headers['Content-Length'])
+        body = self.rfile.read(length)
+        import base64
+        try:
+            data = json.loads(body)
+            fname = data.get('file')
+            b64_data = data.get('image')
+            
+            if not fname or '..' in fname or not b64_data or ',' not in b64_data:
+                self.send_error(400, "Invalid request")
+                return
+
+            lib_root = os.path.join(BASE_DIR, 'library')
+            fpath = os.path.join(lib_root, fname)
+            
+            header, encoded = b64_data.split(",", 1)
+            img_bytes = base64.b64decode(encoded)
+            
+            with open(fpath + ".jpg", "wb") as f:
+                f.write(img_bytes)
+
+            # Analyze for Luminance and Contrast
+            try:
+                import cv2
+                import numpy as np
+                nparr = np.frombuffer(img_bytes, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                if img is not None:
+                    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    lum = round(float(np.mean(gray) / 255.0), 3)
+                    con = round(float(np.std(gray) / 255.0), 3)
+                    
+                    meta_path = fpath + ".json"
+                    if os.path.exists(meta_path):
+                        with open(meta_path, 'r') as m:
+                            meta = json.load(m)
+                        meta['luminance'] = lum
+                        meta['contrast'] = con
+                        with open(meta_path, 'w') as m:
+                            json.dump(meta, m, indent=4)
+                        print(f"📊 Analyzed {fname}: Lum={lum}, Con={con}")
+            except Exception as ae:
+                print(f"⚠️ Metadata analysis failed: {ae}")
+
+            print(f"📸 Saved Thumbnail for: {fname}")
+            self._send_json({"status": "ok"})
+        except Exception as e:
+            print(f"❌ Error saving thumbnail: {e}")
             self.send_error(500, str(e))
 
     def _handle_list_recordings(self):

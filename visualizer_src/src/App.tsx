@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import * as THREE from "three";
-import { Camera, RefreshCw, X, Trash, Cloud, Layers, Sparkles, Settings, Key, Cpu, Save, Edit, Download, Home, Zap } from "lucide-react";
+import { Camera, RefreshCw, X, Trash, Cloud, Layers, Sparkles, Settings, Key, Cpu, Save, Edit, Download, Home, Zap, ChevronDown, Volume2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { GoogleGenAI } from "@google/genai";
 
@@ -469,6 +469,71 @@ const PRESET_WARPS = [
     { name: 'RINGS', code: CONCENTRIC_RINGS_SHADER }
 ];
 
+// EQ Monitor component for settings panel
+const EQ_LABELS = ['SUB', 'BASS', 'LOW', 'MID', 'HI', 'AIR'];
+const EQ_COLORS = ['#8b5cf6', '#6366f1', '#818cf8', '#a78bfa', '#c4b5fd', '#ddd6fe'];
+
+function EqMonitor({ audioDataRef, active }: { audioDataRef: React.RefObject<{ vol: number, bins: number[] }>, active: boolean }) {
+    const barsRef = useRef<(HTMLDivElement | null)[]>([]);
+    const volRef = useRef<HTMLDivElement | null>(null);
+    const volTextRef = useRef<HTMLSpanElement | null>(null);
+    const rafRef = useRef<number>(0);
+    const smoothed = useRef([0, 0, 0, 0, 0, 0]);
+    const smoothVol = useRef(0);
+
+    useEffect(() => {
+        if (!active) return;
+        let lastDraw = 0;
+        const draw = (t: number) => {
+            if (t - lastDraw > 50) { // ~20Hz update
+                lastDraw = t;
+                const data = audioDataRef.current;
+                const sf = 0.3;
+                for (let i = 0; i < 6; i++) {
+                    smoothed.current[i] += ((data?.bins[i] || 0) - smoothed.current[i]) * sf;
+                    const pct = Math.min(100, smoothed.current[i] * 100);
+                    if (barsRef.current[i]) barsRef.current[i]!.style.height = `${Math.max(4, pct)}%`;
+                }
+                smoothVol.current += ((data?.vol || 0) - smoothVol.current) * sf;
+                const volPct = Math.min(100, smoothVol.current * 100);
+                if (volRef.current) volRef.current.style.width = `${volPct}%`;
+                if (volTextRef.current) volTextRef.current.textContent = `${Math.round(volPct)}%`;
+            }
+            rafRef.current = requestAnimationFrame(draw);
+        };
+        rafRef.current = requestAnimationFrame(draw);
+        return () => cancelAnimationFrame(rafRef.current);
+    }, [active]);
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-end justify-between gap-1.5" style={{ height: 80 }}>
+                {EQ_LABELS.map((label, i) => (
+                    <div key={label} className="flex-1 flex flex-col items-center gap-1 h-full">
+                        <div className="flex-1 w-full flex items-end justify-center rounded-md overflow-hidden" style={{ background: 'rgba(0,0,0,0.4)' }}>
+                            <div
+                                ref={el => { barsRef.current[i] = el; }}
+                                className="w-full rounded-t-sm transition-all"
+                                style={{ height: '4%', background: EQ_COLORS[i], minHeight: 2 }}
+                            />
+                        </div>
+                        <span className="text-[7px] font-black tracking-wider text-zinc-600">{label}</span>
+                    </div>
+                ))}
+            </div>
+            <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                    <span className="text-[8px] font-black text-zinc-500 tracking-wider">VOL</span>
+                    <span ref={volTextRef} className="text-[8px] font-bold text-indigo-400 tabular-nums">0%</span>
+                </div>
+                <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                    <div ref={volRef} className="h-full rounded-full transition-all" style={{ width: '0%', background: 'linear-gradient(90deg, #6366f1, #a78bfa)' }} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const isNodeMode = useMemo(() => new URLSearchParams(window.location.search).get('mode') === 'node', []);
@@ -482,6 +547,7 @@ export default function App() {
     const [fps, setFps] = useState(60);
 
     const [libraryItems, setLibraryItems] = useState<any[]>([]);
+    const [thumbnailVersion, setThumbnailVersion] = useState(Date.now());
     const libraryRef = useRef<any[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [filterTab, setFilterTab] = useState<'tex' | 'base'>('tex');
@@ -489,9 +555,13 @@ export default function App() {
     // UI Toggles
     const [showAiInput, setShowAiInput] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [settingsSection, setSettingsSection] = useState<'eq' | 'perf' | 'api' | null>('eq');
     const [geminiKey, setGeminiKey] = useState(localStorage.getItem('vj_gemini_key') || '');
     const [aiModel, setAiModel] = useState(localStorage.getItem('vj_ai_model') || 'gemini-2.5-flash');
     const [highPerformance, setHighPerformance] = useState(localStorage.getItem('vj_high_perf') !== 'false');
+    const [inputGain, setInputGain] = useState(parseFloat(localStorage.getItem('vj_input_gain') || '1.0'));
+    const wsRef = useRef<WebSocket | null>(null);
+    const audioDataRef = useRef<{ vol: number, bins: number[] }>({ vol: 0, bins: [0,0,0,0,0,0] });
 
     const [geminiPrompt, setGeminiPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -503,6 +573,12 @@ export default function App() {
 
     // Audio Sync Vibe
     const vibeRef = useRef('mid');
+    const dimmingScaleRef = useRef(1.0);
+    const brightnessCheckCounter = useRef(0);
+    const pixelBuffer = useMemo(() => new Uint8Array(4), []);
+    const currentShaderRef = useRef<any>(null);
+    const lowFpsCounterRef = useRef(0);
+    const lastFlaggedRef = useRef<string | null>(null);
     const spotifyTextureRef = useRef<THREE.Texture | null>(null);
     const lastSpotifyUrlRef = useRef<string | null>(null);
     const currentVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -565,6 +641,7 @@ export default function App() {
             combined.sort((a, b) => b.mtime - a.mtime);
             setLibraryItems(combined);
             libraryRef.current = combined;
+            setThumbnailVersion(Date.now());
         } catch (err) { console.error("Library load failed:", err); }
     };
 
@@ -946,6 +1023,48 @@ export default function App() {
         }
     };
 
+    const handleImportShader = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const code = event.target?.result as string;
+            if (code) {
+                try {
+                    setStatus("💾 Importing Shader...");
+                    await fetch(`${apiBase}/api/usergen/save`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            code, 
+                            prompt: file.name.replace('.frag', ''), 
+                            layer_type: 'base' 
+                        })
+                    });
+                    setStatus("✅ Shader Imported");
+                    setStatusColor("text-emerald-400");
+                    fetchLibraries();
+                } catch (e) {
+                    setStatus("❌ Import Failed");
+                    setStatusColor("text-rose-400");
+                }
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const handleExportShader = () => {
+        if (!baseMeshRef.current) return;
+        const code = (baseMeshRef.current.material as THREE.ShaderMaterial).fragmentShader;
+        const blob = new Blob([code], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = activeShaderId?.split('/').pop() || 'shader.frag';
+        if (!a.download.endsWith('.frag')) a.download += '.frag';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+
     const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -1115,8 +1234,48 @@ export default function App() {
             frameCount++;
             const now = performance.now();
             const dt = now - lastTime;
-            if (dt >= 1000) { setFps(Math.round((frameCount * 1000) / dt)); frameCount = 0; lastTime = now; }
+            if (dt >= 1000) { 
+                const currentFps = Math.round((frameCount * 1000) / dt);
+                setFps(currentFps); 
+                frameCount = 0; 
+                lastTime = now; 
+
+                // --- PERFORMANCE WATCHDOG ---
+                // If a shader consistently stays below 48 FPS on a Pi 5, flag it as HEAVY
+                if (currentFps < 48 && currentShaderRef.current && !currentShaderRef.current.heavy) {
+                    lowFpsCounterRef.current++;
+                    const shaderFile = currentShaderRef.current.file;
+                    if (lowFpsCounterRef.current >= 4 && lastFlaggedRef.current !== shaderFile) {
+                        console.warn(`🚩 High Load Detected! Flagging shader as HEAVY: ${shaderFile}`);
+                        lastFlaggedRef.current = shaderFile;
+                        fetch(`${apiBase}/api/usergen/flag`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ file: shaderFile, heavy: true })
+                        }).catch(console.error);
+                        // Optimistically update local state so we gain immediate performance
+                        currentShaderRef.current.heavy = true;
+                    }
+                } else {
+                    lowFpsCounterRef.current = 0;
+                }
+            }
             uniformsRef.current.u_time.value = (now * 0.001) - startT;
+
+            // --- 1/2 PHASE PERFORMANCE SCALING ---
+            // If High Performance (1/2 Phase) is toggled ON, drop resolution for Heavy shaders
+            const isHeavy = currentShaderRef.current?.heavy;
+            if (highPerformanceRef.current && isHeavy) {
+                if (renderer.getPixelRatio() !== 0.5) renderer.setPixelRatio(0.5);
+            } else if (highPerformanceRef.current) {
+                // General high-performance mode (light sub-sampling)
+                if (renderer.getPixelRatio() !== 0.75) renderer.setPixelRatio(0.75);
+            } else {
+                // Standard mode (Full resolution)
+                const targetRatio = window.devicePixelRatio || 1.0;
+                if (renderer.getPixelRatio() !== targetRatio) renderer.setPixelRatio(targetRatio);
+            }
+
             if (highPerformanceRef.current || filterTabRef.current === 'tex') {
                 renderer.setRenderTarget(null);
                 renderer.render(baseScene, camera);
@@ -1133,9 +1292,37 @@ export default function App() {
 
             if (captureThumbnailForRef.current) {
                 const dataUrl = renderer.domElement.toDataURL('image/jpeg', 0.5);
-                localStorage.setItem(`thumb_${captureThumbnailForRef.current}`, dataUrl);
+                const targetFile = captureThumbnailForRef.current;
                 captureThumbnailForRef.current = null;
-                setForceRender(prev => prev + 1);
+                
+                fetch(`${apiBase}/api/usergen/thumbnail`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: targetFile, image: dataUrl })
+                }).then(res => {
+                    if (res.ok) fetchLibraries();
+                }).catch(console.error);
+            }
+
+            // --- AUTO-DIMMING (Audience Protection) ---
+            // Periodically check frame brightness to prevent blinding whiteouts
+            brightnessCheckCounter.current++;
+            if (brightnessCheckCounter.current % 15 === 0) {
+                const gl = renderer.getContext();
+                gl.readPixels(
+                    gl.drawingBufferWidth / 2, 
+                    gl.drawingBufferHeight / 2, 
+                    1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixelBuffer
+                );
+                const brightness = (pixelBuffer[0] + pixelBuffer[1] + pixelBuffer[2]) / (3 * 255.0);
+                
+                if (brightness > 0.94) { // Extreme brightness
+                    dimmingScaleRef.current = Math.max(0.3, dimmingScaleRef.current - 0.15);
+                } else if (brightness > 0.85) { // High brightness
+                    dimmingScaleRef.current = Math.max(0.6, dimmingScaleRef.current - 0.05);
+                } else {
+                    dimmingScaleRef.current = Math.min(1.0, dimmingScaleRef.current + 0.02);
+                }
             }
 
             requestAnimationFrame(animate);
@@ -1158,6 +1345,7 @@ export default function App() {
         const connect = () => {
             socket = new WebSocket(wsUrl);
             socket.binaryType = 'arraybuffer';
+            wsRef.current = socket;
             socket.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
                     const view = new DataView(event.data);
@@ -1169,6 +1357,13 @@ export default function App() {
                     targetMods.vol = view.getFloat32(20, true);
                     targetMods.beat_phase = view.getFloat32(28, true);
                     effIntensityRef.current = view.getUint8(59) / 255.0;
+
+                    // Store EQ data for settings monitor
+                    if (event.data.byteLength >= 56) {
+                        const eqBins = [];
+                        for (let i = 0; i < 6; i++) eqBins.push(view.getFloat32(32 + i * 4, true));
+                        audioDataRef.current = { vol: targetMods.vol, bins: eqBins };
+                    }
 
                     const baseIdx = view.getUint16(80, true);
 
@@ -1188,7 +1383,25 @@ export default function App() {
                             } else {
                                 lastBase = baseIdx;
                                 if (allSources.length > 0) {
-                                    const source = allSources[baseIdx % allSources.length];
+                                    // --- VIBE-AWARE SELECTION ---
+                                    // Prioritize shaders based on current energy vibe and metadata
+                                    const vibe = vibeRef.current;
+                                    let filteredPool = allSources;
+                                    
+                                    if (vibe === 'chill') {
+                                        // Chill vibes like dimmer, lower-contrast visuals
+                                        filteredPool = allSources.filter(i => (i.luminance === undefined || i.luminance < 0.45));
+                                    } else if (vibe === 'high') {
+                                        // High vibes like bright, punchy, high-contrast visuals
+                                        filteredPool = allSources.filter(i => (i.luminance === undefined || i.luminance > 0.55 || i.contrast > 0.35));
+                                    }
+                                    
+                                    // Fallback if filtering is too strict
+                                    if (filteredPool.length === 0) filteredPool = allSources;
+                                    
+                                    const source = filteredPool[baseIdx % filteredPool.length];
+                                    currentShaderRef.current = source;
+                                    lowFpsCounterRef.current = 0; // Reset watchdog for new shader
                                     
                                     // Randomly enable dual-image masking ~50% of the time on drops
                                     uniformsRef.current.u_dual.value = Math.random() > 0.5 ? 1.0 : 0.0;
@@ -1290,16 +1503,16 @@ export default function App() {
             // This eliminates drift while keeping local reactivity "liquid smooth"
             uniformsRef.current.u_clock.value = mTimeRef.current + localFlutterRef.current;
             // Master intensity scalar for the whole visual system
-            const masterAlpha = effIntensityRef.current;
-            uniformsRef.current.u_flux.value = smoothedMods.flux;
-            uniformsRef.current.u_bass.value = smoothedMods.bass;
-            uniformsRef.current.u_high.value = smoothedMods.high;
-            uniformsRef.current.u_vol.value = smoothedMods.vol;
+            const masterAlpha = effIntensityRef.current * dimmingScaleRef.current;
+            uniformsRef.current.u_flux.value = smoothedMods.flux * dimmingScaleRef.current;
+            uniformsRef.current.u_bass.value = smoothedMods.bass * dimmingScaleRef.current;
+            uniformsRef.current.u_high.value = smoothedMods.high * dimmingScaleRef.current;
+            uniformsRef.current.u_vol.value = smoothedMods.vol * dimmingScaleRef.current;
             uniformsRef.current.u_beat_phase.value = smoothedMods.beat_phase;
             
             // Calculate a snappy exponential pulse (1.0 -> 0.0) from the linear phase
             const beatPulse = Math.exp(-5.0 * smoothedMods.beat_phase);
-            uniformsRef.current.u_beat_pulse.value = beatPulse;
+            uniformsRef.current.u_beat_pulse.value = beatPulse * dimmingScaleRef.current;
 
             // Handle Blackout
             const isBlackout = blackoutActiveRef.current;
@@ -1361,7 +1574,7 @@ export default function App() {
         };
 
         connect(); updateLoop();
-        return () => socket?.close();
+        return () => { wsRef.current = null; socket?.close(); };
     }, [wsUrl]);
 
     return (
@@ -1378,7 +1591,7 @@ export default function App() {
                 {showHistory && (
                     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onClick={e => e.stopPropagation()} className="absolute top-4 left-4 bottom-4 w-80 bg-zinc-900/95 border border-zinc-800 rounded-2xl flex flex-col z-50 overflow-hidden pointer-events-auto backdrop-blur-md shadow-2xl">
                         <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-black/40">
-                            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Unified Library</h3>
+                            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Shaders</h3>
                             <div className="flex gap-2">
                                 {filterTab === 'tex' ? (
                                     <div className="relative">
@@ -1388,9 +1601,17 @@ export default function App() {
                                         </button>
                                     </div>
                                 ) : (
-                                    <button onClick={() => setShowAiInput(!showAiInput)} className={`p-1.5 rounded-md transition-all shadow-lg ${showAiInput ? 'bg-fuchsia-600 text-white' : 'bg-zinc-800 text-fuchsia-400 hover:text-white'}`}>
-                                        <Sparkles size={14} />
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <div className="relative">
+                                            <input type="file" accept=".frag" onChange={handleImportShader} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
+                                            <button title="Import Shader" className="p-1.5 bg-zinc-800 text-emerald-400 hover:text-white rounded-md transition-all shadow-lg">
+                                                <Cloud size={14} />
+                                            </button>
+                                        </div>
+                                        <button onClick={() => setShowAiInput(!showAiInput)} className={`p-1.5 rounded-md transition-all shadow-lg ${showAiInput ? 'bg-fuchsia-600 text-white' : 'bg-zinc-800 text-fuchsia-400 hover:text-white'}`}>
+                                            <Sparkles size={14} />
+                                        </button>
+                                    </div>
                                 )}
                                 <button onClick={() => setShowHistory(false)} className="p-1.5 hover:bg-zinc-800 rounded-md"><X size={14} /></button>
                             </div>
@@ -1429,90 +1650,91 @@ export default function App() {
                             ))}
                         </div>
 
-                        <div className="flex-1 overflow-auto p-4 gap-4 grid grid-cols-2 content-start custom-scrollbar">
-                            {((filterTab === 'tex' && currentSpotifyArt)
-                                ? [{ category: 'spotify', file: currentSpotifyArt, name: 'Spotify Art' }, ...libraryItems.filter(i => i.category === 'tex')]
-                                : libraryItems.filter(i => i.category === filterTab)
-                            ).map((item, idx) => (
-                                item.category === 'spotify' ? (
-                                    <div key="spotify" className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer shadow-lg transition-all ${activeShaderId === 'spotify-art' ? 'border-emerald-500 shadow-emerald-500/20' : 'border-zinc-800 hover:border-emerald-400'}`} onClick={() => loadFromLibrary(item)}>
-                                        <img src={item.file} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <div className="bg-emerald-500 text-black text-[8px] font-black px-2 py-0.5 rounded-full mb-1">LIVE</div>
-                                            <div className="text-[10px] font-bold text-white">SPOTIFY</div>
+                        <div className="flex-1 overflow-auto custom-scrollbar">
+                            <div className="p-4 grid grid-cols-2 gap-4 content-start" style={{ gridAutoRows: 'auto' }}>
+                                {((filterTab === 'tex' && currentSpotifyArt)
+                                    ? [{ category: 'spotify', file: currentSpotifyArt, name: 'Spotify Art' }, ...libraryItems.filter(i => i.category === 'tex')]
+                                    : libraryItems.filter(i => i.category === filterTab)
+                                ).map((item, idx) => (
+                                    item.category === 'spotify' ? (
+                                        <div key="spotify" className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer shadow-lg transition-all ${activeShaderId === 'spotify-art' ? 'border-emerald-500 shadow-emerald-500/20' : 'border-zinc-800 hover:border-emerald-400'}`} onClick={() => loadFromLibrary(item)}>
+                                            <img src={item.file} className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="bg-emerald-500 text-black text-[8px] font-black px-2 py-0.5 rounded-full mb-1">LIVE</div>
+                                                <div className="text-[10px] font-bold text-white">SPOTIFY</div>
+                                            </div>
+                                            {activeShaderId === 'spotify-art' && (
+                                                <div className="absolute top-2 left-2 w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                                            )}
                                         </div>
-                                        {activeShaderId === 'spotify-art' && (
-                                            <div className="absolute top-2 left-2 w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                                        )}
-                                    </div>
-                                ) : filterTab === 'tex' ? (
-                                    <div key={idx} className={`relative group aspect-square rounded-xl overflow-hidden border cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-zinc-800 hover:border-indigo-400'}`} onClick={() => loadFromLibrary(item)}>
-                                        {item.file.match(/\.(mp4|webm|ogg)$/i) ? (
-                                            <video src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" autoPlay muted loop playsInline />
-                                        ) : (
-                                            <img src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" />
-                                        )}
-                                        <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-rose-500 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity backdrop-blur-md"><X size={14} /></button>
-
-                                    </div>
-                                ) : (
-                                    <div
-                                        key={idx}
-                                        className={`relative group aspect-square rounded-xl border flex flex-col items-center justify-center p-3 cursor-pointer shadow-lg transition-all overflow-hidden ${activeShaderId === item.file ? 'border-fuchsia-500 ring-2 ring-fuchsia-500/20' : 'border-zinc-800 bg-black hover:border-zinc-600 hover:bg-zinc-900'}`}
-                                        onClick={() => {
-                                            if (activeShaderId === item.file) {
-                                                renameLibraryItem(item);
-                                            } else {
-                                                loadAiShader(item);
-                                            }
-                                        }}
-                                    >
-                                        {localStorage.getItem(`thumb_${item.file}`) ? (
-                                            <>
-                                                <img src={localStorage.getItem(`thumb_${item.file}`)!} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity" />
-                                                <div className="relative z-10 text-[9px] text-white font-bold text-center line-clamp-3 leading-relaxed drop-shadow-md">{item.prompt || item.file}</div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Sparkles size={24} className={`${activeShaderId === item.file ? 'text-fuchsia-400' : 'text-zinc-600 group-hover:text-fuchsia-400'} mb-2 transition-colors`} />
-                                                <div className="text-[9px] text-zinc-500 font-bold text-center line-clamp-3 leading-relaxed">{item.prompt || item.file}</div>
-                                            </>
-                                        )}
-                                        <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black hover:bg-rose-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"><X size={14} /></button>
-                                        {activeShaderId === item.file && (
-                                            <>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        captureThumbnailForRef.current = item.file;
-                                                    }}
-                                                    className="absolute top-2 left-2 p-1.5 bg-black hover:bg-emerald-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"
-                                                    title="Capture Thumbnail"
-                                                >
-                                                    <Camera size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        const libPath = 'library';
-                                                        const res = await fetch(`${apiBase}/${libPath}/${item.file}`);
-                                                        const code = await res.text();
-                                                        const blob = new Blob([code], { type: 'text/plain' });
-                                                        const a = document.createElement('a');
-                                                        a.href = URL.createObjectURL(blob);
-                                                        a.download = item.file.split('/').pop() || 'shader.frag';
-                                                        a.click();
-                                                        URL.revokeObjectURL(a.href);
-                                                    }}
-                                                    className="absolute bottom-2 inset-x-2 py-1 bg-fuchsia-600/80 hover:bg-fuchsia-500 rounded-lg text-white text-[8px] font-black tracking-widest flex items-center justify-center gap-1 transition-colors z-20"
-                                                >
-                                                    <Download size={10} /> SAVE .FRAG
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                )
-                            ))}
+                                    ) : filterTab === 'tex' ? (
+                                        <div key={idx} className={`relative group aspect-square rounded-xl overflow-hidden border cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-zinc-800 hover:border-indigo-400'}`} onClick={() => loadFromLibrary(item)}>
+                                            {item.file.match(/\.(mp4|webm|ogg)$/i) ? (
+                                                <video src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                                            ) : (
+                                                <img src={`${apiBase}/${item.file}?t=${thumbnailVersion}`} className="w-full h-full object-cover" />
+                                            )}
+                                            <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-rose-500 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity backdrop-blur-md"><X size={14} /></button>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            key={idx}
+                                            className={`relative group aspect-square rounded-xl border flex flex-col items-center justify-center p-3 cursor-pointer shadow-lg transition-all overflow-hidden ${activeShaderId === item.file ? 'border-fuchsia-500 ring-2 ring-fuchsia-500/20' : 'border-zinc-800 bg-black hover:border-zinc-600 hover:bg-zinc-900'}`}
+                                            onClick={() => {
+                                                if (activeShaderId === item.file) {
+                                                    renameLibraryItem(item);
+                                                } else {
+                                                    loadAiShader(item);
+                                                }
+                                            }}
+                                        >
+                                            {item.has_thumb ? (
+                                                <>
+                                                    <img src={`${apiBase}/library/${item.file}.jpg?t=${thumbnailVersion}`} className="absolute inset-0 w-full h-full object-cover opacity-100 transition-opacity" />
+                                                    <div className="relative z-10 text-[9px] text-white font-bold text-center line-clamp-3 leading-relaxed drop-shadow-md">{item.prompt || item.file}</div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles size={24} className={`${activeShaderId === item.file ? 'text-fuchsia-400' : 'text-zinc-600 group-hover:text-fuchsia-400'} mb-2 transition-colors`} />
+                                                    <div className="text-[9px] text-zinc-500 font-bold text-center line-clamp-3 leading-relaxed">{item.prompt || item.file}</div>
+                                                </>
+                                            )}
+                                            <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black hover:bg-rose-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"><X size={14} /></button>
+                                            {activeShaderId === item.file && (
+                                                <>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            captureThumbnailForRef.current = item.file;
+                                                        }}
+                                                        className="absolute top-2 left-2 p-1.5 bg-black hover:bg-emerald-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"
+                                                        title="Capture Thumbnail"
+                                                    >
+                                                        <Camera size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            const libPath = 'library';
+                                                            const res = await fetch(`${apiBase}/${libPath}/${item.file}`);
+                                                            const code = await res.text();
+                                                            const blob = new Blob([code], { type: 'text/plain' });
+                                                            const a = document.createElement('a');
+                                                            a.href = URL.createObjectURL(blob);
+                                                            a.download = item.file.split('/').pop() || 'shader.frag';
+                                                            a.click();
+                                                            URL.revokeObjectURL(a.href);
+                                                        }}
+                                                        className="absolute bottom-2 inset-x-2 py-1 bg-fuchsia-600/80 hover:bg-fuchsia-500 rounded-lg text-white text-[8px] font-black tracking-widest flex items-center justify-center gap-1 transition-colors z-20"
+                                                    >
+                                                        <Download size={10} /> SAVE .FRAG
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    )
+                                ))}
+                            </div>
                         </div>
 
                         <div className="flex-none p-4 border-t border-zinc-800 bg-black/60 backdrop-blur-md">
@@ -1562,66 +1784,103 @@ export default function App() {
                 )}
 
                 {showSettings && (
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} onClick={e => e.stopPropagation()} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 bg-zinc-900/98 border border-zinc-800 rounded-3xl p-6 z-[100] pointer-events-auto backdrop-blur-2xl shadow-3xl">
-                        <div className="flex justify-between items-center mb-6">
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} onClick={e => e.stopPropagation()} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 bg-zinc-900/98 border border-zinc-800 rounded-3xl p-5 z-[100] pointer-events-auto backdrop-blur-2xl shadow-3xl max-h-[85vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xs font-black tracking-widest text-zinc-400 flex items-center gap-2">
-                                <Settings size={14} /> ENGINE SETTINGS
+                                <Settings size={14} /> ENGINE
                             </h3>
                             <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-zinc-800 rounded-full"><X size={16} /></button>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-500 tracking-wider flex items-center gap-2 px-1">
-                                    <Key size={10} /> GEMINI API KEY
-                                </label>
-                                <form autoComplete="off" onSubmit={e => e.preventDefault()}>
-                                    <input type="text" name="username" autoComplete="username" style={{ display: 'none' }} readOnly />
-                                    <input
-                                        type="password"
-                                        value={geminiKey}
-                                        onChange={e => { setGeminiKey(e.target.value); localStorage.setItem('vj_gemini_key', e.target.value); }}
-                                        placeholder="Paste API Key..."
-                                        autoComplete="current-password"
-                                        className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-indigo-400 focus:outline-none focus:border-indigo-500/50"
-                                    />
-                                </form>
+                        <div className="space-y-2">
+                            {/* EQ MONITOR — expanded by default, auto-collapses when others open */}
+                            <div className="rounded-2xl border border-zinc-800 overflow-hidden">
+                                <div className={`transition-all duration-300 overflow-hidden ${settingsSection === 'eq' ? 'max-h-60 p-4' : 'max-h-0 p-0'}`}>
+                                    <EqMonitor audioDataRef={audioDataRef} active={settingsSection === 'eq' && showSettings} />
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-500 tracking-wider flex items-center gap-2 px-1">
-                                    <Cpu size={10} /> AI MODEL
-                                </label>
-                                <select
-                                    value={aiModel}
-                                    onChange={e => { setAiModel(e.target.value); localStorage.setItem('vj_ai_model', e.target.value); }}
-                                    className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 appearance-none"
-                                >
-                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                    <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
-                                    <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
-                                    <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
-                                </select>
+                            {/* PERFORMANCE — collapsed by default */}
+                            <div className="rounded-2xl border border-zinc-800 overflow-hidden">
+                                <button onClick={() => setSettingsSection(settingsSection === 'perf' ? 'eq' : 'perf')} className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black tracking-widest text-zinc-400 hover:bg-zinc-800/50 transition-colors">
+                                    <div className="flex items-center gap-2"><Zap size={10} /> PERFORMANCE</div>
+                                    <ChevronDown size={12} className={`transition-transform ${settingsSection === 'perf' ? 'rotate-180' : ''}`} />
+                                </button>
+                                <div className={`transition-all duration-300 overflow-hidden ${settingsSection === 'perf' ? 'max-h-60' : 'max-h-0'}`}>
+                                    <div className="px-4 pb-4 space-y-4">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-zinc-500 tracking-wider">INPUT GAIN</span>
+                                                <span className="text-[10px] font-bold text-indigo-400 tabular-nums">{inputGain.toFixed(1)}</span>
+                                            </div>
+                                            <input type="range" min="0" max="2" step="0.05" value={inputGain}
+                                                onChange={e => {
+                                                    const v = parseFloat(e.target.value);
+                                                    setInputGain(v);
+                                                    localStorage.setItem('vj_input_gain', String(v));
+                                                    if (wsRef.current && wsRef.current.readyState === 1) {
+                                                        wsRef.current.send(JSON.stringify({ type: 'params', sensitivity: v }));
+                                                    }
+                                                }}
+                                                className="w-full h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                                            />
+                                        </div>
+                                        <label className="text-[10px] font-black text-zinc-500 tracking-wider flex items-center justify-between cursor-pointer" onClick={() => {
+                                            const newVal = !highPerformance;
+                                            setHighPerformance(newVal);
+                                            localStorage.setItem('vj_high_perf', String(newVal));
+                                        }}>
+                                            <span>1-STAGE RENDER</span>
+                                            <div className={`w-8 h-4 rounded-full flex items-center p-0.5 transition-colors ${highPerformance ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
+                                                <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${highPerformance ? 'translate-x-4' : 'translate-x-0'}`} />
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-500 tracking-wider flex items-center justify-between px-1 cursor-pointer" onClick={() => {
-                                    const newVal = !highPerformance;
-                                    setHighPerformance(newVal);
-                                    localStorage.setItem('vj_high_perf', String(newVal));
-                                }}>
-                                    <div className="flex items-center gap-2">
-                                        <Zap size={10} /> HIGH PERFORMANCE (1-PASS)
+
+                            {/* API — collapsed by default */}
+                            <div className="rounded-2xl border border-zinc-800 overflow-hidden">
+                                <button onClick={() => setSettingsSection(settingsSection === 'api' ? 'eq' : 'api')} className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black tracking-widest text-zinc-400 hover:bg-zinc-800/50 transition-colors">
+                                    <div className="flex items-center gap-2"><Key size={10} /> API</div>
+                                    <ChevronDown size={12} className={`transition-transform ${settingsSection === 'api' ? 'rotate-180' : ''}`} />
+                                </button>
+                                <div className={`transition-all duration-300 overflow-hidden ${settingsSection === 'api' ? 'max-h-60' : 'max-h-0'}`}>
+                                    <div className="px-4 pb-4 space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-zinc-500 tracking-wider">GEMINI API KEY</label>
+                                            <form autoComplete="off" onSubmit={e => e.preventDefault()}>
+                                                <input type="text" name="username" autoComplete="username" style={{ display: 'none' }} readOnly />
+                                                <input
+                                                    type="password"
+                                                    value={geminiKey}
+                                                    onChange={e => { setGeminiKey(e.target.value); localStorage.setItem('vj_gemini_key', e.target.value); }}
+                                                    placeholder="Paste API Key..."
+                                                    autoComplete="current-password"
+                                                    className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-indigo-400 focus:outline-none focus:border-indigo-500/50"
+                                                />
+                                            </form>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-zinc-500 tracking-wider">AI MODEL</label>
+                                            <select
+                                                value={aiModel}
+                                                onChange={e => { setAiModel(e.target.value); localStorage.setItem('vj_ai_model', e.target.value); }}
+                                                className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 appearance-none"
+                                            >
+                                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                                <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
+                                                <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite</option>
+                                                <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div className={`w-8 h-4 rounded-full flex items-center p-0.5 transition-colors ${highPerformance ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
-                                        <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${highPerformance ? 'translate-x-4' : 'translate-x-0'}`} />
-                                    </div>
-                                </label>
+                                </div>
                             </div>
                         </div>
 
-                        <button onClick={() => setShowSettings(false)} className="w-full mt-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-[10px] font-black tracking-widest rounded-xl transition-all shadow-lg active:scale-95">
-                            SAVE & CLOSE
+                        <button onClick={() => setShowSettings(false)} className="w-full mt-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-[10px] font-black tracking-widest rounded-xl transition-all shadow-lg active:scale-95">
+                            CLOSE
                         </button>
                     </motion.div>
                 )}

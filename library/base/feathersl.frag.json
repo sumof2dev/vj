@@ -1,1 +1,6 @@
-{"prompt": "solar system", "type": "base"}
+{
+    "prompt": "solar system",
+    "type": "base",
+    "luminance": 0.022,
+    "contrast": 0.056
+}

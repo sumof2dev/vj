@@ -8,67 +8,67 @@ let prevEnergy = 0;
 let baseIdx = 0;
 let fxIdx = 0;
 let lastCycleTime = Date.now();
+let integratedTime = 0;
+let lastFrameTime = 0;
 
-// --- MOCK WEBSOCKET SYSTEM ---
-const mockSockets = new Set();
-class MockWebSocket {
-    constructor(url) {
-        this.url = url;
-        this.readyState = 0; // CONNECTING
-        this.binaryType = 'blob';
-        mockSockets.add(this);
-        setTimeout(() => {
-            this.readyState = 1; // OPEN
-            if (this.onopen) this.onopen();
-        }, 50);
-    }
-    send(data) { console.debug("MockWS Send:", data); }
-    close() { mockSockets.delete(this); this.readyState = 3; }
-}
-window.MockWebSocket = MockWebSocket;
+// Reference to the iframe window for broadcasting
+let iframeWindow = null;
 
-function broadcastToMocks(data) {
-    mockSockets.forEach(ws => {
-        if (ws.onmessage) ws.onmessage({ data });
-    });
+function registerIframeWindow(win) {
+    iframeWindow = win;
+    console.log("🔗 Iframe window registered for standalone broadcasting");
 }
 
-// --- MOCK API (Fetch Interceptor) ---
-const originalFetch = window.fetch;
-window.fetch = async function(url, options) {
-    const urlStr = url.toString();
-    if (urlStr.includes('/api/images/list')) {
-        return new Response(JSON.stringify([
-            { file: 'demo_bg_1.jpg', name: 'demo_bg_1.jpg', mtime: Date.now() }
-        ]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+
+
+function broadcastToIframe(data) {
+    try {
+        const frame = document.getElementById('viz-frame');
+        if (frame && frame.contentWindow && frame.contentWindow._broadcastToMocks) {
+            frame.contentWindow._broadcastToMocks(data);
+        }
+    } catch (e) {
+        // Cross-origin or iframe not ready
     }
-    if (urlStr.includes('/api/usergen/list')) {
-        return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    }
-    // Fallback for real assets if they exist, or just return mock 200 for things we don't care about
-    if (urlStr.endsWith('.jpg') || urlStr.endsWith('.png')) {
-        // Return a transparent pixel or similar if file not found? 
-        // For a demo, the user might want to see SOMETHING.
-        // But for now, just let it fail or return original if it's a relative path.
-    }
-    return originalFetch.apply(this, arguments);
-};
+}
 
 async function startStandaloneEngine() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+            }
+        });
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Mobile browsers start AudioContext in "suspended" state.
+        // Must resume during a user gesture or analyser returns all zeros.
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.6;
         const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
+
+        // Boost mic input — mobile devices often deliver very low levels
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 2.5;
+        source.connect(gainNode);
+        gainNode.connect(analyser);
+
         dataArray = new Uint8Array(analyser.frequencyBinCount);
         
         const btn = document.getElementById('standalone-btn');
         if (btn) btn.style.display = 'none';
 
+        lastFrameTime = performance.now() / 1000;
         requestAnimationFrame(standaloneLoop);
-        console.log("🎤 Standalone Engine Active");
+        console.log("🎤 Standalone Engine Active — AudioContext state:", audioContext.state);
     } catch (err) {
         console.error("Audio access denied.", err);
         alert("Microphone access is required for the standalone demo.");
@@ -78,6 +78,10 @@ async function startStandaloneEngine() {
 function standaloneLoop() {
     analyser.getByteFrequencyData(dataArray);
     
+    const now = performance.now() / 1000;
+    const dt = now - lastFrameTime;
+    lastFrameTime = now;
+
     let bins = [0, 0, 0, 0, 0, 0];
     // Group FFT into 6 bins for the visualizer
     for (let i = 0; i < 4; i++) bins[0] += dataArray[i]; // Sub
@@ -97,6 +101,10 @@ function standaloneLoop() {
     prevEnergy = currentEnergy;
     const isBeat = flux > 0.12;
 
+    // Integrate mTime: base speed + audio modulation (matches backend effSpeed=0.6 default)
+    const effSpeed = 0.6;
+    integratedTime += dt * effSpeed * (1.0 + flux * 2.0 + bins[1] * 0.5);
+
     // Update global state
     window.latestAudioState.vol = currentEnergy;
     window.latestAudioState.bins = bins;
@@ -113,34 +121,80 @@ function standaloneLoop() {
         console.log("🔄 Auto-Cycling Shaders:", { baseIdx, fxIdx });
     }
 
-    // BROADCAST BINARY PACKET (SPOOFED)
-    // Layout (86-byte header): 
-    // [0..3: time] [4..7: flux] [8..11: bass] [16..19: high] [20..23: vol] [28..31: beat_phase] ... [80..81: baseIdx] [82..83: fxIdx] [86..end: DMX]
+    // BROADCAST BINARY PACKET
+    // Layout matches backend pack_binary_state():
+    // [0..3]:   mTime (float32)        — integrated audio-modulated time
+    // [4..7]:   flux (float32)         — energy flux
+    // [8..11]:  bass (float32)         — bass energy
+    // [12..15]: mid (float32)          — mid frequency energy
+    // [16..19]: high (float32)         — high frequency energy
+    // [20..23]: vol (float32)          — overall volume
+    // [24..27]: bpm (float32)          — estimated BPM
+    // [28..31]: beat_phase (float32)   — 0.0-1.0 sawtooth
+    // [32..55]: bins[0..5] (6x float32) — 6-band EQ
+    // [56]:     beat (uint8)           — beat flag
+    // [59]:     eff_intensity (uint8)  — master intensity (0-255)
+    // [80..81]: baseIdx (uint16)       — shader cycle index
+    // [82..83]: fxIdx (uint16)         — fx index
+    // [86..end]: DMX universe (513 bytes)
     const buffer = new ArrayBuffer(86 + 513);
     const view = new DataView(buffer);
+
+    // Offset 0: mTime — integrated time for u_clock sync
+    view.setFloat32(0, integratedTime, true);
+
+    // Offset 4: flux
     view.setFloat32(4, flux, true);
+
+    // Offset 8: bass
     view.setFloat32(8, bins[1], true);
+
+    // Offset 12: mid
+    view.setFloat32(12, bins[3], true);
+
+    // Offset 16: high
     view.setFloat32(16, bins[5], true);
+
+    // Offset 20: vol (overall energy)
     view.setFloat32(20, currentEnergy, true);
-    
-    // Mock beat phase (0.0 to 1.0 ramp based on time, approx 120bpm)
+
+    // Offset 24: estimated BPM (simple fixed estimate for standalone)
+    view.setFloat32(24, 120.0, true);
+
+    // Offset 28: beat_phase (0.0 to 1.0 ramp, approx 120bpm)
     const beatPhase = (Date.now() % 500) / 500.0;
     view.setFloat32(28, beatPhase, true);
 
+    // Offset 32-55: 6-band EQ bins
+    for (let i = 0; i < 6; i++) {
+        view.setFloat32(32 + (i * 4), bins[i], true);
+    }
+
+    // Offset 56: beat flag
+    view.setUint8(56, isBeat ? 1 : 0);
+
+    // Offset 59: eff_intensity — full brightness in standalone mode
+    view.setUint8(59, 255);
+
+    // Offset 80-83: shader indices
     view.setUint16(80, baseIdx, true);
     view.setUint16(82, fxIdx, true);
+
     // Fill DMX part
     for (let i = 0; i < 513; i++) view.setUint8(86 + i, window.latestDmxUniverse[i]);
 
-    broadcastToMocks(buffer);
+    broadcastToIframe(buffer);
 
-    // Also broadcast State JSON occasionally or on change
+    // Broadcast State JSON periodically for vibe/commands sync
     if (isBeat) {
-        broadcastToMocks(JSON.stringify({
+        broadcastToIframe(JSON.stringify({
             type: 'state',
             vibe: window.latestAudioState.vibe,
             transient: window.latestAudioState.transient,
-            beat: true
+            beat: true,
+            eff_speed: effSpeed,
+            eff_intensity: 1.0,
+            visual_commands: []
         }));
     }
 

@@ -1,1 +1,6 @@
-{"prompt": "stained glass", "type": "base"}
+{
+    "prompt": "stained glass",
+    "type": "base",
+    "luminance": 0.441,
+    "contrast": 0.187
+}

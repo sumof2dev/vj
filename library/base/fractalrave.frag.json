@@ -1,1 +1,6 @@
-{"prompt": "tie dye fractal", "type": "base"}
+{
+    "prompt": "tie dye fractal",
+    "type": "base",
+    "luminance": 0.124,
+    "contrast": 0.134
+}

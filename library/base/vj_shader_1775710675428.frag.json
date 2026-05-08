@@ -1,1 +1,8 @@
-{"prompt": "Lissajous patterns driven off audio frequency and beat", "timestamp": 1775710675428, "id": 1775710675428, "type": "base"}
+{
+    "prompt": "Lissajous patterns driven off audio frequency and beat",
+    "timestamp": 1775710675428,
+    "id": 1775710675428,
+    "type": "base",
+    "luminance": 0.192,
+    "contrast": 0.008
+}

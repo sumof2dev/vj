@@ -1,1 +1,8 @@
-{"prompt": "Fractal tunnels", "timestamp": 1775722320225, "id": 1775722320225, "type": "base"}
+{
+    "prompt": "Fractal tunnels",
+    "timestamp": 1775722320225,
+    "id": 1775722320225,
+    "type": "base",
+    "luminance": 0.911,
+    "contrast": 0.061
+}

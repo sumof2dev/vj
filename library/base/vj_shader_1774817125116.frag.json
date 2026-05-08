@@ -1,1 +1,8 @@
-{"prompt": "Kaliedoscope mandala ", "timestamp": 1774817125116, "id": 1774817125116, "type": "base"}
+{
+    "prompt": "Kaliedoscope mandala ",
+    "timestamp": 1774817125116,
+    "id": 1774817125116,
+    "type": "base",
+    "luminance": 0.184,
+    "contrast": 0.236
+}

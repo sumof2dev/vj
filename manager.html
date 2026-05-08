@@ -39,6 +39,7 @@
             touch-action: none;
             /* Disable browser gestures like pull-to-refresh */
             overscroll-behavior: none;
+            overscroll-behavior-x: none;
         }
 
         /* Ken Burns Tunnel Background */
@@ -59,10 +60,9 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            opacity: 0;
+            opacity: 0.6;
             filter: brightness(0.85) saturate(1.2);
-            /* 32s total cycle for 4 images (8s each) */
-            animation: tunnel-move 32s infinite linear;
+            /* Removed animation: tunnel-move 32s infinite linear; for performance */
         }
 
         .bg-overlay {
@@ -75,19 +75,7 @@
             z-index: 1;
         }
 
-        /* Stagger the animations so they crossfade */
-        .bg-image:nth-child(1) { animation-delay: 0s; }
-        .bg-image:nth-child(2) { animation-delay: 8s; }
-        .bg-image:nth-child(3) { animation-delay: 16s; }
-        .bg-image:nth-child(4) { animation-delay: 24s; }
-
-        @keyframes tunnel-move {
-            0%   { opacity: 0; transform: scale(1); }
-            5%   { opacity: 1; }
-            25%  { opacity: 1; transform: scale(1.1); } /* End of primary phase */
-            35%  { opacity: 0; transform: scale(1.15); } /* Fade out during next image start */
-            100% { opacity: 0; transform: scale(1); }
-        }
+        /* Removed nth-child staggered animations and tunnel-move keyframes for performance */
 
         /* Scanlines Effect */
         .scanlines {
@@ -844,9 +832,6 @@
     <div class="bg-container" id="bgContainer">
         <div id="tunnelLayer">
             <img src="/public/background.png" class="bg-image">
-            <img src="/public/background2.png" class="bg-image">
-            <img src="/public/background3.png" class="bg-image">
-            <img src="/public/background4.png" class="bg-image">
         </div>
         <img id="spotifyBg" class="spotify-bg-image" src="">
         <div class="bg-overlay"></div>
@@ -864,7 +849,7 @@
 
     <div class="container">
         <h1>RaveBox <a href="console.html"
-                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v56261042</span></h1>
+                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v58260219</span></h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
@@ -1009,6 +994,17 @@
                     <span class="slider"></span>
                 </label>
             </div>
+
+            <div class="toggle-row" id="dmxInterfaceRow">
+                <div class="toggle-label">
+                    <div style="font-weight: bold; color: #fff;">DMX Output</div>
+                    <div id="dmxInterfaceLabel" style="font-size: 0.7rem; opacity: 0.7;">RS485 HAT Preferred</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="pairDmxInterface">
+                    <span class="slider"></span>
+                </label>
+            </div>
             
             <div class="action-btns" style="margin-top: 1rem;">
                 <button class="btn btn-restart" onclick="closePairModal()" style="flex:1;">Cancel</button>
@@ -1037,32 +1033,89 @@
         // Routing and globals are handled by shared_setup.js
         console.log("📍 Host:", window.host, "| Launcher:", window.LAUNCHER_API);
 
-        function changeHost() {
+        async function changeHost() {
             const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
             const isNode = localStorage.getItem('vj_node_mode') === 'true';
             
             document.getElementById('pairCode').value = current === window.location.hostname ? '' : current;
             document.getElementById('pairNodeMode').checked = isNode;
+            
+            // Open modal immediately for better UX
             document.getElementById('pairModal').style.display = 'flex';
             document.getElementById('pairCode').focus();
+
+            // Then populate DMX preference from backend
+            try {
+                const res = await fetch(`${window.API_BASE_ROOT}/api/remote_settings`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const dmxPref = data.master?.dmx_interface || "HAT";
+                    const isUsb = dmxPref === "USB";
+                    const toggle = document.getElementById('pairDmxInterface');
+                    const label = document.getElementById('dmxInterfaceLabel');
+                    if (toggle) toggle.checked = isUsb;
+                    if (label) label.innerText = isUsb ? "USB FTDI Preferred" : "RS485 HAT Preferred";
+                }
+            } catch(e) { console.warn("DMX settings fetch failed", e); }
         }
+
+        // Handle DMX toggle label updates
+        document.addEventListener('DOMContentLoaded', () => {
+            const dmxToggle = document.getElementById('pairDmxInterface');
+            if (dmxToggle) {
+                dmxToggle.onchange = (e) => {
+                    document.getElementById('dmxInterfaceLabel').innerText = e.target.checked ? "USB FTDI Preferred" : "RS485 HAT Preferred";
+                };
+            }
+        });
 
         function closePairModal() {
             document.getElementById('pairModal').style.display = 'none';
         }
 
-        function savePairing() {
+        async function savePairing() {
+            const btn = event ? event.target : null;
+            const originalText = btn ? btn.innerText : "Save";
+            if (btn) { btn.innerText = "⏳ Saving..."; btn.disabled = true; }
+
             const next = document.getElementById('pairCode').value.trim();
             const isNode = document.getElementById('pairNodeMode').checked;
+            const isUsb = document.getElementById('pairDmxInterface').checked;
             
-            if (next === "" || next === window.location.hostname) {
+            // 1. Update Backend (Hardware Setting)
+            // We always try to push this if we aren't on the pure cloud domain
+            if (!window.location.hostname.includes('ravebox.love') || window.isCustomSubdomain) {
+                try {
+                    const res = await fetch(`${window.API_BASE_ROOT}/api/remote_settings`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (!data.master) data.master = {};
+                        data.master.dmx_interface = isUsb ? "USB" : "HAT";
+                        
+                        await fetch(`${window.API_BASE_ROOT}/vj_remote_settings.json`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        console.log("✅ DMX Interface saved to backend:", data.master.dmx_interface);
+                    }
+                } catch(e) { console.error("Hardware save failed:", e); }
+            }
+
+            // 2. Update LocalStorage (Routing)
+            const onLocal = (next === "" || next === window.location.hostname);
+            if (onLocal) {
                 localStorage.removeItem('vj_backend_host');
             } else {
                 localStorage.setItem('vj_backend_host', next);
             }
             
             localStorage.setItem('vj_node_mode', isNode);
-            location.reload();
+            
+            if (btn) btn.innerText = "✅ Done!";
+            setTimeout(() => {
+                location.reload();
+            }, 500);
         }
 
         const isNodeMode = localStorage.getItem("vj_node_mode") === "true";
@@ -1075,9 +1128,17 @@
             document.getElementById('hostBadge').style.cursor = 'default';
         }
         // Point links within the same origin (Port Independent)
-        document.getElementById('link-visual').href = `./visualdmx.html`;
+        // Default to standalone when engine state is unknown
+        document.getElementById('link-visual').href = `./standalone.html`;
         document.getElementById('link-setup').href = `./setup.html`;
         document.getElementById("link-help").href = "./help.html";
+
+        function updateVisualizerLink() {
+            const vizLink = document.getElementById('link-visual');
+            if (vizLink) {
+                vizLink.href = engineActive ? './visualdmx.html' : './standalone.html';
+            }
+        }
 
         function authorizeLauncher() {
             if (isCustomTunnel) {
@@ -1157,6 +1218,7 @@
                     if (document.getElementById('loader')) document.getElementById('loader').style.display = 'none';
                 }
                 lastKnownActive = isActive;
+                updateVisualizerLink();
             } catch (e) {
                 console.error("Status check failed", e);
                 statusPollingRate = 12000;
@@ -1634,7 +1696,7 @@
             const touchEndX = e.changedTouches[0].clientX;
             const deltaX = touchEndX - touchStartX;
             if (Math.abs(deltaX) > 100) { // Threshold for swipe
-                if (deltaX < -100) window.location.href = './visualdmx.html'; // Swipe Left
+                if (deltaX < -100) window.location.href = engineActive ? './visualdmx.html' : './standalone.html'; // Swipe Left
             }
         }, { passive: true });
 

@@ -151,6 +151,7 @@
         }
         html {
             height: 100%;
+            overscroll-behavior: none;
             overscroll-behavior-x: none;
         }
 
@@ -314,6 +315,7 @@
             overflow: hidden;
             font-size: 14px;
             overscroll-behavior: none;
+            overscroll-behavior-x: none;
             touch-action: pan-y;
         }
 
@@ -535,6 +537,9 @@
             position: relative;
             z-index: 1;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: none;
+            overscroll-behavior-x: none;
+            touch-action: pan-y;
         }
 
         .tab-content {

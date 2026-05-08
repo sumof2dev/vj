@@ -1,1 +1,6 @@
-{"prompt": "tie die blotter", "type": "base"}
+{
+    "prompt": "tie die blotter",
+    "type": "base",
+    "luminance": 0.757,
+    "contrast": 0.118
+}

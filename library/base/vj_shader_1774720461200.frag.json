@@ -1,1 +1,8 @@
-{"prompt": "swirling tunnel", "timestamp": 1774720461200, "id": 1774720461200, "type": "base"}
+{
+    "prompt": "swirling tunnel",
+    "timestamp": 1774720461200,
+    "id": 1774720461200,
+    "type": "base",
+    "luminance": 0.29,
+    "contrast": 0.052
+}

@@ -1,1 +1,8 @@
-{"prompt": "shader", "timestamp": 1776058507198, "id": 1776058507198, "type": "base"}
+{
+    "prompt": "shader",
+    "timestamp": 1776058507198,
+    "id": 1776058507198,
+    "type": "base",
+    "luminance": 0.036,
+    "contrast": 0.097
+}
