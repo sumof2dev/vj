@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Live Console - RaveBox</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="stylesheet" href="setup.css">
     <link rel="stylesheet" href="engine_tab.css">
     <style>
@@ -101,7 +101,7 @@
                 max-height: calc(100dvh - 30px);
                 width: 100% !important;
                 max-width: none !important;
-                margin: 0 0 40px 0 !important; /* Force start at top on mobile */
+                margin: 0 0 calc(40px + env(safe-area-inset-bottom, 0px)) 0 !important; /* Force start at top on mobile */
                 transition: none !important; /* Disable jumpy transitions on mobile */
             }
             #live-console-grid {
@@ -199,7 +199,7 @@
     <div class="console-container" id="console-main-container">
         <div class="console-header" style="padding: 15px 20px;">
             <div style="display:flex; align-items:center; gap:15px; flex:1;">
-                <h1 style="margin:0;">Console <span style="font-size: 8px; opacity: 0.3; vertical-align: middle;">VJ Console v58260219</span></h1>
+                <h1 style="margin:0;">Console <span style="font-size: 8px; opacity: 0.3; vertical-align: middle;">VJ Console v510261247</span></h1>
                 <div class="mini-eq" id="console-eq">
                     <div class="eq-bar"></div>
                     <div class="eq-bar"></div>

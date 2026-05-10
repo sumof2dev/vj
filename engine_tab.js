@@ -100,7 +100,7 @@ function startCalibration() {
                     item.style.padding = '10px 15px';
                     item.innerHTML = `
                         <span style="color:var(--text-dim); font-weight:600;">${check.name}</span>
-                        <span class="${check.pass ? 'cal-pass' : 'cal-fail'}" style="font-weight:bold;">${check.pass ? '✅ PASS' : '❌ ' + check.actual.toUpperCase()}</span>
+                        <span class="${check.pass ? 'cal-pass' : 'cal-fail'}" style="font-weight:bold;">${check.pass ? 'PASS' : check.actual.toUpperCase()}</span>
                     `;
                     list.appendChild(item);
                 });
@@ -134,7 +134,7 @@ function startCalibration() {
             document.getElementById('calRunning').style.display = 'none';
             document.getElementById('auditResults').style.display = 'block';
             const overall = document.getElementById('auditOverall');
-            overall.textContent = msg.overall_pass ? "✅ ALL SYSTEMS GO: Gold Standard Compliance Verified" : "❌ AUDIT FAILED: Non-Standard parameters detected";
+            overall.textContent = msg.overall_pass ? "ALL SYSTEMS GO: Gold Standard Compliance Verified" : "AUDIT FAILED: Non-Standard parameters detected";
             overall.className = msg.overall_pass ? "cal-pass" : "cal-fail";
 
             const list = document.getElementById('auditChecksList');
@@ -640,7 +640,7 @@ initEngineTab();
                     if (window.EASY_DESCRIPTORS) window.EASY_DESCRIPTORS.push(data.descriptor);
                     populateLabSelects();
                     document.getElementById('labBehaviorSelect').value = data.descriptor.id;
-                    alert(`✅ Saved "${label}" to library!`);
+                    alert(`Saved "${label}" to library!`);
                 }
             } catch (e) {
                 alert("Failed to save behavior.");
@@ -681,16 +681,16 @@ initEngineTab();
                 });
 
                 if (response.ok) {
-                    btn.innerHTML = "✅ SAVED";
+                    btn.innerHTML = "SAVED";
                     btn.style.background = "var(--success)";
                     Object.assign(premade, updatedData);
                     syncLabProbe();
                 } else {
-                    btn.innerHTML = "❌ ERROR";
+                    btn.innerHTML = "ERROR";
                 }
             } catch (e) {
                 console.error(e);
-                btn.innerHTML = "❌ FAILED";
+                btn.innerHTML = "FAILED";
             } finally {
                 setTimeout(() => {
                     btn.innerHTML = originalText;
@@ -756,7 +756,7 @@ initEngineTab();
 
             // Reset UI after 10s
             setTimeout(() => {
-                feedback.innerText = "✅ Snippet Saved to recordings/";
+                feedback.innerText = "Snippet Saved to recordings/";
                 feedback.style.color = "#00ff88";
                 setTimeout(() => {
                     feedback.innerText = originalText;

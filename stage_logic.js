@@ -63,6 +63,31 @@ var switchTab = window.switchTab || function() { };
                     </div>
                 </div>
             `).join('') || '<div style="padding:15px; color:#444; font-size:12px; text-align:center;">No profiles found. Add one to get started.</div>';
+
+            // --- ADDED: Hardware Output Block ---
+            const hardwareHtml = `
+                <div class="item-row" style="padding:15px 16px; margin-top: 10px; background:rgba(0,0,0,0.4); border-top:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; border-radius: 0 0 12px 12px;">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:10px; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">Hardware Output</span>
+                        <span style="font-size:11px; color:#fff; font-weight:800; margin-top:2px;">Network Node Routing</span>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <select id="hardware-output-type" onchange="updateHardwareType()" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; border-radius:4px; height:28px; padding:0 8px;">
+                            <option value="dmx">DMX Node (ArtNet)</option>
+                            <option value="govee">Govee LAN (UDP)</option>
+                        </select>
+                        <input type="text" id="dmx-node-ip-input" placeholder="Enter IP Address" 
+                               style="width:140px; height:28px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:var(--accent); font-family:monospace; font-weight:800; font-size:11px; padding:0 12px; outline:none; text-align:center;" 
+                               onblur="lockNodeIp()" onkeydown="if(event.key==='Enter') lockNodeIp()">
+                        <label class="modern-switch" title="Toggle Hardware Output" style="margin-left: 5px;">
+                            <input type="checkbox" id="hardware-node-toggle" onchange="toggleNodeMode()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            `;
+            list.innerHTML += hardwareHtml;
+            if (typeof loadNodeIp === 'function') loadNodeIp();
         }
 
         window.addProfileToStage = function(profileId) {
@@ -279,10 +304,10 @@ var switchTab = window.switchTab || function() { };
                     const profName = profile ? profile.name : (s.profileName || 'Unknown Profile');
 
                     return `<div class="item-row condensed" style="padding:6px 12px; display:flex; align-items:center; gap:10px; border-top:1px solid rgba(255,255,255,0.02); background:rgba(0,0,0,0.2);">
-                        <div style="display:flex; align-items:center; gap:0; font-family:monospace; font-weight:900; background:rgba(0,0,0,0.3); padding:2px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); min-width:70px;">
-                            <input type="number" value="${s.address}" min="1" max="512" style="width:30px; background:none; border:none; color:white; font-size:12px; padding:0; text-align:right; outline:none; font-weight:900;" onchange="updateInstanceAddress('${s.id}', this.value)" title="DMX Address">
+                        <div style="display:flex; align-items:center; gap:0; font-family:monospace; font-weight:900; background:rgba(0,0,0,0.3); padding:2px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); min-width:70px; flex-shrink: 0;">
+                            <input type="number" value="${s.address}" min="1" max="512" style="width:30px; min-width:30px; background:none; border:none; color:white; font-size:12px; padding:0; text-align:right; outline:none; font-weight:900;" onchange="updateInstanceAddress('${s.id}', this.value)" title="DMX Address">
                             <span style="opacity:0.3; margin:0 2px; color:white;">|</span>
-                            <input type="number" value="${s.offset || 0}" min="0" max="512" style="width:30px; background:none; border:none; color:var(--accent); font-size:12px; padding:0; text-align:left; outline:none; font-weight:900;" onchange="updateInstanceOffset('${s.id}', this.value)" title="Channel Offset">
+                            <input type="number" value="${s.offset || 0}" min="0" max="512" style="width:25px; min-width:25px; background:none; border:none; color:var(--accent); font-size:12px; padding:0; text-align:left; outline:none; font-weight:900;" onchange="updateInstanceOffset('${s.id}', this.value)" title="Channel Offset">
                         </div>
                         <div style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:4px;">
                             <select style="background:none; border:none; color:#fff; font-weight:700; font-size:13px; outline:none; cursor:pointer; max-width:180px; padding:0; flex-shrink:1;" onchange="updateInstanceProfile('${s.id}', this.value)">
@@ -375,20 +400,37 @@ var switchTab = window.switchTab || function() { };
 
                     const brokenStatus = isBroken ? `<div style="font-size:9px; color:#ff5555; margin-top:2px; font-weight:bold; letter-spacing:0.5px;">⚠️ MISSING REFERENCES: ${missingTargets.join(', ')}</div>` : '';
 
-                    return `<div class="item-row" style="flex-wrap:wrap; gap:10px; padding:12px; border-top:1px solid rgba(255,255,255,0.02); background:rgba(0,0,0,0.2); ${isBroken ? 'border-left: 4px solid #ff3366; background: rgba(255,51,102,0.05);' : ''}">
+                    const isMuted = p.active === false;
+
+                    return `<div class="item-row" style="flex-wrap:wrap; gap:10px; padding:12px; border-top:1px solid rgba(255,255,255,0.02); background:rgba(0,0,0,0.2); ${isBroken ? 'border-left: 4px solid #ff3366; background: rgba(255,51,102,0.05);' : ''} ${isMuted ? 'opacity: 0.5; filter: grayscale(0.5);' : ''}">
                         <div style="flex:1; min-width:150px;">
-                            <div style="font-weight:bold; font-size:1.1rem; color:#fff; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <div style="font-weight:bold; font-size:1.1rem; color:#fff; display:flex; align-items:center; gap:8px; flex-wrap:wrap; cursor:pointer;" onclick="editPreset('${p.id}')">
                                 ${p.name}
                                 ${targetBadges}
+                                ${isMuted ? '<span style="font-size:10px; color:#ff5555; background:rgba(255,85,85,0.1); padding:2px 6px; border-radius:4px; margin-left:5px;">MUTED</span>' : ''}
                             </div>
                             <div style="font-size:11px; color:var(--text-dim); margin-top:4px; font-family:monospace; opacity:0.8;">${triggerDesc}</div>
                             ${overrideSummary || ''}
                             ${brokenStatus}
                         </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            ${isBroken ? `<button class="btn btn-sm" style="background:#555;" onclick="console.log('Broken Preset JSON:', JSON.parse('${JSON.stringify(p).replace(/'/g, "\\'")}'))">Debug</button>` : ''}
-                            <button class="btn btn-sm" onclick="editPreset('${p.id}')">Edit</button>
-                            <button class="btn btn-sm btn-danger" onclick="deletePreset('${p.id}')">Delete</button>
+                        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                ${isBroken ? `<button class="btn btn-sm" style="background:#555;" onclick="console.log('Broken Preset JSON:', JSON.parse('${JSON.stringify(p).replace(/'/g, "\\'")}'))">Debug</button>` : ''}
+                                <button class="btn btn-sm" style="${isMuted ? 'background:rgba(255,255,255,0.1);' : ''}" onclick="togglePresetMute('${p.id}')">${isMuted ? 'Unmute' : 'Mute'}</button>
+                                <button class="btn btn-sm btn-danger" onclick="deletePreset('${p.id}')">Delete</button>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="font-size:8px; color:var(--text-dim); text-transform:uppercase; font-weight:900; letter-spacing:0.5px;">Hold:</span>
+                                <select class="glass-select" style="font-size:9px; height:20px; width:110px; padding:0 4px; background:rgba(0,0,0,0.4); border-color:rgba(255,255,255,0.05); font-weight:bold;" onchange="savePresetDecay('${p.id}', this.value)">
+                                    <option value="0" ${p.decay == 0 ? 'selected' : ''}>0s - Instant</option>
+                                    <option value="1" ${p.decay == 1 ? 'selected' : ''}>1s - Snap</option>
+                                    <option value="2" ${p.decay == 2 ? 'selected' : ''}>2s - Short</option>
+                                    <option value="4" ${p.decay == 4 ? 'selected' : ''}>4s - Build</option>
+                                    <option value="8" ${p.decay == 8 ? 'selected' : ''}>8s - Long</option>
+                                    <option value="16" ${p.decay == 16 ? 'selected' : ''}>16s - Persistent</option>
+                                    <option value="999" ${p.decay == 999 ? 'selected' : ''}>STAY ON</option>
+                                </select>
+                            </div>
                         </div>
                     </div>`;
                 }
@@ -623,7 +665,6 @@ var switchTab = window.switchTab || function() { };
                     return `
                                 <div class="compact-slider-row ${isBusy ? 'busy' : ''}" data-addr="${addr}" data-fixture-id="${id}" data-idx="${idx}">
                                     <div class="compact-role-label" onclick="toggleHideTestChannel('${id}', ${idx})">${ch.role || ch.name}<span class="remove-x">✖</span></div>
-                                    <div class="compact-addr-label">${addr}</div>
                                     <div class="test-slider-container">
                                         <button class="compact-adj-btn" onclick="adjustTestValue('${id}', ${idx}, -1)">-</button>
                                         <input type="range" min="0" max="255" value="${val}" class="compact-slider-input"
@@ -784,6 +825,52 @@ var switchTab = window.switchTab || function() { };
                     if (isBusy) row.classList.add('busy');
                     else row.classList.remove('busy');
                 });
+            });
+
+            // Traverse preset vertical sliders
+            const presetCols = document.querySelectorAll('.preset-slider-col');
+            presetCols.forEach(col => {
+                const addr = parseInt(col.dataset.addr);
+                if (isNaN(addr)) return;
+                const isBusy = latestOverrides.has(addr);
+                const currentVal = latestDmxUniverse[addr] ?? 0;
+                
+                const slider = col.querySelector('.preset-slider-input');
+                const cap = col.querySelector('.dmx-fader-cap');
+                const valDisplay = col.querySelector('.preset-val-display');
+                const roleLabel = col.querySelector('.preset-slider-role');
+                const container = col.querySelector('.vertical-slider-container');
+                
+                if (slider && document.activeElement !== slider) {
+                    slider.value = currentVal;
+                    if (cap) cap.style.bottom = Math.round((currentVal / 255) * (120 - 18)) + 'px';
+                }
+                
+                if (valDisplay) {
+                    valDisplay.innerText = currentVal;
+                    valDisplay.style.color = isBusy ? 'var(--danger)' : '#fff';
+                }
+                
+                if (roleLabel) {
+                    roleLabel.style.color = isBusy ? 'var(--danger)' : '#666';
+                }
+                
+                if (container) {
+                    container.style.borderColor = isBusy ? 'var(--danger)' : '';
+                }
+                
+                if (cap) {
+                    if (isBusy) {
+                        cap.style.background = 'linear-gradient(180deg, var(--danger) 0%, #900 100%)';
+                        cap.style.borderColor = '#f00';
+                    } else {
+                        cap.style.background = '';
+                        cap.style.borderColor = '';
+                    }
+                }
+                
+                if (isBusy) col.classList.add('busy');
+                else col.classList.remove('busy');
             });
         }
 
@@ -1039,6 +1126,8 @@ var switchTab = window.switchTab || function() { };
                 dmx_connected = true;
                 ws_reconnect_delay = 2000; // Reset on success
                 console.log("✅ WebSocket Connected!");
+                // Request initial parameters (including Govee IPs)
+                setTimeout(() => ws.send(JSON.stringify({ type: 'get_params' })), 200);
             };
 
             newWs.binaryType = 'arraybuffer';
@@ -1078,7 +1167,8 @@ var switchTab = window.switchTab || function() { };
                     }
 
                     // 3. TRIGGER THROTTLED UI UPDATES
-                    if (document.getElementById('tab-test')?.classList.contains('active')) {
+                    if (document.getElementById('tab-test')?.classList.contains('active') || 
+                        document.getElementById('tab-presets')?.classList.contains('active')) {
                         updateTestNumericalValues();
                     }
 
@@ -1094,6 +1184,7 @@ var switchTab = window.switchTab || function() { };
                     const msg = JSON.parse(event.data);
                     if (msg.type && msg.type.startsWith("calibration_") && typeof handleCalibrationMessage === "function") handleCalibrationMessage(msg);
                     if (msg.type === "audit_report" && typeof handleAuditMessage === "function") handleAuditMessage(msg);
+                    if (msg.type === "status") console.log("📣 SYSTEM STATUS:", msg.message);
                     if (msg.type === "state") window.latestProbeValue = msg.lab_dmx_val || 0;
                     if (msg.type === 'state') {
                         const prevVibe = latestAudioState.vibe;
@@ -1143,9 +1234,15 @@ var switchTab = window.switchTab || function() { };
                         }
                     } else if (msg.type === 'current_params') {
                         if (msg.master) {
-                            if ('sensitivity' in msg.master) document.getElementById('master-sensitivity-input').value = msg.master.sensitivity;
-                            if ('speed' in msg.master) document.getElementById('master-speed-input').value = msg.master.speed;
-                            if ('intensity' in msg.master) document.getElementById('master-intensity-input').value = msg.master.intensity;
+                            const sensInput = document.getElementById('master-sensitivity-input') || document.getElementById('masterSens');
+                            const speedInput = document.getElementById('master-speed-input') || document.getElementById('masterSpeed');
+                            const intensityInput = document.getElementById('master-intensity-input') || document.getElementById('masterInt');
+                            
+                            if (sensInput && 'sensitivity' in msg.master) sensInput.value = msg.master.sensitivity;
+                            if (speedInput && 'speed' in msg.master) speedInput.value = msg.master.speed;
+                            if (intensityInput && 'intensity' in msg.master) intensityInput.value = msg.master.intensity;
+                            
+                            if ('govee_ips' in msg.master) renderGoveeList(msg.master.govee_ips);
                         }
                     } else if (msg.type === 'recording_started') {
                         if (msg.success) {
@@ -1167,7 +1264,7 @@ var switchTab = window.switchTab || function() { };
                         
                         if (msg.path) {
                             const folder = msg.path.split('/').pop();
-                            const link = `<a href="player.html?session=${folder}" target="_blank" style="color:var(--accent); font-weight:bold; text-decoration:underline;">Open X-Ray Player 📈</a>`;
+                            const link = `<a href="player.html?session=${folder}" style="color:var(--accent); font-weight:bold; text-decoration:underline;">Open X-Ray Player 📈</a>`;
                             showToast(`🎬 Recording Saved! ${link}`, 10000);
                         }
                     }
@@ -1746,3 +1843,67 @@ function togglePreset(presetId) {
 window.togglePreset = togglePreset;
 window.everActivatedPresets = everActivatedPresets;
 window.activePresets = activePresets;
+
+// --- GOVEE LAN MANAGEMENT ---
+function renderGoveeList(ips) {
+    const list = document.getElementById('govee-nodes-list');
+    if (!list) return;
+    if (!ips || ips.length === 0) {
+        list.innerHTML = '<div style="padding:10px 15px; font-size:10px; color:#555;">No Govee nodes active.</div>';
+        return;
+    }
+    list.innerHTML = ips.map((ip, i) => `
+        <div class="item-row condensed" style="padding:4px 15px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.02);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:6px; height:6px; border-radius:50%; background:orange; box-shadow: 0 0 5px orange;"></div>
+                <div style="font-family:monospace; font-size:11px; color:#fff;">${ip}</div>
+                <div style="font-size:9px; color:#666;">DMX CH ${400 + (i*4)}</div>
+            </div>
+            <button class="btn btn-danger btn-sm" style="width:20px; height:20px; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.4;" onclick="removeGoveeNode(${i})">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+window.addGoveeNode = async function() {
+    const input = document.getElementById('govee-ip-input');
+    if (!input || !input.value) return;
+    const ip = input.value.trim();
+    
+    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify({ type: 'add_govee', ip: ip }));
+        
+        // AUTO-PATCH: Check if we need to add a fixture to the stage for this Govee node
+        const currentGoveeNodes = document.querySelectorAll('#govee-nodes-list .item-row').length;
+        const targetAddr = 400 + (currentGoveeNodes * 4);
+        
+        const existing = db.stage.find(s => s.address === targetAddr);
+        if (!existing) {
+            console.log(`🛠️ Auto-patching Govee fixture at address ${targetAddr}...`);
+            const newInst = {
+                id: `Govee_${targetAddr}`,
+                profileId: "govee.p.lan",
+                profileName: "Govee LAN (RGBD)",
+                address: targetAddr,
+                offset: 0,
+                zone: "Center"
+            };
+            db.stage.push(newInst);
+            await saveDB();
+            if (typeof renderStageList === 'function') renderStageList();
+        }
+
+        input.value = '';
+        // Request updated params to refresh list
+        setTimeout(() => window.ws.send(JSON.stringify({ type: 'get_params' })), 100);
+    }
+};
+
+window.removeGoveeNode = function(index) {
+    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify({ type: 'remove_govee', index: index }));
+        // Request updated params to refresh list
+        setTimeout(() => window.ws.send(JSON.stringify({ type: 'get_params' })), 100);
+    }
+};

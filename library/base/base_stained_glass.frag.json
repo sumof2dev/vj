@@ -2,5 +2,6 @@
     "prompt": "stained glass",
     "type": "base",
     "luminance": 0.441,
-    "contrast": 0.187
+    "contrast": 0.187,
+    "heavy": true
 }

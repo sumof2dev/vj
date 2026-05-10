@@ -4,5 +4,6 @@
     "id": 1775710835455,
     "type": "base",
     "luminance": 0.014,
-    "contrast": 0.069
+    "contrast": 0.069,
+    "heavy": true
 }

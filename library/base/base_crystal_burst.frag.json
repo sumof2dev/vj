@@ -2,5 +2,6 @@
     "prompt": "Crystal Burst",
     "type": "base",
     "luminance": 0.299,
-    "contrast": 0.188
+    "contrast": 0.188,
+    "heavy": true
 }

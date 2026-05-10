@@ -68,16 +68,13 @@ class ChannelConfig:
                     return r
             return None # Revert to default channel value
 
-        # 5. Random Logic: If vibe category changed, pick a random rule from the matching set
+        # 5. Random Logic: Pick one random rule from the matching set
+        # We use a stable seed (vibe change or sync variant change) to maintain the choice
+        # until the vibe category or variant index rotates.
         if state['last_vibe'] != search_vibe:
             state['last_vibe'] = search_vibe
             if len(matching_indices) > 1:
-                # Try to pick a new random index that isn't the current one if possible
-                prev_idx = state['indices'].get(search_vibe, 0)
-                new_idx = random.randrange(len(matching_indices))
-                if new_idx == prev_idx:
-                    new_idx = (new_idx + 1) % len(matching_indices)
-                state['indices'][search_vibe] = new_idx
+                state['indices'][search_vibe] = random.randrange(len(matching_indices))
             else:
                 state['indices'][search_vibe] = 0
             
@@ -150,6 +147,7 @@ class LogicMatrix:
 class DMXEngine:
     def __init__(self):
         self.universe = bytearray(513)
+        self.prev_universe = bytearray(513)
         self.universe[0] = 0x00
         self.overrides = {}
         self._dt = 0.016
@@ -162,7 +160,10 @@ class DMXEngine:
         self.base_intensity = 1.0
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
-        self.active_presets = []
+        self.active_presets = [] # Combined list for UI/Broadcast (Held + Auto + Manual)
+        self.auto_active_presets = [] # Sustained presets triggered by audio (picked randomly)
+        self.auto_one_shots = [] # Zero-hold presets triggered by audio (all simultaneous)
+        self.manual_active_presets = set() # Set of preset IDs manually forced ON
         
         # Pause & Recovery System
         self.is_paused = False
@@ -192,9 +193,6 @@ class DMXEngine:
             'chill': 0, 'mid': 0, 'high': 0, 'any': 0, 'build': 0, 'drop': 0
         }
         
-        self.auto_active_presets = [] # Presets triggered by audio
-        self.manual_active_presets = set() # Set of preset IDs manually forced ON
-        
         self.lab_probe_rule = None
         self.lab_probe_state = {} # Isolated state for Behavior Laboratory calculations
 
@@ -217,10 +215,6 @@ class DMXEngine:
         self._presets_path = os.path.join('fixtures', 'presets.json')
         
         self._fixture_mtime = 0
-        self._fast_cache = {} 
-        self.active_presets = [] # Combined list for UI/Broadcast
-        self.auto_active_presets = []
-        self.manual_active_presets = set() # Set of preset IDs manually forced ON
         self.active_visual_commands = []
         
         self._load_profiles()
@@ -402,6 +396,8 @@ class DMXEngine:
 
     def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
         self._dt = dt
+        self.prev_universe[:] = self.universe[:]
+        
         
         # PAUSE & RECOVERY LOGIC
         if self.is_paused:
@@ -426,13 +422,12 @@ class DMXEngine:
         self.gamepad = gamepad or {}
         self.transient = audio.get('transient', 'steady')
         current_vibe = audio.get('vibe', 'mid')
+        variant = self.sync_indices.get(current_vibe, 0) + 1
+        tagged_vibe = f"{current_vibe} {variant}"
         
         # --- AUTOMATIC PRESETS (Triggers) ---
-        self.auto_active_presets = []
+        possible_auto_presets = []
         
-        active_triggers = [f"vibe:{current_vibe}"]
-        if self.transient: active_triggers.append(f"state:{self.transient}") # Support state triggers correctly
-
         for p_data in self.presets:
             if not p_data.get('active', True): continue
             triggers = p_data.get('triggers', [])
@@ -446,11 +441,11 @@ class DMXEngine:
                 t_cat = trig.get('category') or trig.get('type')
                 
                 if not t_cat or t_cat == "":
-                    # Warn the user about the broken preset they planned to fix manually
+                    # Warn the user about the broken preset
                     if not hasattr(self, '_warned_presets'): self._warned_presets = set()
                     p_name = p_data.get('name', 'Unknown')
                     if p_name not in self._warned_presets:
-                        print(f"⚠️  Preset '{p_name}' contains an empty/invalid trigger and will not activate. Please fix in UI.")
+                        print(f"⚠️  Preset '{p_name}' contains an empty/invalid trigger.")
                         self._warned_presets.add(p_name)
                     is_active = False
                     break
@@ -463,8 +458,10 @@ class DMXEngine:
                     if gt is not None and val < float(gt): return False
                     return True
 
-                if t_cat == 'vibe' and trig.get('vibe', trig.get('value')) == current_vibe:
-                    trig_matched = True
+                if t_cat == 'vibe':
+                    t_val = trig.get('vibe', trig.get('value'))
+                    if t_val == current_vibe or t_val == tagged_vibe:
+                        trig_matched = True
                 elif t_cat == 'state' and (trig.get('state') == self.transient or trig.get('value') == self.transient):
                     trig_matched = True
                 elif t_cat == 'volume':
@@ -489,11 +486,15 @@ class DMXEngine:
                         'BIN 0': 0, 'BIN 1': 1, 'BIN 2': 2, 'BIN 3': 3, 'BIN 4': 4, 'BIN 5': 5,
                         'bin 0': 0, 'bin 1': 1, 'bin 2': 2, 'bin 3': 3, 'bin 4': 4, 'bin 5': 5
                     }
-                    b_idx = bin_map.get(target, int(trig.get('bin', 1)))
+                    b_idx = bin_map.get(target, -1)
+                    if b_idx == -1:
+                        try: b_idx = int(trig.get('bin', 1))
+                        except: b_idx = 1
                     
-                    if b_idx < len(bins):
+                    if 0 <= b_idx < len(bins):
                         val = bins[b_idx] * 100.0
-                        if check_range(val, trig): trig_matched = True
+                        if check_range(val, trig): 
+                            trig_matched = True
 
                 elif t_cat == 'channel':
                     fixture_id = trig.get('fixture')
@@ -526,22 +527,54 @@ class DMXEngine:
                     break
                 
             if is_active:
-                self.auto_active_presets.append(p_data)
+                possible_auto_presets.append(p_data)
+                
+        # Separate matching presets into sustained (one randomly chosen) and one-shots (all active)
+        auto_sustained = [p for p in possible_auto_presets if int(p.get('decay', 0)) > 0]
+        self.auto_one_shots = [p for p in possible_auto_presets if int(p.get('decay', 0)) == 0]
+
+        self.auto_active_presets = []
+        if auto_sustained:
+            # If multiple sustained presets match, pick one at random
+            # We use beat_count as a seed so the "random" choice is stable per beat
+            seed = self.logic.beat_count
+            rng = random.Random(seed)
+            self.auto_active_presets = [rng.choice(auto_sustained)]
+            
+        # --- PRESET DECAY LOGIC ---
+        now = time.time()
+        for p in self.auto_active_presets:
+            p_id = str(p.get('id', ''))
+            decay = int(p.get('decay', 0))
+            if decay > 0:
+                self._preset_holds[p_id] = now + decay if decay != 999 else now + 999999
+        
+        # Check if any held presets are still active
+        held_presets = []
+        for p_id, hold_until in list(self._preset_holds.items()):
+            if now < hold_until:
+                # Find the preset data
+                p_data = next((p for p in self.presets if str(p.get('id', '')) == p_id), None)
+                if p_data and p_data not in self.auto_active_presets:
+                    held_presets.append(p_data)
+            else:
+                self._preset_holds.pop(p_id, None)
                 
         # --- MERGE MANUAL PRESETS ---
         manual_presets_list = []
         for p_data in self.presets:
+            if not p_data.get('active', True): continue
             p_id = str(p_data.get('id', ''))
             p_name = str(p_data.get('name', ''))
-            # Strict identifier matching
             if (p_id and p_id in self.manual_active_presets) or (p_name and p_name in self.manual_active_presets):
                 manual_presets_list.append(p_data)
             elif (p_id.lower() in self.manual_active_presets) or (p_name.lower() in self.manual_active_presets):
                 # Fallback to lowered only if exact match fails
                 manual_presets_list.append(p_data)
 
-        # Update combined list for external observers
-        self.active_presets = self.auto_active_presets + manual_presets_list
+        # Update combined list for external observers and priority processing
+        # Order: Held -> New Sustained -> Manual -> One-Shots (highest priority/overwrite)
+        self.active_presets = held_presets + self.auto_active_presets + manual_presets_list + self.auto_one_shots
 
         self.active_visual_commands = []
         force_next_visual = False
@@ -668,15 +701,18 @@ class DMXEngine:
         else:
             self.lab_dmx_val = 0
 
-        # 1. Base Layer Processing (Profiles + Auto-Presets)
+        # 1. Base Layer Processing (Profiles + Auto Sustained + Held Presets)
+        # Held presets are included here to ensure they continue to apply their state during decay
         for i, inst in enumerate(self.stage_instances):
-            self._process_instance(inst, i, audio, self.auto_active_presets, self.sync_indices, use_raw_dt=False)
+            self._process_instance(inst, i, audio, held_presets + self.auto_active_presets, self.sync_indices, use_raw_dt=False)
 
-        # 2. MANUAL PUNCH-THROUGH (Manual Presets & Overrides)
-        # These override the automated base layer
+        # 2. OVERRIDES (Manual Presets & One-Shots)
+        # These overwrite the automated base layer and sustained presets.
+        # One-shots (decay=0) are added last to ensure they overwrite everything else.
         for i, inst in enumerate(self.stage_instances):
-            if manual_presets_list:
-                self._apply_presets_to_instance(inst, i, audio, manual_presets_list, use_raw_dt=True)
+            overwrites = manual_presets_list + self.auto_one_shots
+            if overwrites:
+                self._apply_presets_to_instance(inst, i, audio, overwrites, use_raw_dt=True)
 
         for addr, val in self.overrides.items():
             if 0 < addr < len(self.universe):
@@ -734,7 +770,7 @@ class DMXEngine:
             cache = self._fast_cache.get(profile['id'], {}).get(ch_idx)
             if not cache: continue
             
-            val = self._calculate_channel(ch_idx, active_audio, active_logic, zone_idx, cache, profile['id'], ch_def, sync_indices)
+            val = self._calculate_channel(ch_idx, active_audio, active_logic, zone_idx, cache, profile['id'], ch_def, sync_indices, base_addr=base_addr, all_channels=channels)
             self.universe[final_addr] = max(0, min(255, int(val)))
 
         # Now apply presets
@@ -798,13 +834,13 @@ class DMXEngine:
                     elif ov_type == 'global':
                         if target_id == target_role or target_id == f"Global: {target_role}" or ov.get('name') == target_role:
                             for ov_ch in ov.get('channels', []):
-                                if ov_ch.get('name') == target_role:
+                                if (ov_ch.get('role') and ov_ch.get('role') == target_role) or (ov_ch.get('name') == target_role):
                                     matched_ov_ch = ov_ch
                                     break
                             if matched_ov_ch is None and 'value' in ov:
                                 ov_key = f"dimmer_{p_id}_{target_id}_{inst['id']}"
                                 preset_override_val = self._resolve_preset_value(ov_key, ov.get('value', 0), dt_to_use)
-                    
+
                     if matched_ov_ch is not None:
                         if matched_ov_ch.get('mode') == 'behavior':
                             bkey = f"preset_{p_id}_{ov.get('id','g')}_{target_role}_{zone_idx}"
@@ -820,19 +856,20 @@ class DMXEngine:
 
 
 
-    def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id, ch_def=None, sync_indices=None):
+    def _calculate_channel(self, ch_idx, audio, logic_matrix, zone_idx, cache, profile_id, ch_def=None, sync_indices=None, base_addr=1, all_channels=None):
         current_vibe = audio.get('vibe', 'mid')
         current_transient = audio.get('transient', 'steady')
         instance_key = f"{profile_id}_{ch_idx}_{zone_idx}"
         rule = cache.get_active_rule(current_vibe, current_transient, instance_key, sync_indices)
         if not rule: return cache.default_val
-
+        
         # State Maintenance for this specific rule instance
         st = logic_matrix.states[instance_key]
         return self._apply_rule_math(rule, st, logic_matrix, self._dt * logic_matrix.speed_mult, 
-                                    audio=audio, ch_def=ch_def, vibe_splits=cache.vibe_splits)
+                                    audio=audio, ch_def=ch_def, vibe_splits=cache.vibe_splits,
+                                    base_addr=base_addr, all_channels=all_channels)
 
-    def _apply_rule_math(self, rule, st, logic_matrix, dt, audio=None, ch_def=None, use_intensity=True, vibe_splits=None):
+    def _apply_rule_math(self, rule, st, logic_matrix, dt, audio=None, ch_def=None, use_intensity=True, vibe_splits=None, base_addr=1, all_channels=None):
         """Core mathematical mapping from audio/logic to DMX value"""
         behavior = rule.get('behavior', 'static').lower()
         source = rule.get('source', 'volume').lower()
@@ -963,17 +1000,41 @@ class DMXEngine:
 
         elif behavior == 'fuzzy':
             st['t'] += dt * speed * 1.8
-            noise = (logic_matrix._noise1d(st['t']) * 2.0 - 1.0) * react * 0.25
+            noise = (self.logic._noise1d(st['t']) * 2.0 - 1.0) * react * 0.25
             y = ((E + noise) * 2.0) - 1.0
 
-        elif behavior == 'direct_stepped':
-            steps = 8
-            y = (math.floor(E * steps) / steps * 2.0) - 1.0
-            
         elif behavior == 'bar phase':
             p = logic_matrix.state.get('bar phase', 0.0)
             y = (p * 2.0 * E) - 1.0
 
+        elif behavior == 'direct_stepped':
+            y = (math.floor(E * 8) / 8 * 2.0) - 1.0
+            
+        # --- CHANNEL MODULATION (Logic) ---
+        mod_type = mods.get('mod_type', 'none')
+        mod_target = mods.get('mod_target')
+        
+        if mod_type != 'none' and mod_target is not None and all_channels:
+            try:
+                target_idx = int(mod_target)
+                if 0 <= target_idx < len(all_channels):
+                    target_ch = all_channels[target_idx]
+                    target_offset = target_ch.get('addrOffset')
+                    if target_offset is None: target_offset = target_idx
+                    target_addr = base_addr + int(target_offset)
+                    
+                    if 0 < target_addr < len(self.prev_universe):
+                        target_val_normalized = self.prev_universe[target_addr] / 255.0
+                        
+                        if mod_type == "dampen_amp":
+                            y = y * (1.0 - target_val_normalized)
+                        elif mod_type == "clamp":
+                            y = min(y, (target_val_normalized * 2.0) - 1.0)
+                        elif mod_type == "gate":
+                            if target_val_normalized < 0.1: y = -1.0
+            except: pass
+            
+        # --- Y → DMX MAPPING ---
         # Mapping normalized y to DMX
         y = max(-1.0, min(1.0, y))
         if use_intensity:

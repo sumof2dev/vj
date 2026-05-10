@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>VJ Recording X-Ray Player</title>
     <style>
         body { background: #0f0f13; color: #fff; font-family: sans-serif; margin: 0; padding: 0; min-height: 100vh; overscroll-behavior: none; touch-action: pan-y; }
@@ -21,8 +22,12 @@
         button.step-btn { background: #1a1a24; border: 1px solid #444; width: 34px; padding: 8px 0; }
         button.step-btn:hover { background: #333; }
 
-        .video-wrapper { background: #000; border-radius: 8px; overflow: hidden; border: 1px solid #333; display: flex; justify-content: center; align-items: center; min-height: 350px; position: relative; }
+        .video-wrapper { background: #000; border-radius: 8px; overflow: hidden; border: 1px solid #333; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 350px; position: relative; }
+        .video-wrapper.no-video { min-height: 0; border: none; background: transparent; padding: 0; margin-bottom: 5px; }
         video { max-width: 100%; height: 350px; outline: none; }
+        .no-video video { display: none; }
+        .no-video audio { display: block; width: 100%; height: 40px; margin-top: 5px; }
+        .no-video .status { position: relative; top: 0; left: 0; margin-bottom: 8px; display: inline-block; }
         
         .timeline-wrapper { position: relative; width: 100%; height: 160px; background: #000; border: 1px solid #333; border-radius: 8px; overflow-x: auto; overflow-y: hidden; }
         canvas { display: block; height: 100%; cursor: crosshair; }
@@ -87,7 +92,7 @@
                         Source: <span id="hostDisplay" style="color:#00f2ff; font-weight:bold;">Local</span>
                     </div>
                 </div>
-                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v58260219</span>
+                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v510261247</span>
             </div>
             <div class="playback-controls">
                 <button class="step-btn" title="Step Back (0.05s) - Arrow Left" onclick="stepFrame(-1)">❮</button>
@@ -211,6 +216,7 @@
     // --- Media Error Handling ---
     vid.onerror = () => {
         console.warn("Video Load Error or Not Found (Headless). Switching to audio driver.");
+        vid.closest('.video-wrapper').classList.add('no-video');
         vid.style.display = 'none';
         aud.style.display = 'block';
         aud.controls = true;
@@ -377,6 +383,7 @@
         channelRoles = {};
 
         // reset ui for fallback logic
+        vid.closest('.video-wrapper').classList.remove('no-video');
         vid.style.display = 'block';
         aud.style.display = 'none';
         aud.controls = false;
@@ -776,7 +783,9 @@
 
     function closeLabeler() {
         document.getElementById('correction-modal').style.display = 'none';
+        isAwaitingEndClick = false;
         activeLabelReq = null;
+        drawTimeline();
     }
 
     function submitLabel(type, newLabel) {
@@ -840,10 +849,25 @@
         }
     }
 
-    // Auto-load if 'session' param is in URL
-    window.onload = () => {
+    // Auto-load if 'session' param is in URL, else find latest
+    window.onload = async () => {
         const folder = urlParams.get('session');
-        if (folder) loadRecording(folder);
+        if (folder) {
+            loadRecording(folder);
+        } else {
+            console.log("No session param. Fetching latest recording...");
+            try {
+                const res = await fetch(`${P_API_BASE}/api/recordings`);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    data.sort((a, b) => b.mtime - a.mtime);
+                    const latest = data[0];
+                    selectSession(latest.id, latest.name);
+                }
+            } catch (e) {
+                console.warn("Could not auto-load latest recording:", e);
+            }
+        }
         resizeCanvas();
     };
 </script>

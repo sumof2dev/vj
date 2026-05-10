@@ -272,6 +272,7 @@ active_clients = set()
 last_callback_time = time.time()
 dmx_port = None
 network_dmx_node = None
+govee_nodes = []
 audio_state = { "bass": 0.0, "mid": 0.0, "high": 0.0, "vol": 0.0, "flux": 0.0, "beat": False, "device_name": "None", "bpm": 120.0 }
 gamepad_state = {
     "ls_x": 0.5, "ls_y": 0.5, "rs_x": 0.5, "rs_y": 0.5,
@@ -333,6 +334,53 @@ class DMXNetworkNode:
                 print(f"⚠️ Network DMX Send Error to {self.ip}: {e}")
                 self._last_err_log = now
 
+class GoveeLANNode:
+    def __init__(self, ip, port=4001, start_addr=1):
+        import socket
+        self.ip = ip
+        self.port = port
+        self.start_addr = start_addr 
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setblocking(False)
+        self.last_r, self.last_g, self.last_b, self.last_bri = -1, -1, -1, -1
+        self.last_tx = 0
+
+    def send(self, universe):
+        import time, json
+        now = time.time()
+        # Cap at 20Hz (0.05s) to prevent overwhelming the device's MCU
+        if now - self.last_tx < 0.05: 
+            return
+            
+        if len(universe) <= self.start_addr + 3: return
+
+        r, g, b = universe[self.start_addr], universe[self.start_addr + 1], universe[self.start_addr + 2]
+        dimmer = universe[self.start_addr + 3]
+        bri_100 = int((dimmer / 255.0) * 100)
+
+        changed = False
+        try:
+            if r != self.last_r or g != self.last_g or b != self.last_b:
+                cmd = {"msg": {"cmd": "colorwc", "data": {"color": {"r": r, "g": g, "b": b}, "colorTemInKelvin": 0}}}
+                self.sock.sendto(json.dumps(cmd).encode('utf-8'), (self.ip, self.port))
+                self.last_r, self.last_g, self.last_b = r, g, b
+                changed = True
+
+            if bri_100 != self.last_bri:
+                if dimmer == 0:
+                    self.sock.sendto(json.dumps({"msg": {"cmd": "turn", "data": {"value": 0}}}).encode('utf-8'), (self.ip, self.port))
+                else:
+                    if self.last_bri <= 0:
+                        self.sock.sendto(json.dumps({"msg": {"cmd": "turn", "data": {"value": 1}}}).encode('utf-8'), (self.ip, self.port))
+                    self.sock.sendto(json.dumps({"msg": {"cmd": "brightness", "data": {"value": max(1, bri_100)}}}).encode('utf-8'), (self.ip, self.port))
+                self.last_bri = bri_100
+                changed = True
+                
+            if changed:
+                self.last_tx = now
+        except Exception:
+            pass
+
 def save_training_snippet(snippet):
     """Save a captured training snippet as a 'playable' session in the recordings folder"""
     try:
@@ -390,6 +438,7 @@ def save_live_defaults():
                 "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
                 "node_ip": network_dmx_node.ip if network_dmx_node else getattr(main, 'node_ip_cache', ""),
                 "node_active": network_dmx_node is not None,
+                "govee_ips": [node.ip for node in govee_nodes] if 'govee_nodes' in globals() else [],
                 "dmx_interface": dmx_interface
             },
             "laser": {
@@ -425,6 +474,7 @@ def load_live_defaults():
             if "sceneFreq" in m_data and dmx_engine: dmx_engine.scene_freq = m_data["sceneFreq"]
             node_ip = m_data.get("node_ip")
             node_active = m_data.get("node_active", True)
+            node_type = m_data.get("node_type", "dmx")
             
             global dmx_interface
             dmx_interface = m_data.get("dmx_interface", "HAT")
@@ -433,14 +483,28 @@ def load_live_defaults():
             import __main__ as main
             main.node_ip_cache = node_ip
             
-            if node_ip and node_active:
+            if node_ip and node_active and node_type == "dmx":
                 global network_dmx_node
                 network_dmx_node = DMXNetworkNode(node_ip)
                 print(f"🌐 Loaded Network DMX Target: {node_ip} (ACTIVE)")
             else:
                 network_dmx_node = None
-                if node_ip:
+                if node_ip and node_type == "dmx":
                     print(f"🌐 Network DMX Target: {node_ip} (DISABLED)")
+
+            global govee_nodes
+            govee_nodes = []
+            govee_ips = m_data.get("govee_ips", [])
+            
+            if node_type == "govee" and not node_active:
+                print("💡 Govee LAN Nodes: DISABLED by global toggle")
+                govee_ips = []
+            
+            start_addr = 400 
+            for ip in govee_ips:
+                govee_nodes.append(GoveeLANNode(ip=ip, start_addr=start_addr))
+                print(f"💡 Loaded Govee LAN Node: {ip} mapped to DMX ch {start_addr}")
+                start_addr += 4
 
             # 2. Laser Section
             l_data = data.get("laser", {})
@@ -841,12 +905,16 @@ async def fast_broadcast_loop():
                             print(f"DMX_OUT: Healthy | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Signal: {health['status']} ({health['peak']:.1f})")
                             last_log = current_time
 
-                    if dmx_port or network_dmx_node:
+                    if dmx_port or network_dmx_node or govee_nodes:
                         full_u = dmx_engine.get_universe()
                         
                         # NETWORK DMX STREAM
                         if network_dmx_node:
                             network_dmx_node.send(bytearray(full_u))
+                            
+                        # GOVEE UDP STREAM
+                        for g_node in govee_nodes:
+                            g_node.send(bytearray(full_u))
                             
                         # LOG DATA TO RECORDER IF ACTIVE
                         if recorder.is_recording:
@@ -937,6 +1005,7 @@ async def fast_broadcast_loop():
                         "eff_intensity": dmx_engine.eff_intensity if dmx_engine else 1.0,
                         "lab_dmx_val": dmx_engine.lab_dmx_val if dmx_engine else 0,
                         "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
+                        "sensitivity": analyzer.gain,
                         "spotify": audio_state.get('spotify')
                     }
                     if 'error' in audio_state:
@@ -1302,6 +1371,43 @@ async def ws_handler(websocket):
                             except Exception as e:
                                 print(f"⚠️ System Volume Error: {e}")
                         
+                        elif msg_type == "add_govee":
+                            # Dynamically add a Govee light to the rig
+                            ip = data.get("ip")
+                            if ip:
+                                # Prevent duplicate IPs
+                                if any(n.ip == ip for n in govee_nodes):
+                                    print(f"⚠️ Govee node {ip} already exists.")
+                                else:
+                                    start_addr = 400 + (len(govee_nodes) * 4)
+                                    node = GoveeLANNode(ip=ip, start_addr=start_addr)
+                                    govee_nodes.append(node)
+                                    save_live_defaults()
+                                    print(f"✅ Added Govee LAN node: {ip} at DMX {start_addr}")
+                                    await websocket.send(json.dumps({"type": "status", "message": f"Added Govee at {ip} on CH{start_addr}"}))
+
+                        elif msg_type == "remove_govee":
+                            # Remove a Govee light by index or IP
+                            idx = data.get("index")
+                            ip = data.get("ip")
+                            removed = False
+                            if idx is not None and 0 <= idx < len(govee_nodes):
+                                removed_ip = govee_nodes.pop(idx).ip
+                                removed = True
+                            elif ip:
+                                for i, node in enumerate(govee_nodes):
+                                    if node.ip == ip:
+                                        govee_nodes.pop(i)
+                                        removed = True
+                                        removed_ip = ip
+                                        break
+                            
+                            if removed:
+                                save_live_defaults()
+                                await websocket.send(json.dumps({"type": "status", "message": f"Removed Govee node {removed_ip}"}))
+                            else:
+                                await websocket.send(json.dumps({"type": "status", "message": "Govee node not found"}))
+
                         elif msg_type == "save_defaults":
                             # Persist current state as power-on default
                             save_live_defaults()
@@ -1326,7 +1432,8 @@ async def ws_handler(websocket):
                                     "audio_source": current_audio_mode,
                                     "vibe_splits": vibe_engine.vibe_splits if vibe_engine else {"chillMid": 33, "midHigh": 66},
                                     "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
-                                    "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
+                                    "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
+                                    "govee_ips": [node.ip for node in govee_nodes]
                                 },
                                 "laser": {
                                     "speed": dmx_engine.base_speed if dmx_engine else 1.0,

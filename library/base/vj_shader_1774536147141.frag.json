@@ -2,5 +2,6 @@
     "prompt": "big blue blocks",
     "type": "base",
     "luminance": 0.369,
-    "contrast": 0.097
+    "contrast": 0.097,
+    "heavy": true
 }

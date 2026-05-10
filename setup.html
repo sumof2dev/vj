@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>RaveBox Setup</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
@@ -48,7 +48,7 @@
             </div>
             <div class="sidebar-title">
                 <div class="brand">RAVE<span>BOX</span></div>
-                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v58260219</span></div>
+                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v510261247</span></div>
             </div>
         </div>
 
@@ -109,6 +109,24 @@
             </div>
         </div>
 
+        <!-- GOVEE LAN NODES -->
+        <div class="card hidden" id="govee-nodes-card" style="border-color: rgba(255, 165, 0, 0.2); margin-bottom: 20px;">
+            <div class="row" style="display:flex; justify-content:space-between; align-items:center; padding: 12px 15px; background:rgba(255,165,0,0.03); border-bottom: 1px solid rgba(255,165,0,0.05);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-weight:900; font-size:11px; letter-spacing:1px; color:orange;">🌐 GOVEE LAN NODES</div>
+                    <div style="font-size:9px; opacity:0.4; color:orange;">CH 400+</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="govee-ip-input" placeholder="192.168.1.XX" 
+                        style="width:120px; height:24px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,165,0,0.2); border-radius:4px; color:#fff; font-family:monospace; font-size:10px; padding:0 8px; outline:none;">
+                    <button class="btn btn-primary btn-sm" style="height:24px; padding:0 10px; font-size:10px; background:orange; border-color:orange; color:#000;" onclick="addGoveeNode()">Add</button>
+                </div>
+            </div>
+            <div id="govee-nodes-list" style="padding:5px 0;">
+                <!-- Govee IPs injected here -->
+            </div>
+        </div>
+
         <!-- PROFILES & MANAGEMENT -->
         <div class="card" id="all-profiles-card" style="border-color: rgba(0, 242, 255, 0.2);">
             <div class="row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -120,13 +138,6 @@
                 </div>
                 
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <div style="display:flex; flex-direction:column; gap:5px;">
-                        <div style="display:flex; align-items:center; gap:5px;">
-                            <input type="text" id="dmx-node-ip-input" placeholder="NODE IP: OFF" 
-                                style="width:130px; height:28px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:var(--accent); font-family:monospace; font-weight:800; font-size:11px; padding:0 12px; outline:none; cursor:pointer; text-align:center; transition: all 0.2s;" 
-                                readonly onclick="toggleNodeMode()" ondblclick="editNodeIp()" onblur="lockNodeIp()" onkeydown="if(event.key==='Enter') lockNodeIp()">
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -178,8 +189,8 @@
         <div class="card" id="preset-editor-card" style="margin-bottom:20px; overflow:hidden; border-color: rgba(0, 242, 255, 0.15);">
             <div id="preset-editor-header" class="row" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding: 12px 15px; background:rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="togglePresetEditor()">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <button class="btn btn-primary btn-sm" id="preset-add-btn" style="height:28px; padding:0 12px; font-size:11px;" onclick="event.stopPropagation(); togglePresetEditor(true)">Add Preset</button>
-                    <button class="btn btn-primary btn-sm" id="preset-gen-btn-top" style="height:28px; padding:0 12px; font-size:11px; background:var(--secondary); border-color:var(--secondary);" onclick="event.stopPropagation(); openPresetAiChat(); togglePresetEditor(true)">Generate</button>
+                    <button class="btn btn-primary btn-sm" id="preset-add-btn" style="height:28px; padding:0 12px; font-size:11px;" onclick="event.stopPropagation(); addNewPreset()">Add Preset</button>
+                    <button class="btn btn-primary btn-sm" id="preset-ai-gen-btn" style="height:28px; padding:0 12px; font-size:11px; background:var(--secondary); border-color:var(--secondary);" onclick="event.stopPropagation(); openPresetAiChat()">Generate</button>
                     
                     <div id="preset-editor-actions-top" class="hidden" style=" gap:10px; align-items:center;">
                         <button class="btn btn-sm" id="preset-test-btn" style="height:28px; padding:0 12px; font-size:11px; border:1px solid var(--accent); color:var(--accent-alt); background:transparent;" onclick="event.stopPropagation(); testPreset()">Test</button>
@@ -199,12 +210,11 @@
                         <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">Preset Label</label>
                         <input type="text" id="pres-name" placeholder="e.g. BREAKDOWN or KICK STROBE" style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:8px;">
                     </div>
-                    <button class="btn btn-primary btn-sm" id="preset-ai-gen-btn" onclick="openPresetAiChat()" style="margin-top:18px;">Generate</button>
                 </div>
 
                 <div style="margin-bottom:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">1. Trigger Conditions (AND Logic)</label>
+                        <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">1. Trigger Conditions</label>
                         <div style="display:flex; gap:8px;">
                             <select id="pres-new-trigger-type" style="font-size:11px; background:#111; border:1px solid #444; color:#fff; border-radius:4px; padding:4px;">
                                 <option value="vibe">Vibe</option>
@@ -213,7 +223,7 @@
                                 <option value="bin">Energy Bin</option>
                                 <option value="channel">Fixture Function</option>
                             </select>
-                            <button class="btn btn-sm" onclick="addConditionFromUI()" style="padding:4px 10px;">+ Add IF</button>
+                            <button class="btn btn-primary btn-sm" onclick="addConditionFromUI()" style="padding:10px 15px;">ADD</button>
                         </div>
                     </div>
                     <div id="pres-active-triggers">
@@ -227,7 +237,7 @@
                     </div>
                     
                     <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
-                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:10px; align-items:end;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; align-items:end;">
                             <div>
                                 <label style="font-size:9px; color:#666;">TARGET</label>
                                 <select id="pres-add-stage-fix" onchange="updatePresetFunctionDropdown()"></select>
@@ -235,10 +245,6 @@
                             <div>
                                 <label style="font-size:9px; color:#666;">FUNCTION</label>
                                 <select id="pres-add-global-func" onchange="updatePresetFunctionDropdown()"></select>
-                            </div>
-                            <div>
-                                <label style="font-size:9px; color:#666;">VALUE / RANGE</label>
-                                <input type="text" id="pres-add-global-val" placeholder="255 or 0-255" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff;">
                             </div>
                             <button class="btn btn-primary btn-sm" onclick="addOverrideToCurrentPreset()" style="padding:10px 15px;">ADD</button>
                         </div>
@@ -251,15 +257,15 @@
 
                 <details class="engine-accordion" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;" ontoggle="if(this.open) renderSliderSetup()">
                     <summary style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:10px; opacity:0.6;">🎚️</span> 3. Slider Setup (Tactile Recording)
+                        <span style="font-size:10px; opacity:0.6;">🎚️</span> 3. Slider Setup
                         <span style="margin-left:auto; font-size:9px; opacity:0.4;">[EXPAND]</span>
                     </summary>
                     <div class="accordion-content" style="padding-top:15px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <label style="font-size:0.65rem; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-weight:900;">Slider Calibration</label>
+                            <label style="font-size:0.65rem; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-weight:900;">Slider Snapshot (Tactile Control)</label>
                             <div style="display:flex; gap:8px;">
                                 <button class="btn btn-sm btn-danger-soft" onclick="clearSliderSetup()" style="padding:4px 10px; font-size:10px;">Clear All</button>
-                                <button class="btn btn-primary btn-sm" onclick="recordSliderSetup()" style="padding:4px 10px; font-size:10px; background:var(--accent); color:#000;">Capture Sliders</button>
+                                <button class="btn btn-primary btn-sm" onclick="recordSliderSetup()" style="padding:4px 12px; font-size:10px; background:var(--accent); color:#000; font-weight:900; border-radius:6px; box-shadow:0 0 15px rgba(var(--accent-rgb), 0.3);">📸 Snapshot</button>
                             </div>
                         </div>
                         
@@ -274,6 +280,25 @@
                         </div>
                     </div>
                 </details>
+
+                <!-- 4. DECAY - HOLD TIME -->
+                <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">4. Decay - Hold Time</label>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                        <select id="pres-decay-select" class="glass-select" style="flex:1; height:32px; font-size:11px; font-weight:bold;">
+                            <option value="0">0s - Instant (Audio Only)</option>
+                            <option value="1">1s - Snap Decay</option>
+                            <option value="2">2s - Short Decay</option>
+                            <option value="4">4s - Build Decay</option>
+                            <option value="8">8s - Long Tail</option>
+                            <option value="16">16s - Persistent</option>
+                            <option value="999">STAY ON (Permanent Toggle)</option>
+                        </select>
+                        <div style="font-size:9px; color:#666; width:150px; line-height:1.2;">How long the preset stays active after triggers fail.</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -488,38 +513,37 @@
         <p style="color:var(--text-dim)">Sanity checks, live laboratory, training data collection, and live tuning.</p>
 
         <details class="engine-accordion" open>
-            <summary>📹 Live Feed Tune</summary>
+            <summary>Record and Analyze</summary>
             <div class="accordion-content">
 <div class="test-hub-header-sticky">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <h2 style="margin:0;">Live Tune Hub</h2>
+
                     <div id="rec-status" class="rec-status">
                         <span class="rec-dot"></span> REC <span id="rec-timer" style="margin-left:8px; font-family:monospace;">00:00</span>
                     </div>
                 </div>
                 <div style="display:flex; gap:8px;">
                     <button id="btn-mute-others" class="btn btn-sm" onclick="toggleMuteOthers()" 
-                            style="background:#222; border-color:#444; transition: all 0.2s;">🔕 Mute Others</button>
-                    <button id="btn-record" class="btn btn-sm" onclick="toggleRecording()" style="background:#222; border-color:#444;">🔴 Record</button>
-                    <button id="btn-toggle-feed" class="btn btn-sm" onclick="toggleTestFeed()">📷 Live Feed: OFF</button>
-                    <button class="btn btn-sm" onclick="openAudioTimelineModal()" style="background:#222; border-color:#444;">📈 Timeline</button>
-                    <button class="btn btn-sm" onclick="window.open('player.html', '_blank')" style="background:#222; border-color:#444;">🎬 Player</button>
+                            style="background:#222; border-color:#444; transition: all 0.2s;">Mute Others</button>
+                    <button id="btn-record" class="btn btn-sm" onclick="toggleRecording()" style="background:#222; border-color:#444;">Record</button>
+                    <button id="btn-toggle-feed" class="btn btn-sm" onclick="toggleTestFeed()">Live Feed: OFF</button>
+                    <button class="btn btn-sm" onclick="openAudioTimelineModal()" style="background:#222; border-color:#444;">Timeline</button>
+                    <button class="btn btn-sm" onclick="window.location.href='player.html'" style="background:#222; border-color:#444;">Player</button>
                     <button class="btn btn-danger btn-sm" onclick="clearAllGlobalOverrides()">Release All</button>
                 </div>
             </div>
         </div>
 
         <div id="test-live-feed-container">
-            <div style="position:absolute; top:25px; left:25px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:4px; font-size:10px; color:var(--accent); z-index:10; border:1px solid var(--accent); backdrop-filter:blur(10px);">● LIVE FEED</div>
+            <div style="position:absolute; top:25px; left:25px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:4px; font-size:10px; color:var(--accent); z-index:10; border:1px solid var(--accent); backdrop-filter:blur(10px);">LIVE FEED</div>
             <img id="test-live-feed-img" src="" alt="Camera Stream Disconnected">
         </div>
 
         <p style="color:var(--text-dim); margin-bottom:20px;">Real-time DMX tactile control with visual verification.
         </p>
 
-        <!-- PRESET OVERRIDES -->
-        <div id="active-presets-bar" class="active-presets-bar"></div>
+        <!-- PRESET OVERRIDES (Removed, now shown in Universal HUD) -->
 
         <!-- ENSEMBLE PICKER -->
         <div class="test-controls-bar">
@@ -549,13 +573,13 @@
 
         <details class="engine-accordion" ontoggle="if(this.open) { if(typeof openBehaviorLab === 'function') openBehaviorLab(); } else { window.labRunning = false; }">
 
-            <summary>🔬 Live Behavior Laboratory</summary>
+            <summary>Live Behavior Laboratory</summary>
             <div class="accordion-content">
                 <!-- BEHAVIOR LABORATORY MODAL -->
     
         <div class="lab-modal-content" style="box-shadow:none; border:none; height:auto; background:transparent;">
             <div class="lab-header">
-                <h2>🔬 Live Behavior Laboratory</h2>
+                <h2>Live Behavior Laboratory</h2>
                 
             </div>
             <div class="lab-body">
@@ -624,7 +648,7 @@
                     <canvas id="behaviorChart"></canvas>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-dim);">
-                    <div>🔴 REAL AUDIO INPUT <span id="labEnergyStatus" style="margin-left:10px; color:var(--accent); font-weight:bold;">SIGNAL: 0%</span></div>
+                    <div>REAL AUDIO INPUT <span id="labEnergyStatus" style="margin-left:10px; color:var(--accent); font-weight:bold;">SIGNAL: 0%</span></div>
                     <div>Y-AXIS: 0 - 255 | X-AXIS: ROLLING 5s (30Hz)</div>
                 </div>
             </div>
@@ -633,12 +657,12 @@
         </details>
 
         <details class="engine-accordion">
-            <summary>🧠 The Collector</summary>
+            <summary>The Collector</summary>
             <div class="accordion-content">
                 <!-- TRAINING HUB (Feature Collector) -->
             <div id="trainingHub" class="dash-panel" style="margin-top: 10px; border-color: rgba(249, 202, 36, 0.3);">
                 <div class="dash-header">
-                    <span style="color:#f9ca24;">🧠 Feature Collector</span>
+                    <span style="color:#f9ca24;">Feature Collector</span>
                     <span style="font-size: 9px; opacity:0.6;">30s BEFORE / 10s AFTER</span>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
@@ -657,7 +681,7 @@
         </details>
 
         <details class="engine-accordion">
-            <summary>⚖️ The Sanity Check</summary>
+            <summary>The Sanity Check</summary>
             <div class="accordion-content">
                 <!-- SECTION: CALIBRATION (Sanity Check) -->
             <div id="section-calibration" class="section">

@@ -2,5 +2,6 @@
     "prompt": "tie dye fractal",
     "type": "base",
     "luminance": 0.124,
-    "contrast": 0.134
+    "contrast": 0.134,
+    "heavy": true
 }

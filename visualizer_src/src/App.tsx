@@ -517,14 +517,14 @@ function EqMonitor({ audioDataRef, active }: { audioDataRef: React.RefObject<{ v
                                 style={{ height: '4%', background: EQ_COLORS[i], minHeight: 2 }}
                             />
                         </div>
-                        <span className="text-[7px] font-black tracking-wider text-zinc-600">{label}</span>
+                        <span className="text-[7px] font-black tracking-wider text-white/30">{label}</span>
                     </div>
                 ))}
             </div>
             <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                    <span className="text-[8px] font-black text-zinc-500 tracking-wider">VOL</span>
-                    <span ref={volTextRef} className="text-[8px] font-bold text-indigo-400 tabular-nums">0%</span>
+                    <span className="text-[8px] font-black text-white/40 tracking-wider">VOL</span>
+                    <span ref={volTextRef} className="text-[8px] font-bold text-[#9d7cff] tabular-nums">0%</span>
                 </div>
                 <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
                     <div ref={volRef} className="h-full rounded-full transition-all" style={{ width: '0%', background: 'linear-gradient(90deg, #6366f1, #a78bfa)' }} />
@@ -560,6 +560,8 @@ export default function App() {
     const [aiModel, setAiModel] = useState(localStorage.getItem('vj_ai_model') || 'gemini-2.5-flash');
     const [highPerformance, setHighPerformance] = useState(localStorage.getItem('vj_high_perf') !== 'false');
     const [inputGain, setInputGain] = useState(parseFloat(localStorage.getItem('vj_input_gain') || '1.0'));
+    const inputGainRef = useRef(inputGain);
+    useEffect(() => { inputGainRef.current = inputGain; }, [inputGain]);
     const wsRef = useRef<WebSocket | null>(null);
     const audioDataRef = useRef<{ vol: number, bins: number[] }>({ vol: 0, bins: [0,0,0,0,0,0] });
 
@@ -934,7 +936,7 @@ export default function App() {
                 baseMeshRef.current.material = newMat;
             }
             setStatus(`✅ ${category.toUpperCase()} Live`);
-            setStatusColor("text-indigo-400");
+            setStatusColor("text-[#9d7cff]");
         } catch (err: any) {
             setStatus(`❌ Shader error`);
             setStatusColor("text-rose-400");
@@ -955,7 +957,7 @@ export default function App() {
                 applyNewShader(previousCode, targetCategory);
                 setGeminiPrompt('');
                 setStatus("⏪ Edit Reverted");
-                setStatusColor("text-indigo-400");
+                setStatusColor("text-[#9d7cff]");
                 return;
             } else {
                 setStatus("⚠️ Nothing to undo");
@@ -1428,6 +1430,11 @@ export default function App() {
                             if (msg.eff_speed !== undefined) effSpeedRef.current = msg.eff_speed;
                             if (msg.eff_intensity !== undefined) effIntensityRef.current = msg.eff_intensity;
 
+                            if (msg.sensitivity !== undefined && Math.abs(inputGainRef.current - msg.sensitivity) > 0.01) {
+                                setInputGain(msg.sensitivity);
+                                localStorage.setItem('vj_input_gain', String(msg.sensitivity));
+                            }
+
                             // Handle DMX-Timed Visual Commands
                             if (msg.visual_commands) {
                                 strobeActiveRef.current = msg.visual_commands.some((c: any) => c.function === 'strobe' && c.value > 0);
@@ -1467,7 +1474,7 @@ export default function App() {
                                         const finalWarpIdx = autoCycleRef.current ? warpIdx : (activeWarpIndex ?? warpIdx);
                                         applyNewShader(PRESET_WARPS[finalWarpIdx].code, 'tex');
                                         setStatus("🎵 Spotify Art Detected");
-                                        setStatusColor("text-indigo-400");
+                                        setStatusColor("text-[#9d7cff]");
                                     });
                                 }
                             } else if (!msg.spotify) {
@@ -1589,14 +1596,14 @@ export default function App() {
 
             <AnimatePresence>
                 {showHistory && (
-                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onClick={e => e.stopPropagation()} className="absolute top-4 left-4 bottom-4 w-80 bg-zinc-900/95 border border-zinc-800 rounded-2xl flex flex-col z-50 overflow-hidden pointer-events-auto backdrop-blur-md shadow-2xl">
-                        <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-black/40">
-                            <h3 className="text-xs font-black tracking-widest text-indigo-400 uppercase">Shaders</h3>
+                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onClick={e => e.stopPropagation()} className="absolute top-4 left-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] w-80 bg-[#14141b]/60 backdrop-blur-[25px] backdrop-saturate-[180%] border border-white/10 rounded-[20px] flex flex-col z-50 overflow-hidden pointer-events-auto shadow-[0_12px_48px_rgba(0,0,0,0.5)]">
+                        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40">
+                            <h3 className="text-xs font-black tracking-widest text-[#9d7cff] uppercase">Shaders</h3>
                             <div className="flex gap-2">
                                 {filterTab === 'tex' ? (
                                     <div className="relative">
                                         <input type="file" accept="image/*,video/mp4,video/webm" onChange={handleMediaUpload} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                                        <button className="p-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-md text-white shadow-lg transition-colors">
+                                        <button className="p-1.5 bg-[#9d7cff] hover:bg-[#9d7cff] rounded-md text-white shadow-lg transition-colors">
                                             <Camera size={14} />
                                         </button>
                                     </div>
@@ -1604,35 +1611,35 @@ export default function App() {
                                     <div className="flex gap-2">
                                         <div className="relative">
                                             <input type="file" accept=".frag" onChange={handleImportShader} className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                                            <button title="Import Shader" className="p-1.5 bg-zinc-800 text-emerald-400 hover:text-white rounded-md transition-all shadow-lg">
+                                            <button title="Import Shader" className="p-1.5 bg-white/10 text-emerald-400 hover:text-white rounded-md transition-all shadow-lg">
                                                 <Cloud size={14} />
                                             </button>
                                         </div>
-                                        <button onClick={() => setShowAiInput(!showAiInput)} className={`p-1.5 rounded-md transition-all shadow-lg ${showAiInput ? 'bg-fuchsia-600 text-white' : 'bg-zinc-800 text-fuchsia-400 hover:text-white'}`}>
+                                        <button onClick={() => setShowAiInput(!showAiInput)} className={`p-1.5 rounded-md transition-all shadow-lg ${showAiInput ? 'bg-fuchsia-600 text-white' : 'bg-white/10 text-fuchsia-400 hover:text-white'}`}>
                                             <Sparkles size={14} />
                                         </button>
                                     </div>
                                 )}
-                                <button onClick={() => setShowHistory(false)} className="p-1.5 hover:bg-zinc-800 rounded-md"><X size={14} /></button>
+                                <button onClick={() => setShowHistory(false)} className="p-1.5 hover:bg-white/10 rounded-md"><X size={14} /></button>
                             </div>
                         </div>
 
                         <AnimatePresence>
                             {showAiInput && (filterTab === 'base') && (
-                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-black/60 border-b border-zinc-800">
+                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-black/60 border-b border-white/10">
                                     <div className="p-3 flex flex-col gap-2">
                                         <textarea
                                             value={geminiPrompt}
                                             onChange={e => setGeminiPrompt(e.target.value)}
                                             placeholder={`Describe a ${filterTab} shader... (Type "undo" to revert edit)`}
-                                            className="w-full bg-zinc-900 text-white border border-zinc-700 rounded-lg p-2 text-[10px] focus:outline-none focus:border-fuchsia-500 placeholder:text-zinc-600 resize-none h-16"
+                                            className="w-full bg-black/40 text-white border border-white/20 rounded-lg p-2 text-[10px] focus:outline-none focus:border-fuchsia-500 placeholder:text-white/30 resize-none h-16"
                                         />
                                         <div className="flex gap-2">
                                             <button onClick={() => handleGenerateAi('new')} disabled={isGenerating || !geminiPrompt} className="flex-1 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 disabled:opacity-50 text-[10px] font-black tracking-widest text-white rounded-lg transition-colors flex items-center justify-center gap-1.5">
                                                 {isGenerating ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
                                                 {isGenerating ? 'DREAMING...' : 'NEW'}
                                             </button>
-                                            <button onClick={() => handleGenerateAi('refine')} disabled={isGenerating || !geminiPrompt} className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-[10px] font-black tracking-widest text-white rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                                            <button onClick={() => handleGenerateAi('refine')} disabled={isGenerating || !geminiPrompt} className="flex-1 py-1.5 bg-[#9d7cff] hover:bg-[#9d7cff] disabled:opacity-50 text-[10px] font-black tracking-widest text-white rounded-lg transition-colors flex items-center justify-center gap-1.5">
                                                 {isGenerating ? <RefreshCw size={12} className="animate-spin" /> : <Edit size={12} />}
                                                 {isGenerating ? 'REFINING...' : 'REFINE'}
                                             </button>
@@ -1644,7 +1651,7 @@ export default function App() {
 
                         <div className="flex bg-black">
                             {['tex', 'base'].map(tab => (
-                                <button key={tab} onClick={() => { setFilterTab(tab as any); setShowAiInput(false); }} className={`flex-1 py-3 text-[10px] font-black tracking-widest ${filterTab === tab ? 'text-white border-b-2 border-indigo-500 bg-indigo-900/20' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/50'}`}>
+                                <button key={tab} onClick={() => { setFilterTab(tab as any); setShowAiInput(false); }} className={`flex-1 py-3 text-[10px] font-black tracking-widest ${filterTab === tab ? 'text-white border-b-2 border-[#9d7cff] bg-[#9d7cff]/20' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}>
                                     {tab === 'tex' ? 'TEX' : tab.toUpperCase()}
                                 </button>
                             ))}
@@ -1657,7 +1664,7 @@ export default function App() {
                                     : libraryItems.filter(i => i.category === filterTab)
                                 ).map((item, idx) => (
                                     item.category === 'spotify' ? (
-                                        <div key="spotify" className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer shadow-lg transition-all ${activeShaderId === 'spotify-art' ? 'border-emerald-500 shadow-emerald-500/20' : 'border-zinc-800 hover:border-emerald-400'}`} onClick={() => loadFromLibrary(item)}>
+                                        <div key="spotify" className={`relative group aspect-square rounded-xl overflow-hidden border-2 cursor-pointer shadow-lg transition-all ${activeShaderId === 'spotify-art' ? 'border-emerald-500 shadow-emerald-500/20' : 'border-white/10 hover:border-emerald-400'}`} onClick={() => loadFromLibrary(item)}>
                                             <img src={item.file} className="w-full h-full object-cover" />
                                             <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <div className="bg-emerald-500 text-black text-[8px] font-black px-2 py-0.5 rounded-full mb-1">LIVE</div>
@@ -1668,7 +1675,7 @@ export default function App() {
                                             )}
                                         </div>
                                     ) : filterTab === 'tex' ? (
-                                        <div key={idx} className={`relative group aspect-square rounded-xl overflow-hidden border cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-zinc-800 hover:border-indigo-400'}`} onClick={() => loadFromLibrary(item)}>
+                                        <div key={idx} className={`relative group aspect-square rounded-xl overflow-hidden border cursor-pointer shadow-lg transition-all ${activeShaderId === item.file ? 'border-[#9d7cff] ring-2 ring-[#9d7cff]/20' : 'border-white/10 hover:border-[#9d7cff]'}`} onClick={() => loadFromLibrary(item)}>
                                             {item.file.match(/\.(mp4|webm|ogg)$/i) ? (
                                                 <video src={`${apiBase}/${item.file}`} className="w-full h-full object-cover" autoPlay muted loop playsInline />
                                             ) : (
@@ -1679,7 +1686,7 @@ export default function App() {
                                     ) : (
                                         <div
                                             key={idx}
-                                            className={`relative group aspect-square rounded-xl border flex flex-col items-center justify-center p-3 cursor-pointer shadow-lg transition-all overflow-hidden ${activeShaderId === item.file ? 'border-fuchsia-500 ring-2 ring-fuchsia-500/20' : 'border-zinc-800 bg-black hover:border-zinc-600 hover:bg-zinc-900'}`}
+                                            className={`relative group aspect-square rounded-xl border flex flex-col items-center justify-center p-3 cursor-pointer shadow-lg transition-all overflow-hidden ${activeShaderId === item.file ? 'border-fuchsia-500 ring-2 ring-fuchsia-500/20' : 'border-white/10 bg-black hover:border-white/20 hover:bg-black/40'}`}
                                             onClick={() => {
                                                 if (activeShaderId === item.file) {
                                                     renameLibraryItem(item);
@@ -1695,11 +1702,11 @@ export default function App() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Sparkles size={24} className={`${activeShaderId === item.file ? 'text-fuchsia-400' : 'text-zinc-600 group-hover:text-fuchsia-400'} mb-2 transition-colors`} />
-                                                    <div className="text-[9px] text-zinc-500 font-bold text-center line-clamp-3 leading-relaxed">{item.prompt || item.file}</div>
+                                                    <Sparkles size={24} className={`${activeShaderId === item.file ? 'text-fuchsia-400' : 'text-white/30 group-hover:text-fuchsia-400'} mb-2 transition-colors`} />
+                                                    <div className="text-[9px] text-white/40 font-bold text-center line-clamp-3 leading-relaxed">{item.prompt || item.file}</div>
                                                 </>
                                             )}
-                                            <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black hover:bg-rose-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"><X size={14} /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); deleteLibraryItem(item); }} className="absolute top-2 right-2 p-1.5 bg-black hover:bg-rose-500 border border-white/10 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"><X size={14} /></button>
                                             {activeShaderId === item.file && (
                                                 <>
                                                     <button
@@ -1707,7 +1714,7 @@ export default function App() {
                                                             e.stopPropagation();
                                                             captureThumbnailForRef.current = item.file;
                                                         }}
-                                                        className="absolute top-2 left-2 p-1.5 bg-black hover:bg-emerald-500 border border-zinc-800 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"
+                                                        className="absolute top-2 left-2 p-1.5 bg-black hover:bg-emerald-500 border border-white/10 rounded-lg text-white opacity-30 group-hover:opacity-100 transition-opacity z-20"
                                                         title="Capture Thumbnail"
                                                     >
                                                         <Camera size={14} />
@@ -1737,9 +1744,9 @@ export default function App() {
                             </div>
                         </div>
 
-                        <div className="flex-none p-4 border-t border-zinc-800 bg-black/60 backdrop-blur-md">
-                                <div className="text-[9px] font-black text-indigo-400 mb-3 tracking-widest uppercase flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" /> Modifiers
+                        <div className="flex-none p-4 border-t border-white/10 bg-black/60 backdrop-blur-md">
+                                <div className="text-[9px] font-black text-[#9d7cff] mb-3 tracking-widest uppercase flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 bg-[#9d7cff] rounded-full animate-pulse" /> Modifiers
                                 </div>
                                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar scrollbar-hide">
                                     {PRESET_WARPS.map((warp, i) => (
@@ -1773,7 +1780,7 @@ export default function App() {
                                                     applyNewShader(warp.code, 'tex');
                                                 }
                                             }}
-                                            className={`flex-none px-4 py-2 rounded-xl text-[9px] font-black tracking-widest transition-all border whitespace-nowrap ${activeWarpIndex === i ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'}`}
+                                            className={`flex-none px-4 py-2 rounded-xl text-[9px] font-black tracking-widest transition-all border whitespace-nowrap ${activeWarpIndex === i ? 'bg-[#9d7cff] border-[#9d7cff] text-white shadow-[0_0_15px_rgba(157,124,255,0.4)]' : 'bg-black/20 border-white/10 text-white/40 hover:border-white/20 hover:text-white/80'}`}
                                         >
                                             {warp.name}
                                         </button>
@@ -1784,34 +1791,30 @@ export default function App() {
                 )}
 
                 {showSettings && (
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} onClick={e => e.stopPropagation()} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 bg-zinc-900/98 border border-zinc-800 rounded-3xl p-5 z-[100] pointer-events-auto backdrop-blur-2xl shadow-3xl max-h-[85vh] overflow-y-auto">
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} onClick={e => e.stopPropagation()} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 bg-[#14141b]/60 backdrop-blur-[25px] backdrop-saturate-[180%] border border-white/10 rounded-[20px] p-5 z-[100] pointer-events-auto shadow-[0_12px_48px_rgba(0,0,0,0.5)] max-h-[85vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xs font-black tracking-widest text-zinc-400 flex items-center gap-2">
+                            <h3 className="text-xs font-black tracking-widest text-white/60 flex items-center gap-2">
                                 <Settings size={14} /> ENGINE
                             </h3>
-                            <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-zinc-800 rounded-full"><X size={16} /></button>
+                            <button onClick={() => setShowSettings(false)} className="p-1 hover:bg-white/10 rounded-full"><X size={16} /></button>
                         </div>
 
                         <div className="space-y-2">
                             {/* EQ MONITOR — expanded by default, auto-collapses when others open */}
-                            <div className="rounded-2xl border border-zinc-800 overflow-hidden">
+                            <div className="rounded-2xl border border-white/10 overflow-hidden">
                                 <div className={`transition-all duration-300 overflow-hidden ${settingsSection === 'eq' ? 'max-h-60 p-4' : 'max-h-0 p-0'}`}>
                                     <EqMonitor audioDataRef={audioDataRef} active={settingsSection === 'eq' && showSettings} />
                                 </div>
                             </div>
 
                             {/* PERFORMANCE — collapsed by default */}
-                            <div className="rounded-2xl border border-zinc-800 overflow-hidden">
-                                <button onClick={() => setSettingsSection(settingsSection === 'perf' ? 'eq' : 'perf')} className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black tracking-widest text-zinc-400 hover:bg-zinc-800/50 transition-colors">
-                                    <div className="flex items-center gap-2"><Zap size={10} /> PERFORMANCE</div>
-                                    <ChevronDown size={12} className={`transition-transform ${settingsSection === 'perf' ? 'rotate-180' : ''}`} />
-                                </button>
+                            <div className="rounded-2xl border border-white/10 overflow-hidden flex flex-col">
                                 <div className={`transition-all duration-300 overflow-hidden ${settingsSection === 'perf' ? 'max-h-60' : 'max-h-0'}`}>
-                                    <div className="px-4 pb-4 space-y-4">
+                                    <div className="px-4 pt-4 pb-2 space-y-4 border-b border-white/5">
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-black text-zinc-500 tracking-wider">INPUT GAIN</span>
-                                                <span className="text-[10px] font-bold text-indigo-400 tabular-nums">{inputGain.toFixed(1)}</span>
+                                                <span className="text-[10px] font-black text-white/40 tracking-wider">INPUT GAIN</span>
+                                                <span className="text-[10px] font-bold text-[#9d7cff] tabular-nums">{inputGain.toFixed(1)}</span>
                                             </div>
                                             <input type="range" min="0" max="2" step="0.05" value={inputGain}
                                                 onChange={e => {
@@ -1822,33 +1825,34 @@ export default function App() {
                                                         wsRef.current.send(JSON.stringify({ type: 'params', sensitivity: v }));
                                                     }
                                                 }}
-                                                className="w-full h-1 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                                                className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#9d7cff]"
                                             />
                                         </div>
-                                        <label className="text-[10px] font-black text-zinc-500 tracking-wider flex items-center justify-between cursor-pointer" onClick={() => {
+                                        <label className="text-[10px] font-black tracking-wider flex items-center justify-center gap-4 cursor-pointer" onClick={() => {
                                             const newVal = !highPerformance;
                                             setHighPerformance(newVal);
                                             localStorage.setItem('vj_high_perf', String(newVal));
                                         }}>
-                                            <span>1-STAGE RENDER</span>
-                                            <div className={`w-8 h-4 rounded-full flex items-center p-0.5 transition-colors ${highPerformance ? 'bg-indigo-600' : 'bg-zinc-700'}`}>
-                                                <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${highPerformance ? 'translate-x-4' : 'translate-x-0'}`} />
+                                            <span className={!highPerformance ? "text-white" : "text-white/40"}>COMPLEX</span>
+                                            <div className={`w-8 h-4 rounded-full flex items-center p-0.5 transition-colors ${!highPerformance ? 'bg-[#9d7cff]' : 'bg-white/20'}`}>
+                                                <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${!highPerformance ? 'translate-x-0' : 'translate-x-4'}`} />
                                             </div>
+                                            <span className={highPerformance ? "text-white" : "text-white/40"}>FPS</span>
                                         </label>
                                     </div>
                                 </div>
+                                <button onClick={() => setSettingsSection(settingsSection === 'perf' ? 'eq' : 'perf')} className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black tracking-widest text-white/60 hover:bg-white/10/50 transition-colors">
+                                    <div className="flex items-center gap-2"><Zap size={10} /> PERFORMANCE</div>
+                                    <ChevronDown size={12} className={`transition-transform ${settingsSection === 'perf' ? 'rotate-180' : ''}`} />
+                                </button>
                             </div>
 
                             {/* API — collapsed by default */}
-                            <div className="rounded-2xl border border-zinc-800 overflow-hidden">
-                                <button onClick={() => setSettingsSection(settingsSection === 'api' ? 'eq' : 'api')} className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black tracking-widest text-zinc-400 hover:bg-zinc-800/50 transition-colors">
-                                    <div className="flex items-center gap-2"><Key size={10} /> API</div>
-                                    <ChevronDown size={12} className={`transition-transform ${settingsSection === 'api' ? 'rotate-180' : ''}`} />
-                                </button>
+                            <div className="rounded-2xl border border-white/10 overflow-hidden flex flex-col">
                                 <div className={`transition-all duration-300 overflow-hidden ${settingsSection === 'api' ? 'max-h-60' : 'max-h-0'}`}>
-                                    <div className="px-4 pb-4 space-y-4">
+                                    <div className="px-4 pt-4 pb-2 space-y-4 border-b border-white/5">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-zinc-500 tracking-wider">GEMINI API KEY</label>
+                                            <label className="text-[10px] font-black text-white/40 tracking-wider">GEMINI API KEY</label>
                                             <form autoComplete="off" onSubmit={e => e.preventDefault()}>
                                                 <input type="text" name="username" autoComplete="username" style={{ display: 'none' }} readOnly />
                                                 <input
@@ -1857,16 +1861,16 @@ export default function App() {
                                                     onChange={e => { setGeminiKey(e.target.value); localStorage.setItem('vj_gemini_key', e.target.value); }}
                                                     placeholder="Paste API Key..."
                                                     autoComplete="current-password"
-                                                    className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-indigo-400 focus:outline-none focus:border-indigo-500/50"
+                                                    className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-xs text-[#9d7cff] focus:outline-none focus:border-[#9d7cff]/50"
                                                 />
                                             </form>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-zinc-500 tracking-wider">AI MODEL</label>
+                                            <label className="text-[10px] font-black text-white/40 tracking-wider">AI MODEL</label>
                                             <select
                                                 value={aiModel}
                                                 onChange={e => { setAiModel(e.target.value); localStorage.setItem('vj_ai_model', e.target.value); }}
-                                                className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 appearance-none"
+                                                className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-xs text-white/80 focus:outline-none focus:border-[#9d7cff]/50 appearance-none"
                                             >
                                                 <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                                                 <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
@@ -1876,32 +1880,36 @@ export default function App() {
                                         </div>
                                     </div>
                                 </div>
+                                <button onClick={() => setSettingsSection(settingsSection === 'api' ? 'eq' : 'api')} className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black tracking-widest text-white/60 hover:bg-white/10/50 transition-colors">
+                                    <div className="flex items-center gap-2"><Key size={10} /> API</div>
+                                    <ChevronDown size={12} className={`transition-transform ${settingsSection === 'api' ? 'rotate-180' : ''}`} />
+                                </button>
                             </div>
                         </div>
 
-                        <button onClick={() => setShowSettings(false)} className="w-full mt-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-[10px] font-black tracking-widest rounded-xl transition-all shadow-lg active:scale-95">
+                        <button onClick={() => setShowSettings(false)} className="w-full mt-4 py-2.5 bg-[#9d7cff] hover:bg-[#9d7cff] text-[10px] font-black tracking-widest rounded-xl transition-all shadow-lg active:scale-95">
                             CLOSE
                         </button>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            <div className="fixed bottom-10 inset-x-0 w-full flex justify-center pointer-events-none">
+            <div className="fixed bottom-[calc(2.5rem+env(safe-area-inset-bottom,0px))] inset-x-0 w-full flex justify-center pointer-events-none">
                 <AnimatePresence>
                     {showToolbar && (
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} onClick={e => e.stopPropagation()} className="pointer-events-auto flex flex-col gap-3 w-full max-w-xl px-4 sm:px-12">
 
-                            <div className="bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/80 p-2.5 rounded-3xl flex items-center justify-between shadow-3xl overflow-hidden">
+                            <div className="bg-[#14141b]/60 backdrop-blur-[25px] backdrop-saturate-[180%] border border-white/10 p-2.5 rounded-[20px] flex items-center justify-between shadow-[0_12px_48px_rgba(0,0,0,0.5)] overflow-hidden">
                                 <div className="flex gap-2">
-                                    <button onClick={() => setShowHistory(!showHistory)} className={`p-3 rounded-2xl transition-all border ${showHistory ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-black/50 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}>
+                                    <button onClick={() => setShowHistory(!showHistory)} className={`p-3 rounded-2xl transition-all border ${showHistory ? 'bg-[#9d7cff] border-[#9d7cff] text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-black/50 border-white/10 text-white/60 hover:bg-white/10 hover:text-white'}`}>
                                         <Layers size={18} />
                                     </button>
-                                    <button onClick={() => setShowSettings(!showSettings)} className={`p-3 rounded-2xl transition-all border ${showSettings ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-black/50 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}>
+                                    <button onClick={() => setShowSettings(!showSettings)} className={`p-3 rounded-2xl transition-all border ${showSettings ? 'bg-[#9d7cff] border-[#9d7cff] text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-black/50 border-white/10 text-white/60 hover:bg-white/10 hover:text-white'}`}>
                                         <Settings size={18} />
                                     </button>
-                                    <button onClick={() => setAutoCycle(!autoCycle)} className={`px-4 py-2 rounded-2xl transition-all border flex items-center justify-center gap-2 ${autoCycle ? 'bg-emerald-600/10 border-emerald-500/40 text-emerald-400' : 'bg-black/50 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}`}>
+                                    <button onClick={() => setAutoCycle(!autoCycle)} className={`px-4 py-2 rounded-2xl transition-all border flex items-center justify-center gap-2 ${autoCycle ? 'bg-emerald-600/10 border-emerald-500/40 text-emerald-400' : 'bg-black/50 border-white/10 text-white/40 hover:bg-white/10'}`}>
                                         <RefreshCw size={14} className={autoCycle ? 'animate-spin-slow' : ''} />
-                                        <span className="text-[10px] font-black tracking-widest">{autoCycle ? 'AUTO SYNC' : 'MANUAL'}</span>
+                                        <span className="text-[10px] font-black tracking-widest">{autoCycle ? 'CYCLE' : 'MANUAL'}</span>
                                     </button>
                                     <AnimatePresence>
                                         {unsavedShader && (
@@ -1910,7 +1918,7 @@ export default function App() {
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 exit={{ opacity: 0, scale: 0.8 }}
                                                 onClick={handleSaveUnsavedShader}
-                                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-white flex items-center justify-center gap-2 shadow-lg transition-colors border border-indigo-500 font-black tracking-widest text-[10px]"
+                                                className="px-4 py-2 bg-[#9d7cff] hover:bg-[#9d7cff] rounded-2xl text-white flex items-center justify-center gap-2 shadow-lg transition-colors border border-[#9d7cff] font-black tracking-widest text-[10px]"
                                             >
                                                 <Save size={14} /> SAVE
                                             </motion.button>
@@ -1925,7 +1933,7 @@ export default function App() {
                                     <div className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${statusColor} group-hover:text-white transition-colors`}>
                                         <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${statusColor.replace('text-', 'bg-')}`} /> HOME
                                     </div>
-                                    <div className="text-[8px] font-bold text-zinc-600 tracking-tighter uppercase">{fps} FPS • PI-5 GL ES</div>
+                                    <div className="text-[8px] font-bold text-white/30 tracking-tighter uppercase">{fps} FPS • PI-5 GL ES</div>
                                 </button>
                             </div>
                         </motion.div>
@@ -1935,26 +1943,26 @@ export default function App() {
                 {/* DEBUG OVERLAY - Enhanced for visibility, only shows when toolbar is active */}
                 {showToolbar && (
                     <div className="fixed top-24 left-8 pointer-events-none font-mono text-[12px] space-y-2 z-[100] bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/5 shadow-2xl">
-                        <div className="text-zinc-500 mb-2 border-b border-white/10 pb-1 text-[10px] font-black uppercase tracking-wider">Visual Debug</div>
+                        <div className="text-white/40 mb-2 border-b border-white/10 pb-1 text-[10px] font-black uppercase tracking-wider">Visual Debug</div>
                         <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${strobeActiveRef.current ? "bg-amber-400 animate-pulse shadow-[0_0_10px_#fbbf24]" : "bg-zinc-800"}`} />
-                            <span className={strobeActiveRef.current ? "text-amber-200" : "text-zinc-600"}>STROBE</span>
+                            <div className={`w-2 h-2 rounded-full ${strobeActiveRef.current ? "bg-amber-400 animate-pulse shadow-[0_0_10px_#fbbf24]" : "bg-white/10"}`} />
+                            <span className={strobeActiveRef.current ? "text-amber-200" : "text-white/30"}>STROBE</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${spinActiveRef.current ? "bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]" : "bg-zinc-800"}`} />
-                            <span className={spinActiveRef.current ? "text-emerald-200" : "text-zinc-600"}>SPIN</span>
+                            <div className={`w-2 h-2 rounded-full ${spinActiveRef.current ? "bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]" : "bg-white/10"}`} />
+                            <span className={spinActiveRef.current ? "text-emerald-200" : "text-white/30"}>SPIN</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${(zoomTargetRef.current > 1.05 || zoomTargetRef.current < 0.95) ? "bg-indigo-400 shadow-[0_0_10px_#818cf8]" : "bg-zinc-800"}`} />
-                            <span className={(zoomTargetRef.current > 1.05 || zoomTargetRef.current < 0.95) ? "text-indigo-200" : "text-zinc-600"}>ZOOM: {zoomTargetRef.current.toFixed(2)}x</span>
+                            <div className={`w-2 h-2 rounded-full ${(zoomTargetRef.current > 1.05 || zoomTargetRef.current < 0.95) ? "bg-[#9d7cff] shadow-[0_0_10px_#818cf8]" : "bg-white/10"}`} />
+                            <span className={(zoomTargetRef.current > 1.05 || zoomTargetRef.current < 0.95) ? "text-indigo-200" : "text-white/30"}>ZOOM: {zoomTargetRef.current.toFixed(2)}x</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${hueTargetRef.current > 0 ? "bg-rose-400 shadow-[0_0_10px_#fb7185]" : "bg-zinc-800"}`} />
-                            <span className={hueTargetRef.current > 0 ? "text-rose-200" : "text-zinc-600"}>HUE: {(hueTargetRef.current * 360).toFixed(0)}°</span>
+                            <div className={`w-2 h-2 rounded-full ${hueTargetRef.current > 0 ? "bg-rose-400 shadow-[0_0_10px_#fb7185]" : "bg-white/10"}`} />
+                            <span className={hueTargetRef.current > 0 ? "text-rose-200" : "text-white/30"}>HUE: {(hueTargetRef.current * 360).toFixed(0)}°</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${invertActiveRef.current ? "bg-white shadow-[0_0_10px_#fff]" : "bg-zinc-800"}`} />
-                            <span className={invertActiveRef.current ? "text-white" : "text-zinc-600"}>INVERT</span>
+                            <div className={`w-2 h-2 rounded-full ${invertActiveRef.current ? "bg-white shadow-[0_0_10px_#fff]" : "bg-white/10"}`} />
+                            <span className={invertActiveRef.current ? "text-white" : "text-white/30"}>INVERT</span>
                         </div>
                     </div>
                 )}

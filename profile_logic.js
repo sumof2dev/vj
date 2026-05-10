@@ -10,6 +10,13 @@ var refreshUI = window.refreshUI || function() { };
 var saveDB = window.saveDB || function() { };
 var switchTab = window.switchTab || function() { };
 
+const MOD_TYPES = [
+    { id: 'none', label: 'NONE' },
+    { id: 'dampen_amp', label: 'DAMPEN AMP' },
+    { id: 'clamp', label: 'CLAMP' },
+    { id: 'gate', label: 'GATE' }
+];
+
 function normalizeProfileData(profile) {
     if (!profile) return;
     
@@ -57,9 +64,15 @@ function normalizeProfileData(profile) {
                     rule.modifiers = {
                         speed: rule.speed !== undefined ? rule.speed : 0.1,
                         react: rule.react !== undefined ? rule.react : 0.5,
-                        hold_type: rule.hold_type !== undefined ? rule.hold_type : 'none'
+                        hold_type: rule.hold_type !== undefined ? rule.hold_type : 'none',
+                        mod_type: rule.mod_type || 'none',
+                        mod_target: rule.mod_target !== undefined ? rule.mod_target : null
                     };
                 }
+                
+                // Ensure mod keys exist even if modifiers object was partially present
+                if (rule.modifiers.mod_type === undefined) rule.modifiers.mod_type = 'none';
+                if (rule.modifiers.mod_target === undefined) rule.modifiers.mod_target = null;
                 
                 // 3. Remap Hold Types
                 if (MAP.holds[rule.modifiers.hold_type]) rule.modifiers.hold_type = MAP.holds[rule.modifiers.hold_type];
@@ -104,7 +117,13 @@ function loadProfileChannels() {
                 behavior: 'static',
                 source: 'volume',
                 cal: { min: 0, center: 127, max: 255 },
-                modifiers: { speed: 0.5, react: 0.5, hold_type: 'none' },
+                modifiers: { 
+                    speed: 0.5, 
+                    react: 0.5, 
+                    hold_type: 'none',
+                    mod_type: 'none',
+                    mod_target: null
+                },
                 value: 0
             }]];
         }
@@ -128,7 +147,9 @@ function loadProfileChannels() {
                 modifiers: { 
                     speed: 0.5, 
                     react: 0.5, 
-                    hold_type: 'none' 
+                    hold_type: 'none',
+                    mod_type: 'none',
+                    mod_target: null
                 },
                 value: 0
             }];
@@ -837,10 +858,11 @@ function renderPresetTriggers() {
 function addOverrideToCurrentPreset() {
     const fixId = document.getElementById('pres-add-stage-fix')?.value;
     const funcId = document.getElementById('pres-add-global-func')?.value;
-    const valInput = document.getElementById('pres-add-global-val')?.value || "0";
 
     if (!funcId) return alert("Select a function to override.");
-    const val = valInput.includes('-') ? valInput : (parseInt(valInput) || 0);
+    
+    // Default to full intensity (255) for new overrides; user can edit in the list
+    const val = 255;
 
     currentPresetOverrides.push({
         id: (fixId === 'global') ? `global_${funcId}` : fixId,
@@ -852,8 +874,6 @@ function addOverrideToCurrentPreset() {
         channels: [{ name: funcId, value: val }]
     });
     renderPresetOverrides();
-    // Clear input after adding
-    if (document.getElementById('pres-add-global-val')) document.getElementById('pres-add-global-val').value = '';
 }
 
 function renderPresetOverrides() {
@@ -870,7 +890,7 @@ function renderPresetOverrides() {
                     <!-- Channel-specific settings for this override -->
                     <div style="display:flex; gap:10px; align-items:center;">
                         <label style="font-size:0.8rem;">Value / Range:</label>
-                        <input type="text" value="${ov.value || 0}" onchange="updateOverrideVal(${ovIdx}, this.value)" style="width:120px;" placeholder="e.g. 128 or 0-255">
+                        <input type="text" class="glass-input" value="${ov.value || 0}" onchange="updateOverrideVal(${ovIdx}, this.value)" style="width:120px;" placeholder="e.g. 128 or 0-255">
                     </div>
                 </div>
             </div>
@@ -900,7 +920,7 @@ function removeOverrideChannel(ovIdx, chIdx) {
     renderPresetOverrides();
 }
 
-function resetPresetForm() {
+function resetPresetForm(skipToggle = false) {
     current_editing_preset_id = null;
     document.getElementById('pres-name').value = '';
     currentPresetOverrides = [];
@@ -916,11 +936,20 @@ function resetPresetForm() {
         testPreset(false);
     }
 
+    // 4. Decay
+    const decayDrop = document.getElementById('pres-decay-select');
+    if (decayDrop) decayDrop.value = "0";
+
     renderPresetTriggers();
     renderPresetOverrides();
 
     // Collapse if open
-    if (typeof togglePresetEditor === 'function') togglePresetEditor(false);
+    if (!skipToggle && typeof togglePresetEditor === 'function') togglePresetEditor(false);
+}
+
+function addNewPreset() {
+    resetPresetForm(true);
+    if (typeof togglePresetEditor === 'function') togglePresetEditor(true);
 }
 
 // renderEnsemblePicker and toggleFixtureInTest moved to stage_logic.js
@@ -1085,13 +1114,15 @@ async function savePreset(silent = false) {
             // Filter out any accidental empty triggers
             db.presets[idx].triggers = JSON.parse(JSON.stringify(currentPresetTriggers.filter(t => t.type && t.type !== '')));
             db.presets[idx].overrides = JSON.parse(JSON.stringify(currentPresetOverrides));
+            db.presets[idx].decay = parseInt(document.getElementById('pres-decay-select')?.value || 0);
         }
     } else {
         db.presets.push({
             id: window.generateFriendlyId('pr', db.presets.map(p => p.id)),
             name,
-            triggers: JSON.parse(JSON.stringify(currentPresetTriggers)),
-            overrides: JSON.parse(JSON.stringify(currentPresetOverrides))
+            triggers: JSON.parse(JSON.stringify(currentPresetTriggers.filter(t => t.type && t.type !== ''))),
+            overrides: JSON.parse(JSON.stringify(currentPresetOverrides)),
+            decay: parseInt(document.getElementById('pres-decay-select')?.value || 0)
         });
     }
     await saveDB();
@@ -1116,6 +1147,10 @@ function editPreset(id) {
 
     renderPresetTriggers();
     renderPresetOverrides();
+    
+    if (document.getElementById('pres-decay-select')) {
+        document.getElementById('pres-decay-select').value = String(pre.decay || 0);
+    }
     
     // Update AI Button label to indicate edit mode
     const aiBtn = document.getElementById('preset-ai-gen-btn');
@@ -1247,9 +1282,25 @@ window.savePreset = savePreset;
 window.editPreset = editPreset;
 window.deletePreset = deletePreset;
 window.updatePresetFunctionDropdown = updatePresetFunctionDropdown;
+window.savePresetDecay = async function(id, decayValue) {
+    const pre = db.presets.find(p => p.id === id);
+    if (!pre) return;
+    pre.decay = parseInt(decayValue);
+    await saveDB();
+    console.log(`✅ Preset "${pre.name}" decay updated to ${decayValue}s`);
+};
 window.renderActivePresets = renderActivePresets;
+window.togglePresetMute = async function(id) {
+    const pre = db.presets.find(p => p.id === id);
+    if (!pre) return;
+    pre.active = (pre.active === false) ? true : false;
+    await saveDB();
+    refreshUI();
+    console.log(`✅ Preset "${pre.name}" active state toggled to: ${pre.active}`);
+};
 window.addConditionFromUI = addConditionFromUI;
 window.resetPresetForm = resetPresetForm;
+window.addNewPreset = addNewPreset;
 window.addOverrideToCurrentPreset = addOverrideToCurrentPreset;
 function getFixtureRoles(fixtureId) {
     if (!fixtureId) return [];
@@ -1289,7 +1340,9 @@ function getFixtureRoles(fixtureId) {
                     modifiers: { 
                         speed: conf.speed, 
                         react: conf.react, 
-                        hold_type: conf.hold_type || 'none' 
+                        hold_type: conf.hold_type || 'none',
+                        mod_type: conf.mod_type || 'none',
+                        mod_target: conf.mod_target !== undefined ? conf.mod_target : null
                     }
                 });
             });
@@ -1345,6 +1398,8 @@ function getFixtureRoles(fixtureId) {
                     speed: defaultSpeed, 
                     react: defaultReact, 
                     hold_type: defaultHold,
+                    mod_type: first.modifiers?.mod_type || 'none',
+                    mod_target: first.modifiers?.mod_target !== undefined ? first.modifiers.mod_target : null,
                     ranges: ranges 
                 };
             }
@@ -1394,18 +1449,17 @@ function getFixtureRoles(fixtureId) {
             const isCollapsed = collapsedChannels && collapsedChannels.has(chIdx);
             
             html += '<div class="channel-card ' + (isCollapsed ? 'collapsed' : '') + '" data-chidx="' + chIdx + '">' +
-                '<div class="channel-header channel-card-header" onclick="toggleChannelCollapse(' + chIdx + ')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05);">' +
-                    '<div class="channel-title" style="margin:0; font-size:12px; font-weight:800; color:var(--accent);"><span class="collapse-icon" style="margin-right:8px; display:inline-block; transition:transform 0.2s;">▼</span>CH ' + (chIdx + 1) + ': ' + (ch.name || ch.role || 'Unassigned') + '</div>' +
-                    '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); removeProfileChannel(' + chIdx + ')" style="background:transparent; border:1px solid #ff4757; color:#ff4757;">Remove</button>' +
+                '<div class="channel-header channel-card-header" onclick="toggleChannelCollapse(' + chIdx + ')" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05); gap: 10px;">' +
+                    '<div class="channel-title" style="margin:0; font-size:12px; font-weight:800; color:var(--accent); flex: 1;"><span class="collapse-icon" style="margin-right:8px; display:inline-block; transition:transform 0.2s;">▼</span>CH ' + (chIdx + 1) + ': ' + (ch.name || ch.role || 'Unassigned') + '</div>' +
+                    '<select id="preset-select-' + chIdx + '" class="logic-selector" style="border-color:var(--accent); color:var(--accent); font-weight:bold; margin-bottom: 0; width: auto; flex: 1; padding: 4px 8px;" onchange="applyEasyBehaviorToChannel(' + chIdx + ', this.value)" onclick="event.stopPropagation()">' + libOptions + '</select>' +
+                    '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); removeProfileChannel(' + chIdx + ')" style="background:transparent; border:1px solid #ff4757; color:#ff4757; flex-shrink: 0;">Remove</button>' +
                 '</div>' +
                 '<div class="channel-card-body">' +
-                '<div class="section-title">BEHAVIOR PRESET</div>' +
-                '<select id="preset-select-' + chIdx + '" class="logic-selector" style="border-color:var(--accent); color:var(--accent); font-weight:bold;" onchange="applyEasyBehaviorToChannel(' + chIdx + ', this.value)">' + libOptions + '</select>' +
-                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">' +
+                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">' +
                     '<div><div class="section-title">LOGIC</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'behavior\', this.value)">' + behaviorOptions + '</select></div>' +
                     '<div><div class="section-title">SOURCE</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'source\', this.value)">' + sourceOptions + '</select></div>' +
                 '</div>' +
-                '<div class="waveform-wrap" style="height:60px; background:#09090b; border-radius:8px; border:1px solid #27272a; margin-bottom:16px; position:relative; overflow:hidden;">' +
+                '<div class="waveform-wrap" style="height:60px; background:#09090b; border-radius:8px; border:1px solid #27272a; margin-bottom:10px; position:relative; overflow:hidden;">' +
                     '<canvas id="wave-' + chIdx + '" class="behavior-wave" style="width:100%; height:100%; display:block;"></canvas>' +
                     '<div style="position:absolute; top:4px; left:6px; font-size:8px; color:#444; pointer-events:none; font-weight:bold; letter-spacing:1px;">LIVE BEHAVIOR PREVIEW</div>' +
                 '</div>' +
@@ -1425,6 +1479,16 @@ function getFixtureRoles(fixtureId) {
                 '<div class="controls-grid">' +
                     '<div class="control-group"><label>Base Speed</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.speed + '" onchange="updateChannelConfig(' + chIdx + ', \'speed\', this.value)"></div>' +
                     '<div class="control-group"><label>Reactivity</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.react + '" onchange="updateChannelConfig(' + chIdx + ', \'react\', this.value)"></div>' +
+                    '<div><div class="section-title">Modulation Type</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'mod_type\', this.value)">' + 
+                        MOD_TYPES.map(m => `<option value="${m.id}" ${m.id === conf.mod_type ? 'selected' : ''}>${m.label}</option>`).join('') + 
+                    '</select></div>' +
+                    '<div><div class="section-title">Mod Target</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'mod_target\', this.value)">' + 
+                        '<option value="">-- NONE --</option>' + 
+                        (window.currentProfileChannels || []).map((otherCh, otherIdx) => {
+                            if (otherIdx === chIdx) return '';
+                            return `<option value="${otherIdx}" ${conf.mod_target == otherIdx ? 'selected' : ''}>CH ${otherIdx + 1}: ${(otherCh.name || otherCh.role || 'Unassigned').toUpperCase()}</option>`;
+                        }).join('') + 
+                    '</select></div>' +
                 '</div>' +
             '</div></div>';
         });
@@ -1607,6 +1671,30 @@ function getFixtureRoles(fixtureId) {
                     y = (Math.floor(E * 8) / 8 * 2.0) - 1.0;
                 }
                 
+                // --- CHANNEL MODULATION (Simulation) ---
+                if (conf.mod_type && conf.mod_type !== 'none' && conf.mod_target !== null) {
+                    const targetIdx = parseInt(conf.mod_target);
+                    const targetBuffer = window.simBuffers[targetIdx];
+                    if (targetBuffer && targetBuffer.length > 0) {
+                        const targetVal = targetBuffer[targetBuffer.length - 1];
+                        const targetNorm = targetVal / 255.0;
+                        
+                        if (conf.mod_type === 'dampen_amp') {
+                            y = y * (1.0 - targetNorm);
+                        } else if (conf.mod_type === 'dampen_speed') {
+                            // Speed modification in simulation is tricky as phase is already updated,
+                            // but we can scale the amplitude as a proxy or accept the limitation.
+                            // However, the user specifically asked for dampen_speed.
+                            // We'll scale y for now as the 'output' of the logic.
+                            y = y * (1.0 - targetNorm);
+                        } else if (conf.mod_type === 'clamp') {
+                            y = Math.min(y, (targetNorm * 2.0) - 1.0);
+                        } else if (conf.mod_type === 'gate') {
+                            if (targetNorm < 0.1) y = -1.0;
+                        }
+                    }
+                }
+                
                 // --- Y → DMX MAPPING (mirrors engine exactly) ---
                 y = Math.max(-1.0, Math.min(1.0, y));
                 let final_dmx;
@@ -1773,6 +1861,7 @@ function getFixtureRoles(fixtureId) {
 
     window.updateChannelConfig = function(chIdx, field, val) {
         if(field === 'speed' || field === 'react') val = parseFloat(val);
+        if(field === 'mod_target') val = val === "" ? null : parseInt(val);
         window.channelConfig[chIdx][field] = val;
         window.compileProfileMappings();
         
@@ -1867,14 +1956,14 @@ window.renderSliderSetup = function() {
     // 1. Fixture Picker
     picker.innerHTML = stage.map(inst => {
         const isActive = window.activeSliderSetupFixtures.includes(inst.id);
-        return `<div class="fixture-picker-pill ${isActive ? 'active' : ''}" onclick="toggleFixtureInSliderSetup('${inst.id}')">
+        return `<div class="fixture-picker-pill ${isActive ? 'active' : ''}" onclick="toggleFixtureInSliderSetup('${inst.id}')" style="cursor:pointer; padding:4px 10px; border-radius:15px; background:${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; color:${isActive ? '#000' : '#fff'}; font-size:10px; font-weight:800; border:1px solid ${isActive ? 'transparent' : 'rgba(255,255,255,0.1)'}; transition:all 0.2s;">
             ${inst.id}
         </div>`;
     }).join('') || '<div style="color:#666; font-size:12px; padding:10px;">No fixtures found. Check Stage Tab.</div>';
 
     // 2. Slider Strips
     if (window.activeSliderSetupFixtures.length === 0) {
-        strips.innerHTML = '<div style="padding:20px; text-align:center; color:#444; width:100%; border:1px dashed #222; border-radius:8px; font-size:12px;">Select fixtures above to live-adjust sliders.</div>';
+        strips.innerHTML = '<div style="padding:40px; text-align:center; color:#444; width:100%; border:2px dashed #222; border-radius:12px; font-size:12px; background:rgba(0,0,0,0.2);">Select fixtures above to live-adjust sliders for snapshotting.</div>';
         return;
     }
 
@@ -1885,29 +1974,46 @@ window.renderSliderSetup = function() {
         const prof = window.db.profiles.find(p => p.id === inst.profileId);
         if (!prof) return;
 
+        const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
         const channels = prof.channels || [];
         if (!window.sliderSetupValues[id]) window.sliderSetupValues[id] = {};
 
         html += `
-            <div class="test-strip" style="min-width: unset; flex-shrink: 0; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                <div style="font-size: 10px; font-weight: 900; color: var(--accent); text-transform: uppercase;">${id}</div>
-                <div style="display: flex; gap: 10px;">
+            <div class="test-strip-card" data-fixture-id="${id}" style="min-width: unset; flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 1px;">${id}</div>
+                    <div style="font-size: 9px; color: #555; font-family: monospace;">ADDR: ${baseAddr}</div>
+                </div>
+                <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none;">
                     ${channels.map((ch, chIdx) => {
-                        const val = window.sliderSetupValues[id][chIdx] !== undefined ? window.sliderSetupValues[id][chIdx] : (ch.default || 0);
+                        const addr = baseAddr + (parseInt(ch.addrOffset) || chIdx);
+                        const isBusy = window.latestOverrides.has(addr);
+                        const val = (window.sliderSetupValues[id] && window.sliderSetupValues[id][chIdx] !== undefined)
+                            ? window.sliderSetupValues[id][chIdx] 
+                            : (window.latestDmxUniverse[addr] || 0);
+                        
                         return `
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
-                                <div style="font-size: 8px; color: #666; height: 10px; overflow: hidden; text-transform: uppercase; width: 30px; text-align: center;">${ch.name || ch.role}</div>
-                                <div class="vertical-slider-container">
-                                    <div class="dmx-fader-track"></div>
-                                    <input type="range" min="0" max="255" step="1" value="${val}" 
-                                        id="slider-setup-${id}-${chIdx}"
-                                        oninput="adjustSliderSetupValue('${id}', ${chIdx}, parseInt(this.value))">
-                                    <div class="dmx-fader-cap" id="cap-setup-${id}-${chIdx}" style="bottom: ${Math.round((val / 255) * (120 - 18))}px;"></div>
+                            <div class="preset-slider-col ${isBusy ? 'busy' : ''}" data-addr="${addr}" data-fixture-id="${id}" data-idx="${chIdx}" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                <div class="preset-slider-role" style="font-size: 8px; font-weight: 800; color: ${isBusy ? 'var(--danger)' : '#777'}; height: 12px; overflow: visible; text-transform: uppercase; width: 36px; text-align: center; cursor: pointer; white-space: nowrap; transition: color 0.2s;" 
+                                     onclick="if(window.clearOverride) window.clearOverride(${addr}); else { window.ws.send(JSON.stringify({type: 'clear_overrides', addresses: [${addr}]})); window.latestOverrides.delete(${addr}); window.renderSliderSetup(); }">
+                                     ${ch.role || ch.name}
                                 </div>
-                                <div id="val-setup-${id}-${chIdx}" style="font-size: 10px; font-weight: bold; color: #fff; font-family: monospace;">${val}</div>
+                                <div class="vertical-slider-container" style="${isBusy ? 'border-color: var(--danger); box-shadow: 0 0 10px rgba(255, 71, 87, 0.2);' : ''}">
+                                    <div class="dmx-fader-track" style="background: rgba(255,255,255,0.05);"></div>
+                                    <input type="range" class="preset-slider-input" min="0" max="255" step="1" value="${val}" 
+                                        id="slider-setup-${id}-${chIdx}"
+                                        oninput="adjustSliderSetupValue('${id}', ${chIdx}, parseInt(this.value), ${addr})"
+                                        onchange="adjustSliderSetupValue('${id}', ${chIdx}, parseInt(this.value), ${addr})"
+                                        onkeydown="window.handleSliderKeyNav(event)">
+                                    <div class="dmx-fader-cap" id="cap-setup-${id}-${chIdx}" style="bottom: ${Math.round((val / 255) * (120 - 18))}px; ${isBusy ? 'background: linear-gradient(180deg, var(--danger) 0%, #900 100%); border-color: #f00; box-shadow: 0 0 8px var(--danger);' : ''}"></div>
+                                </div>
+                                <div class="preset-val-display" id="val-setup-${id}-${chIdx}" style="font-size: 10px; font-weight: 900; color: ${isBusy ? 'var(--danger)' : '#fff'}; font-family: 'JetBrains Mono', monospace; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); min-width: 24px; text-align: center;">${val}</div>
                             </div>
                         `;
                     }).join('')}
+                </div>
+                <div style="display:flex; justify-content:center;">
+                     <button class="btn btn-sm" style="font-size:8px; opacity:0.5; padding:2px 10px; background:transparent;" onclick="clearFixtureOverrides('${id}')">Release Fix</button>
                 </div>
             </div>
         `;
@@ -1925,15 +2031,26 @@ window.toggleFixtureInSliderSetup = function(id) {
     window.renderSliderSetup();
 }
 
-window.adjustSliderSetupValue = function(id, chIdx, val) {
+window.adjustSliderSetupValue = function(id, chIdx, val, addr) {
     if (!window.sliderSetupValues[id]) window.sliderSetupValues[id] = {};
     window.sliderSetupValues[id][chIdx] = val;
+
+    if (addr !== undefined) {
+        window.latestOverrides.add(addr);
+    }
 
     // Update visuals inline — do NOT rebuild DOM (renderSliderSetup) during interaction
     const cap = document.getElementById(`cap-setup-${id}-${chIdx}`);
     const valDisplay = document.getElementById(`val-setup-${id}-${chIdx}`);
-    if (cap) cap.style.bottom = Math.round((val / 255) * (120 - 18)) + 'px';
-    if (valDisplay) valDisplay.innerText = val;
+    if (cap) {
+        cap.style.bottom = Math.round((val / 255) * (120 - 18)) + 'px';
+        cap.style.background = 'linear-gradient(180deg, var(--danger) 0%, #900 100%)';
+        cap.style.borderColor = '#f00';
+    }
+    if (valDisplay) {
+        valDisplay.innerText = val;
+        valDisplay.style.color = 'var(--danger)';
+    }
 
     window.sendSliderSetupOverride(id, chIdx, val);
 }
@@ -1982,6 +2099,7 @@ window.clearSliderSetup = function() {
 
 window.recordSliderSetup = function() {
     let capturedCount = 0;
+    // Iterate through all fixtures that have been adjusted in the Slider Setup
     Object.keys(window.sliderSetupValues).forEach(fixId => {
         const channels = window.sliderSetupValues[fixId];
         Object.keys(channels).forEach(chIdx => {
@@ -1990,9 +2108,17 @@ window.recordSliderSetup = function() {
             if (!inst) return;
             const prof = window.db.profiles.find(p => p.id === inst.profileId);
             if (!prof) return;
+            
             const ch = prof.channels[chIdx];
+            const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+            const addr = baseAddr + (parseInt(ch.addrOffset) || parseInt(chIdx));
+            
+            // Only capture if this specific channel is currently overridden (locked)
+            if (!window.latestOverrides.has(addr)) return;
+
             const role = ch.role || ch.name;
 
+            // Check if an override for this fixture/role already exists in currentPresetOverrides
             const existingIdx = currentPresetOverrides.findIndex(ov => ov.id === fixId && ov.role === role);
             const override = {
                 id: fixId,
@@ -2015,11 +2141,9 @@ window.recordSliderSetup = function() {
 
     if (capturedCount > 0) {
         renderPresetOverrides();
-        if (typeof showToast === 'function') showToast(`Captured ${capturedCount} slider values!`, 3000);
-        else console.log(`Captured ${capturedCount} slider values!`);
+        if (typeof showToast === 'function') showToast(`📸 Snapshot: Captured ${capturedCount} locked values!`, 3000, "success");
     } else {
-        if (typeof showToast === 'function') showToast("No sliders have been adjusted to capture.", 3000, "warning");
-        else console.warn("No sliders have been adjusted to capture.");
+        if (typeof showToast === 'function') showToast("Move sliders to lock values before snapshotting.", 3000, "warning");
     }
 }
 function renderProfileCalibration() {
@@ -2138,4 +2262,22 @@ window.updateSliderSetupVisuals = function() {
             }
         });
     });
+};
+
+window.handleSliderKeyNav = function(event) {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        const current = event.target;
+        const all = Array.from(document.querySelectorAll('.preset-slider-input'));
+        const idx = all.indexOf(current);
+        if (idx === -1) return;
+        
+        let target = null;
+        if (event.key === 'ArrowLeft' && idx > 0) target = all[idx - 1];
+        if (event.key === 'ArrowRight' && idx < all.length - 1) target = all[idx + 1];
+        
+        if (target) {
+            event.preventDefault();
+            target.focus();
+        }
+    }
 };

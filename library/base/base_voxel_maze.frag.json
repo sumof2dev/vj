@@ -2,5 +2,6 @@
     "prompt": "voxel",
     "type": "base",
     "luminance": 0.228,
-    "contrast": 0.098
+    "contrast": 0.098,
+    "heavy": true
 }

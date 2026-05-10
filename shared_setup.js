@@ -233,7 +233,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "58260219";
+window.APP_VERSION = "510261247";
 
 console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
 
@@ -334,7 +334,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v58260219)");
+    console.log("✅ RaveBox Core Ready (v510261247)");
 }
 
 // Kick off sync immediately
@@ -436,7 +436,7 @@ window.dmx_connected = false;
 
 // --- UI UTILITIES ---
 window.cycleTheme = function() {
-    const themes = ['', 'theme-glass', 'theme-cyber', 'theme-industrial'];
+    const themes = ['', 'theme-cyber', 'theme-industrial'];
     let currentIdx = 0;
     const bodyClass = document.body.className;
     themes.forEach((t, i) => {
@@ -469,23 +469,19 @@ window.updateUniversalHUD = function() {
         
         if (!window.everActivatedPresets) window.everActivatedPresets = new Set();
 
-        const activeIds = window.activePresets || (window.latestAudioState && window.latestAudioState.active_presets) || [];
-        activeIds.forEach(id => {
-            window.everActivatedPresets.add(id);
-            const p = (window.db && window.db.presets) ? window.db.presets.find(x => x.id === id || x.name === id) : null;
-            const name = p ? p.name : id;
-            if (!activeNames.includes(name)) activeNames.push(name);
-        });
+        const activeIds = (window.activePresets || (window.latestAudioState && window.latestAudioState.active_presets) || []).map(id => String(id));
+        activeIds.forEach(id => window.everActivatedPresets.add(id));
         
+        // Render in the order they were first added to the Set (Insertion Order)
+        let badgesHtml = '';
         window.everActivatedPresets.forEach(id => {
-            const p = (window.db && window.db.presets) ? window.db.presets.find(x => x.id === id || x.name === id) : null;
+            const p = (window.db && window.db.presets) ? window.db.presets.find(x => String(x.id) === id || String(x.name) === id) : null;
             const name = p ? p.name : id;
-            if (!activeNames.includes(name) && !dimNames.includes(name)) dimNames.push(name);
+            const isActive = activeIds.includes(id);
+            badgesHtml += `<span class="hud-preset-badge ${isActive ? '' : 'dim'}">${name}</span>`;
         });
         
-        presetsCont.innerHTML = 
-            activeNames.map(name => `<span class="hud-preset-badge">${name}</span>`).join('') +
-            dimNames.map(name => `<span class="hud-preset-badge dim">${name}</span>`).join('');
+        presetsCont.innerHTML = badgesHtml;
     }
 
     // 2. Vibe Log
@@ -566,7 +562,13 @@ var switchTab = window.switchTab = function(tabId, noHistory = false) {
 
 var getUniqueProfiles = window.getUniqueProfiles = () => {
     const seen = new Set();
-    return (window.db.profiles || []).filter(p => { if (!p.id || seen.has(p.id)) return false; seen.add(p.id); return true; });
+    return (window.db.profiles || []).filter(p => { 
+        if (!p.id || seen.has(p.id)) return false; 
+        // Hide Govee LAN profiles from the main library list
+        if (p.id === 'govee.p.lan' || (p.name && p.name.includes('Govee LAN'))) return false;
+        seen.add(p.id); 
+        return true; 
+    });
 };
 
 var refreshUI = window.refreshUI = function() {
@@ -611,12 +613,12 @@ var sendIt = window.sendIt = async function(event) {
         try { await fetch(`${window.API_BASE_ROOT}/restart`, { method: 'POST' }); } catch (e) {}
 
         if (btn) {
-            btn.innerText = "✅ Saved!"; btn.style.background = "var(--success)";
+            btn.innerText = "Saved!"; btn.style.background = "var(--success)";
             setTimeout(() => { btn.innerText = originalText; btn.style.background = ""; btn.disabled = false; }, 2000);
         }
     } catch (err) {
         console.error("Save error:", err);
-        if (btn) { btn.innerText = "❌ Error"; btn.disabled = false; setTimeout(() => btn.innerText = originalText, 3000); }
+        if (btn) { btn.innerText = "Error"; btn.disabled = false; setTimeout(() => btn.innerText = originalText, 3000); }
     }
 };
 
@@ -625,7 +627,7 @@ window.togglePresetEditor = function(show) {
     const content = document.getElementById('preset-editor-content');
     const actionsTop = document.getElementById('preset-editor-actions-top');
     const addBtn = document.getElementById('preset-add-btn');
-    const genBtn = document.getElementById('preset-gen-btn-top');
+    const aiBtn = document.getElementById('preset-ai-gen-btn');
     const arrow = document.getElementById('preset-editor-arrow');
     const header = document.getElementById('preset-editor-header');
 
@@ -635,14 +637,15 @@ window.togglePresetEditor = function(show) {
         content.classList.remove('hidden');
         actionsTop.classList.remove('hidden');
         addBtn.classList.add('hidden');
-        genBtn.classList.add('hidden');
+        // Keep AI button visible (it will say "Edit" if editing)
+        if (aiBtn) aiBtn.classList.remove('hidden'); 
         if (arrow) arrow.style.transform = 'rotate(180deg)';
         if (header) header.style.background = 'rgba(255,255,255,0.05)';
     } else {
         content.classList.add('hidden');
         actionsTop.classList.add('hidden');
         addBtn.classList.remove('hidden');
-        genBtn.classList.remove('hidden');
+        if (aiBtn) aiBtn.classList.remove('hidden');
         if (arrow) arrow.style.transform = 'rotate(0deg)';
         if (header) header.style.background = 'rgba(255,255,255,0.02)';
         
@@ -653,7 +656,7 @@ window.togglePresetEditor = function(show) {
     }
 };
 
-window.APP_VERSION = "58260219";
+window.APP_VERSION = "510261247";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
@@ -710,21 +713,28 @@ window.APP_VERSION = "58260219";
 
 function loadNodeIp() {
     const input = document.getElementById('dmx-node-ip-input');
+    const typeSelect = document.getElementById('hardware-output-type');
     if (!input) return;
     fetch('/api/remote_settings')
         .then(r => r.ok ? r.json() : Promise.reject("Status " + r.status))
         .then(data => {
             const ip = data.master?.node_ip || "";
             const active = data.master?.node_active !== false; // Default true
+            const type = data.master?.node_type || 'dmx';
             input.value = ip;
             input.dataset.active = active;
+            if (typeSelect) typeSelect.value = type;
             updateNodeUiState(input, active);
+            updateHardwareType();
         })
         .catch(e => console.warn("Failed to load node IP:", e));
 }
 
 function updateNodeUiState(input, active) {
-    if (!input.value) {
+    const toggle = document.getElementById('hardware-node-toggle');
+    if (toggle) toggle.checked = active;
+
+    if (!input.value && input.dataset.active !== 'true') {
         input.style.borderColor = "rgba(255,255,255,0.1)";
         input.style.background = "rgba(255,255,255,0.03)";
         input.style.boxShadow = "none";
@@ -746,14 +756,50 @@ function updateNodeUiState(input, active) {
 
 window.toggleNodeMode = function() {
     const input = document.getElementById('dmx-node-ip-input');
-    if (!input || !input.value || !input.readOnly) return;
+    const toggle = document.getElementById('hardware-node-toggle');
+    if (!input) return;
     
-    const wasActive = input.dataset.active === 'true';
-    const nowActive = !wasActive;
+    // Safety: only allow toggle if IP is locked (readOnly)
+    if (!input.readOnly) {
+        if (toggle) toggle.checked = input.dataset.active === 'true';
+        console.warn("⚠️ Lock IP address before toggling output.");
+        return;
+    }
+    
+    const nowActive = toggle ? toggle.checked : (input.dataset.active !== 'true');
     input.dataset.active = nowActive;
     
     updateNodeUiState(input, nowActive);
     saveNodeIp(input.value, nowActive);
+    updateHardwareType(); 
+};
+
+window.updateHardwareType = function() {
+    const type = document.getElementById('hardware-output-type')?.value || 'dmx';
+    const input = document.getElementById('dmx-node-ip-input');
+    const goveeCard = document.getElementById('govee-nodes-card');
+    
+    if (type === 'govee') {
+        if (input) {
+            input.placeholder = "Govee LAN Mode";
+            input.disabled = true;
+            input.style.opacity = "0.3";
+        }
+        const isActive = input?.dataset.active === 'true';
+        if (goveeCard) {
+            if (isActive) goveeCard.classList.remove('hidden');
+            else goveeCard.classList.add('hidden');
+        }
+    } else {
+        if (input) {
+            input.placeholder = "Enter IP Address";
+            input.disabled = false;
+            input.style.opacity = "1";
+        }
+        if (goveeCard) goveeCard.classList.add('hidden');
+    }
+    
+    if (input) updateNodeUiState(input, input.dataset.active === 'true');
 };
 
 window.editNodeIp = function() {
@@ -776,20 +822,24 @@ window.lockNodeIp = function() {
 };
 
 function saveNodeIp(nodeIp, active = true) {
+    const typeSelect = document.getElementById('hardware-output-type');
+    const nodeType = typeSelect ? typeSelect.value : 'dmx';
+    
     fetch('/api/remote_settings')
         .then(r => r.ok ? r.json() : Promise.reject("Status " + r.status))
         .then(data => {
             if (!data.master) data.master = {};
             data.master.node_ip = nodeIp;
             data.master.node_active = active;
+            data.master.node_type = nodeType;
             return fetch('/vj_remote_settings.json', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(data, null, 4)
             });
         })
         .then(() => {
-            console.log("📡 Node settings saved:", nodeIp, active);
+            console.log("📡 Node settings saved:", nodeIp, active, nodeType);
             fetch('/api/restart', { method: 'POST' }).catch(() => {});
         })
         .catch(e => console.error("Failed to save node IP:", e));

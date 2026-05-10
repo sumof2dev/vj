@@ -2,5 +2,6 @@
     "prompt": "cubes",
     "type": "base",
     "luminance": 0.072,
-    "contrast": 0.128
+    "contrast": 0.128,
+    "heavy": true
 }

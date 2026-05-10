@@ -146,8 +146,13 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
                     subprocess.run(['pkill', '-f', pattern])
                 
                 if action == 'start' or action == 'restart':
+                    if action == 'restart':
+                        import time
+                        time.sleep(1.5) # Give port time to clear
+
                     # Start manual process in background
-                    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', f'{service}.log')
+                    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+                    log_file = os.path.join(BASE_DIR, 'logs', f'{service}.log')
                     os.makedirs(os.path.dirname(log_file), exist_ok=True)
                     
                     cmd_manual = f"nohup venv/bin/python3 -u {pattern} > {log_file} 2>&1 &"

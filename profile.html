@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>RaveBox Setup</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
@@ -30,14 +30,14 @@
             background: var(--card);
             border: 1px solid #27272a;
             border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 24px;
+            padding: 10px;
+            margin-bottom: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             position: relative;
         }
         .channel-header {
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 16px; border-bottom: 1px solid #27272a; padding-bottom: 12px;
+            margin-bottom: 10px; border-bottom: 1px solid #27272a; padding-bottom: 10px;
         }
         .channel-title { font-size: 16px; font-weight: 700; color: var(--accent); }
         .section-title {
@@ -47,8 +47,8 @@
         }
         .logic-selector {
             width: 100%; background: #09090b; border: 1px solid #27272a;
-            border-radius: 8px; color: var(--text); padding: 10px 14px;
-            font-size: 13px; appearance: none; cursor: pointer; outline: none; margin-bottom: 16px;
+            border-radius: 8px; color: var(--text); padding: 8px 12px;
+            font-size: 13px; appearance: none; cursor: pointer; outline: none; margin-bottom: 10px;
         }
         .proportion-container {
             height: 42px; background: #09090b; border-radius: 8px; position: relative;
@@ -163,83 +163,73 @@
             <div id="hud-presets" class="hud-presets"></div>
             <div id="hud-vibe-log" class="hud-vibe-log"></div>
         </div>
-            <div id="profile-editor-view">
-            <div class="row" style="display:flex; justify-content:space-between; align-items: center; margin-bottom: 10px;">
+        <div id="profile-editor-view" style="display: flex; flex-direction: column; padding: 0; width: 100%;">
+            <!-- Separate Container for Header -->
+            <div class="card" style="border-color: rgba(0, 242, 255, 0.2); display:flex; justify-content:space-between; align-items: center; margin-bottom: 15px; padding: 15px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); background: rgba(24, 24, 27, 0.85);">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <button class="btn btn-sm" onclick="window.location.href='setup.html?tab=stage'">← Back</button>
-                    <h2 style="margin:0; border:none; padding:0;">Profile Editor</h2>
-                    <div id="editor-heartbeat"
-                        style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">
-                        IDLE</div>
+                    <h2 style="margin:0; border:none; padding:0; font-size: 1.1rem; color: var(--accent-alt); text-transform: uppercase;">Profile Editor</h2>
+                    <div id="editor-heartbeat" style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">IDLE</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="downloadBehaviorProfile()">Export JSON</button>
+                    <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background: var(--accent-alt); border-color: var(--accent-alt);" onclick="refineProfileGlobal()">Refine Profile</button>
+                    <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background:var(--success); border-color:var(--success);" onclick="sendIt(event)" title="Sync changes to the server backend">Save Profile</button>
                 </div>
             </div>
 
-            
-            <input type="file" id="load-behavior-input" style="display:none"
-                onchange="loadBehaviorProfile(event)">
-                <div id="ai-loading-container" style="display:none; margin-bottom: 20px;">
-                    <div
-                        style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; position: relative;">
-                        <div id="ai-loading-bar"
-                            style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; position: absolute; top:0; left:0;">
+            <!-- Content Container -->
+            <div class="card" style="border-color: rgba(0, 242, 255, 0.2); padding: 15px;">
+                    <input type="file" id="load-behavior-input" style="display:none" onchange="loadBehaviorProfile(event)">
+                    <div id="ai-loading-container" style="display:none; margin-bottom: 20px;">
+                        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; position: relative;">
+                            <div id="ai-loading-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; position: absolute; top:0; left:0;"></div>
+                        </div>
+                        <div style="display:flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                            <button id="ai-view-diff-btn" class="btn btn-sm" style="display:none; padding:2px 8px; font-size:9px; background:var(--accent); border:none; height:18px;" onclick="showAiDiff()">🔍 View Changes</button>
+                            <div id="ai-loading-text" style="font-size: 10px; color: var(--accent); text-align: right; font-weight: bold; text-transform: uppercase;">Processing...</div>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                        <button id="ai-view-diff-btn" class="btn btn-sm"
-                            style="display:none; padding:2px 8px; font-size:9px; background:var(--accent); border:none; height:18px;"
-                            onclick="showAiDiff()">🔍 View Changes</button>
-                        <div id="ai-loading-text"
-                            style="font-size: 10px; color: var(--accent); text-align: right; font-weight: bold; text-transform: uppercase;">
-                            Processing...</div>
-                    </div>
-                </div>
 
-
-                <div class="form-row">
-                    <div style="flex:1">
-                        <label>Profile Label</label>
-                        <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
-                        <input type="hidden" id="prof-base-fixture">
-                    </div>
-                </div>
-
-                <div id="profile-calibration-container"></div>
-                <div id="prof-mappings" style="margin-top: 10px;"></div>
-                
-                <div style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:10px;">
-                    <button class="btn" onclick="addProfileChannel()" style="flex:1; padding:12px; font-weight:bold; background:rgba(255,255,255,0.05); border:1px dashed var(--border);">➕ Add Channel</button>
-                    <div class="syntax-help-trigger">
-                        <span class="help-icon" style="background:var(--accent); color:#000; border:none; width:30px; height:30px; font-size:16px;">?</span>
-                        <div class="syntax-guide" style="bottom: 45px; right: 0; left: auto;">
-                            <strong>Quick Reference</strong>
-
-                            <div class="syntax-header">Premade Behaviors</div>
-                            <div class="syntax-item"><span>Pulse with Beat:</span> Hard-sync dimmer to kick drum</div>
-                            <div class="syntax-item"><span>Smooth Drift:</span> Slow sine wave on bass energy</div>
-                            <div class="syntax-item"><span>Bass Pump:</span> Channel mirrors bass hits directly</div>
-                            <div class="syntax-item"><span>Snap Phrase:</span> Random jump on each musical phrase</div>
-                            <div class="syntax-item"><span>Static Hold:</span> Fixed DMX value, ignores audio</div>
-                            <div class="syntax-item"><span>Random Bar Hold:</span> New random value every bar</div>
-
-                            <div class="syntax-header">Speed &amp; Reactivity</div>
-                            <div class="syntax-item"><span>Speed:</span> How fast the shape cycles (LFO rate)</div>
-                            <div class="syntax-item"><span>Reactivity:</span> How strongly audio moves the value</div>
-
-                            <div class="syntax-header">Vibe Dropdown</div>
-                            <div class="syntax-item"><span>Any:</span> Rule fires in all vibe states</div>
-                            <div class="syntax-item"><span>Chill / Mid / High:</span> Fires only in that energy tier</div>
-                            <div class="syntax-item"><span>Build / Drop:</span> Fires during a detected transition</div>
-                            <div class="syntax-item"><span>Chill 1, Mid 2…:</span> Variant sub-states within a tier — set ranges with the colored slider above</div>
-                            <div class="syntax-item"><span>Never:</span> Disables the rule without deleting it</div>
+                    <div class="form-row">
+                        <div style="flex:1">
+                            <label>Profile Label</label>
+                            <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
+                            <input type="hidden" id="prof-base-fixture">
                         </div>
                     </div>
-            </div>
 
-                <div class="profile-editor-actions">
-                    <button class="btn btn-secondary" onclick="window.location.href='setup.html?tab=stage'">Cancel</button>
-                    <button class="btn btn-sm" onclick="downloadBehaviorProfile()">Export JSON</button>
-                    <button class="btn btn-primary btn-sm" onclick="refineProfileGlobal()" style="background: var(--accent-alt); border-color: var(--accent-alt);">Refine Profile</button>
-                    <button class="btn btn-primary" onclick="saveProfile()" title="Sync changes to the server backend">Save Profile</button>
+                    <div id="profile-calibration-container"></div>
+                    <div id="prof-mappings" style="margin-top: 10px;"></div>
+                    
+                    <div style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom: 20px;">
+                        <button class="btn" onclick="addProfileChannel()" style="flex:1; padding:12px; font-weight:bold; background:rgba(255,255,255,0.05); border:1px dashed var(--border);">➕ Add Channel</button>
+                        <div class="syntax-help-trigger">
+                            <span class="help-icon" style="background:var(--accent); color:#000; border:none; width:30px; height:30px; font-size:16px;">?</span>
+                            <div class="syntax-guide" style="bottom: 45px; right: 0; left: auto;">
+                                <strong>Quick Reference</strong>
+
+                                <div class="syntax-header">Premade Behaviors</div>
+                                <div class="syntax-item"><span>Pulse with Beat:</span> Hard-sync dimmer to kick drum</div>
+                                <div class="syntax-item"><span>Smooth Drift:</span> Slow sine wave on bass energy</div>
+                                <div class="syntax-item"><span>Bass Pump:</span> Channel mirrors bass hits directly</div>
+                                <div class="syntax-item"><span>Snap Phrase:</span> Random jump on each musical phrase</div>
+                                <div class="syntax-item"><span>Static Hold:</span> Fixed DMX value, ignores audio</div>
+                                <div class="syntax-item"><span>Random Bar Hold:</span> New random value every bar</div>
+
+                                <div class="syntax-header">Speed &amp; Reactivity</div>
+                                <div class="syntax-item"><span>Speed:</span> How fast the shape cycles (LFO rate)</div>
+                                <div class="syntax-item"><span>Reactivity:</span> How strongly audio moves the value</div>
+
+                                <div class="syntax-header">Vibe Dropdown</div>
+                                <div class="syntax-item"><span>Any:</span> Rule fires in all vibe states</div>
+                                <div class="syntax-item"><span>Chill / Mid / High:</span> Fires only in that energy tier</div>
+                                <div class="syntax-item"><span>Build / Drop:</span> Fires during a detected transition</div>
+                                <div class="syntax-item"><span>Chill 1, Mid 2…:</span> Variant sub-states within a tier — set ranges with the colored slider above</div>
+                                <div class="syntax-item"><span>Never:</span> Disables the rule without deleting it</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
