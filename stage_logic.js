@@ -56,10 +56,13 @@ var switchTab = window.switchTab || function() { };
                             <span style="font-size:9px; color:#666; font-family:monospace;">${p.id}</span>
                         </div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-sm" style="font-size:10px; background:rgba(0, 242, 255, 0.1); border-color:rgba(0, 242, 255, 0.2); color:var(--accent);" onclick="addProfileToStage('${p.id}')">Add to Stage</button>
-                        <button class="btn btn-sm" style="font-size:10px;" onclick="goToProfile('${p.id}')">Edit</button>
-                        <button class="btn btn-danger btn-sm" style="padding:4px 8px; font-size:9px; opacity:0.4; transition:opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.4" onclick="event.stopPropagation(); deleteProfile('${p.id}')">Delete</button>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <button class="btn btn-sm" style="width:24px; height:24px; padding:0; display:flex; align-items:center; justify-content:center; background:rgba(0, 242, 255, 0.1); border-color:rgba(0, 242, 255, 0.2); color:var(--accent);" onclick="addProfileToStage('${p.id}')" title="Add to Stage">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                        <button class="btn btn-danger btn-sm" style="width:24px; height:24px; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.4; transition:opacity 0.2s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.4" onclick="event.stopPropagation(); deleteProfile('${p.id}')" title="Delete Profile">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
                     </div>
                 </div>
             `).join('') || '<div style="padding:15px; color:#444; font-size:12px; text-align:center;">No profiles found. Add one to get started.</div>';
@@ -291,9 +294,8 @@ var switchTab = window.switchTab || function() { };
                         <span style="opacity:0.4; font-size:9px;">${grouped[zone].length} FIXTURES</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:8px; opacity:0.3;">BULK PROFILE:</span>
-                        <select style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-size:9px; border-radius:4px; padding:2px 4px; outline:none; cursor:pointer;" onchange="updateZoneProfile('${zone}', this.value)">
-                            <option value="BULK">-- APPLY TO ALL --</option>
+                        <select style="background:none; border:none; color:var(--accent); font-size:12px; outline:none; cursor:pointer; width:20px; padding:0; appearance:auto;" onchange="updateZoneProfile('${zone}', this.value)">
+                            <option value="BULK"></option>
                             ${uniqueAllProfs.map(p => `<option value="${p.id}">${p.name.toUpperCase()}</option>`).join('')}
                         </select>
                     </div>
@@ -1172,11 +1174,7 @@ var switchTab = window.switchTab || function() { };
                         updateTestNumericalValues();
                     }
 
-                    const heart = document.getElementById('editor-heartbeat');
-                    if (heart && latestAudioState.beat) {
-                        heart.style.background = 'var(--accent)';
-                        setTimeout(() => heart.style.background = '#333', 50);
-                    }
+
                     return;
                 }
 
@@ -1818,13 +1816,6 @@ var switchTab = window.switchTab || function() { };
 
         }
         
-        // Swipe Gestures
-        let touchStartX = 0, touchStartY = 0;
-        document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; }, { passive: true });
-        document.addEventListener('touchend', e => { handleSwipe(e.changedTouches[0].screenX - touchStartX, e.changedTouches[0].screenY - touchStartY); }, { passive: true });
-        function handleSwipe(dx, dy) {
-            if (window.innerWidth <= 768 && dx > 80 && Math.abs(dx) > Math.abs(dy)) window.location.href = 'manager.html';
-        }
 
         initApp();
         drawCanvasLoop();

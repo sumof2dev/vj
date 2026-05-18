@@ -78,6 +78,8 @@ The engine separates **what** the light does from **why** it does it:
 - **Axis 1: Behavior (The Action):** The mathematical animation applied to the DMX channel (e.g., Static Value, Direct Mapping, LFO, or rhythmic Cycle/Trigger).
 - **Axis 2: Audio Source (The Driver):** The specific acoustic metric powering that behavior. Sources include Raw Energy, Harmonic Ratio (Timbre), Attack Velocity (Impact), or Spectral Flux.
 This decoupling allows for sophisticated layering, such as a laser's position orbiting based on a synth's harmonic ratio while its strobe intensity is hard-coded to the impact velocity of the kick drum.
+- **Per-Range Gain:** Each sub-range in a mapping supports a `gain` modifier (0.0 to 1.0+). This scales the behavior's output amplitude before it hits that specific DMX range. It is the primary tool for stabilizing fixtures with narrow DMX ranges (e.g., a pan range of only 10 steps) that otherwise feel too twitchy or "wild" when driven by raw audio energy. The global "Logic Gain" (whole channel multiplier) has been removed to ensure all gain scaling is intentional and localized to specific value ranges.
+- **Timing Consistency:** To ensure sweeps and sequences remain in sync across all trigger sources, all automated behaviors, manual presets, and one-shots MUST respect the engine's `base_speed` (effective DT) by default.
 
 ### The 4-Layer Priority Stack
 Before a final DMX value is sent, it passes through four priority layers:
@@ -115,14 +117,15 @@ Accurate DMX timing is critical on the Pi 5. The engine uses two methods based o
 - **Issue:** The system enters a constant loop: `steady` -> `building` -> `tension` -> `dropping` -> `steady`, even with consistent-energy music.
 - **Cause:** Beat-sensitivity. Small analysis windows (8-10 frames) misinterpret the space between kick drums as "tension."
 - **Mitigation/Standard (The Rhythm-Aware Gold Standard):**
-  - **Window Size:** Analysis windows MUST be **30 frames (~0.5s)** to smooth out percussive peaks.
+  - **Window Size:** Analysis windows MUST be **60 frames (~1.0s)** to smooth out percussive peaks and prevent aliasing between kick drums.
   - **Steady Lockout:** Must be **5.0s** minimum after a drop to allow the track to settle.
   - **Peak Suppression:** Building detection MUST be disabled if `vibe == "high"`.
-  - **Trend Threshold:** `trend_long` must exceed **0.25** and `recent_avg` must exceed **0.35**.
+  - **Trend Threshold:** `trend_long` must exceed **0.25** and `recent_avg` must exceed **0.35** for detection.
+  - **Fallback Threshold (Fizzle):** If in `building`, return to `steady` if `trend_long <= 0.0` AND `recent_avg <= 0.25` (Plateau Protection).
   - **Warmup Guard:** Transient detection suppressed for first **180 frames (~3s)** to ensure history is statistically valid.
 
 > [!IMPORTANT]
-> **Core Logic Protection**: The transient detection configuration above (30-frame windows, 5s lockout, and High-Vibe suppression) is the system's "Stability Baseline." Any future requests to modify these specific parameters must trigger a system warning and require an explicit "ignore and proceed" command.
+> **Core Logic Protection**: The transient detection configuration above (60-frame windows, 5s lockout, and High-Vibe suppression) is the system's "Stability Baseline." Any future requests to modify these specific parameters must trigger a system warning and require an explicit "ignore and proceed" command.
 
 ### Bass Bin Domination (Bin 0 Maxing Out)
 - **Issue:** The first EQ meter bar in the manager constantly pegs at maximum, and `bass`/`impact` values entering the vibe engine are chronically inflated, which makes the transient ghost cycling harder to suppress even with raised thresholds.
@@ -134,8 +137,8 @@ Accurate DMX timing is critical on the Pi 5. The engine uses two methods based o
 
 ### Sanity Check All-Fail (Except Volume)
 - **Issue:** The in-app sanity check in `help.html` reports all transient and vibe checks as failed.
-- **Cause:** The calibration task (`run_calibration_task`) creates a fresh `VibeEngine()` instance with `_history_frame = 0`. With the warmup guard set to 120 frames (~4s), transient detection was fully suppressed for the first 4 seconds of the calibration audio — which covers several early test sections entirely.
-- **Mitigation:** Warmup guard reduced to 60 frames (~2s), which is sufficient to avoid startup false-positives while still allowing calibration sections to be evaluated correctly.
+- **Cause:** The calibration task (`run_calibration_task`) creates a fresh `VibeEngine()` instance with `_history_frame = 0`. With the warmup guard set to 120 frames (~2s), transient detection was fully suppressed for the first 2 seconds of the calibration audio — which covers several early test sections entirely.
+- **Mitigation:** Warmup guard set to 180 frames (~3s), ensuring statistical validity while maintaining system stability baseline.
 
 ## 8. Pi 5 Hardware Peculiarities
 

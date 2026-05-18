@@ -133,18 +133,18 @@ class VibeEngine:
         
         # Suppress transient detection until history is warm (~3s).
         if self._history_frame >= 180 and len(self.energy_history) >= 180 and len(self.impact_history) >= 180:
-            # Windowed Trend: Compare recent 30-frame average to a 30-frame block from ~2s ago
-            # This is MUCH more stable than single-frame comparisons.
-            recent_energy = float(sum(list(self.energy_history)[-30:]) / 30.0)
-            past_energy = float(sum(list(self.energy_history)[-180:-150]) / 30.0)
+            # Windowed Trend: Compare recent 60-frame average to a 60-frame block from ~3s ago
+            # This is MUCH more stable than single-frame comparisons and avoids beat-aliasing.
+            recent_energy = float(sum(list(self.energy_history)[-60:]) / 60.0)
+            past_energy = float(sum(list(self.energy_history)[-180:-120]) / 60.0)
             trend_long = recent_energy - past_energy
             
             # Minimum hold durations per state (seconds) - Re-aligned with Cinematic rules
             HOLD_TIMES = {"building": 0.5, "tension": 1.5, "dropping": 6.0}
             
-            # Use a wide window (30 frames / ~0.5s) for rhythmic stability
-            recent_avg = float(sum(list(self.impact_history)[-30:]) / 30.0)
-            old_avg = float(sum(list(self.impact_history)[-90:-60]) / 30.0)
+            # Use a wide window (60 frames / ~1.0s) for rhythmic stability
+            recent_avg = float(sum(list(self.impact_history)[-60:]) / 60.0)
+            old_avg = float(sum(list(self.impact_history)[-180:-120]) / 60.0)
             
             # Deep History Check (Compare to 25s ago if available)
             if len(self.energy_history) >= 1500:
@@ -173,7 +173,7 @@ class VibeEngine:
                     if recent_avg < old_avg * 0.70 and past_energy > 0.05:
                         self.transient = "tension"
                         self._transient_hold_until = now + HOLD_TIMES["tension"]
-                    elif trend_long > -0.02 or recent_avg > 0.2:
+                    elif trend_long > 0.0 or recent_avg > 0.25:
                         # Energy still rising or high, DO NOT revert to steady
                         self._transient_hold_until = now + 1.0 # Extend
                     else:

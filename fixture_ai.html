@@ -1337,19 +1337,38 @@ ${limitText}
                     return;
                 }
 
-                currentFixture = data; // Now a Profile object
+                window.currentFixture = data; // Now a Profile object
 
                 // Final verification
                 const ts = Date.now();
-                if (!currentFixture.mappings || !currentFixture.channels) throw new Error("Invalid schema");
+                if (!window.currentFixture.mappings || !window.currentFixture.channels) throw new Error("Invalid schema");
 
-                if (!currentFixture.id || currentFixture.id === 'prof_generated') {
-                    currentFixture.id = window.generateFriendlyId('p', db.profiles.map(p => p.id));
+                // SCHEMA SYNCHRONIZATION: Ensure channels and mappings have the same length
+                const chLen = window.currentFixture.channels.length;
+                const mapLen = window.currentFixture.mappings.length;
+                
+                if (chLen < mapLen) {
+                    console.warn(`⚠️ AI returned ${mapLen} mappings but only ${chLen} channels. Padding channels...`);
+                    for (let i = chLen; i < mapLen; i++) {
+                        window.currentFixture.channels.push({ name: `Extra Channel ${i+1}`, role: 'generic', default: 0 });
+                    }
+                } else if (chLen > mapLen) {
+                    console.warn(`⚠️ AI returned ${chLen} channels but only ${mapLen} mappings. Padding mappings...`);
+                    for (let i = mapLen; i < chLen; i++) {
+                        window.currentFixture.mappings.push([{ 
+                            vibe: 'any', description: 'Default Range', source: 'volume', behavior: 'static', 
+                            cal: { min: 0, center: 127, max: 255 }, modifiers: { speed: 0.5, react: 0.5, hold_type: 'none' } 
+                        }]);
+                    }
                 }
 
-                currentFixture.mappings = currentFixture.mappings.map((rules, chIdx) => {
+                if (!window.currentFixture.id || window.currentFixture.id === 'prof_generated') {
+                    window.currentFixture.id = window.generateFriendlyId('p', db.profiles.map(p => p.id));
+                }
+
+                window.currentFixture.mappings = window.currentFixture.mappings.map((rules, chIdx) => {
                     const chRules = Array.isArray(rules) ? rules : [rules];
-                    const role = currentFixture.channels[chIdx]?.role || 'generic';
+                    const role = window.currentFixture.channels[chIdx]?.role || 'generic';
                     
                     // SORT BY MIN before hydration to ensure correct ordinal assignment
                     const sorted = [...chRules].sort((a, b) => (parseInt(a.cal?.min) || 0) - (parseInt(b.cal?.min) || 0));
@@ -1409,7 +1428,7 @@ ${limitText}
             }
 
             const ts = Date.now();
-            currentFixture = {
+            window.currentFixture = {
                 id: window.generateFriendlyId('p', db.profiles.map(p => p.id)),
                 name: `${brand} ${fixModel}`,
                 channels: Array.from({ length: chCount }, (_, i) => ({
@@ -1504,7 +1523,7 @@ ${limitText}
         // --- RENDERING ---
         function renderResults(resetDMX = false) {
             const list = document.getElementById('channels-list');
-            const prof = currentFixture;
+            const prof = window.currentFixture;
 
             document.getElementById('final-fix-name').value = prof.name;
 
@@ -1525,10 +1544,21 @@ ${limitText}
                         <div>
                              <select onchange="window.currentFixture.mappings[${idx}][${rIdx}].vibe = this.value" 
                                      style="background:#1a1a1a; border:1px solid #333; border-radius:4px; color:var(--accent); font-size:9px; font-weight:bold; height:22px; padding:0 4px;">
-                                 <option value="any" ${vibeStr === 'any' ? 'selected' : ''}>ANY</option>
-                                 <option value="any 1" ${vibeStr === 'any 1' ? 'selected' : ''}>1</option>
-                                 <option value="any 2" ${vibeStr === 'any 2' ? 'selected' : ''}>2</option>
-                                 <option value="any 3" ${vibeStr === 'any 3' ? 'selected' : ''}>3</option>
+                                 <option value="any" ${vibeStr === 'any' || !vibeStr ? 'selected' : ''}>ANY</option>
+                                 <option value="any bass" ${vibeStr === 'any bass' ? 'selected' : ''}>ANY BASS</option>
+                                 <option value="any treble" ${vibeStr === 'any treble' ? 'selected' : ''}>ANY TREBLE</option>
+                                 <option value="chill" ${vibeStr === 'chill' ? 'selected' : ''}>CHILL</option>
+                                 <option value="chill bass" ${vibeStr === 'chill bass' ? 'selected' : ''}>CHILL BASS</option>
+                                 <option value="chill treble" ${vibeStr === 'chill treble' ? 'selected' : ''}>CHILL TREBLE</option>
+                                 <option value="mid" ${vibeStr === 'mid' ? 'selected' : ''}>MID</option>
+                                 <option value="mid bass" ${vibeStr === 'mid bass' ? 'selected' : ''}>MID BASS</option>
+                                 <option value="mid treble" ${vibeStr === 'mid treble' ? 'selected' : ''}>MID TREBLE</option>
+                                 <option value="high" ${vibeStr === 'high' ? 'selected' : ''}>HIGH</option>
+                                 <option value="high bass" ${vibeStr === 'high bass' ? 'selected' : ''}>HIGH BASS</option>
+                                 <option value="high treble" ${vibeStr === 'high treble' ? 'selected' : ''}>HIGH TREBLE</option>
+                                 <option value="build" ${vibeStr === 'build' ? 'selected' : ''}>BUILD</option>
+                                 <option value="drop" ${vibeStr === 'drop' ? 'selected' : ''}>DROP</option>
+                                 <option value="never" ${vibeStr === 'never' ? 'selected' : ''}>NEVER</option>
                              </select>
                         </div>
 
@@ -1771,8 +1801,8 @@ ${limitText}
                 rules[0].vibe = 'any';
             } else if (rules.length > 1) {
                 rules[0].vibe = 'any';
-                const lastVibeOptions = ['high', 'high 1', 'high 2', 'high 3'];
-                rules[rules.length - 1].vibe = lastVibeOptions[syncNum];
+                const lastVibeOptions = ['high', 'high bass', 'high treble'];
+                rules[rules.length - 1].vibe = lastVibeOptions[chIdx % 3];
             }
             
             renderResults();

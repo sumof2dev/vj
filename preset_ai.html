@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AI Preset Architect | RaveBox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="icon" href="/public/icon.png">
+    <style>
+        :root {
+            --bg: #050508;
+            --panel: rgba(20, 20, 27, 0.7);
+            --header: #1b1b22;
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #7c4dff;
+            --accent-rgb: 124, 77, 255;
+            --accent-glow: rgba(124, 77, 255, 0.4);
+            --accent-alt: #00ffcc;
+            --text: #eee;
+            --text-dim: #a0a0a0;
+            --danger: #ff4757;
+            --success: #2ed573;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --glass: blur(12px) saturate(180%);
+        }
+
+        body {
+            background: var(--bg);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(var(--accent-rgb), 0.15) 0, transparent 40%),
+                radial-gradient(at 100% 100%, rgba(0, 255, 204, 0.1) 0, transparent 40%);
+            color: var(--text);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        header {
+            width: 100%;
+            padding: 20px 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: var(--glass);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.0 !important;
+        }
+
+        .logo .brand {
+            font-weight: 900;
+            font-size: 1.2rem;
+            letter-spacing: -1px;
+            color: #fff !important;
+            display: flex;
+            align-items: baseline;
+            text-transform: uppercase;
+        }
+
+        .logo .brand span {
+            color: var(--accent) !important;
+            font-size: 0.85em !important;
+            margin-left: 2px;
+            font-weight: 900;
+        }
+
+        .logo .subtitle {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent) !important;
+            opacity: 0.8;
+            align-self: flex-start;
+            margin-top: -2px;
+            margin-left: 12px;
+        }
+
+        main {
+            width: 90%;
+            max-width: 800px;
+            padding: 40px 0 100px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .card {
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* --- CHAT STYLES (Matching ai_architect.js modals) --- */
+        .chat-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 300px;
+            max-height: 50vh;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+        }
+
+        .chat-bubble {
+            padding: 12px 18px;
+            border-radius: 12px;
+            max-width: 85%;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .chat-bubble.ai {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border);
+        }
+
+        .chat-bubble.user {
+            background: var(--accent);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .chat-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn-suggestion {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-suggestion:hover {
+            border-color: var(--accent);
+            color: #fff;
+            background: rgba(var(--accent-rgb), 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: #fff;
+            padding: 15px;
+            font-size: 0.95rem;
+            resize: none;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+        }
+
+        .hidden { display: none !important; }
+        
+        .active { display: flex !important; }
+
+        #ai-preset-diff-container:not(.hidden) {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            z-index: 3000;
+            background: #111;
+            border: 2px solid var(--accent);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        /* Diff Styles */
+        .diff-modal-body {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .diff-row { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
+        .diff-ch-label { font-weight: 800; color: var(--accent-alt); font-size: 11px; margin-bottom: 5px; text-transform: uppercase; }
+        .diff-item { font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .diff-old { color: #ff4d4d; text-decoration: line-through; opacity: 0.6; }
+        .diff-new { color: #2ed573; font-weight: 800; }
+
+        @media (max-width: 600px) {
+            .header-content { width: 95%; }
+            main { width: 95%; padding: 20px 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="brand">RAVE<span>BOX</span></div>
+                <div class="subtitle" id="page-subtitle">AI PRESET ARCHITECT</div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-secondary" onclick="window.location.href='setup.html?tab=presets'"
+                    style="padding: 6px 12px; font-size: 0.8rem;">← Back</button>
+                <div class="btn-settings" onclick="openAiSettings()" title="Settings" style="cursor:pointer; opacity:0.6;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="card" id="ai-preset-chat-container">
+            <div id="ai-preset-chat-history" class="chat-body">
+                <div class="chat-bubble ai">
+                    Describe the preset you want to create. For example: "blackout all fixtures when volume drops below 5%" or "when vibe goes high, crank dimmers to max on the rhythm fixtures."
+                </div>
+            </div>
+
+            <div class="chat-footer">
+                <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
+                    <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;" onclick="clearPresetAiChatHistory()">🗑️ Clear</button>
+                    <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">[FIX]</button>
+                    <button class="btn-suggestion" id="ai-zone-picker-btn" onclick="toggleZonePicker()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[ZONE]</button>
+                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[X/Y]</button>
+                    <button class="btn-suggestion" id="ai-path-picker-btn" onclick="togglePathPicker()" style="border: 1px solid var(--accent); color: var(--accent);">[PATH]</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
+                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
+                </div>
+
+                <div id="ai-preset-xy-panel" class="hidden" style="padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px; max-height: 250px; overflow-y: auto;"></div>
+                <div id="ai-fixture-picker" class="hidden" style="padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent); margin-bottom:10px; max-height: 250px; overflow-y: auto;"></div>
+                <div id="ai-zone-picker" class="hidden" style="padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent-alt); margin-bottom:10px; max-height: 250px; overflow-y: auto;"></div>
+                <div id="ai-path-picker" class="hidden" style="padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent); margin-bottom:10px; max-height: 250px; overflow-y: auto;"></div>
+
+                <div style="display: flex; gap: 10px; position: relative;">
+                    <textarea id="ai-preset-textarea" placeholder="Describe your preset..." onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendPresetAiPrompt(); }"></textarea>
+                    <button class="btn btn-primary" id="ai-preset-send-btn" onclick="sendPresetAiPrompt()" style="height: 80px; width: 80px; padding:0; border-radius: 12px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                    <div style="font-size:0.7rem; color:var(--text-dim); display:flex; align-items:center; gap:5px;">
+                        Using <span class="active-model-name" style="color:var(--accent-alt); font-weight:bold;">...</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <input type="hidden" id="pres-name" value="AI Generated Preset">
+                        <select id="pres-decay-select" class="hidden"><option value="0" selected>0</option></select>
+                        <button class="btn btn-secondary btn-sm hidden" id="ai-preset-view-diff-btn" onclick="showPresetAiDiff()">Diff</button>
+                        <button class="btn btn-accent btn-sm hidden" id="ai-preset-save-btn" onclick="savePreset()">💾 Save Preset</button>
+                        <button class="btn btn-primary btn-sm hidden" id="ai-preset-apply-btn" onclick="acceptPresetAi()">Apply & Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Diff Display (Integrated into main page) -->
+        <div id="ai-preset-diff-container" class="hidden">
+             <div class="card" style="margin-top: 20px; border-color: var(--accent);">
+                <div style="font-weight: 800; margin-bottom: 15px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>PRESET CHANGES</span>
+                    <button class="btn btn-sm" style="padding:4px 10px;" onclick="document.getElementById('ai-preset-diff-container').classList.add('hidden')">✕</button>
+                </div>
+                <div id="ai-preset-diff-body" class="diff-modal-body"></div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="btn btn-secondary" style="flex:1;" onclick="undoPresetAi()">Undo & Revert</button>
+                    <button class="btn btn-primary" style="flex:1;" onclick="acceptPresetAi()">Accept Changes</button>
+                </div>
+             </div>
+        </div>
+    </main>
+
+    <!-- SETTINGS MODAL -->
+    <div id="ai-settings-modal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center;" onclick="closeAiSettings()">
+        <div class="card" style="max-width:400px; width:90%;" onclick="event.stopPropagation()">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div style="font-weight:800;">AI Engine Settings</div>
+                <button class="btn btn-sm" onclick="closeAiSettings()">×</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:20px;">
+                <div>
+                    <label style="font-size:11px; color:var(--text-dim); text-transform:uppercase;">Gemini API Key</label>
+                    <input type="text" id="gemini-key-input" style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; border-radius:8px; padding:10px;">
+                </div>
+                <div>
+                    <label style="font-size:11px; color:var(--text-dim); text-transform:uppercase;">Model Selection</label>
+                    <select id="ai-model-select-settings" style="width:100%; margin-top:5px; background:rgba(0,0,0,0.4); border:1px solid var(--border); color:#fff; border-radius:8px; padding:10px;">
+                        <option value="gemini-flash-latest">Gemini Flash Latest</option>
+                        <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                        <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite Preview</option>
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="saveAiSettings()" style="width:100%;">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared_setup.js"></script>
+    <script src="live_controller.js"></script>
+    <script src="profile_logic.js"></script>
+    <script src="ai_architect.js"></script>
+    <script src="stage_logic.js"></script>
+    <script>
+        window.onload = async () => {
+            console.log("🚀 AI Preset Architect starting...");
+            
+            // Wait for DB sync
+            if (!window.RAVEBOX_READY) {
+                await new Promise(r => window.addEventListener('RAVEBOX_READY', r, { once: true }));
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const presetId = urlParams.get('id');
+            
+            if (presetId) {
+                window.current_editing_preset_id = presetId;
+                const preset = db.presets.find(p => p.id === presetId);
+                if (preset) {
+                    window.currentPresetTriggers = JSON.parse(JSON.stringify(preset.triggers || []));
+                    window.currentPresetOverrides = JSON.parse(JSON.stringify(preset.overrides || []));
+                }
+            }
+
+            // Initialize AI UI
+            if (typeof openPresetAiChat === 'function') {
+                openPresetAiChat();
+            }
+            
+            // Update page subtitle
+            if (window.current_editing_preset_id) {
+                document.getElementById('page-subtitle').innerText = "AI PRESET REFINEMENT";
+            }
+            
+            if (typeof updateModelLabelDisplay === 'function') updateModelLabelDisplay();
+        };
+
+        // Navigation overrides
+        window.closePresetAiModal = () => {
+            window.location.href = 'setup.html?tab=presets';
+        };
+
+        window.acceptPresetAi = () => {
+            savePreset(); 
+            setTimeout(() => {
+                 window.location.href = 'setup.html?tab=presets';
+            }, 500);
+        };
+        
+        // Mock elements for ai_architect.js compatibility
+        if (!document.getElementById('ai-preset-modal')) {
+            const mock = document.createElement('div');
+            mock.id = 'ai-preset-modal';
+            mock.style.display = 'none';
+            document.body.appendChild(mock);
+        }
+    </script>
+</body>
+
+</html>

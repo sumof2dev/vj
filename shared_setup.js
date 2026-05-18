@@ -80,7 +80,7 @@ var currentPresetTriggers = [];
 var currentPresetOverrides = [];
 var simulationLastTime = 0;
 var lastDmxUpdate = Date.now();
-window.db = { profiles: [], stage: [], presets: [], liveConsole: [], savedConsoles: [] };
+window.db = { profiles: [], stage: [], presets: [], liveConsole: [], positional_data: [], savedConsoles: [] };
 var db = window.db;
 var activeProfileId = null;
 var currentProfileChannels = [];
@@ -127,7 +127,6 @@ window.BEHAVIORS = [
     { id: 'beat phase', label: 'Beat Phase' },
     { id: 'stochastic', label: 'Stochastic' },
     { id: 'spike', label: 'Spike' },
-    { id: 'hum', label: 'Hum' },
     { id: 'fuzzy', label: 'Fuzzy' },
     { id: 'direct_stepped', label: 'Direct Stepped' }
 ];
@@ -135,22 +134,23 @@ window.BEHAVIORS = [
 window.EASY_DESCRIPTORS = [
     {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "bin 0", "speed": 0.2, "react": 0.8, "hold_type": "none", "rel_center": 0.498},
     {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "bass", "speed": 0.1, "react": 0.25, "hold_type": "none", "rel_center": 0.498},
-    {"id": "bass_pump", "label": "Bass Pump", "behavior": "direct", "source": "bin 1", "speed": 0.05, "react": 0.9, "hold_type": "none", "rel_center": 0.498},
     {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "stochastic", "source": "mids", "speed": 0.5, "react": 0.45, "hold_type": "beat", "rel_center": 0.498},
     {"id": "rapid_climb", "label": "Rapid Climb", "behavior": "direct", "source": "impact", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     {"id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5},
     {"id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "mids", "speed": 0.3, "react": 0.15, "hold_type": "beat", "rel_center": 0.498},
-    {"id": "inverse_bass", "label": "Flux Direct", "behavior": "direct", "source": "spectral flux", "speed": 0.4, "react": 0.8, "hold_type": "none", "rel_center": 0.502},
     {"id": "kick_drum_step", "label": "kick drum step", "behavior": "direct", "source": "bass", "speed": 0, "react": 0.45, "hold_type": "beat", "rel_center": 0.004},
     {"id": "hi_hat", "label": "hi hat", "behavior": "direct", "source": "highs", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     {"id": "random_bar_hold", "label": "Random Bar Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "bar", "rel_center": 0.5},
     {"id": "random_beat_hold", "label": "Random Beat Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "beat", "rel_center": 0.5},
     {"id": "beat_jump", "label": "Beat Jump", "behavior": "direct", "source": "beat phase", "speed": 0.2, "react": 0.4, "hold_type": "none", "rel_center": 0.502},
-    {"id": "bass_hum", "label": "Bass Line Hum", "behavior": "direct", "source": "bin 1", "speed": 0, "react": 0.6, "hold_type": "none", "rel_center": 0.502},
     {"id": "direct_hold", "label": "Direct and Hold", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.2, "hold_type": "beat", "rel_center": 0.502},
     {"id": "hi_hit", "label": "Hi Hit", "behavior": "saw", "source": "highs", "speed": 0.2, "react": 0.65, "hold_type": "none", "rel_center": 0.498},
     {"id": "fuzzy_mids", "label": "Fuzzy Mids", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "none", "rel_center": 0.502},
     {"id": "new_trigger_state", "label": "New Trigger State", "behavior": "static", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498, "value": 127},
+    {"id": "smoother_fuzzy", "label": "Smoother fuzzy", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "beat", "rel_center": 0.502},
+    {"id": "kick_spike", "label": "Kick spike", "behavior": "saw", "source": "bass", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498},
+    {"id": "beat", "label": "beat", "behavior": "beat phase", "source": "volume", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498},
+    {"id": "spiky_mid", "label": "spiky mid", "behavior": "spike", "source": "mids", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     // PREMADE_ANCHOR
 ];
 
@@ -159,16 +159,10 @@ window.SOURCES = [
     { id: 'mids', label: 'Mids' },
     { id: 'highs', label: 'Highs' },
     { id: 'volume', label: 'Volume' },
-    { id: 'spectral flux', label: 'Spectral Flux' },
     { id: 'impact', label: 'Impact' },
     { id: 'beat phase', label: 'Beat Phase' },
-    { id: '2 bar phase', label: '2 Bar Phase' },
     { id: 'bin 0', label: 'Bin 0' },
-    { id: 'bin 1', label: 'Bin 1' },
-    { id: 'bin 2', label: 'Bin 2' },
-    { id: 'bin 3', label: 'Bin 3' },
-    { id: 'bin 4', label: 'Bin 4' },
-    { id: 'bin 5', label: 'Bin 5' }
+    { id: 'bin 4', label: 'Bin 4' }
 ];
 
 window.HOLD_TYPES = [
@@ -225,17 +219,39 @@ window.wsHost = window.isCustomTunnel ? 'ws-' + baseHost : host;
 window.host = host;
 
 var PROTO = (setupLocation.protocol === 'file:') ? 'http:' : setupLocation.protocol;
+var isLocal = (setupHostname === 'localhost' || setupHostname === '127.0.0.1' || setupHostname === '');
+
+// Upgrade to HTTPS for known local SSL ports if we are on http: but have reason to believe https: is required
+if (isLocal && PROTO === 'http:' && (setupLocation.port === '8000' || setupLocation.port === '8001')) {
+    console.warn("⚠️ Local SSL detected on port " + setupLocation.port + ". Upgrading protocol to https:");
+    // Note: We don't force a redirect here to avoid loops, but we use it for API calls below
+}
+
 API_BASE_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : '')));
 BACKEND_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : '')));
+
+// Final sanity check for local production servers (which are HTTPS in this codebase)
+if (isLocal && (API_BASE_ROOT.includes(':8000') || BACKEND_ROOT.includes(':8001'))) {
+    // If we are on http: but targeting 8000/8001, we MUST use https: to avoid ERR_CONNECTION_RESET
+    API_BASE_ROOT = API_BASE_ROOT.replace('http://', 'https://');
+    BACKEND_ROOT = BACKEND_ROOT.replace('http://', 'https://');
+}
 
 window.API_BASE_ROOT = API_BASE_ROOT;
 window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "510261247";
+window.APP_VERSION = "518260909";
 
-console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host });
+if (setupLocation.protocol === 'file:') {
+    console.error("❌ Running from file:// protocol is not supported. Please use http://localhost:8085/manager.html");
+    setTimeout(() => {
+        window.showToast("❌ Protocol Error: Use http://localhost:8085", 10000, 'error');
+    }, 1000);
+}
+
+console.log("🎯 Context:", { isOriginalCloud: window.isOriginalCloud, isCustomTunnel: window.isCustomTunnel, host: window.host, api: API_BASE_ROOT, launcher: BACKEND_ROOT });
 
 // --- 2. DATABASE INITIALIZATION & SYNC ---
 async function initDatabaseSync() {
@@ -254,6 +270,7 @@ async function initDatabaseSync() {
             { key: 'presets', path: 'presets.json' },
             { key: 'stage', path: 'stage_config.json' },
             { key: 'liveConsole', path: 'live_console.json' },
+            { key: 'positional_data', path: 'positional_data.json' },
             { key: 'savedConsoles', path: 'live_consoles/index.json' },
             { key: 'descriptors', path: '../descriptors.json' } // Premade behaviors
         ];
@@ -334,7 +351,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v510261247)");
+    console.log("✅ RaveBox Core Ready (v518260909)");
 }
 
 // Kick off sync immediately
@@ -368,6 +385,7 @@ var saveDB = window.saveDB = async function(skipServer = false) {
         if (window.db.presets) syncPromises.push(fetch(`${window.API_BASE}/presets.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.presets) }));
         if (window.db.stage) syncPromises.push(fetch(`${window.API_BASE}/stage_config.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.stage) }));
         if (window.db.liveConsole) syncPromises.push(fetch(`${window.API_BASE}/live_console.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.liveConsole) }));
+        if (window.db.positional_data) syncPromises.push(fetch(`${window.API_BASE}/positional_data.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.positional_data) }));
 
         try {
             await Promise.allSettled(syncPromises);
@@ -519,6 +537,7 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function() {
         const options = (window.db.stage || []).map(inst => `<option value="${inst.id}">FIXTURE: ${inst.id}</option>`).join('');
         stageDrop.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' + 
                               '<option value="visualdmx">VISUALIZER (VisualDMX)</option>' +
+                              '<option value="system">SYSTEM (Engine Control)</option>' +
                               options;
         if (current) stageDrop.value = current;
     }
@@ -614,7 +633,12 @@ var sendIt = window.sendIt = async function(event) {
 
         if (btn) {
             btn.innerText = "Saved!"; btn.style.background = "var(--success)";
-            setTimeout(() => { btn.innerText = originalText; btn.style.background = ""; btn.disabled = false; }, 2000);
+            setTimeout(() => { 
+                btn.innerText = originalText; btn.style.background = ""; btn.disabled = false; 
+                if (window.location.pathname.endsWith('/profile.html') || window.location.pathname.endsWith('profile.html')) {
+                    window.location.href = 'setup.html?tab=stage';
+                }
+            }, 1000);
         }
     } catch (err) {
         console.error("Save error:", err);
@@ -656,7 +680,7 @@ window.togglePresetEditor = function(show) {
     }
 };
 
-window.APP_VERSION = "510261247";
+window.APP_VERSION = "518260909";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
@@ -671,8 +695,8 @@ window.APP_VERSION = "510261247";
     const initializeRouting = () => {
         loadNodeIp();
         if (isSetup) {
-            // Priority 1: Direct Redirect if no tab or explicit profile tab
-            if (!tabParam || tabParam === 'profiles' || tabParam === 'profile') {
+            // Priority 1: Direct Redirect for explicit profile tab requests
+            if (tabParam === 'profiles' || tabParam === 'profile') {
                 window.location.href = 'profile.html' + (profileId ? '?id=' + profileId : '');
                 return;
             }
@@ -687,7 +711,9 @@ window.APP_VERSION = "510261247";
 
             // Priority 3: localStorage Fallback (Only if valid setup tab)
             if (!targetTab) {
-                targetTab = localStorage.getItem('vj_active_tab') || 'tab-stage';
+                const stored = localStorage.getItem('vj_active_tab');
+                // tab-profile only exists on profile.html, not setup.html
+                targetTab = (stored && stored !== 'tab-profile') ? stored : 'tab-stage';
             }
 
             // Priority 4: Final Validation and Trigger
@@ -917,29 +943,4 @@ document.addEventListener('DOMContentLoaded', () => {
  * Combined with overscroll-behavior: none in CSS, this intercepts horizontal swipes
  * starting from the screen edges to prevent accidental "Back" navigation in Chrome/Safari.
  */
-(function() {
-    let touchStartX = 0;
-    let touchStartY = 0;
-    window.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-            touchStartX = e.touches[0].pageX;
-            touchStartY = e.touches[0].pageY;
-        }
-    }, { passive: true });
 
-    window.addEventListener('touchmove', (e) => {
-        if (e.touches.length !== 1) return;
-        const x = e.touches[0].pageX;
-        const y = e.touches[0].pageY;
-        const deltaX = Math.abs(x - touchStartX);
-        const deltaY = Math.abs(y - touchStartY);
-        
-        const edgeThreshold = 40;
-        const isNearEdge = touchStartX < edgeThreshold || touchStartX > (window.innerWidth - edgeThreshold);
-        
-        // If primarily horizontal and from the edge, block it to stop back/forward navigation
-        if (isNearEdge && deltaX > deltaY && deltaX > 10) {
-            if (e.cancelable) e.preventDefault();
-        }
-    }, { passive: false });
-})();

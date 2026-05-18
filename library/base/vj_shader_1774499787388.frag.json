@@ -2,5 +2,6 @@
     "prompt": "starship tunnel",
     "type": "base",
     "luminance": 0.447,
-    "contrast": 0.216
+    "contrast": 0.216,
+    "heavy": true
 }

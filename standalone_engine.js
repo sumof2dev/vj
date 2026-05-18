@@ -42,10 +42,46 @@ async function startStandaloneEngine() {
                 autoGainControl: false
             }
         });
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        setupAudioStream(stream, false);
+    } catch (err) {
+        console.error("Audio access denied.", err);
+        alert("Microphone access is required for the standalone demo.");
+    }
+}
+
+async function setSystemAudio() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert("System Audio sharing is not supported in this mobile browser. Please use Microphone mode.");
+        return;
+    }
+    try {
+        // Request the display media stream
+        const stream = await navigator.mediaDevices.getDisplayMedia({ 
+            video: true, // Required for getDisplayMedia to work
+            audio: true  // This enables the "Share Audio" checkbox in the browser picker
+        });
+
+        // Error handling: Check if the user actually checked the 'Share Audio' box
+        if (stream.getAudioTracks().length === 0) {
+            throw new Error("No system audio shared. Did you check the 'Share Audio' box?");
+        }
+
+        // Optimization: Stop the video track immediately as we only need the audio
+        stream.getVideoTracks().forEach(track => track.stop());
+
+        setupAudioStream(stream, true);
+    } catch (err) {
+        console.error('System audio access failed:', err);
+    }
+}
+
+async function setupAudioStream(stream, isSystemAudio) {
+    try {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
 
         // Mobile browsers start AudioContext in "suspended" state.
-        // Must resume during a user gesture or analyser returns all zeros.
         if (audioContext.state === 'suspended') {
             await audioContext.resume();
         }
@@ -55,25 +91,29 @@ async function startStandaloneEngine() {
         analyser.smoothingTimeConstant = 0.6;
         const source = audioContext.createMediaStreamSource(stream);
 
-        // Boost mic input — mobile devices often deliver very low levels
+        // Boost mic input — mobile devices often deliver very low levels. 
+        // System audio (isSystemAudio=true) usually doesn't need boost.
         const gainNode = audioContext.createGain();
-        gainNode.gain.value = 2.5;
+        gainNode.gain.value = isSystemAudio ? 1.0 : 2.5;
         source.connect(gainNode);
         gainNode.connect(analyser);
 
         dataArray = new Uint8Array(analyser.frequencyBinCount);
         
-        const btn = document.getElementById('standalone-btn');
-        if (btn) btn.style.display = 'none';
+        const ui = document.getElementById('source-selector');
+        if (ui) {
+            ui.style.display = 'none';
+            ui.style.pointerEvents = 'none';
+        }
 
         lastFrameTime = performance.now() / 1000;
         requestAnimationFrame(standaloneLoop);
-        console.log("🎤 Standalone Engine Active — AudioContext state:", audioContext.state);
-    } catch (err) {
-        console.error("Audio access denied.", err);
-        alert("Microphone access is required for the standalone demo.");
+        console.log("🎤 Standalone Engine Active — Source:", isSystemAudio ? 'System' : 'Mic', "Context state:", audioContext.state);
+    } catch (e) {
+        console.error("Setup audio stream failed:", e);
     }
 }
+
 
 function standaloneLoop() {
     analyser.getByteFrequencyData(dataArray);

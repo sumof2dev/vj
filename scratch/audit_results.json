@@ -1,0 +1,5895 @@
+[
+  {
+    "rel_path": ".gitignore",
+    "filename": ".gitignore",
+    "size_bytes": 735,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "9.html",
+    "filename": "9.html",
+    "size_bytes": 3768,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "QUICKSTART.sh",
+    "filename": "QUICKSTART.sh",
+    "size_bytes": 1373,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "backend.log",
+    "filename": "backend.log",
+    "size_bytes": 1502,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "backend/backend.log",
+    "filename": "backend.log",
+    "size_bytes": 1237,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "camera_service",
+    "filename": "camera_service",
+    "size_bytes": 770,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "dev_server.log",
+    "filename": "dev_server.log",
+    "size_bytes": 139,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "dev_server.py",
+    "filename": "dev_server.py",
+    "size_bytes": 17333,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "dev_tunnel.sh",
+    "filename": "dev_tunnel.sh",
+    "size_bytes": 1809,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775937620_prof_1775935124209.json",
+    "filename": "1775937620_prof_1775935124209.json",
+    "size_bytes": 1568,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775937623_prof_1775936916808.json",
+    "filename": "1775937623_prof_1775936916808.json",
+    "size_bytes": 5013,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775937940_prof_1775937657947.json",
+    "filename": "1775937940_prof_1775937657947.json",
+    "size_bytes": 8563,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775940457_prof_generated_ehaho_17ch.json",
+    "filename": "1775940457_prof_generated_ehaho_17ch.json",
+    "size_bytes": 18009,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775941348_prof_1775940504052.json",
+    "filename": "1775941348_prof_1775940504052.json",
+    "size_bytes": 14042,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775968519_prof_1775617630839.json",
+    "filename": "1775968519_prof_1775617630839.json",
+    "size_bytes": 29336,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775968521_prof_1775744797976.json",
+    "filename": "1775968521_prof_1775744797976.json",
+    "size_bytes": 29656,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775968522_prof_1775434015105.json",
+    "filename": "1775968522_prof_1775434015105.json",
+    "size_bytes": 29307,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775968525_prof_1775513835051.json",
+    "filename": "1775968525_prof_1775513835051.json",
+    "size_bytes": 28779,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775968529_prof_1775781976965.json",
+    "filename": "1775968529_prof_1775781976965.json",
+    "size_bytes": 472,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775968539_prof_1775564820663.json",
+    "filename": "1775968539_prof_1775564820663.json",
+    "size_bytes": 15598,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775968542_prof_1775841955005.json",
+    "filename": "1775968542_prof_1775841955005.json",
+    "size_bytes": 3314,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1775968545_prof_1775564902743.json",
+    "filename": "1775968545_prof_1775564902743.json",
+    "size_bytes": 25723,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776011562_prof_ehaho_17ch.json",
+    "filename": "1776011562_prof_ehaho_17ch.json",
+    "size_bytes": 12697,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776038490_prof_1775617630839.json",
+    "filename": "1776038490_prof_1775617630839.json",
+    "size_bytes": 29336,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776038492_prof_1775744797976.json",
+    "filename": "1776038492_prof_1775744797976.json",
+    "size_bytes": 29656,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776038494_prof_1775434015105.json",
+    "filename": "1776038494_prof_1775434015105.json",
+    "size_bytes": 29307,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776038496_prof_1775513835051.json",
+    "filename": "1776038496_prof_1775513835051.json",
+    "size_bytes": 28779,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776038499_prof_1775781976965.json",
+    "filename": "1776038499_prof_1775781976965.json",
+    "size_bytes": 472,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776038507_prof_1775564902743.json",
+    "filename": "1776038507_prof_1775564902743.json",
+    "size_bytes": 25723,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776038509_prof_1775564820663.json",
+    "filename": "1776038509_prof_1775564820663.json",
+    "size_bytes": 15598,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776038511_prof_1775841955005.json",
+    "filename": "1776038511_prof_1775841955005.json",
+    "size_bytes": 3314,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776042295_prof_1775617630839.json",
+    "filename": "1776042295_prof_1775617630839.json",
+    "size_bytes": 29336,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776042298_prof_1775744797976.json",
+    "filename": "1776042298_prof_1775744797976.json",
+    "size_bytes": 29656,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776042302_prof_1775434015105.json",
+    "filename": "1776042302_prof_1775434015105.json",
+    "size_bytes": 29307,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776042305_prof_1775513835051.json",
+    "filename": "1776042305_prof_1775513835051.json",
+    "size_bytes": 28779,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776042308_prof_1775781976965.json",
+    "filename": "1776042308_prof_1775781976965.json",
+    "size_bytes": 472,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776042312_prof_1775564820663.json",
+    "filename": "1776042312_prof_1775564820663.json",
+    "size_bytes": 15598,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776042317_prof_1775841955005.json",
+    "filename": "1776042317_prof_1775841955005.json",
+    "size_bytes": 3314,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776042324_prof_1775564902743.json",
+    "filename": "1776042324_prof_1775564902743.json",
+    "size_bytes": 25723,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776775255_prof_1776617535067.json",
+    "filename": "1776775255_prof_1776617535067.json",
+    "size_bytes": 4099,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776775258_prof_1776618748575.json",
+    "filename": "1776775258_prof_1776618748575.json",
+    "size_bytes": 2987,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1776775261_prof_1776623545662.json",
+    "filename": "1776775261_prof_1776623545662.json",
+    "size_bytes": 3653,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777168446_prof_1776693958041.json",
+    "filename": "1777168446_prof_1776693958041.json",
+    "size_bytes": 1995,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389941_prof_1776087340298.json",
+    "filename": "1777389941_prof_1776087340298.json",
+    "size_bytes": 15048,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389943_prof_1776086541264.json",
+    "filename": "1777389943_prof_1776086541264.json",
+    "size_bytes": 15292,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389945_prof_1775941739083.json",
+    "filename": "1777389945_prof_1775941739083.json",
+    "size_bytes": 15116,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389950_prof_1776429854437.json",
+    "filename": "1777389950_prof_1776429854437.json",
+    "size_bytes": 2282,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389952_0426.p.love.json",
+    "filename": "1777389952_0426.p.love.json",
+    "size_bytes": 32586,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389956_prof_1776774947768.json",
+    "filename": "1777389956_prof_1776774947768.json",
+    "size_bytes": 4561,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389958_prof_1776258179003.json",
+    "filename": "1777389958_prof_1776258179003.json",
+    "size_bytes": 15130,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389960_prof_1776087078444.json",
+    "filename": "1777389960_prof_1776087078444.json",
+    "size_bytes": 10740,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389962_prof_1776776207528.json",
+    "filename": "1777389962_prof_1776776207528.json",
+    "size_bytes": 442,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389972_prof_ehaho_l2600_34ch.json",
+    "filename": "1777389972_prof_ehaho_l2600_34ch.json",
+    "size_bytes": 13773,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389979_prof_1776693958041.json",
+    "filename": "1777389979_prof_1776693958041.json",
+    "size_bytes": 25730,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777389983_prof_1776693577673.json",
+    "filename": "1777389983_prof_1776693577673.json",
+    "size_bytes": 14817,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777394281_prof_1777312778995.json",
+    "filename": "1777394281_prof_1777312778995.json",
+    "size_bytes": 10466,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777478022_test_profile_1777400635.json",
+    "filename": "1777478022_test_profile_1777400635.json",
+    "size_bytes": 189,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777482937_prof_generated_ehaho_l2600.json",
+    "filename": "1777482937_prof_generated_ehaho_l2600.json",
+    "size_bytes": 11695,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777482940_prof_1777405996098.json",
+    "filename": "1777482940_prof_1777405996098.json",
+    "size_bytes": 33956,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1777482952_prof_1775951301709.json",
+    "filename": "1777482952_prof_1775951301709.json",
+    "size_bytes": 6292,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778318271_0509.p.daddy.json",
+    "filename": "1778318271_0509.p.daddy.json",
+    "size_bytes": 1301,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778437800_prof_1777478035109.json",
+    "filename": "1778437800_prof_1777478035109.json",
+    "size_bytes": 15818,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778437806_prof_1774217808170.json",
+    "filename": "1778437806_prof_1774217808170.json",
+    "size_bytes": 4086,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778461298_0509.p.daddy.json",
+    "filename": "1778461298_0509.p.daddy.json",
+    "size_bytes": 2196,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778461306_prof_1777478413445.json",
+    "filename": "1778461306_prof_1777478413445.json",
+    "size_bytes": 13248,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778461309_0501.p.grandma.json",
+    "filename": "1778461309_0501.p.grandma.json",
+    "size_bytes": 4757,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778516362_prof_1774280131343.json",
+    "filename": "1778516362_prof_1774280131343.json",
+    "size_bytes": 4046,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778606410_prof_1778174005216.json",
+    "filename": "1778606410_prof_1778174005216.json",
+    "size_bytes": 5411,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778606413_prof_1778224293548.json",
+    "filename": "1778606413_prof_1778224293548.json",
+    "size_bytes": 6507,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778606416_0511.p.yeet.json",
+    "filename": "1778606416_0511.p.yeet.json",
+    "size_bytes": 116,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778606421_prof_1778228730107.json",
+    "filename": "1778606421_prof_1778228730107.json",
+    "size_bytes": 6237,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/backup/1778773243_prof_1777393062610.json",
+    "filename": "1778773243_prof_1777393062610.json",
+    "size_bytes": 6273,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures-20260426T075517Z-3-001.zip",
+    "filename": "fixtures-20260426T075517Z-3-001.zip",
+    "size_bytes": 99061,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775937620_prof_1775935124209.json",
+    "filename": "1775937620_prof_1775935124209.json",
+    "size_bytes": 1568,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775937623_prof_1775936916808.json",
+    "filename": "1775937623_prof_1775936916808.json",
+    "size_bytes": 5013,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775937940_prof_1775937657947.json",
+    "filename": "1775937940_prof_1775937657947.json",
+    "size_bytes": 8563,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775940457_prof_generated_ehaho_17ch.json",
+    "filename": "1775940457_prof_generated_ehaho_17ch.json",
+    "size_bytes": 18009,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775941348_prof_1775940504052.json",
+    "filename": "1775941348_prof_1775940504052.json",
+    "size_bytes": 14042,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775968519_prof_1775617630839.json",
+    "filename": "1775968519_prof_1775617630839.json",
+    "size_bytes": 29336,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775968521_prof_1775744797976.json",
+    "filename": "1775968521_prof_1775744797976.json",
+    "size_bytes": 29656,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775968522_prof_1775434015105.json",
+    "filename": "1775968522_prof_1775434015105.json",
+    "size_bytes": 29307,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775968525_prof_1775513835051.json",
+    "filename": "1775968525_prof_1775513835051.json",
+    "size_bytes": 28779,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775968529_prof_1775781976965.json",
+    "filename": "1775968529_prof_1775781976965.json",
+    "size_bytes": 472,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775968539_prof_1775564820663.json",
+    "filename": "1775968539_prof_1775564820663.json",
+    "size_bytes": 15598,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775968542_prof_1775841955005.json",
+    "filename": "1775968542_prof_1775841955005.json",
+    "size_bytes": 3314,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1775968545_prof_1775564902743.json",
+    "filename": "1775968545_prof_1775564902743.json",
+    "size_bytes": 25723,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776011562_prof_ehaho_17ch.json",
+    "filename": "1776011562_prof_ehaho_17ch.json",
+    "size_bytes": 12697,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776038490_prof_1775617630839.json",
+    "filename": "1776038490_prof_1775617630839.json",
+    "size_bytes": 29336,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776038492_prof_1775744797976.json",
+    "filename": "1776038492_prof_1775744797976.json",
+    "size_bytes": 29656,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776038494_prof_1775434015105.json",
+    "filename": "1776038494_prof_1775434015105.json",
+    "size_bytes": 29307,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776038496_prof_1775513835051.json",
+    "filename": "1776038496_prof_1775513835051.json",
+    "size_bytes": 28779,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776038499_prof_1775781976965.json",
+    "filename": "1776038499_prof_1775781976965.json",
+    "size_bytes": 472,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776038507_prof_1775564902743.json",
+    "filename": "1776038507_prof_1775564902743.json",
+    "size_bytes": 25723,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776038509_prof_1775564820663.json",
+    "filename": "1776038509_prof_1775564820663.json",
+    "size_bytes": 15598,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776038511_prof_1775841955005.json",
+    "filename": "1776038511_prof_1775841955005.json",
+    "size_bytes": 3314,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776042295_prof_1775617630839.json",
+    "filename": "1776042295_prof_1775617630839.json",
+    "size_bytes": 29336,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776042298_prof_1775744797976.json",
+    "filename": "1776042298_prof_1775744797976.json",
+    "size_bytes": 29656,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776042302_prof_1775434015105.json",
+    "filename": "1776042302_prof_1775434015105.json",
+    "size_bytes": 29307,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776042305_prof_1775513835051.json",
+    "filename": "1776042305_prof_1775513835051.json",
+    "size_bytes": 28779,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776042308_prof_1775781976965.json",
+    "filename": "1776042308_prof_1775781976965.json",
+    "size_bytes": 472,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776042312_prof_1775564820663.json",
+    "filename": "1776042312_prof_1775564820663.json",
+    "size_bytes": 15598,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776042317_prof_1775841955005.json",
+    "filename": "1776042317_prof_1775841955005.json",
+    "size_bytes": 3314,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776042324_prof_1775564902743.json",
+    "filename": "1776042324_prof_1775564902743.json",
+    "size_bytes": 25723,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776775255_prof_1776617535067.json",
+    "filename": "1776775255_prof_1776617535067.json",
+    "size_bytes": 4099,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776775258_prof_1776618748575.json",
+    "filename": "1776775258_prof_1776618748575.json",
+    "size_bytes": 2987,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/backup/1776775261_prof_1776623545662.json",
+    "filename": "1776775261_prof_1776623545662.json",
+    "size_bytes": 3653,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/stages/stage_1775748504128.json",
+    "filename": "stage_1775748504128.json",
+    "size_bytes": 919,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/0430.p.roses.json",
+    "filename": "0430.p.roses.json",
+    "size_bytes": 1210,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/0509.p.unload.json",
+    "filename": "0509.p.unload.json",
+    "size_bytes": 3003,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/govee.p.lan.json",
+    "filename": "govee.p.lan.json",
+    "size_bytes": 879,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/prof_1778436571073.json",
+    "filename": "prof_1778436571073.json",
+    "size_bytes": 7390,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/prof_1778461325957.json",
+    "filename": "prof_1778461325957.json",
+    "size_bytes": 5983,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/prof_1778601546011.json",
+    "filename": "prof_1778601546011.json",
+    "size_bytes": 7423,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/prof_1778606164982.json",
+    "filename": "prof_1778606164982.json",
+    "size_bytes": 9545,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/prof_1778686943128.json",
+    "filename": "prof_1778686943128.json",
+    "size_bytes": 5987,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/profiles/prof_1778778509185.json",
+    "filename": "prof_1778778509185.json",
+    "size_bytes": 7598,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "fixtures/stages/stage_1775748504128.json",
+    "filename": "stage_1775748504128.json",
+    "size_bytes": 919,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "gcs_cors.json",
+    "filename": "gcs_cors.json",
+    "size_bytes": 148,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "head.html",
+    "filename": "head.html",
+    "size_bytes": 646,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "killvj.sh",
+    "filename": "killvj.sh",
+    "size_bytes": 534,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "launcher.log",
+    "filename": "launcher.log",
+    "size_bytes": 6234,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "launcher_debug.txt",
+    "filename": "launcher_debug.txt",
+    "size_bytes": 11039,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_crystal_burst.frag.jpg",
+    "filename": "base_crystal_burst.frag.jpg",
+    "size_bytes": 20825,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_crystal_burst.frag.json",
+    "filename": "base_crystal_burst.frag.json",
+    "size_bytes": 119,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_mandala.frag.jpg",
+    "filename": "base_mandala.frag.jpg",
+    "size_bytes": 66694,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_mandala.frag.json",
+    "filename": "base_mandala.frag.json",
+    "size_bytes": 68,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_neon_web.frag.jpg",
+    "filename": "base_neon_web.frag.jpg",
+    "size_bytes": 38972,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_neon_web.frag.json",
+    "filename": "base_neon_web.frag.json",
+    "size_bytes": 68,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_stained_glass.frag.jpg",
+    "filename": "base_stained_glass.frag.jpg",
+    "size_bytes": 31376,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_stained_glass.frag.json",
+    "filename": "base_stained_glass.frag.json",
+    "size_bytes": 119,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_voxel_maze.frag.jpg",
+    "filename": "base_voxel_maze.frag.jpg",
+    "size_bytes": 9734,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/base_voxel_maze.frag.json",
+    "filename": "base_voxel_maze.frag.json",
+    "size_bytes": 111,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/feathersl.frag.jpg",
+    "filename": "feathersl.frag.jpg",
+    "size_bytes": 7724,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/feathersl.frag.json",
+    "filename": "feathersl.frag.json",
+    "size_bytes": 118,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/fractal.frag.jpg",
+    "filename": "fractal.frag.jpg",
+    "size_bytes": 37278,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/fractal.frag.json",
+    "filename": "fractal.frag.json",
+    "size_bytes": 121,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/fractalrave.frag.jpg",
+    "filename": "fractalrave.frag.jpg",
+    "size_bytes": 24455,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/fractalrave.frag.json",
+    "filename": "fractalrave.frag.json",
+    "size_bytes": 121,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774499787388.frag.jpg",
+    "filename": "vj_shader_1774499787388.frag.jpg",
+    "size_bytes": 38061,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774499787388.frag.json",
+    "filename": "vj_shader_1774499787388.frag.json",
+    "size_bytes": 121,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774500081403.frag.jpg",
+    "filename": "vj_shader_1774500081403.frag.jpg",
+    "size_bytes": 17537,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774500081403.frag.json",
+    "filename": "vj_shader_1774500081403.frag.json",
+    "size_bytes": 111,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774500524039.frag.jpg",
+    "filename": "vj_shader_1774500524039.frag.jpg",
+    "size_bytes": 34309,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774500524039.frag.json",
+    "filename": "vj_shader_1774500524039.frag.json",
+    "size_bytes": 123,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774532698270.frag.jpg",
+    "filename": "vj_shader_1774532698270.frag.jpg",
+    "size_bytes": 62666,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774532698270.frag.json",
+    "filename": "vj_shader_1774532698270.frag.json",
+    "size_bytes": 68,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774532754979.frag.jpg",
+    "filename": "vj_shader_1774532754979.frag.jpg",
+    "size_bytes": 87013,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774532754979.frag.json",
+    "filename": "vj_shader_1774532754979.frag.json",
+    "size_bytes": 68,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774533996474.frag.jpg",
+    "filename": "vj_shader_1774533996474.frag.jpg",
+    "size_bytes": 158439,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774533996474.frag.json",
+    "filename": "vj_shader_1774533996474.frag.json",
+    "size_bytes": 68,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774534200206.frag.jpg",
+    "filename": "vj_shader_1774534200206.frag.jpg",
+    "size_bytes": 71627,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774534200206.frag.json",
+    "filename": "vj_shader_1774534200206.frag.json",
+    "size_bytes": 121,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774535157541.frag.jpg",
+    "filename": "vj_shader_1774535157541.frag.jpg",
+    "size_bytes": 21673,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774535157541.frag.json",
+    "filename": "vj_shader_1774535157541.frag.json",
+    "size_bytes": 68,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774536147141.frag.jpg",
+    "filename": "vj_shader_1774536147141.frag.jpg",
+    "size_bytes": 24837,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774536147141.frag.json",
+    "filename": "vj_shader_1774536147141.frag.json",
+    "size_bytes": 121,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774720461200.frag.jpg",
+    "filename": "vj_shader_1774720461200.frag.jpg",
+    "size_bytes": 11324,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774720461200.frag.json",
+    "filename": "vj_shader_1774720461200.frag.json",
+    "size_bytes": 177,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774723795528.frag.jpg",
+    "filename": "vj_shader_1774723795528.frag.jpg",
+    "size_bytes": 34381,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774723795528.frag.json",
+    "filename": "vj_shader_1774723795528.frag.json",
+    "size_bytes": 209,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774817125116.frag.jpg",
+    "filename": "vj_shader_1774817125116.frag.jpg",
+    "size_bytes": 24550,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774817125116.frag.json",
+    "filename": "vj_shader_1774817125116.frag.json",
+    "size_bytes": 184,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775710675428.frag.jpg",
+    "filename": "vj_shader_1775710675428.frag.jpg",
+    "size_bytes": 8405,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775710675428.frag.json",
+    "filename": "vj_shader_1775710675428.frag.json",
+    "size_bytes": 217,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775710835455.frag.jpg",
+    "filename": "vj_shader_1775710835455.frag.jpg",
+    "size_bytes": 12154,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775710835455.frag.json",
+    "filename": "vj_shader_1775710835455.frag.json",
+    "size_bytes": 172,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775721840167.frag.jpg",
+    "filename": "vj_shader_1775721840167.frag.jpg",
+    "size_bytes": 19116,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775721840167.frag.json",
+    "filename": "vj_shader_1775721840167.frag.json",
+    "size_bytes": 209,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775722274354.frag.jpg",
+    "filename": "vj_shader_1775722274354.frag.jpg",
+    "size_bytes": 7071,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775722274354.frag.json",
+    "filename": "vj_shader_1775722274354.frag.json",
+    "size_bytes": 176,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775722320225.frag.jpg",
+    "filename": "vj_shader_1775722320225.frag.jpg",
+    "size_bytes": 37895,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775722320225.frag.json",
+    "filename": "vj_shader_1775722320225.frag.json",
+    "size_bytes": 178,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776058507198.frag.jpg",
+    "filename": "vj_shader_1776058507198.frag.jpg",
+    "size_bytes": 12166,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776058507198.frag.json",
+    "filename": "vj_shader_1776058507198.frag.json",
+    "size_bytes": 169,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776083009301.frag.jpg",
+    "filename": "vj_shader_1776083009301.frag.jpg",
+    "size_bytes": 9563,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776083009301.frag.json",
+    "filename": "vj_shader_1776083009301.frag.json",
+    "size_bytes": 181,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776610277210.frag.jpg",
+    "filename": "vj_shader_1776610277210.frag.jpg",
+    "size_bytes": 90434,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776610277210.frag.json",
+    "filename": "vj_shader_1776610277210.frag.json",
+    "size_bytes": 187,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/fx_neon_hex.frag",
+    "filename": "fx_neon_hex.frag",
+    "size_bytes": 1756,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/fx_wireframe_dna.frag",
+    "filename": "fx_wireframe_dna.frag",
+    "size_bytes": 1248,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1774617414295.frag",
+    "filename": "vj_shader_1774617414295.frag",
+    "size_bytes": 3524,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1774617414295.frag.json",
+    "filename": "vj_shader_1774617414295.frag.json",
+    "size_bytes": 86,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1774617644852.frag",
+    "filename": "vj_shader_1774617644852.frag",
+    "size_bytes": 4644,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1774617644852.frag.json",
+    "filename": "vj_shader_1774617644852.frag.json",
+    "size_bytes": 143,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1774617932720.frag",
+    "filename": "vj_shader_1774617932720.frag",
+    "size_bytes": 2921,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1774617932720.frag.json",
+    "filename": "vj_shader_1774617932720.frag.json",
+    "size_bytes": 106,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1774725939451.frag",
+    "filename": "vj_shader_1774725939451.frag",
+    "size_bytes": 6224,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1774725939451.frag.json",
+    "filename": "vj_shader_1774725939451.frag.json",
+    "size_bytes": 118,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1775722013224.frag",
+    "filename": "vj_shader_1775722013224.frag",
+    "size_bytes": 5298,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/fx/vj_shader_1775722013224.frag.json",
+    "filename": "vj_shader_1775722013224.frag.json",
+    "size_bytes": 98,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/vj_shader_1774532698270.frag.json",
+    "filename": "vj_shader_1774532698270.frag.json",
+    "size_bytes": 83,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/vj_shader_1774532754979.frag.json",
+    "filename": "vj_shader_1774532754979.frag.json",
+    "size_bytes": 83,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/vj_shader_1774533996474.frag.json",
+    "filename": "vj_shader_1774533996474.frag.json",
+    "size_bytes": 83,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/vj_shader_1774534200206.frag.json",
+    "filename": "vj_shader_1774534200206.frag.json",
+    "size_bytes": 78,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/vj_shader_1774535157541.frag.json",
+    "filename": "vj_shader_1774535157541.frag.json",
+    "size_bytes": 129,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "library/vj_shader_1774536147141.frag.json",
+    "filename": "vj_shader_1774536147141.frag.json",
+    "size_bytes": 113,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "local_install.sh",
+    "filename": "local_install.sh",
+    "size_bytes": 3802,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "modals.html",
+    "filename": "modals.html",
+    "size_bytes": 0,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "package_local.sh",
+    "filename": "package_local.sh",
+    "size_bytes": 1099,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "presets_tab.html",
+    "filename": "presets_tab.html",
+    "size_bytes": 2715,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "profilesetup_logic.js",
+    "filename": "profilesetup_logic.js",
+    "size_bytes": 12657,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "ravebox.love.txt",
+    "filename": "ravebox.love.txt",
+    "size_bytes": 1891,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "ravebox_config753.json",
+    "filename": "ravebox_config753.json",
+    "size_bytes": 212783,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "refactor.py",
+    "filename": "refactor.py",
+    "size_bytes": 4740,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/auto_scan_ehaho.py",
+    "filename": "auto_scan_ehaho.py",
+    "size_bytes": 3087,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/calibration_proxy.py",
+    "filename": "calibration_proxy.py",
+    "size_bytes": 10249,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/calibration_scan_ehaho.py",
+    "filename": "calibration_scan_ehaho.py",
+    "size_bytes": 20493,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/concert_scan_ehaho.py",
+    "filename": "concert_scan_ehaho.py",
+    "size_bytes": 4299,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/fix_setup.py",
+    "filename": "fix_setup.py",
+    "size_bytes": 16267,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/fix_setup_aesthetic.py",
+    "filename": "fix_setup_aesthetic.py",
+    "size_bytes": 3253,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/fix_setup_final.py",
+    "filename": "fix_setup_final.py",
+    "size_bytes": 14686,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/fix_setup_v2.py",
+    "filename": "fix_setup_v2.py",
+    "size_bytes": 15135,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/generate_melody_b.py",
+    "filename": "generate_melody_b.py",
+    "size_bytes": 7604,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/generate_profiles.py",
+    "filename": "generate_profiles.py",
+    "size_bytes": 14879,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/generate_sim_manifest.py",
+    "filename": "generate_sim_manifest.py",
+    "size_bytes": 3567,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/migrate_dmx_data.py",
+    "filename": "migrate_dmx_data.py",
+    "size_bytes": 3320,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/multi_axis_scan_ehaho.py",
+    "filename": "multi_axis_scan_ehaho.py",
+    "size_bytes": 7327,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/reconstruct_multi_axis_report.py",
+    "filename": "reconstruct_multi_axis_report.py",
+    "size_bytes": 1767,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/reconstruct_profiles.py",
+    "filename": "reconstruct_profiles.py",
+    "size_bytes": 6032,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/rename_profiles.py",
+    "filename": "rename_profiles.py",
+    "size_bytes": 2638,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/restore_active.py",
+    "filename": "restore_active.py",
+    "size_bytes": 2448,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/restore_v2.py",
+    "filename": "restore_v2.py",
+    "size_bytes": 3682,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "scripts/resume_draw_scan_ehaho.py",
+    "filename": "resume_draw_scan_ehaho.py",
+    "size_bytes": 3123,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "server_recovery.log",
+    "filename": "server_recovery.log",
+    "size_bytes": 5330,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "sidebar.html",
+    "filename": "sidebar.html",
+    "size_bytes": 18226,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "stage_tab.html",
+    "filename": "stage_tab.html",
+    "size_bytes": 491,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "sumof2@lappop.local",
+    "filename": "sumof2@lappop.local",
+    "size_bytes": 254948399,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "test_tab.html",
+    "filename": "test_tab.html",
+    "size_bytes": 1549,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "training_data/training_1776794259953.json",
+    "filename": "training_1776794259953.json",
+    "size_bytes": 21936,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "training_data/training_1776804260510.json",
+    "filename": "training_1776804260510.json",
+    "size_bytes": 109531,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "update_engine.py",
+    "filename": "update_engine.py",
+    "size_bytes": 1097,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "upload_library.sh",
+    "filename": "upload_library.sh",
+    "size_bytes": 3168,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "visualizer_src/README.md",
+    "filename": "README.md",
+    "size_bytes": 550,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "visualizer_src/metadata.json",
+    "filename": "metadata.json",
+    "size_bytes": 191,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "visualizer_src/package-lock.json",
+    "filename": "package-lock.json",
+    "size_bytes": 152621,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "visualizer_src/package.json",
+    "filename": "package.json",
+    "size_bytes": 1830,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "visualizer_src/tsconfig.json",
+    "filename": "tsconfig.json",
+    "size_bytes": 508,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "visualizer_src/vite.config.ts",
+    "filename": "vite.config.ts",
+    "size_bytes": 721,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "vj_clear_data.sh",
+    "filename": "vj_clear_data.sh",
+    "size_bytes": 760,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "vj_open.sh",
+    "filename": "vj_open.sh",
+    "size_bytes": 290,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "vj_restart_all.sh",
+    "filename": "vj_restart_all.sh",
+    "size_bytes": 272,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "vj_startup.log",
+    "filename": "vj_startup.log",
+    "size_bytes": 5609070,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "vj_update_all.sh",
+    "filename": "vj_update_all.sh",
+    "size_bytes": 954,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": "web_port.py",
+    "filename": "web_port.py",
+    "size_bytes": 1290,
+    "ref_count": 0,
+    "referenced_by": []
+  },
+  {
+    "rel_path": ".lgd-nfy0",
+    "filename": ".lgd-nfy0",
+    "size_bytes": 0,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "package_local.sh",
+        "details": [
+          "Contains basename '.lgd-nfy0'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "backend/audio_analyzer.py",
+    "filename": "audio_analyzer.py",
+    "size_bytes": 13244,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Python import of 'audio_analyzer'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "backend/recorder_service.py",
+    "filename": "recorder_service.py",
+    "size_bytes": 12274,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Python import of 'recorder_service'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "deploy.sh",
+    "filename": "deploy.sh",
+    "size_bytes": 1721,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixture_ai.html",
+        "details": [
+          "Contains basename 'deploy.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "dmxchartexample.png",
+    "filename": "dmxchartexample.png",
+    "size_bytes": 391356,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixture_ai.html",
+        "details": [
+          "Contains basename 'dmxchartexample.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "engine.log",
+    "filename": "engine.log",
+    "size_bytes": 101498,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'engine.log'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "favicon.ico",
+    "filename": "favicon.ico",
+    "size_bytes": 489278,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'favicon.ico'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "feed.html",
+    "filename": "feed.html",
+    "size_bytes": 5778,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'feed.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+    "filename": "index.json",
+    "size_bytes": 216,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'index.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1774217808170.json",
+    "filename": "prof_1774217808170.json",
+    "size_bytes": 3980,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1778437806_prof_1774217808170.json",
+        "details": [
+          "Contains basename 'prof_1774217808170.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1774280131343.json",
+    "filename": "prof_1774280131343.json",
+    "size_bytes": 3553,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1778516362_prof_1774280131343.json",
+        "details": [
+          "Contains basename 'prof_1774280131343.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1775941739083.json",
+    "filename": "prof_1775941739083.json",
+    "size_bytes": 15116,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389945_prof_1775941739083.json",
+        "details": [
+          "Contains basename 'prof_1775941739083.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1775951301709.json",
+    "filename": "prof_1775951301709.json",
+    "size_bytes": 10544,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777482952_prof_1775951301709.json",
+        "details": [
+          "Contains basename 'prof_1775951301709.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776086541264.json",
+    "filename": "prof_1776086541264.json",
+    "size_bytes": 15292,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389943_prof_1776086541264.json",
+        "details": [
+          "Contains basename 'prof_1776086541264.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776087078444.json",
+    "filename": "prof_1776087078444.json",
+    "size_bytes": 10740,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389960_prof_1776087078444.json",
+        "details": [
+          "Contains basename 'prof_1776087078444.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776087340298.json",
+    "filename": "prof_1776087340298.json",
+    "size_bytes": 15048,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389941_prof_1776087340298.json",
+        "details": [
+          "Contains basename 'prof_1776087340298.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776258179003.json",
+    "filename": "prof_1776258179003.json",
+    "size_bytes": 15130,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389958_prof_1776258179003.json",
+        "details": [
+          "Contains basename 'prof_1776258179003.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776429854437.json",
+    "filename": "prof_1776429854437.json",
+    "size_bytes": 2282,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389950_prof_1776429854437.json",
+        "details": [
+          "Contains basename 'prof_1776429854437.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776693577673.json",
+    "filename": "prof_1776693577673.json",
+    "size_bytes": 14817,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389983_prof_1776693577673.json",
+        "details": [
+          "Contains basename 'prof_1776693577673.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776693958041.json",
+    "filename": "prof_1776693958041.json",
+    "size_bytes": 25676,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389979_prof_1776693958041.json",
+        "details": [
+          "Contains basename 'prof_1776693958041.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776774947768.json",
+    "filename": "prof_1776774947768.json",
+    "size_bytes": 4561,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389956_prof_1776774947768.json",
+        "details": [
+          "Contains basename 'prof_1776774947768.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/profiles/prof_1776776207528.json",
+    "filename": "prof_1776776207528.json",
+    "size_bytes": 442,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/backup/1777389962_prof_1776776207528.json",
+        "details": [
+          "Contains basename 'prof_1776776207528.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/live_consoles/index.json",
+    "filename": "index.json",
+    "size_bytes": 216,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'index.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/positional_data.json",
+    "filename": "positional_data.json",
+    "size_bytes": 972,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'positional_data.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/profiles/govee_lan.json",
+    "filename": "govee_lan.json",
+    "size_bytes": 1265,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixtures/profiles/govee.p.lan.json",
+        "details": [
+          "Contains basename 'govee_lan.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/base_crystal_burst.frag",
+    "filename": "base_crystal_burst.frag",
+    "size_bytes": 2232,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'base_crystal_burst.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/base_mandala.frag",
+    "filename": "base_mandala.frag",
+    "size_bytes": 1998,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'base_mandala.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/base_neon_web.frag",
+    "filename": "base_neon_web.frag",
+    "size_bytes": 1205,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'base_neon_web.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/base_stained_glass.frag",
+    "filename": "base_stained_glass.frag",
+    "size_bytes": 2331,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'base_stained_glass.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/base_voxel_maze.frag",
+    "filename": "base_voxel_maze.frag",
+    "size_bytes": 2517,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'base_voxel_maze.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/feathersl.frag",
+    "filename": "feathersl.frag",
+    "size_bytes": 1845,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'feathersl.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/fractal.frag",
+    "filename": "fractal.frag",
+    "size_bytes": 3274,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'fractal.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/fractalrave.frag",
+    "filename": "fractalrave.frag",
+    "size_bytes": 3812,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'fractalrave.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774499787388.frag",
+    "filename": "vj_shader_1774499787388.frag",
+    "size_bytes": 2305,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774499787388.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774500081403.frag",
+    "filename": "vj_shader_1774500081403.frag",
+    "size_bytes": 2652,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774500081403.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774500524039.frag",
+    "filename": "vj_shader_1774500524039.frag",
+    "size_bytes": 1669,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774500524039.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774532698270.frag",
+    "filename": "vj_shader_1774532698270.frag",
+    "size_bytes": 3366,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774532698270.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774532754979.frag",
+    "filename": "vj_shader_1774532754979.frag",
+    "size_bytes": 4502,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774532754979.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774533996474.frag",
+    "filename": "vj_shader_1774533996474.frag",
+    "size_bytes": 3852,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774533996474.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774534200206.frag",
+    "filename": "vj_shader_1774534200206.frag",
+    "size_bytes": 3102,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774534200206.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774535157541.frag",
+    "filename": "vj_shader_1774535157541.frag",
+    "size_bytes": 3332,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774535157541.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774536147141.frag",
+    "filename": "vj_shader_1774536147141.frag",
+    "size_bytes": 3744,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774536147141.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774720461200.frag",
+    "filename": "vj_shader_1774720461200.frag",
+    "size_bytes": 3575,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774720461200.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774723795528.frag",
+    "filename": "vj_shader_1774723795528.frag",
+    "size_bytes": 4397,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774723795528.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1774817125116.frag",
+    "filename": "vj_shader_1774817125116.frag",
+    "size_bytes": 2535,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1774817125116.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775710675428.frag",
+    "filename": "vj_shader_1775710675428.frag",
+    "size_bytes": 4495,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1775710675428.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775710835455.frag",
+    "filename": "vj_shader_1775710835455.frag",
+    "size_bytes": 5246,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1775710835455.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775721840167.frag",
+    "filename": "vj_shader_1775721840167.frag",
+    "size_bytes": 4092,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1775721840167.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775722274354.frag",
+    "filename": "vj_shader_1775722274354.frag",
+    "size_bytes": 6696,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1775722274354.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1775722320225.frag",
+    "filename": "vj_shader_1775722320225.frag",
+    "size_bytes": 3918,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1775722320225.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776058507198.frag",
+    "filename": "vj_shader_1776058507198.frag",
+    "size_bytes": 3621,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1776058507198.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776083009301.frag",
+    "filename": "vj_shader_1776083009301.frag",
+    "size_bytes": 5027,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1776083009301.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/base/vj_shader_1776610277210.frag",
+    "filename": "vj_shader_1776610277210.frag",
+    "size_bytes": 4420,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_shader_1776610277210.frag'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776175089248.png",
+    "filename": "vj_image_1776175089248.png",
+    "size_bytes": 1841442,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776175089248.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776175121236.jpg",
+    "filename": "vj_image_1776175121236.jpg",
+    "size_bytes": 113547,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776175121236.jpg'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776175563194.png",
+    "filename": "vj_image_1776175563194.png",
+    "size_bytes": 1076304,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776175563194.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776176347053.png",
+    "filename": "vj_image_1776176347053.png",
+    "size_bytes": 4894272,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776176347053.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776400961135.png",
+    "filename": "vj_image_1776400961135.png",
+    "size_bytes": 779185,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776400961135.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776401779193.jpg",
+    "filename": "vj_image_1776401779193.jpg",
+    "size_bytes": 22680,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776401779193.jpg'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776401853679.jpg",
+    "filename": "vj_image_1776401853679.jpg",
+    "size_bytes": 18604,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776401853679.jpg'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776401862025.jpg",
+    "filename": "vj_image_1776401862025.jpg",
+    "size_bytes": 18604,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776401862025.jpg'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1776401919167.png",
+    "filename": "vj_image_1776401919167.png",
+    "size_bytes": 14653,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1776401919167.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1777180898745.png",
+    "filename": "vj_image_1777180898745.png",
+    "size_bytes": 1118681,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1777180898745.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1777181277189.png",
+    "filename": "vj_image_1777181277189.png",
+    "size_bytes": 933493,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1777181277189.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1777731112364.png",
+    "filename": "vj_image_1777731112364.png",
+    "size_bytes": 2151227,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1777731112364.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1777846161552.mp4",
+    "filename": "vj_image_1777846161552.mp4",
+    "size_bytes": 9547505,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1777846161552.mp4'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1777846535154.mp4",
+    "filename": "vj_image_1777846535154.mp4",
+    "size_bytes": 9651669,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1777846535154.mp4'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1778053091039.mp4",
+    "filename": "vj_image_1778053091039.mp4",
+    "size_bytes": 6336914,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1778053091039.mp4'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1778053845422.mp4",
+    "filename": "vj_image_1778053845422.mp4",
+    "size_bytes": 12659501,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1778053845422.mp4'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1778076436225.mp4",
+    "filename": "vj_image_1778076436225.mp4",
+    "size_bytes": 10868539,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1778076436225.mp4'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library/images/vj_image_1778076500290.mp4",
+    "filename": "vj_image_1778076500290.mp4",
+    "size_bytes": 11425642,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "library_manifest.json",
+        "details": [
+          "Contains basename 'vj_image_1778076500290.mp4'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "preset_ai.html",
+    "filename": "preset_ai.html",
+    "size_bytes": 19863,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "ai_architect.js",
+        "details": [
+          "Contains basename 'preset_ai.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "public/dmxchartexample.png",
+    "filename": "dmxchartexample.png",
+    "size_bytes": 391356,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "fixture_ai.html",
+        "details": [
+          "Contains basename 'dmxchartexample.png'",
+          "Served public asset reference 'dmxchartexample.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "public/favicon.ico",
+    "filename": "favicon.ico",
+    "size_bytes": 489278,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'favicon.ico'",
+          "Served public asset reference 'favicon.ico'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "scripts/pack_vj.sh",
+    "filename": "pack_vj.sh",
+    "size_bytes": 1785,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "scripts/provision_evt.sh",
+        "details": [
+          "Contains basename 'pack_vj.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "scripts/provision_evt.sh",
+    "filename": "provision_evt.sh",
+    "size_bytes": 3386,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'provision_evt.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "server.log",
+    "filename": "server.log",
+    "size_bytes": 657,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "dev_tunnel.sh",
+        "details": [
+          "Contains basename 'server.log'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "spotify_auth.py",
+    "filename": "spotify_auth.py",
+    "size_bytes": 2863,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'spotify_auth.py'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "training_data/TRAIN_20260421_075523_building/label.json",
+    "filename": "label.json",
+    "size_bytes": 168,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "backend/recorder_service.py",
+        "details": [
+          "Contains basename 'label.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "training_data/TRAIN_20260421_075523_building/transcode.log",
+    "filename": "transcode.log",
+    "size_bytes": 4997,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "backend/recorder_service.py",
+        "details": [
+          "Contains basename 'transcode.log'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "tunnel_guardian.sh",
+    "filename": "tunnel_guardian.sh",
+    "size_bytes": 1871,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "setup_tunnel.sh",
+        "details": [
+          "Contains basename 'tunnel_guardian.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualizer_src/server.ts",
+    "filename": "server.ts",
+    "size_bytes": 2204,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'server.ts'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualizer_src/src/index.css",
+    "filename": "index.css",
+    "size_bytes": 197,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "visualizer_src/src/main.tsx",
+        "details": [
+          "Contains basename 'index.css'",
+          "Visualizer src internal reference"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vj_local_install.tar.gz",
+    "filename": "vj_local_install.tar.gz",
+    "size_bytes": 509897371,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "package_local.sh",
+        "details": [
+          "Contains basename 'vj_local_install.tar.gz'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vj_secondary_install.tar.gz",
+    "filename": "vj_secondary_install.tar.gz",
+    "size_bytes": 83121357,
+    "ref_count": 1,
+    "referenced_by": [
+      {
+        "file": "package_local.sh",
+        "details": [
+          "Contains basename 'vj_secondary_install.tar.gz'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "assets/index-t91N0y39.js",
+    "filename": "index-t91N0y39.js",
+    "size_bytes": 1155344,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "visualdmx.html",
+        "details": [
+          "Contains basename 'index-t91N0y39.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/dist/index.html",
+        "details": [
+          "Contains basename 'index-t91N0y39.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "backend/dmx_engine.py",
+    "filename": "dmx_engine.py",
+    "size_bytes": 60742,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Python import of 'dmx_engine'"
+        ]
+      },
+      {
+        "file": "scripts/rename_profiles.py",
+        "details": [
+          "Contains basename 'dmx_engine.py'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "backend/vibe_engine.py",
+    "filename": "vibe_engine.py",
+    "size_bytes": 11444,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "update_engine.py",
+        "details": [
+          "Contains basename 'vibe_engine.py'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Python import of 'vibe_engine'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "background2.png",
+    "filename": "background2.png",
+    "size_bytes": 3832306,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'background2.png'"
+        ]
+      },
+      {
+        "file": "setup.css",
+        "details": [
+          "Contains basename 'background2.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "background3.png",
+    "filename": "background3.png",
+    "size_bytes": 4362178,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'background3.png'"
+        ]
+      },
+      {
+        "file": "setup.css",
+        "details": [
+          "Contains basename 'background3.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "background4.png",
+    "filename": "background4.png",
+    "size_bytes": 3525044,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'background4.png'"
+        ]
+      },
+      {
+        "file": "setup.css",
+        "details": [
+          "Contains basename 'background4.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "engine_tab.js",
+    "filename": "engine_tab.js",
+    "size_bytes": 35629,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'engine_tab.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'engine_tab.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/live_console.json",
+    "filename": "live_console.json",
+    "size_bytes": 764,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'live_console.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'live_console.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/live_consoles/console1.json",
+    "filename": "console1.json",
+    "size_bytes": 763,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'console1.json'"
+        ]
+      },
+      {
+        "file": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'console1.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/live_consoles/my_console.json",
+    "filename": "my_console.json",
+    "size_bytes": 577,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'my_console.json'"
+        ]
+      },
+      {
+        "file": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'my_console.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/live_console.json",
+    "filename": "live_console.json",
+    "size_bytes": 728,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'live_console.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'live_console.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/live_consoles/console1.json",
+    "filename": "console1.json",
+    "size_bytes": 763,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'console1.json'"
+        ]
+      },
+      {
+        "file": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'console1.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/live_consoles/my_console.json",
+    "filename": "my_console.json",
+    "size_bytes": 747,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'my_console.json'"
+        ]
+      },
+      {
+        "file": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'my_console.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "index.html",
+    "filename": "index.html",
+    "size_bytes": 391,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'index.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/server.ts",
+        "details": [
+          "Contains basename 'index.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "install.sh",
+    "filename": "install.sh",
+    "size_bytes": 6084,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "scripts/provision_evt.sh",
+        "details": [
+          "Contains basename 'install.sh'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'install.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "public/background2.png",
+    "filename": "background2.png",
+    "size_bytes": 3832306,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'background2.png'",
+          "Served public asset reference 'background2.png'"
+        ]
+      },
+      {
+        "file": "setup.css",
+        "details": [
+          "Contains basename 'background2.png'",
+          "Served public asset reference 'background2.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "public/background3.png",
+    "filename": "background3.png",
+    "size_bytes": 4362178,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'background3.png'",
+          "Served public asset reference 'background3.png'"
+        ]
+      },
+      {
+        "file": "setup.css",
+        "details": [
+          "Contains basename 'background3.png'",
+          "Served public asset reference 'background3.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "public/background4.png",
+    "filename": "background4.png",
+    "size_bytes": 3525044,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'background4.png'",
+          "Served public asset reference 'background4.png'"
+        ]
+      },
+      {
+        "file": "setup.css",
+        "details": [
+          "Contains basename 'background4.png'",
+          "Served public asset reference 'background4.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "push_update.sh",
+    "filename": "push_update.sh",
+    "size_bytes": 1621,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'push_update.sh'"
+        ]
+      },
+      {
+        "file": "vj_update_all.sh",
+        "details": [
+          "Contains basename 'push_update.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "scripts/profile_factory.py",
+    "filename": "profile_factory.py",
+    "size_bytes": 4179,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "scripts/generate_melody_b.py",
+        "details": [
+          "Python import of 'profile_factory'"
+        ]
+      },
+      {
+        "file": "scripts/generate_profiles.py",
+        "details": [
+          "Python import of 'profile_factory'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "standalone_viz.html",
+    "filename": "standalone_viz.html",
+    "size_bytes": 12823,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "standalone.html",
+        "details": [
+          "Contains basename 'standalone_viz.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'standalone_viz.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "training_data/TRAIN_20260421_075523_building/video.mp4",
+    "filename": "video.mp4",
+    "size_bytes": 3014871,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "player.html",
+        "details": [
+          "Contains basename 'video.mp4'"
+        ]
+      },
+      {
+        "file": "backend/recorder_service.py",
+        "details": [
+          "Contains basename 'video.mp4'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualizer_src/dist/assets/index-t91N0y39.js",
+    "filename": "index-t91N0y39.js",
+    "size_bytes": 1155344,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "visualdmx.html",
+        "details": [
+          "Contains basename 'index-t91N0y39.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/dist/index.html",
+        "details": [
+          "Contains basename 'index-t91N0y39.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualizer_src/dist/index.html",
+    "filename": "index.html",
+    "size_bytes": 607,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'index.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/server.ts",
+        "details": [
+          "Contains basename 'index.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualizer_src/index.html",
+    "filename": "index.html",
+    "size_bytes": 509,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'index.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/server.ts",
+        "details": [
+          "Contains basename 'index.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vj-node.service",
+    "filename": "vj-node.service",
+    "size_bytes": 313,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'vj-node.service'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'vj-node.service'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vjstatus.sh",
+    "filename": "vjstatus.sh",
+    "size_bytes": 2900,
+    "ref_count": 2,
+    "referenced_by": [
+      {
+        "file": "vj_restart_all.sh",
+        "details": [
+          "Contains basename 'vjstatus.sh'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'vjstatus.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "assets/index-CWXzUtQm.css",
+    "filename": "index-CWXzUtQm.css",
+    "size_bytes": 31229,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "standalone_viz.html",
+        "details": [
+          "Contains basename 'index-CWXzUtQm.css'"
+        ]
+      },
+      {
+        "file": "visualdmx.html",
+        "details": [
+          "Contains basename 'index-CWXzUtQm.css'"
+        ]
+      },
+      {
+        "file": "visualizer_src/dist/index.html",
+        "details": [
+          "Contains basename 'index-CWXzUtQm.css'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "backend/dmx_node.py",
+    "filename": "dmx_node.py",
+    "size_bytes": 3661,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'dmx_node.py'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'dmx_node.py'"
+        ]
+      },
+      {
+        "file": "vj-node.service",
+        "details": [
+          "Contains basename 'dmx_node.py'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "backend/requirements.txt",
+    "filename": "requirements.txt",
+    "size_bytes": 113,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "local_install.sh",
+        "details": [
+          "Contains basename 'requirements.txt'"
+        ]
+      },
+      {
+        "file": "install.sh",
+        "details": [
+          "Contains basename 'requirements.txt'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'requirements.txt'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "console.html",
+    "filename": "console.html",
+    "size_bytes": 27324,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'console.html'"
+        ]
+      },
+      {
+        "file": "deploy.sh",
+        "details": [
+          "Contains basename 'console.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'console.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "engine_tab.css",
+    "filename": "engine_tab.css",
+    "size_bytes": 4004,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'engine_tab.css'"
+        ]
+      },
+      {
+        "file": "console.html",
+        "details": [
+          "Contains basename 'engine_tab.css'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'engine_tab.css'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "library_manifest.json",
+    "filename": "library_manifest.json",
+    "size_bytes": 8021,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "standalone_viz.html",
+        "details": [
+          "Contains basename 'library_manifest.json'"
+        ]
+      },
+      {
+        "file": "upload_library.sh",
+        "details": [
+          "Contains basename 'library_manifest.json'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'library_manifest.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "scripts/calibration_server.py",
+    "filename": "calibration_server.py",
+    "size_bytes": 8710,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'calibration_server.py'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'calibration_server.py'"
+        ]
+      },
+      {
+        "file": "vj-camera.service",
+        "details": [
+          "Contains basename 'calibration_server.py'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "setup_tunnel.sh",
+    "filename": "setup_tunnel.sh",
+    "size_bytes": 3543,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "install.sh",
+        "details": [
+          "Contains basename 'setup_tunnel.sh'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'setup_tunnel.sh'"
+        ]
+      },
+      {
+        "file": "tunnel_guardian.sh",
+        "details": [
+          "Contains basename 'setup_tunnel.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "standalone.html",
+    "filename": "standalone.html",
+    "size_bytes": 4556,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'standalone.html'"
+        ]
+      },
+      {
+        "file": "deploy.sh",
+        "details": [
+          "Contains basename 'standalone.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'standalone.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "standalone_engine.js",
+    "filename": "standalone_engine.js",
+    "size_bytes": 8533,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "standalone_viz.html",
+        "details": [
+          "Contains basename 'standalone_engine.js'"
+        ]
+      },
+      {
+        "file": "standalone.html",
+        "details": [
+          "Contains basename 'standalone_engine.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'standalone_engine.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "sw.js",
+    "filename": "sw.js",
+    "size_bytes": 3416,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'sw.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'sw.js'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'sw.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "training_data/TRAIN_20260421_075523_building/audio.wav",
+    "filename": "audio.wav",
+    "size_bytes": 3267800,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "player.html",
+        "details": [
+          "Contains basename 'audio.wav'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'audio.wav'"
+        ]
+      },
+      {
+        "file": "backend/recorder_service.py",
+        "details": [
+          "Contains basename 'audio.wav'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "training_data/TRAIN_20260421_075523_building/dmx.json",
+    "filename": "dmx.json",
+    "size_bytes": 188191,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "player.html",
+        "details": [
+          "Contains basename 'dmx.json'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'dmx.json'"
+        ]
+      },
+      {
+        "file": "backend/recorder_service.py",
+        "details": [
+          "Contains basename 'dmx.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualizer_src/dist/assets/index-CWXzUtQm.css",
+    "filename": "index-CWXzUtQm.css",
+    "size_bytes": 31229,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "standalone_viz.html",
+        "details": [
+          "Contains basename 'index-CWXzUtQm.css'"
+        ]
+      },
+      {
+        "file": "visualdmx.html",
+        "details": [
+          "Contains basename 'index-CWXzUtQm.css'"
+        ]
+      },
+      {
+        "file": "visualizer_src/dist/index.html",
+        "details": [
+          "Contains basename 'index-CWXzUtQm.css'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualizer_src/src/main.tsx",
+    "filename": "main.tsx",
+    "size_bytes": 231,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "visualizer_src/index.html",
+        "details": [
+          "Contains basename 'main.tsx'",
+          "Visualizer src internal reference"
+        ]
+      },
+      {
+        "file": "visualizer_src/dist/assets/index-t91N0y39.js",
+        "details": [
+          "Visualizer src internal reference"
+        ]
+      },
+      {
+        "file": "visualizer_src/src/App.tsx",
+        "details": [
+          "Visualizer src internal reference"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vj-camera.service",
+    "filename": "vj-camera.service",
+    "size_bytes": 292,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'vj-camera.service'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'vj-camera.service'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'vj-camera.service'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vj-launcher.service",
+    "filename": "vj-launcher.service",
+    "size_bytes": 276,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'vj-launcher.service'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'vj-launcher.service'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'vj-launcher.service'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vj-server.service",
+    "filename": "vj-server.service",
+    "size_bytes": 287,
+    "ref_count": 3,
+    "referenced_by": [
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'vj-server.service'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'vj-server.service'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'vj-server.service'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "ai_architect.js",
+    "filename": "ai_architect.js",
+    "size_bytes": 111512,
+    "ref_count": 4,
+    "referenced_by": [
+      {
+        "file": "preset_ai.html",
+        "details": [
+          "Contains basename 'ai_architect.js'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'ai_architect.js'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'ai_architect.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'ai_architect.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "backend/descriptors.json",
+    "filename": "descriptors.json",
+    "size_bytes": 4364,
+    "ref_count": 4,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'descriptors.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'descriptors.json'"
+        ]
+      },
+      {
+        "file": "dev_server.py",
+        "details": [
+          "Contains basename 'descriptors.json'"
+        ]
+      },
+      {
+        "file": "backend/dmx_engine.py",
+        "details": [
+          "Contains basename 'descriptors.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "backend/main.py",
+    "filename": "main.py",
+    "size_bytes": 84773,
+    "ref_count": 4,
+    "referenced_by": [
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'main.py'"
+        ]
+      },
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'main.py'"
+        ]
+      },
+      {
+        "file": "killvj.sh",
+        "details": [
+          "Contains basename 'main.py'"
+        ]
+      },
+      {
+        "file": "backend/vibe_engine.py",
+        "details": [
+          "Contains basename 'main.py'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "generate_cert.sh",
+    "filename": "generate_cert.sh",
+    "size_bytes": 790,
+    "ref_count": 4,
+    "referenced_by": [
+      {
+        "file": "local_install.sh",
+        "details": [
+          "Contains basename 'generate_cert.sh'"
+        ]
+      },
+      {
+        "file": "install.sh",
+        "details": [
+          "Contains basename 'generate_cert.sh'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'generate_cert.sh'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'generate_cert.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "training_data/TRAIN_20260421_075523_building/meta.json",
+    "filename": "meta.json",
+    "size_bytes": 736,
+    "ref_count": 4,
+    "referenced_by": [
+      {
+        "file": "player.html",
+        "details": [
+          "Contains basename 'meta.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'meta.json'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'meta.json'"
+        ]
+      },
+      {
+        "file": "backend/recorder_service.py",
+        "details": [
+          "Contains basename 'meta.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualizer_src/src/App.tsx",
+    "filename": "App.tsx",
+    "size_bytes": 103156,
+    "ref_count": 4,
+    "referenced_by": [
+      {
+        "file": "visualizer_src/package-lock.json",
+        "details": [
+          "Visualizer src internal reference"
+        ]
+      },
+      {
+        "file": "visualizer_src/dist/assets/index-CWXzUtQm.css",
+        "details": [
+          "Visualizer src internal reference"
+        ]
+      },
+      {
+        "file": "visualizer_src/dist/assets/index-t91N0y39.js",
+        "details": [
+          "Visualizer src internal reference"
+        ]
+      },
+      {
+        "file": "visualizer_src/src/main.tsx",
+        "details": [
+          "Contains basename 'App.tsx'",
+          "Visualizer src internal reference"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vj_remote_settings.json",
+    "filename": "vj_remote_settings.json",
+    "size_bytes": 692,
+    "ref_count": 4,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'vj_remote_settings.json'"
+        ]
+      },
+      {
+        "file": "vj_clear_data.sh",
+        "details": [
+          "Contains basename 'vj_remote_settings.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'vj_remote_settings.json'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'vj_remote_settings.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": ".spotify_cache",
+    "filename": ".spotify_cache",
+    "size_bytes": 530,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "package_local.sh",
+        "details": [
+          "Contains basename '.spotify_cache'"
+        ]
+      },
+      {
+        "file": "vj_clear_data.sh",
+        "details": [
+          "Contains basename '.spotify_cache'"
+        ]
+      },
+      {
+        "file": "push_update.sh",
+        "details": [
+          "Contains basename '.spotify_cache'"
+        ]
+      },
+      {
+        "file": "spotify_auth.py",
+        "details": [
+          "Contains basename '.spotify_cache'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename '.spotify_cache'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixture_ai.html",
+    "filename": "fixture_ai.html",
+    "size_bytes": 81624,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'fixture_ai.html'"
+        ]
+      },
+      {
+        "file": "profile_logic.js",
+        "details": [
+          "Contains basename 'fixture_ai.html'"
+        ]
+      },
+      {
+        "file": "sidebar.html",
+        "details": [
+          "Contains basename 'fixture_ai.html'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'fixture_ai.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'fixture_ai.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "launcher.py",
+    "filename": "launcher.py",
+    "size_bytes": 14843,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'launcher.py'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'launcher.py'"
+        ]
+      },
+      {
+        "file": "vj-launcher.service",
+        "details": [
+          "Contains basename 'launcher.py'"
+        ]
+      },
+      {
+        "file": "scripts/calibration_proxy.py",
+        "details": [
+          "Contains basename 'launcher.py'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'launcher.py'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "live_controller.js",
+    "filename": "live_controller.js",
+    "size_bytes": 68017,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "preset_ai.html",
+        "details": [
+          "Contains basename 'live_controller.js'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'live_controller.js'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'live_controller.js'"
+        ]
+      },
+      {
+        "file": "console.html",
+        "details": [
+          "Contains basename 'live_controller.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'live_controller.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "player.html",
+    "filename": "player.html",
+    "size_bytes": 39448,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "deploy.sh",
+        "details": [
+          "Contains basename 'player.html'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'player.html'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'player.html'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'player.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'player.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "setup.css",
+    "filename": "setup.css",
+    "size_bytes": 64601,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'setup.css'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'setup.css'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'setup.css'"
+        ]
+      },
+      {
+        "file": "console.html",
+        "details": [
+          "Contains basename 'setup.css'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'setup.css'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "setup_service.sh",
+    "filename": "setup_service.sh",
+    "size_bytes": 5664,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "local_install.sh",
+        "details": [
+          "Contains basename 'setup_service.sh'"
+        ]
+      },
+      {
+        "file": "install.sh",
+        "details": [
+          "Contains basename 'setup_service.sh'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'setup_service.sh'"
+        ]
+      },
+      {
+        "file": "push_update.sh",
+        "details": [
+          "Contains basename 'setup_service.sh'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'setup_service.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "stage_logic.js",
+    "filename": "stage_logic.js",
+    "size_bytes": 100402,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "preset_ai.html",
+        "details": [
+          "Contains basename 'stage_logic.js'"
+        ]
+      },
+      {
+        "file": "profile_logic.js",
+        "details": [
+          "Contains basename 'stage_logic.js'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'stage_logic.js'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'stage_logic.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'stage_logic.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "start.sh",
+    "filename": "start.sh",
+    "size_bytes": 5687,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'start.sh'"
+        ]
+      },
+      {
+        "file": "vj-server.service",
+        "details": [
+          "Contains basename 'start.sh'"
+        ]
+      },
+      {
+        "file": "vj-engine.service",
+        "details": [
+          "Contains basename 'start.sh'"
+        ]
+      },
+      {
+        "file": "QUICKSTART.sh",
+        "details": [
+          "Contains basename 'start.sh'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'start.sh'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "vj-engine.service",
+    "filename": "vj-engine.service",
+    "size_bytes": 489,
+    "ref_count": 5,
+    "referenced_by": [
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'vj-engine.service'"
+        ]
+      },
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'vj-engine.service'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'vj-engine.service'"
+        ]
+      },
+      {
+        "file": "spotify_auth.py",
+        "details": [
+          "Contains basename 'vj-engine.service'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'vj-engine.service'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "background.png",
+    "filename": "background.png",
+    "size_bytes": 4237491,
+    "ref_count": 6,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'background.png'"
+        ]
+      },
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'background.png'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'background.png'"
+        ]
+      },
+      {
+        "file": "setup.css",
+        "details": [
+          "Contains basename 'background.png'"
+        ]
+      },
+      {
+        "file": "console.html",
+        "details": [
+          "Contains basename 'background.png'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'background.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "help.html",
+    "filename": "help.html",
+    "size_bytes": 50411,
+    "ref_count": 6,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'help.html'"
+        ]
+      },
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'help.html'"
+        ]
+      },
+      {
+        "file": "install.sh",
+        "details": [
+          "Contains basename 'help.html'"
+        ]
+      },
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'help.html'"
+        ]
+      },
+      {
+        "file": "refactor.py",
+        "details": [
+          "Contains basename 'help.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'help.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "key.pem",
+    "filename": "key.pem",
+    "size_bytes": 3272,
+    "ref_count": 6,
+    "referenced_by": [
+      {
+        "file": "package_local.sh",
+        "details": [
+          "Contains basename 'key.pem'"
+        ]
+      },
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'key.pem'"
+        ]
+      },
+      {
+        "file": "generate_cert.sh",
+        "details": [
+          "Contains basename 'key.pem'"
+        ]
+      },
+      {
+        "file": "push_update.sh",
+        "details": [
+          "Contains basename 'key.pem'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'key.pem'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'key.pem'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "profile.html",
+    "filename": "profile.html",
+    "size_bytes": 31591,
+    "ref_count": 6,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'profile.html'"
+        ]
+      },
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'profile.html'"
+        ]
+      },
+      {
+        "file": "ai_architect.js",
+        "details": [
+          "Contains basename 'profile.html'"
+        ]
+      },
+      {
+        "file": "deploy.sh",
+        "details": [
+          "Contains basename 'profile.html'"
+        ]
+      },
+      {
+        "file": "profile_logic.js",
+        "details": [
+          "Contains basename 'profile.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'profile.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "public/background.png",
+    "filename": "background.png",
+    "size_bytes": 4237491,
+    "ref_count": 6,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'background.png'",
+          "Served public asset reference 'background.png'"
+        ]
+      },
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'background.png'",
+          "Served public asset reference 'background.png'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'background.png'",
+          "Served public asset reference 'background.png'"
+        ]
+      },
+      {
+        "file": "setup.css",
+        "details": [
+          "Contains basename 'background.png'",
+          "Served public asset reference 'background.png'"
+        ]
+      },
+      {
+        "file": "console.html",
+        "details": [
+          "Contains basename 'background.png'",
+          "Served public asset reference 'background.png'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'background.png'",
+          "Served public asset reference 'background.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "cert.pem",
+    "filename": "cert.pem",
+    "size_bytes": 2171,
+    "ref_count": 7,
+    "referenced_by": [
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'cert.pem'"
+        ]
+      },
+      {
+        "file": "package_local.sh",
+        "details": [
+          "Contains basename 'cert.pem'"
+        ]
+      },
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'cert.pem'"
+        ]
+      },
+      {
+        "file": "generate_cert.sh",
+        "details": [
+          "Contains basename 'cert.pem'"
+        ]
+      },
+      {
+        "file": "push_update.sh",
+        "details": [
+          "Contains basename 'cert.pem'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'cert.pem'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'cert.pem'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/stage_config.json",
+    "filename": "stage_config.json",
+    "size_bytes": 1009,
+    "ref_count": 7,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "vj_clear_data.sh",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "backend/dmx_engine.py",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "scripts/restore_active.py",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "scripts/rename_profiles.py",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/stage_config.json",
+    "filename": "stage_config.json",
+    "size_bytes": 922,
+    "ref_count": 7,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "vj_clear_data.sh",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "backend/dmx_engine.py",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "scripts/restore_active.py",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      },
+      {
+        "file": "scripts/rename_profiles.py",
+        "details": [
+          "Contains basename 'stage_config.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "profile_logic.js",
+    "filename": "profile_logic.js",
+    "size_bytes": 114680,
+    "ref_count": 7,
+    "referenced_by": [
+      {
+        "file": "preset_ai.html",
+        "details": [
+          "Contains basename 'profile_logic.js'"
+        ]
+      },
+      {
+        "file": "ai_architect.js",
+        "details": [
+          "Contains basename 'profile_logic.js'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'profile_logic.js'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'profile_logic.js'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'profile_logic.js'"
+        ]
+      },
+      {
+        "file": "console.html",
+        "details": [
+          "Contains basename 'profile_logic.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'profile_logic.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "visualdmx.html",
+    "filename": "visualdmx.html",
+    "size_bytes": 607,
+    "ref_count": 7,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'visualdmx.html'"
+        ]
+      },
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'visualdmx.html'"
+        ]
+      },
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'visualdmx.html'"
+        ]
+      },
+      {
+        "file": "web_port.py",
+        "details": [
+          "Contains basename 'visualdmx.html'"
+        ]
+      },
+      {
+        "file": "QUICKSTART.sh",
+        "details": [
+          "Contains basename 'visualdmx.html'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'visualdmx.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'visualdmx.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/live_consoles/presets.json",
+    "filename": "presets.json",
+    "size_bytes": 533,
+    "ref_count": 8,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "backend/dmx_engine.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "scripts/restore_active.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "scripts/migrate_dmx_data.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/fixturebackup/fixtures/presets.json",
+    "filename": "presets.json",
+    "size_bytes": 8401,
+    "ref_count": 8,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "backend/dmx_engine.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "scripts/restore_active.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "scripts/migrate_dmx_data.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/live_consoles/presets.json",
+    "filename": "presets.json",
+    "size_bytes": 533,
+    "ref_count": 8,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "backend/dmx_engine.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "scripts/restore_active.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "scripts/migrate_dmx_data.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "fixtures/presets.json",
+    "filename": "presets.json",
+    "size_bytes": 39005,
+    "ref_count": 8,
+    "referenced_by": [
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "backend/dmx_engine.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "fixtures/fixturebackup/fixtures/live_consoles/index.json",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "scripts/restore_active.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      },
+      {
+        "file": "scripts/migrate_dmx_data.py",
+        "details": [
+          "Contains basename 'presets.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "icon.png",
+    "filename": "icon.png",
+    "size_bytes": 489278,
+    "ref_count": 8,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'icon.png'"
+        ]
+      },
+      {
+        "file": "manifest.json",
+        "details": [
+          "Contains basename 'icon.png'"
+        ]
+      },
+      {
+        "file": "fixture_ai.html",
+        "details": [
+          "Contains basename 'icon.png'"
+        ]
+      },
+      {
+        "file": "preset_ai.html",
+        "details": [
+          "Contains basename 'icon.png'"
+        ]
+      },
+      {
+        "file": "head.html",
+        "details": [
+          "Contains basename 'icon.png'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'icon.png'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'icon.png'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'icon.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "public/icon.png",
+    "filename": "icon.png",
+    "size_bytes": 489278,
+    "ref_count": 8,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'icon.png'",
+          "Served public asset reference 'icon.png'"
+        ]
+      },
+      {
+        "file": "manifest.json",
+        "details": [
+          "Contains basename 'icon.png'",
+          "Served public asset reference 'icon.png'"
+        ]
+      },
+      {
+        "file": "fixture_ai.html",
+        "details": [
+          "Contains basename 'icon.png'",
+          "Served public asset reference 'icon.png'"
+        ]
+      },
+      {
+        "file": "preset_ai.html",
+        "details": [
+          "Contains basename 'icon.png'",
+          "Served public asset reference 'icon.png'"
+        ]
+      },
+      {
+        "file": "head.html",
+        "details": [
+          "Contains basename 'icon.png'",
+          "Served public asset reference 'icon.png'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'icon.png'",
+          "Served public asset reference 'icon.png'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'icon.png'",
+          "Served public asset reference 'icon.png'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'icon.png'",
+          "Served public asset reference 'icon.png'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "spotify_creds.json",
+    "filename": "spotify_creds.json",
+    "size_bytes": 164,
+    "ref_count": 8,
+    "referenced_by": [
+      {
+        "file": "install.sh",
+        "details": [
+          "Contains basename 'spotify_creds.json'"
+        ]
+      },
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'spotify_creds.json'"
+        ]
+      },
+      {
+        "file": "vj_clear_data.sh",
+        "details": [
+          "Contains basename 'spotify_creds.json'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'spotify_creds.json'"
+        ]
+      },
+      {
+        "file": "spotify_auth.py",
+        "details": [
+          "Contains basename 'spotify_creds.json'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'spotify_creds.json'"
+        ]
+      },
+      {
+        "file": "dev_server.py",
+        "details": [
+          "Contains basename 'spotify_creds.json'"
+        ]
+      },
+      {
+        "file": "backend/main.py",
+        "details": [
+          "Contains basename 'spotify_creds.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "manifest.json",
+    "filename": "manifest.json",
+    "size_bytes": 554,
+    "ref_count": 11,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "standalone_viz.html",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "head.html",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "upload_library.sh",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "scripts/generate_sim_manifest.py",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'manifest.json'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "server.py",
+    "filename": "server.py",
+    "size_bytes": 41977,
+    "ref_count": 11,
+    "referenced_by": [
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'server.py'"
+        ]
+      },
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Python import of 'server'"
+        ]
+      },
+      {
+        "file": "launcher.py",
+        "details": [
+          "Python import of 'server'"
+        ]
+      },
+      {
+        "file": "setup_service.sh",
+        "details": [
+          "Contains basename 'server.py'"
+        ]
+      },
+      {
+        "file": "vj-camera.service",
+        "details": [
+          "Contains basename 'server.py'"
+        ]
+      },
+      {
+        "file": "killvj.sh",
+        "details": [
+          "Contains basename 'server.py'"
+        ]
+      },
+      {
+        "file": "dev_tunnel.sh",
+        "details": [
+          "Contains basename 'server.py'"
+        ]
+      },
+      {
+        "file": "dev_server.py",
+        "details": [
+          "Contains basename 'server.py'"
+        ]
+      },
+      {
+        "file": "scripts/calibration_server.py",
+        "details": [
+          "Python import of 'server'"
+        ]
+      },
+      {
+        "file": "scripts/calibration_proxy.py",
+        "details": [
+          "Contains basename 'server.py'"
+        ]
+      },
+      {
+        "file": "scripts/pack_vj.sh",
+        "details": [
+          "Contains basename 'server.py'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "shared_setup.js",
+    "filename": "shared_setup.js",
+    "size_bytes": 42387,
+    "ref_count": 15,
+    "referenced_by": [
+      {
+        "file": "preset_ai.html",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "stage_tab.html",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "deploy.sh",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "profilesetup_logic.js",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "profile_logic.js",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "stage_logic.js",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "player.html",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "console.html",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "dev_server.py",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'shared_setup.js'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "setup.html",
+    "filename": "setup.html",
+    "size_bytes": 49508,
+    "ref_count": 18,
+    "referenced_by": [
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "fixture_ai.html",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "preset_ai.html",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "manager.html",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "refactor.py",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "ai_architect.js",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "deploy.sh",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "dev_tunnel.sh",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "console.html",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "scripts/fix_setup_aesthetic.py",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "scripts/fix_setup_final.py",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "scripts/fix_setup_v2.py",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      },
+      {
+        "file": "scripts/fix_setup.py",
+        "details": [
+          "Contains basename 'setup.html'"
+        ]
+      }
+    ]
+  },
+  {
+    "rel_path": "manager.html",
+    "filename": "manager.html",
+    "size_bytes": 62221,
+    "ref_count": 21,
+    "referenced_by": [
+      {
+        "file": "index.html",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "sw.js",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "local_install.sh",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "start.sh",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "manifest.json",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "shared_setup.js",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "launcher.py",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "help.html",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "live_controller.js",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "deploy.sh",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "sidebar.html",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "setup.html",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "profile.html",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "dev_tunnel.sh",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "server.py",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "vj_open.sh",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "dev_server.py",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/package.json",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/dist/assets/index-t91N0y39.js",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "visualizer_src/src/App.tsx",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      },
+      {
+        "file": "assets/index-t91N0y39.js",
+        "details": [
+          "Contains basename 'manager.html'"
+        ]
+      }
+    ]
+  }
+]

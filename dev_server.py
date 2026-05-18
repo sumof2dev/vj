@@ -116,6 +116,21 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_update_descriptor()
             return
 
+        # DEV: Log AI response
+        if path == '/api/log_ai':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                if length > 0:
+                    body = self.rfile.read(length).decode('utf-8')
+                    data = json.loads(body)
+                    os.makedirs(os.path.join(BASE_DIR, 'scratch'), exist_ok=True)
+                    with open(os.path.join(BASE_DIR, 'scratch', 'ai_log.json'), 'w') as f:
+                        json.dump(data, f, indent=2)
+                self._send_json({"status": "ok"})
+            except Exception as e:
+                self.send_error(500, str(e))
+            return
+
         self.do_PUT()
 
     def do_DELETE(self):

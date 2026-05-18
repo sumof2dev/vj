@@ -728,6 +728,8 @@ export default function App() {
             currentVideoRef.current.removeAttribute('src');
             currentVideoRef.current.load();
             currentVideoRef.current = null;
+            isPlayingVideoRef.current = false;
+            videoFinishedRef.current = true;
         }
 
         texture.wrapS = THREE.RepeatWrapping;
@@ -1620,9 +1622,9 @@ export default function App() {
                                         </button>
                                     </div>
                                 )}
-                                <button onClick={() => setShowHistory(false)} className="p-1.5 hover:bg-white/10 rounded-md"><X size={14} /></button>
                             </div>
                         </div>
+
 
                         <AnimatePresence>
                             {showAiInput && (filterTab === 'base') && (

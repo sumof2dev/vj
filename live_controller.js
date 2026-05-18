@@ -136,6 +136,27 @@ function renderLiveTab() {
     const displayCount = liveEditMode ? Math.max(16, liveConfig.length + 4) : liveConfig.length;
 
     for (let i = 0; i < displayCount; i++) {
+        // Special Hijack: Index 3 (Top-Right in a 4-col grid) is always Gear/Home
+        if (i === 3) {
+            html += `
+                <div class="live-btn system-slot" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); height:100px; display:flex; gap:15px; align-items:center; justify-content:center; cursor:default; position:relative; overflow:hidden; border-radius:15px; grid-column: 4 / 5; grid-row: 1 / 2;">
+                    <button class="btn btn-sm" id="live-gear-btn" onclick="toggleLiveEditMode()" title="Settings" style="padding: 8px; border-radius: 50%; width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); cursor:pointer; transition:all 0.2s;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                    </button>
+                    <button class="btn btn-sm" onclick="window.location.href='manager.html'" title="Home" style="padding: 8px; border-radius: 50%; width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); cursor:pointer; transition:all 0.2s;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            continue;
+        }
+
         const cfg = liveConfig[i] || { type: 'none', color: '#333' };
         let content = '';
         let label = '';
@@ -907,7 +928,9 @@ setInterval(() => {
             bass: window.latestAudioState.bass || 0,
             mid: window.latestAudioState.mid || 0,
             high: window.latestAudioState.high || 0,
-            flux: window.latestAudioState.flux || 0
+            flux: window.latestAudioState.flux || 0,
+            vibe: window.latestAudioState.vibe || 'mid',
+            transient: window.latestAudioState.transient || 'steady'
         });
         // Remove oldest frame when we exceed 10 seconds
         if (audioTimelineBuffer.length > TIMELINE_MAX_FRAMES) {
@@ -941,29 +964,41 @@ function openAudioTimelineModal() {
                     <button onclick="closeAudioTimelineModal()" style="background: rgba(255,255,255,0.05); border: none; color: #fff; font-size: 20px; width:40px; height:40px; border-radius:50%; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: all 0.2s;">&times;</button>
                 </div>
 
-                <div style="background: #000; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; position: relative; height: 400px; overflow: hidden; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                <div style="background: #000; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; position: relative; height: 420px; overflow: hidden; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
                     <canvas id="audio-timeline-canvas" style="width: 100%; height: 100%; cursor: crosshair;"></canvas>
                     <div id="audio-timeline-inspect" style="position: absolute; top: 0; left: 0; height: 100%; width: 2px; background: linear-gradient(to bottom, transparent, var(--accent), transparent); display: none; pointer-events: none; box-shadow: 0 0 15px var(--accent);">
-                        <div id="audio-timeline-tooltip" style="position: absolute; top: 20px; left: 15px; background: rgba(10,10,12,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: bold; white-space: nowrap; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+                        <div id="audio-timeline-tooltip" style="position: absolute; top: 50px; left: 15px; background: rgba(10,10,12,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 12px; font-family: \'JetBrains Mono\', monospace; font-size: 12px; font-weight: bold; white-space: nowrap; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10;"></div>
                     </div>
                 </div>
 
-                <div style="margin-top: 25px; display: flex; flex-wrap: wrap; gap: 25px; padding: 0 10px;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="width:12px; height:12px; border-radius:3px; background:#ff3366; box-shadow: 0 0 10px rgba(255,51,102,0.4);"></span>
-                        <span style="color: #ff3366; font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Bass</span>
+                <div style="margin-top: 20px; display: flex; align-items: center; gap: 25px; padding: 0 10px;">
+                    <div style="display: flex; gap: 20px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="width:10px; height:10px; border-radius:2px; background:#ff3366; box-shadow: 0 0 10px rgba(255,51,102,0.4);"></span>
+                            <span style="color: #ff3366; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8;">Bass</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="width:10px; height:10px; border-radius:2px; background:var(--accent); box-shadow: 0 0 10px rgba(0,242,255,0.4);"></span>
+                            <span style="color: var(--accent); font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8;">Mid</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="width:10px; height:10px; border-radius:2px; background:#ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.4);"></span>
+                            <span style="color: #ffaa00; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8;">High</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="width:10px; height:10px; border-radius:2px; background:rgba(255,255,255,0.3);"></span>
+                            <span style="color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Flux</span>
+                        </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="width:12px; height:12px; border-radius:3px; background:var(--accent); box-shadow: 0 0 10px rgba(0,242,255,0.4);"></span>
-                        <span style="color: var(--accent); font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Mid</span>
+                </div>
+
+                <div id="timeline-presets-container" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding: 0 10px;">
+                        <h4 style="margin: 0; color: #fff; font-size: 11px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.5;">Interactive Preset Bubbles</h4>
+                        <span style="font-size:9px; color:var(--accent); font-weight:800; opacity:0.6; letter-spacing:0.5px;">CLICK TO TRIGGER (EXCLUSIVE)</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="width:12px; height:12px; border-radius:3px; background:#ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.4);"></span>
-                        <span style="color: #ffaa00; font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">High</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="width:12px; height:12px; border-radius:3px; background:rgba(255,255,255,0.3);"></span>
-                        <span style="color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Spectral Flux</span>
+                    <div id="timeline-preset-bubbles" style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 140px; overflow-y: auto; padding: 0 10px;">
+                        <!-- Dynamically populated -->
                     </div>
                 </div>
             </div>
@@ -971,38 +1006,8 @@ function openAudioTimelineModal() {
         document.body.appendChild(modal);
 
         // Interaction for tooltip
-        const canvas = document.getElementById('audio-timeline-canvas');
-        const inspect = document.getElementById('audio-timeline-inspect');
-        const tooltip = document.getElementById('audio-timeline-tooltip');
-
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const frameIdx = Math.floor((x / rect.width) * audioTimelineBuffer.length);
-            const data = audioTimelineBuffer[frameIdx];
-
-            if (data) {
-                inspect.style.display = 'block';
-                inspect.style.left = x + 'px';
-                tooltip.innerHTML = `
-                    <div style="margin-bottom:6px; color:#aaa; font-size:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:4px;">T-MINUS ${((TIMELINE_MAX_FRAMES - frameIdx) / 30).toFixed(1)}s</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px 15px;">
-                        <span style="color:#ff3366">BASS:</span> <span>${data.bass.toFixed(3)}</span>
-                        <span style="color:var(--accent)">MID:</span> <span>${data.mid.toFixed(3)}</span>
-                        <span style="color:#ffaa00">HIGH:</span> <span>${data.high.toFixed(3)}</span>
-                        <span style="color:#fff; opacity:0.5">SPECTRAL FLUX:</span> <span>${data.flux.toFixed(3)}</span>
-                    </div>
-                `;
-                // Keep tooltip inside bounds
-                if (x > rect.width * 0.7) {
-                    tooltip.style.left = 'auto';
-                    tooltip.style.right = '15px';
-                } else {
-                    tooltip.style.left = '15px';
-                    tooltip.style.right = 'auto';
-                }
-            }
-        });
+        initTimelineInspector('audio-timeline-canvas', 'audio-timeline-inspect', 'audio-timeline-tooltip');
+        
         canvas.addEventListener('mouseleave', () => inspect.style.display = 'none');
         
         // Modal close on overlay click
@@ -1025,6 +1030,58 @@ function closeAudioTimelineModal() {
     }
 }
 
+function initTimelineInspector(canvasId, inspectId, tooltipId) {
+    const canvas = document.getElementById(canvasId);
+    const inspect = document.getElementById(inspectId);
+    const tooltip = document.getElementById(tooltipId);
+    if (!canvas || !inspect || !tooltip) return;
+
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const frameIdx = Math.floor((x / rect.width) * (audioTimelineBuffer.length || 1));
+        const data = audioTimelineBuffer[frameIdx];
+
+        if (data) {
+            inspect.style.display = 'block';
+            inspect.style.left = x + 'px';
+            tooltip.innerHTML = `
+                <div style="margin-bottom:6px; color:#aaa; font-size:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:4px;">T-MINUS ${((TIMELINE_MAX_FRAMES - frameIdx) / 30).toFixed(1)}s</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px 15px;">
+                    <span style="color:#ff3366">BASS:</span> <span>${data.bass.toFixed(3)}</span>
+                    <span style="color:var(--accent)">MID:</span> <span>${data.mid.toFixed(3)}</span>
+                    <span style="color:#ffaa00">HIGH:</span> <span>${data.high.toFixed(3)}</span>
+                    <span style="color:#fff; opacity:0.5">FLUX:</span> <span>${data.flux.toFixed(3)}</span>
+                </div>
+            `;
+            if (x > rect.width * 0.7) {
+                tooltip.style.left = 'auto';
+                tooltip.style.right = '15px';
+            } else {
+                tooltip.style.left = '15px';
+                tooltip.style.right = 'auto';
+            }
+        }
+    });
+    canvas.addEventListener('mouseleave', () => inspect.style.display = 'none');
+}
+
+function startConsoleTimelineLoop() {
+    const canvas = document.getElementById('console-timeline-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Initialize inspector for console version
+    initTimelineInspector('console-timeline-canvas', 'audio-timeline-inspect', 'audio-timeline-tooltip');
+
+    function tick() {
+        if (!document.getElementById('console-timeline-canvas')) return;
+        drawAudioTimeline(canvas, ctx);
+        requestAnimationFrame(tick);
+    }
+    tick();
+}
+
 let timelineLoopId = null;
 function startAudioTimelineLoop() {
     if (timelineLoopId) return;
@@ -1043,6 +1100,94 @@ function stopAudioTimelineLoop() {
     timelineLoopId = null;
 }
 
+function updateTimelinePresetBubbles() {
+    const container = document.getElementById('timeline-preset-bubbles');
+    if (!container) return;
+
+    const presets = (window.db && window.db.presets) || [];
+    const activeIds = (window.activePresets || []).map(id => String(id));
+    
+    // Simple state-aware rendering to avoid flickering
+    let newHtml = presets.map(p => {
+        const isActive = activeIds.includes(String(p.id));
+        return `<div class="timeline-preset-bubble ${isActive ? 'active' : ''}" 
+                     onclick="window.togglePreset('${p.id}')"
+                     style="padding: 6px 14px; background: ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; 
+                            color: ${isActive ? '#000' : '#fff'}; border-radius: 20px; font-size: 11px; 
+                            font-weight: 800; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+                            border: 1px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.1)'};
+                            box-shadow: ${isActive ? '0 0 15px rgba(0,242,255,0.3)' : 'none'};
+                            text-transform: uppercase; letter-spacing: 0.5px;">
+                    ${p.name}
+                </div>`;
+    }).join('');
+
+    if (container.innerHTML !== newHtml) {
+        container.innerHTML = newHtml;
+    }
+}
+
+function drawPerformanceRow(ctx, w, h) {
+    const rowHeight = 24;
+    if (audioTimelineBuffer.length < 2) return rowHeight;
+
+    const segments = [];
+    let activeSeg = { vibe: audioTimelineBuffer[0].vibe, transient: audioTimelineBuffer[0].transient, start: 0 };
+
+    for (let i = 1; i < audioTimelineBuffer.length; i++) {
+        const frame = audioTimelineBuffer[i];
+        if (frame.vibe !== activeSeg.vibe || frame.transient !== activeSeg.transient) {
+            segments.push({ ...activeSeg, end: i });
+            activeSeg = { vibe: frame.vibe, transient: frame.transient, start: i };
+        }
+    }
+    segments.push({ ...activeSeg, end: audioTimelineBuffer.length });
+
+    segments.forEach(seg => {
+        const x1 = (seg.start / TIMELINE_MAX_FRAMES) * w;
+        const x2 = (seg.end / TIMELINE_MAX_FRAMES) * w;
+        const width = x2 - x1;
+
+        // Vibe Background
+        if (seg.vibe === 'high') ctx.fillStyle = 'rgba(255, 50, 50, 0.3)';
+        else if (seg.vibe === 'chill') ctx.fillStyle = 'rgba(50, 150, 255, 0.3)';
+        else ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+
+        ctx.fillRect(x1, 0, width, rowHeight);
+
+        // Transient Highlight
+        if (seg.transient === 'dropping') {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x1 + 1, 1, width - 2, rowHeight - 2);
+        } else if (seg.transient === 'building') {
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x1 + 1, 1, width - 2, rowHeight - 2);
+        }
+
+        // Label
+        if (width > 40) {
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = '900 8px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let label = seg.vibe.toUpperCase();
+            if (seg.transient && seg.transient !== 'steady') label += ` [${seg.transient.toUpperCase()}]`;
+            ctx.fillText(label, x1 + width / 2, rowHeight / 2);
+        }
+    });
+
+    // Divider line
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath();
+    ctx.moveTo(0, rowHeight);
+    ctx.lineTo(w, rowHeight);
+    ctx.stroke();
+
+    return rowHeight;
+}
+
 function drawAudioTimeline(canvas, ctx) {
     if (!canvas) return;
     // Resize internal buffer to match display
@@ -1057,13 +1202,19 @@ function drawAudioTimeline(canvas, ctx) {
     const h = canvas.clientHeight;
     ctx.clearRect(0, 0, w, h);
 
+    const perfHeight = drawPerformanceRow(ctx, w, h);
+    const graphTop = perfHeight;
+    const graphH = h - graphTop;
+
+    updateTimelinePresetBubbles();
+
     // Grid lines
     ctx.strokeStyle = 'rgba(255,255,255,0.03)';
     ctx.lineWidth = 1;
     for (let i = 1; i < 4; i++) {
         ctx.beginPath();
-        ctx.moveTo(0, (h / 4) * i);
-        ctx.lineTo(w, (h / 4) * i);
+        ctx.moveTo(0, graphTop + (graphH / 4) * i);
+        ctx.lineTo(w, graphTop + (graphH / 4) * i);
         ctx.stroke();
     }
     for (let i = 1; i < 10; i++) {
@@ -1085,7 +1236,7 @@ function drawAudioTimeline(canvas, ctx) {
         for (let i = 0; i < audioTimelineBuffer.length; i++) {
             const x = (i / TIMELINE_MAX_FRAMES) * w;
             const val = Math.max(0, Math.min(1.0, audioTimelineBuffer[i][key]));
-            const y = h - (val * h * 0.9) - (h * 0.05); // Slight padding
+            const y = graphTop + (graphH - (val * graphH * 0.85) - (graphH * 0.05)); // Adjusted padding
             points.push({x, y});
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
@@ -1096,10 +1247,11 @@ function drawAudioTimeline(canvas, ctx) {
             ctx.lineTo(points[points.length-1].x, h);
             ctx.lineTo(points[0].x, h);
             ctx.closePath();
-            ctx.globalAlpha = alpha * 0.1;
+            ctx.globalAlpha = alpha * 0.08;
             ctx.fillStyle = color;
             ctx.fill();
         }
+        ctx.globalAlpha = 1.0;
     };
 
     drawLine('flux', 'rgba(255,255,255,0.5)', 1, 0.4);

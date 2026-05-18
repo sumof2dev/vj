@@ -167,26 +167,25 @@
             <!-- Separate Container for Header -->
             <div class="card" style="border-color: rgba(0, 242, 255, 0.2); display:flex; justify-content:space-between; align-items: center; margin-bottom: 15px; padding: 15px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); background: rgba(24, 24, 27, 0.85);">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <button class="btn btn-sm" onclick="window.location.href='setup.html?tab=stage'">← Back</button>
                     <h2 style="margin:0; border:none; padding:0; font-size: 1.1rem; color: var(--accent-alt); text-transform: uppercase;">Profile Editor</h2>
-                    <div id="editor-heartbeat" style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">IDLE</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="downloadBehaviorProfile()">Export JSON</button>
-                    <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background: var(--accent-alt); border-color: var(--accent-alt);" onclick="refineProfileGlobal()">Refine Profile</button>
-                    <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background:var(--success); border-color:var(--success);" onclick="sendIt(event)" title="Sync changes to the server backend">Save Profile</button>
+                    <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="downloadBehaviorProfile()">Export</button>
+                    <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background: var(--accent-alt); border-color: var(--accent-alt);" onclick="refineProfileGlobal()">Refine</button>
+                    <button class="btn btn-primary btn-sm" style="height:28px; padding:0 12px; font-size:11px; background:var(--success); border-color:var(--success);" onclick="sendIt(event)" title="Sync changes to the server backend">Save</button>
+                    <button class="btn btn-sm" style="height:28px; padding:0 12px; font-size:11px;" onclick="window.location.href='setup.html?tab=stage'">Cancel</button>
                 </div>
             </div>
 
             <!-- Content Container -->
             <div class="card" style="border-color: rgba(0, 242, 255, 0.2); padding: 15px;">
                     <input type="file" id="load-behavior-input" style="display:none" onchange="loadBehaviorProfile(event)">
-                    <div id="ai-loading-container" style="display:none; margin-bottom: 20px;">
+                    <div id="ai-loading-container" class="hidden" style="margin-bottom: 20px;">
                         <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; position: relative;">
                             <div id="ai-loading-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease-out; position: absolute; top:0; left:0;"></div>
                         </div>
                         <div style="display:flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                            <button id="ai-view-diff-btn" class="btn btn-sm" style="display:none; padding:2px 8px; font-size:9px; background:var(--accent); border:none; height:18px;" onclick="showAiDiff()">🔍 View Changes</button>
+                            <button id="ai-view-diff-btn" class="btn btn-sm hidden" style="padding:2px 8px; font-size:9px; background:var(--accent); border:none; height:18px;" onclick="showAiDiff()">🔍 View Changes</button>
                             <div id="ai-loading-text" style="font-size: 10px; color: var(--accent); text-align: right; font-weight: bold; text-transform: uppercase;">Processing...</div>
                         </div>
                     </div>
@@ -199,7 +198,6 @@
                         </div>
                     </div>
 
-                    <div id="profile-calibration-container"></div>
                     <div id="prof-mappings" style="margin-top: 10px;"></div>
                     
                     <div style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom: 20px;">
@@ -269,14 +267,14 @@
                     <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
                         onclick="clearAiChatHistory()">🗑️
                         Clear</button>
-                    <button class="btn-suggestion" id="ai-ch-picker-btn" onclick="toggleChannelPicker()" style="border: 1px solid var(--accent); color: var(--accent);">CH</button>
+                    <button class="btn-suggestion" id="ai-ch-picker-btn" onclick="toggleChannelPicker()" style="border: 1px solid var(--accent); color: var(--accent);">[CH]</button>
                     <button class="btn-suggestion" onclick="appendAiSuggestion('bside')">B-Side</button>
                     <button class="btn-suggestion" onclick="appendAiSuggestion('rhythm')">Rhythm</button>
                     <button class="btn-suggestion" onclick="appendAiSuggestion('liquid')">Liquid</button>
                 </div>
 
-                <div id="ai-channel-picker" 
-                    style="display:none; position: absolute; bottom: 130px; left: 10px; right: 10px; background: #1a1a1a; border: 1px solid var(--accent); border-radius: 12px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                <div id="ai-channel-picker" class="hidden"
+                    style="position: absolute; bottom: 130px; left: 10px; right: 10px; background: #1a1a1a; border: 1px solid var(--accent); border-radius: 12px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
                     <!-- Channel items injected here -->
                 </div>
 
@@ -311,11 +309,11 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn btn-secondary btn-sm" id="ai-chat-view-diff-btn" onclick="showAiDiff()"
-                            style="display:none; border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
-                        <button class="btn btn-primary btn-sm" id="ai-apply-final-btn"
+                        <button class="btn btn-secondary btn-sm hidden" id="ai-chat-view-diff-btn" onclick="showAiDiff()"
+                            style="border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
+                        <button class="btn btn-primary btn-sm hidden" id="ai-apply-final-btn"
                             onclick="acceptAiTransformation()"
-                            style="display:none; background:var(--success);">Apply</button>
+                            style="background:var(--success);">Apply</button>
                     </div>
                 </div>
             </div>
@@ -402,8 +400,8 @@
         </div>
     </div>
     <!-- AI DIFF MODAL -->
-    <div id="ai-diff-modal" class="ai-modal-overlay"
-        style="display:none; z-index:11000;"
+    <div id="ai-diff-modal" class="ai-modal-overlay hidden"
+        style="z-index:11000;"
         onclick="closeAiDiff()">
         <div class="ai-modal-content" style="max-width:600px;" onclick="event.stopPropagation()">
             <div class="ai-modal-header">

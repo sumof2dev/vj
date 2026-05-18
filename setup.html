@@ -48,7 +48,7 @@
             </div>
             <div class="sidebar-title">
                 <div class="brand">RAVE<span>BOX</span></div>
-                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v510261247</span></div>
+                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v518260909</span></div>
             </div>
         </div>
 
@@ -186,11 +186,11 @@
         <h2>Presets</h2>
         <p style="color:var(--text-dim)">Define structural overrides and automated triggers (e.g., The Drop).</p>
 
-        <div class="card" id="preset-editor-card" style="margin-bottom:20px; overflow:hidden; border-color: rgba(0, 242, 255, 0.15);">
+        <div class="card" id="preset-editor-card" style="margin-bottom:20px; border-color: rgba(0, 242, 255, 0.15);">
             <div id="preset-editor-header" class="row" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding: 12px 15px; background:rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);" onclick="togglePresetEditor()">
                 <div style="display:flex; align-items:center; gap:12px;">
                     <button class="btn btn-primary btn-sm" id="preset-add-btn" style="height:28px; padding:0 12px; font-size:11px;" onclick="event.stopPropagation(); addNewPreset()">Add Preset</button>
-                    <button class="btn btn-primary btn-sm" id="preset-ai-gen-btn" style="height:28px; padding:0 12px; font-size:11px; background:var(--secondary); border-color:var(--secondary);" onclick="event.stopPropagation(); openPresetAiChat()">Generate</button>
+                    <button class="btn btn-primary btn-sm" id="preset-ai-gen-btn" style="height:28px; padding:0 12px; font-size:11px; background:var(--secondary); border-color:var(--secondary);" onclick="openPresetAiChat()">Generate</button>
                     
                     <div id="preset-editor-actions-top" class="hidden" style=" gap:10px; align-items:center;">
                         <button class="btn btn-sm" id="preset-test-btn" style="height:28px; padding:0 12px; font-size:11px; border:1px solid var(--accent); color:var(--accent-alt); background:transparent;" onclick="event.stopPropagation(); testPreset()">Test</button>
@@ -215,16 +215,7 @@
                 <div style="margin-bottom:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">1. Trigger Conditions</label>
-                        <div style="display:flex; gap:8px;">
-                            <select id="pres-new-trigger-type" style="font-size:11px; background:#111; border:1px solid #444; color:#fff; border-radius:4px; padding:4px;">
-                                <option value="vibe">Vibe</option>
-                                <option value="state">State</option>
-                                <option value="volume">Volume</option>
-                                <option value="bin">Energy Bin</option>
-                                <option value="channel">Fixture Function</option>
-                            </select>
-                            <button class="btn btn-primary btn-sm" onclick="addConditionFromUI()" style="padding:10px 15px;">ADD</button>
-                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="addConditionFromUI()" style="padding:10px 15px;">ADD</button>
                     </div>
                     <div id="pres-active-triggers">
                         <!-- Injected rows -->
@@ -233,7 +224,29 @@
 
                 <div style="margin-bottom:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">2. Dynamic Overrides</label>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <label style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">2. Dynamic Overrides</label>
+                            <div class="syntax-help-trigger">
+                                <span class="help-icon">?</span>
+                                <div class="syntax-guide" style="bottom: 45px; right: 0; left: auto; min-width: 200px;">
+                                    <div class="syntax-header">Sequencer Syntax</div>
+                                    <div class="syntax-item"><span>Range:</span> 0-255 (Maps to energy)</div>
+                                    <div class="syntax-item"><span>Chain:</span> 32-96-32 (Multi-point sweep)</div>
+                                    <div class="syntax-item"><span>Sequence:</span> 127, 255, 0 (Synced steps)</div>
+                                    <div class="syntax-item"><span>Offset:</span> 32-96 + 64 (Phase shift)</div>
+                                    
+                                    <div class="syntax-header">Keywords</div>
+                                    <div class="syntax-item"><span>On/Off:</span> on, off, max, min, zero</div>
+                                    <div class="syntax-item"><span>Speed:</span> slow, med, fast, punch</div>
+                                    
+                                    <div class="syntax-header">VisualDMX Targets</div>
+                                    <div class="syntax-item"><span>strobe:</span> 0 (Off) to 255 (Fast)</div>
+                                    <div class="syntax-item"><span>blackout:</span> 0 (Normal) to 255 (Blackout)</div>
+                                    <div class="syntax-item"><span>spin:</span> Coordinate rotation</div>
+                                    <div class="syntax-item"><span>feedback:</span> Video feedback intensity</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
@@ -305,108 +318,6 @@
         <div class="card">
             <div class="card-title">Saved Presets</div>
             <div id="saved-presets-list" class="item-list"></div>
-        </div>
-    </div>
-
-    <!-- AI PRESET CHAT MODAL -->
-    
-    <div id="ai-preset-modal" class="ai-modal-overlay"
-        onclick="closePresetAiModal()">
-        <div class="ai-modal-content chat-optimized" onclick="event.stopPropagation()">
-            <div class="ai-modal-header">
-                <div style="font-weight: 800; display:flex; align-items:center; gap:10px;">
-                    <span style="font-size: 1.4rem;">🤖</span>
-                    <span id="ai-preset-modal-title-text">AI Preset Generator</span>
-                    <div class="btn-settings" onclick="openAiSettings()" title="AI Settings">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path
-                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                            </path>
-                        </svg>
-                    </div>
-                </div>
-                <button class="btn btn-sm" onclick="closePresetAiModal()">×</button>
-            </div>
-
-            <div class="ai-modal-body chat-body">
-                <div id="ai-preset-chat-history" style="display: flex; flex-direction: column; gap: 12px; min-height: 50px;">
-                    <div class="chat-bubble ai">
-                        Describe the preset you want to create. For example: "blackout all fixtures when volume drops below 5%" or "when vibe goes high, crank dimmers to max on the rhythm fixtures."
-                    </div>
-                </div>
-            </div>
-
-            <div class="ai-modal-footer chat-footer">
-                <div style="display: flex; gap: 10px; align-items: center; overflow-x: auto; padding-bottom: 5px;">
-                    <button class="btn-suggestion" style="background-color: #ff4d4d; color: white;"
-                        onclick="clearPresetAiChatHistory()">🗑️ Clear</button>
-                    <button class="btn-suggestion" id="ai-fix-picker-btn" onclick="toggleFixturePicker()" style="border: 1px solid var(--accent); color: var(--accent);">[FIX]</button>
-                    <button class="btn-suggestion" id="ai-zone-picker-btn" onclick="toggleZonePicker()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[ZONE]</button>
-                    <button class="btn-suggestion" id="ai-xy-picker-btn" onclick="toggleAiXyMode()" style="border: 1px solid var(--accent-alt); color: var(--accent-alt);">[X/Y]</button>
-                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('blackout')">Blackout</button>
-                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('drop_punch')">Drop Punch</button>
-                    <button class="btn-suggestion" onclick="appendPresetAiSuggestion('breakdown')">Breakdown</button>
-                </div>
-
-                <div id="ai-preset-xy-panel" 
-                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid rgba(255,255,255,0.05); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
-                    <!-- X/Y Calibration UI injected here -->
-                </div>
-
-                <div id="ai-fixture-picker" 
-                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
-                    <!-- Fixture items injected here -->
-                </div>
-
-                <div id="ai-zone-picker" 
-                    class="hidden" style=" padding:15px; background: rgba(255,255,255,0.02); border-radius: 12px; border:1px solid var(--accent-alt); margin-bottom:10px; max-height: 250px; overflow-y: auto;">
-                    <!-- Zone items injected here -->
-                </div>
-
-                <div style="display: flex; gap: 10px; position: relative;">
-                    <textarea id="ai-preset-textarea"
-                        style="width: 100%; height: 60px !important; border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.05); resize: none; border: 1px solid rgba(255,255,255,0.1); color: #ffffff !important; font-size: 14px !important; caret-color: #ffffff;"
-                        placeholder="Describe your preset..."
-                        onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendPresetAiPrompt(); }"></textarea>
-
-                    <button class="btn btn-primary" id="ai-preset-send-btn" onclick="sendPresetAiPrompt()"
-                        style="height: 60px; width: 60px; padding:0; border-radius: 12px;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                    </button>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                    <div style="font-size:0.7rem; color:var(--text-dim); display:flex; align-items:center; gap:5px;">
-                        Using <span class="active-model-name"
-                            style="color:var(--accent-alt); font-weight:bold;">...</span>
-                        <div class="hover-opacity" onclick="openAiSettings()" title="AI Settings" style="cursor:pointer; display:flex; align-items:center;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;">
-                                <circle cx="12" cy="12" r="3"></circle>
-                                <path
-                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                                </path>
-                            </svg>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn btn-secondary btn-sm hidden" id="ai-preset-view-diff-btn" onclick="showPresetAiDiff()"
-                            style=" border:1px solid var(--accent); color:var(--accent-alt);">Diff</button>
-                        <button class="btn btn-accent btn-sm hidden" id="ai-preset-save-btn"
-                            onclick="savePreset()"
-                            style=" background:var(--accent);">💾 Save Preset</button>
-                        <button class="btn btn-primary btn-sm hidden" id="ai-preset-apply-btn"
-                            onclick="acceptPresetAi()"
-                            style=" background:var(--success);">Apply & Close</button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 

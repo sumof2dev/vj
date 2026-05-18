@@ -1,8 +1,5 @@
-// --- SAFETY GLOBALS ---
-var db = window.db || { profiles: [], stage: [], presets: [], liveConsole: [], savedConsoles: [] };
-var activeProfileId = window.activeProfileId || null;
-var currentProfileChannels = window.currentProfileChannels || [];
-var currentProfileMappings = window.currentProfileMappings || [];
+// AI Profile Architect & Refinement Logic
+// Integrates with profile_logic.js globals: currentProfileMappings, currentProfileChannels, db, etc.
 var collapsedChannels = window.collapsedChannels || new Set();
 var pendingAiInstructions = window.pendingAiInstructions || {};
 var aiConversationHistory = window.aiConversationHistory || [];
@@ -80,7 +77,6 @@ var saveDB = window.saveDB || function() { };
 
             const fixEl = document.getElementById('prof-base-fixture');
             const fixId = fixEl ? fixEl.value : null;
-            const fixtureChannels = currentProfileChannels;
             const btn = document.getElementById('ai-process-btn');
 
             if (isProcessingAi) return;
@@ -96,8 +92,37 @@ var saveDB = window.saveDB || function() { };
             const loadingText = document.getElementById('ai-loading-text');
             const diffBtn = document.getElementById('ai-view-diff-btn');
 
+            // 1. Tag Detection & Surgical Filtering
+            const userInstructions = pendingAiInstructions["global_instruction"] || "";
+            const chMatches = [...userInstructions.matchAll(/\[ch:([^\]]+)\]/g)];
+            const targetRoles = chMatches.map(m => m[1].trim());
+
+            const fixtureChannels = currentProfileChannels || [];
+            let mappingsToInfect = JSON.parse(JSON.stringify(window.currentProfileMappings || []));
+
+            // Inject roles into mappings for AI clarity
+            mappingsToInfect.forEach((rules, idx) => {
+                const role = fixtureChannels[idx]?.role || 'unknown';
+                if (Array.isArray(rules)) {
+                    rules.forEach(r => { r._role = role; });
+                }
+            });
+
+            let mappingsForPrompt = mappingsToInfect;
+            let fixtureContextForPrompt = fixtureChannels;
+
+            if (targetRoles.length > 0) {
+                // SURGICAL FILTER: Only send the requested channels to the AI
+                mappingsForPrompt = mappingsToInfect.filter((rules, idx) => {
+                    const role = fixtureChannels[idx]?.role;
+                    return targetRoles.includes(role);
+                });
+                fixtureContextForPrompt = fixtureChannels.filter(ch => targetRoles.includes(ch.role));
+                console.log("✂️ Surgical context enabled for roles:", targetRoles);
+            }
+
             // SNAPSHOT FOR DIFF
-            window.preAiMappings = JSON.parse(JSON.stringify(currentProfileMappings));
+            window.preAiMappings = JSON.parse(JSON.stringify(window.currentProfileMappings || []));
 
             if (loadingContainer) {
                 loadingContainer.classList.remove('hidden');
@@ -137,22 +162,28 @@ var saveDB = window.saveDB || function() { };
 Task: Update a behavior profile based on specific user feedback for channels and rules.
 Context: 
 - Input: Current Mappings (2D array) and a Map of Instructions.
-- Available Sources: volume, bass, mids, highs, spectral flux, impact, beat phase, bar phase, 2 bar phase, 4 bar phase, bin 0, bin 1, bin 2, bin 3, bin 4, bin 5.
-- Available Behaviors: static, direct, sine, saw, square, noise, beat phase, bar phase.
-- Available Hold Types: none, beat, bar, 2 bar, 4 bar.
+- Available Sources: volume, bass, mids, highs, impact, beat phase, bar phase, 4 bar phase, bin 0, bin 4.
+- Available Behaviors: static, direct, sine, saw, square, noise, beat phase, bar phase, stochastic, spike, fuzzy, direct_stepped.
+- Available Hold Types: none, beat, bar, 4 bar.
 - GLOBAL ACTORS:
   - "target": "system" -> Modifies the entire room's timing and intensity.
     - Functions: "rate" (global speed multiplier), "intensity" (global master dimmer).
     - Scaling: "100" = 100% (Normal), "200" = 200% (Double), "50" = 50% (Slow-Mo).
   - "target": "visualdmx" -> Modifies Visualizer-specific shaders (u_strobe, u_blackout, u_spin, etc).
 
+SURGICAL FOCUS:
+- You are provided with a "CURRENT LIVE UI STATE".
+- Each channel rule in the state now has a "_role" property (e.g. "zoom", "pos_x").
+- You must ONLY return the channels that need modification.
+
 SCHEMA RULES:
 1. MODIFIERS: All timing and sensitivity settings MUST live inside the "modifiers" object (speed, react, hold_type).
-2. SOURCE: Frequency bins bin_0 (Sub) through bin_5 (Treble) are available for targeted reactivity.
+2. SOURCE: Frequency bins bin 0 (Sub) and bin 4 (Treble/Mid) are available for surgical frequency targeting.
 3. RANGE PRESERVATION: Keep changes within the 'cal' object bounds (min, center, max) unless explicitly asked to expand them.
 4. NO STATIC FOR RANGES: Never use behavior 'static' if min != max. Use 'sine' or 'step' instead.
 5. 3-DIGIT PRECISION: Always return DMX values as 0-255 integers.
 6. NO SEQUENCER STRINGS: The "32-96-32" sequencer syntax is EXCLUSIVELY for Presets. DO NOT use these strings in Base Profile rules.
+7. ROLE-BASED OUTPUT: The "mappings" key in your response should be an object where keys are CHANNEL ROLES (e.g., "zoom", "dimmer") and values are the rule arrays for those channels.
 
 CHANNEL ROLE DICTIONARY:
 - "pan" = role: pos_x
@@ -172,19 +203,24 @@ The "vibe" field controls WHEN a rule activates based on detected audio energy l
 - GOLD STANDARD: Use vibe: "any" as the default. The engine automatically partitions "any" rules into Chill/Mid/High dynamics.
 - SYNC GROUPS: Use variants "any 1", "any 2", or "any 3" to create variety across multiple fixtures of the same type. Spreading these variants makes the output feel more organic and less "mirrored".
 - SPECIFIC VIBES: Use "chill", "mid", "high", "build", "drop" ONLY if you want a fundamentally different behavior (e.g. static on chill, but direct-mapping on high).
-- CRITICAL: DO NOT delete or collapse existing ranges unless explicitly asked. Return all rules in the updated array.
+- CRITICAL: DO NOT delete or collapse existing ranges unless explicitly asked. Return all rules for ALL channels in the updated array.
 
 THE PLAYBOOK (Style Macros):
-- "B-Side": Shift bin sources (e.g. bin 0 -> bin 1). Invert movement. Swap speeds between Pan/Tilt.
+- "B-Side": Shift bin sources (e.g. bin 0 -> bin 4). Invert movement. Swap speeds between Pan/Tilt.
 - "Rhythm": Use 'square' or 'saw' behaviors. Source: 'impact' or 'beat phase'. React: 1.0, Speed: 0.8+.
-- "Liquid": Use 'sine' or 'noise' behaviors. Source: 'spectral flux' or 'volume'. React: 0.2, Speed: 0.1-.
+### IMPORTANT: PARTIAL UPDATE MODE
+You must ONLY return the channels that are being modified. 
+Return a JSON object where the "mappings" key is an object of ROLES.
+Example: If modifying zoom, return:
+{
+  "logic_explanation": "...",
+  "mappings": {
+     "zoom": [ { "behavior": "square", ... } ]
+  }
+}
 
-Output: Return a JSON object with:
-- "logic_explanation": (compact summary of what you did)
-- "mappings": (the updated 2D array)
-- "question": (Optional: Use this field to ask for clarification if the user's request is ambiguous).
-- CURRENT LIVE UI STATE: ${JSON.stringify(currentProfileMappings)}
-- FIXTURE CONTEXT: ${JSON.stringify(fixtureChannels)}
+- CURRENT LIVE UI STATE: ${JSON.stringify(mappingsForPrompt)}
+- FIXTURE CONTEXT: ${JSON.stringify(fixtureContextForPrompt)}
 - NEW INSTRUCTIONS: ${JSON.stringify(pendingAiInstructions)}
 - CONVERSATION DIALOGUE: ${JSON.stringify(aiConversationHistory.slice(-5))}
 
@@ -208,28 +244,61 @@ Output: Valid raw JSON object only.
                 let aiResult = null;
                 try {
                     aiResult = JSON.parse(responseText.replace(/^```json|```$/g, "").trim());
+                    console.log("🤖 AI RAW RESPONSE:", aiResult);
                 } catch (e) {
+                    console.error("AI JSON Parse Error:", responseText);
                     throw new Error("AI returned invalid JSON: " + e.message);
                 }
 
-                let newMappings = aiResult.mappings || aiResult;
                 const logicLog = aiResult.logic_explanation || "";
+                const aiMappings = aiResult.mappings || aiResult.mapping || aiResult;
                 const question = aiResult.question || "";
 
-                if (question) {
-                    addAiChatMessage('ai', `❓ ${question}`);
-                    // If no mappings returned, stop here
-                    if (!aiResult.mappings && !Array.isArray(aiResult)) {
-                        const thinkingBubble = document.getElementById(thinkingId);
-                        if (thinkingBubble) thinkingBubble.remove();
-                        if (masterInput) masterInput.disabled = false;
-                        if (sendBtn) sendBtn.disabled = false;
-                        if (masterInput) masterInput.focus();
-                        return;
+                // HEALING / MERGE LAYER
+                // We now support both full arrays, index objects, AND role objects
+                let finalMappings = JSON.parse(JSON.stringify(window.currentProfileMappings));
+
+                if (Array.isArray(aiMappings)) {
+                    // Full array returned (Legacy/Fallback)
+                    if (aiMappings.length === fixtureChannels.length) {
+                        finalMappings = aiMappings;
+                    } else if (aiMappings.length > 0) {
+                        aiMappings.forEach((chRules, idx) => {
+                            if (idx < finalMappings.length) finalMappings[idx] = chRules;
+                        });
                     }
+                } else if (typeof aiMappings === 'object') {
+                    // Handle Object keys (Could be Indices OR Roles)
+                    Object.keys(aiMappings).forEach(key => {
+                        const idx = parseInt(key);
+                        if (!isNaN(idx) && idx < finalMappings.length) {
+                            // Merge by Index
+                            console.log(`💉 Merging AI update by Index [${idx}]`);
+                            finalMappings[idx] = aiMappings[key];
+                        } else {
+                            // Merge by Role
+                            const foundIdx = fixtureChannels.findIndex(ch => ch.role === key);
+                            if (foundIdx !== -1) {
+                                console.log(`💉 Merging AI update by Role [${key}] -> Index [${foundIdx}]`);
+                                finalMappings[foundIdx] = aiMappings[key];
+                            }
+                        }
+                    });
                 }
 
-                if (!Array.isArray(newMappings)) throw new Error("AI returned invalid mapping format (expected array).");
+                // Final Validation & Healing (Nested Modifiers)
+                finalMappings.forEach(rules => {
+                    if (Array.isArray(rules)) {
+                        rules.forEach(r => {
+                            if (!r.modifiers) r.modifiers = { speed: 0.5, react: 0.5, hold_type: 'none' };
+                            if (r.speed !== undefined) { r.modifiers.speed = r.speed; delete r.speed; }
+                            if (r.react !== undefined) { r.modifiers.react = r.react; delete r.react; }
+                            if (r.hold_type !== undefined) { r.modifiers.hold_type = r.hold_type; delete r.hold_type; }
+                        });
+                    }
+                });
+
+                let newMappings = finalMappings;
 
                 // REMOVE THINKING BUBBLE
                 const thinkingBubble = document.getElementById(thinkingId);
@@ -253,10 +322,20 @@ Output: Valid raw JSON object only.
 
                 // STAGING: Update the live mappings for preview, but DO NOT save to DB yet.
                 window.stagedAiMappings = JSON.parse(JSON.stringify(newMappings));
-                currentProfileMappings = JSON.parse(JSON.stringify(newMappings));
+                
+                const oldZoom = JSON.stringify(window.currentProfileMappings[4]);
+                const newZoom = JSON.stringify(newMappings[4]);
+                console.log("💎 MERGE VERIFICATION (CH 4):", { changed: oldZoom !== newZoom, old: oldZoom, new: newZoom });
 
+                window.currentProfileMappings = JSON.parse(JSON.stringify(newMappings));
+                
                 pendingAiInstructions = {}; // Clear after success
-                loadProfileChannels();
+                
+                if (typeof window.renderProfileMappings === 'function') {
+                    window.renderProfileMappings();
+                } else {
+                    loadProfileChannels();
+                }
                 updateAiReviewBar();
                 if (loadingContainer) {
                     clearInterval(window.aiProgressInterval);
@@ -303,7 +382,9 @@ Output: Valid raw JSON object only.
 
         function showAiDiff() {
             const oldMap = window.preAiMappings;
-            const newMap = currentProfileMappings;
+            const newMap = window.currentProfileMappings; // Use explicit window reference
+            console.log("🔍 AI DIFF: Comparing maps", { oldLen: oldMap?.length, newLen: newMap?.length });
+            
             const modal = document.getElementById('ai-diff-modal');
             const body = document.getElementById('ai-diff-body');
             body.innerHTML = "";
@@ -331,9 +412,9 @@ Output: Valid raw JSON object only.
                         return;
                     }
 
-                    // Compare keys
-                    const keys = ['source', 'behavior', 'vibe', 'value', 'invert', 'offset'];
-                    keys.forEach(k => {
+                    // Compare root keys dynamically (catch all hallucinated or unexpected keys)
+                    Object.keys(nr).forEach(k => {
+                        if (k === 'modifiers' || k === 'cal' || k.startsWith('_')) return; // handled separately
                         const isReverted = nr._reverted_fields && nr._reverted_fields.has(k);
                         if (nr[k] !== or[k] || isReverted) {
                             chChanges.push(`
@@ -346,11 +427,10 @@ Output: Valid raw JSON object only.
                         }
                     });
 
-                    // Compare Modifiers
+                    // Compare Modifiers dynamically
                     const nm = nr.modifiers || {};
                     const om = or.modifiers || {};
-                    const modKeys = ['speed', 'react', 'hold_type'];
-                    modKeys.forEach(mk => {
+                    Object.keys(nm).forEach(mk => {
                         const isReverted = nr._reverted_fields && nr._reverted_fields.has('modifiers.' + mk);
                         if (nm[mk] !== om[mk] || isReverted) {
                             chChanges.push(`
@@ -395,7 +475,15 @@ Output: Valid raw JSON object only.
             });
 
             if (body.innerHTML === "") {
-                body.innerHTML = `<div style="padding:40px; text-align:center; color:var(--text-dim);">No significant changes detected in the behavior structure.</div>`;
+                console.warn("⚠️ AI DIFF: No significant changes found between old and new map.");
+                console.log("OLD MAP:", JSON.stringify(oldMap));
+                console.log("NEW MAP:", JSON.stringify(newMap));
+                body.innerHTML = `<div style="padding:40px; text-align:center; color:var(--text-dim);">
+                    No significant changes detected in the behavior structure.
+                    <div style="font-size:10px; margin-top:10px; opacity:0.5;">
+                        (Old: ${oldMap?.length} ch, New: ${newMap?.length} ch)
+                    </div>
+                </div>`;
             }
 
             modal.classList.add('active');
@@ -865,7 +953,7 @@ Output: Valid raw JSON object only.
         function undoAiTransformation() {
             if (window.preAiMappings) {
                 // Restore original state to both memory and active profile (without saving to DB file)
-                currentProfileMappings = JSON.parse(JSON.stringify(window.preAiMappings));
+                window.currentProfileMappings = JSON.parse(JSON.stringify(window.preAiMappings));
                 
                 if (activeProfileId) {
                     const existing = db.profiles.find(p => p.id === activeProfileId);
@@ -888,7 +976,7 @@ Output: Valid raw JSON object only.
             closeAiDiff();
             
             // Finalize currentProfileMappings by filtering out reverted rules and cleaning metadata
-            currentProfileMappings = currentProfileMappings.map((rules) => {
+            window.currentProfileMappings = currentProfileMappings.map((rules) => {
                 return rules.filter(r => !r._is_reverted).map(r => {
                     const cleaned = { ...r };
                     delete cleaned._reverted_fields;
@@ -950,10 +1038,22 @@ Output: Valid raw JSON object only.
         }
 
 
+        let lastSentAiRefinementText = "";
+
         async function sendAiRefinement() {
             const textarea = document.getElementById('ai-master-textarea');
-            const text = textarea.value.trim();
-            if (!text || isProcessingAi) return;
+            let text = textarea.value.trim();
+            if (!text) {
+                if (lastSentAiRefinementText && !isProcessingAi) {
+                    text = lastSentAiRefinementText;
+                } else {
+                    return;
+                }
+            } else {
+                lastSentAiRefinementText = text;
+            }
+            
+            if (isProcessingAi) return;
 
             addAiChatMessage('user', text);
             textarea.value = "";
@@ -979,32 +1079,15 @@ Output: Valid raw JSON object only.
         var isProcessingPresetAi = false;
 
         function openPresetAiChat() {
+            // IF IN SETUP.HTML OR SIMILAR, NAVIGATE TO STANDALONE PAGE
+            if (window.location.pathname.includes('setup.html') || window.location.pathname.includes('profile.html')) {
+                const presetId = window.current_editing_preset_id || "";
+                window.location.href = `preset_ai.html${presetId ? '?id=' + presetId : ''}`;
+                return;
+            }
+
             const modal = document.getElementById('ai-preset-modal');
             if (!modal) return;
-
-            // Reset footer buttons
-            const diffBtn = document.getElementById('ai-preset-view-diff-btn');
-            const applyBtn = document.getElementById('ai-preset-apply-btn');
-            if (diffBtn) diffBtn.classList.add('hidden');
-            if (applyBtn) applyBtn.classList.add('hidden');
-
-            // Snapshot current state for diff/undo
-            window.preAiPresetTriggers = JSON.parse(JSON.stringify(currentPresetTriggers || []));
-            window.preAiPresetOverrides = JSON.parse(JSON.stringify(currentPresetOverrides || []));
-            window.preAiPresetName = document.getElementById('pres-name')?.value || '';
-
-            document.body.classList.add('ai-modal-open');
-            modal.classList.add('active');
-
-            // Update title based on context
-            const titleTextEl = modal.querySelector('#ai-preset-modal-title-text');
-            if (titleTextEl) {
-                if (current_editing_preset_id) {
-                    titleTextEl.innerText = ` AI Preset Refinement`;
-                } else {
-                    titleTextEl.innerText = ` AI Preset Generator`;
-                }
-            }
 
             const textarea = document.getElementById('ai-preset-textarea');
             if (textarea) {
@@ -1035,21 +1118,24 @@ Output: Valid raw JSON object only.
         }
 
         function toggleAiXyMode() {
-            console.log("🖱️ toggleAiXyMode clicked");
             const history = document.getElementById('ai-preset-chat-history');
             const xyPanel = document.getElementById('ai-preset-xy-panel');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
             const fixBtn = document.getElementById('ai-fix-picker-btn');
             const zoneBtn = document.getElementById('ai-zone-picker-btn');
+            const pathBtn = document.getElementById('ai-path-picker-btn');
             if (!history || !xyPanel || !xyBtn) return;
 
             // Close other pickers
             const fixPicker = document.getElementById('ai-fixture-picker');
             const zonePicker = document.getElementById('ai-zone-picker');
+            const pathPicker = document.getElementById('ai-path-picker');
             if (fixPicker) fixPicker.classList.add('hidden');
             if (zonePicker) zonePicker.classList.add('hidden');
+            if (pathPicker) pathPicker.classList.add('hidden');
             if (fixBtn) fixBtn.classList.remove('active');
             if (zoneBtn) zoneBtn.classList.remove('active');
+            if (pathBtn) pathBtn.classList.remove('active');
 
             const isHidden = xyPanel.classList.contains('hidden');
 
@@ -1069,114 +1155,112 @@ Output: Valid raw JSON object only.
             const panel = document.getElementById('ai-preset-xy-panel');
             if (!panel) return;
 
-            // Get unique profiles used on stage
+            // Get fixtures on stage
             const stageInstances = db.stage || [];
-            const activeProfileIds = new Set(stageInstances.map(inst => inst.profileId));
-            const activeProfiles = (db.profiles || []).filter(p => activeProfileIds.has(p.id));
+            const profiles = db.profiles || [];
 
-            // Filter for X/Y or Zoom roles
-            const calProfiles = activeProfiles.filter(p => {
+            // Filter for fixtures that have X/Y or Zoom roles in their current profile
+            const calFixtures = stageInstances.filter(inst => {
+                const p = profiles.find(prof => prof.id === inst.profileId);
+                if (!p) return false;
                 const roles = (p.channels || []).map(ch => ch.role);
-                return roles.some(r => ['pos_x', 'pos_y', 'zoom'].includes(r));
+                return roles.some(r => ['pos_x', 'pos_y', 'zoom', 'pan', 'tilt'].includes(String(r).toLowerCase()));
             });
 
-            if (calProfiles.length === 0) {
-                panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-dim);">No active profiles with X/Y or Zoom functions found on stage.</div>`;
+            if (calFixtures.length === 0) {
+                panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-dim);">No active fixtures with X/Y or Zoom functions found on stage.</div>`;
                 return;
             }
 
+            if (!db.positional_data) db.positional_data = [];
+
             panel.innerHTML = `
-                <div style="font-size:0.8rem; font-weight:bold; color:var(--accent-alt); margin-bottom:10px; text-transform:uppercase;">Positional & Zoom Calibration</div>
+                <div style="font-size:0.8rem; font-weight:bold; color:var(--accent-alt); margin-bottom:10px; text-transform:uppercase;">Fixture Calibration (by Address)</div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
-                    ${calProfiles.map(p => {
-                        const roles = (p.channels || []).map(ch => ch.role);
-                        const hasXY = roles.includes('pos_x') && roles.includes('pos_y');
-                        const hasZoom = roles.includes('zoom');
+                    ${calFixtures.map(inst => {
+                        const p = profiles.find(prof => prof.id === inst.profileId);
+                        const roles = (p.channels || []).map(ch => String(ch.role || ch.name).toLowerCase());
+                        const hasXY = roles.some(r => ['pos_x', 'pos_y', 'pan', 'tilt'].includes(r));
+                        const hasZoom = roles.some(r => r.includes('zoom'));
                         
-                        window.aiSessionCalibrationOverrides = window.aiSessionCalibrationOverrides || {};
-                        const cal = p.calibration || {};
-                        const override = window.aiSessionCalibrationOverrides[p.id] || {};
+                        // Find matching calibration by ADDRESS
+                        const set = (db.positional_data || []).find(s => String(s.address) === String(inst.address)) || { x: { left: 0, right: 255 }, y: { top: 0, bottom: 255 }, zoom: { smallest: 0, largest: 255 } };
                         
-                        const x = override.x || cal.x || {};
-                        const y = override.y || cal.y || {};
-                        const zoom = override.zoom || cal.zoom || {};
-
-                        const xLeft = (x.left !== undefined && x.left !== null) ? x.left : (x.min !== undefined ? x.min : '');
-                        const xRight = (x.right !== undefined && x.right !== null) ? x.right : (x.max !== undefined ? x.max : '');
-                        const yTop = (y.top !== undefined && y.top !== null) ? y.top : '';
-                        const yBottom = (y.bottom !== undefined && y.bottom !== null) ? y.bottom : '';
-                        const zSmall = (zoom.smallest !== undefined && zoom.smallest !== null) ? zoom.smallest : '';
-                        const zLarge = (zoom.largest !== undefined && zoom.largest !== null) ? zoom.largest : '';
-
                         return `
-                            <div class="card" style="margin:0; padding:10px; background:rgba(255,255,255,0.03);">
-                                <div style="font-weight:900; font-size:11px; margin-bottom:10px; color:var(--accent);">${p.name}</div>
-                                <div style="display:flex; flex-direction:column; gap:10px;">
-                                    ${hasXY ? `
-                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                        <div>
-                                            <label style="font-size:8px; color:var(--text-dim);">X RANGE (LEFT - RIGHT)</label>
-                                            <div style="display:flex; align-items:center; gap:5px;">
-                                                <input type="number" value="${xLeft}" placeholder="Left" 
-                                                    onchange="saveProfileCalibration('${p.id}', 'x', 'left', this.value)"
-                                                    style="height:24px; font-size:10px; padding:0 5px;">
-                                                <span style="opacity:0.3">-</span>
-                                                <input type="number" value="${xRight}" placeholder="Right" 
-                                                    onchange="saveProfileCalibration('${p.id}', 'x', 'right', this.value)"
-                                                    style="height:24px; font-size:10px; padding:0 5px;">
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label style="font-size:8px; color:var(--text-dim);">Y RANGE (TOP - BOTTOM)</label>
-                                            <div style="display:flex; align-items:center; gap:5px;">
-                                                <input type="number" value="${yTop}" placeholder="Top" 
-                                                    onchange="saveProfileCalibration('${p.id}', 'y', 'top', this.value)"
-                                                    style="height:24px; font-size:10px; padding:0 5px;">
-                                                <span style="opacity:0.3">-</span>
-                                                <input type="number" value="${yBottom}" placeholder="Bottom" 
-                                                    onchange="saveProfileCalibration('${p.id}', 'y', 'bottom', this.value)"
-                                                    style="height:24px; font-size:10px; padding:0 5px;">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    ` : ''}
-                                    ${hasZoom ? `
-                                    <div>
-                                        <label style="font-size:8px; color:var(--text-dim);">ZOOM RANGE (SMALLEST - LARGEST)</label>
-                                        <div style="display:flex; align-items:center; gap:5px;">
-                                            <input type="number" value="${zSmall}" placeholder="Smallest" 
-                                                onchange="saveProfileCalibration('${p.id}', 'zoom', 'smallest', this.value)"
-                                                style="height:24px; font-size:10px; padding:0 5px; width:70px;">
-                                            <span style="opacity:0.3">-</span>
-                                            <input type="number" value="${zLarge}" placeholder="Largest" 
-                                                onchange="saveProfileCalibration('${p.id}', 'zoom', 'largest', this.value)"
-                                                style="height:24px; font-size:10px; padding:0 5px; width:70px;">
-                                        </div>
-                                    </div>
-                                    ` : ''}
+                            <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <div style="font-weight:900; font-size:11px; color:var(--accent);">${inst.id}</div>
+                                    <div style="font-size:9px; color:var(--text-dim);">ADDR: ${inst.address}</div>
                                 </div>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                                    ${hasXY ? `
+                                    <div>
+                                        <label style="font-size:8px; color:var(--text-dim);">X RANGE (LEFT - RIGHT)</label>
+                                        <div style="display:flex; align-items:center; gap:5px;">
+                                            <input type="number" value="${set.x?.left ?? 0}" placeholder="Left" 
+                                                oninput="saveAddressCalibration('${inst.address}', 'x', 'left', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:#fff;">
+                                            <span style="opacity:0.3">-</span>
+                                            <input type="number" value="${set.x?.right ?? 255}" placeholder="Right" 
+                                                oninput="saveAddressCalibration('${inst.address}', 'x', 'right', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:#fff;">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="font-size:8px; color:var(--text-dim);">Y RANGE (TOP - BOTTOM)</label>
+                                        <div style="display:flex; align-items:center; gap:5px;">
+                                            <input type="number" value="${set.y?.top ?? 0}" placeholder="Top" 
+                                                oninput="saveAddressCalibration('${inst.address}', 'y', 'top', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:#fff;">
+                                            <span style="opacity:0.3">-</span>
+                                            <input type="number" value="${set.y?.bottom ?? 255}" placeholder="Bottom" 
+                                                oninput="saveAddressCalibration('${inst.address}', 'y', 'bottom', this.value)"
+                                                style="height:24px; font-size:10px; padding:0 5px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:#fff;">
+                                        </div>
+                                    </div>
+                                    ` : '<div style="grid-column: span 2; font-size:9px; color:var(--text-dim); opacity:0.5; text-align:center; padding:5px;">No X/Y roles detected for this fixture.</div>'}
+                                </div>
+                                ${hasZoom ? `
+                                <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05);">
+                                    <label style="font-size:8px; color:var(--text-dim);">ZOOM RANGE (SMALLEST - LARGEST)</label>
+                                    <div style="display:flex; align-items:center; gap:5px; margin-top:4px;">
+                                        <input type="number" value="${set.zoom?.smallest ?? 0}" placeholder="Smallest" 
+                                            oninput="saveAddressCalibration('${inst.address}', 'zoom', 'smallest', this.value)"
+                                            style="height:24px; font-size:10px; padding:0 5px; width:70px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:#fff;">
+                                        <span style="opacity:0.3">-</span>
+                                        <input type="number" value="${set.zoom?.largest ?? 255}" placeholder="Largest" 
+                                            oninput="saveAddressCalibration('${inst.address}', 'zoom', 'largest', this.value)"
+                                            style="height:24px; font-size:10px; padding:0 5px; width:70px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:#fff;">
+                                    </div>
+                                </div>
+                                ` : ''}
                             </div>
                         `;
                     }).join('')}
                 </div>
-                <div style="margin-top:15px; font-size:9px; color:var(--text-dim); line-height:1.4;">
-                    💡 These bounds tell the AI the physical limits of the fixture. If you ask for a square, circle, or zoom effect, it will scale the movement within these ranges.
-                </div>
             `;
         }
 
-        window.aiSessionCalibrationOverrides = window.aiSessionCalibrationOverrides || {};
-        
-        window.saveProfileCalibration = function(profId, axis, side, val) {
-            if (!window.aiSessionCalibrationOverrides[profId]) {
-                window.aiSessionCalibrationOverrides[profId] = {};
+        window.saveAddressCalibration = function(address, axis, side, val) {
+            if (!db.positional_data) db.positional_data = [];
+            
+            let set = db.positional_data.find(s => String(s.address) === String(address));
+            if (!set) {
+                set = {
+                    address: address,
+                    x: { left: 0, right: 255 },
+                    y: { top: 0, bottom: 255 },
+                    zoom: { smallest: 0, largest: 255 }
+                };
+                db.positional_data.push(set);
             }
-            const overrides = window.aiSessionCalibrationOverrides[profId];
             
-            if (!overrides[axis]) overrides[axis] = {};
-            
+            if (!set[axis]) set[axis] = {};
             let num = parseInt(val, 10);
-            overrides[axis][side] = isNaN(num) ? null : num;
+            set[axis][side] = isNaN(num) ? 0 : num;
+            
+            // Persist
+            if (typeof saveDB === 'function') saveDB();
         }
 
         function closePresetAiModal() {
@@ -1197,14 +1281,15 @@ Output: Valid raw JSON object only.
         }
 
         function toggleFixturePicker() {
-            console.log("🖱️ toggleFixturePicker clicked");
             const history = document.getElementById('ai-preset-chat-history');
             const picker = document.getElementById('ai-fixture-picker');
             const zonePicker = document.getElementById('ai-zone-picker');
+            const pathPicker = document.getElementById('ai-path-picker');
             const xyPanel = document.getElementById('ai-preset-xy-panel');
             
             const fixBtn = document.getElementById('ai-fix-picker-btn');
             const zoneBtn = document.getElementById('ai-zone-picker-btn');
+            const pathBtn = document.getElementById('ai-path-picker-btn');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
             
             if (!picker) return;
@@ -1212,7 +1297,9 @@ Output: Valid raw JSON object only.
             // Close other pickers
             if (zonePicker) zonePicker.classList.add('hidden');
             if (xyPanel) xyPanel.classList.add('hidden');
+            if (pathPicker) pathPicker.classList.add('hidden');
             if (zoneBtn) zoneBtn.classList.remove('active');
+            if (pathBtn) pathBtn.classList.remove('active');
             if (xyBtn) xyBtn.classList.remove('active');
 
             if (!picker.classList.contains('hidden')) {
@@ -1228,14 +1315,15 @@ Output: Valid raw JSON object only.
         }
 
         function toggleZonePicker() {
-            console.log("🖱️ toggleZonePicker clicked");
             const history = document.getElementById('ai-preset-chat-history');
             const picker = document.getElementById('ai-zone-picker');
             const fixPicker = document.getElementById('ai-fixture-picker');
+            const pathPicker = document.getElementById('ai-path-picker');
             const xyPanel = document.getElementById('ai-preset-xy-panel');
             
             const fixBtn = document.getElementById('ai-fix-picker-btn');
             const zoneBtn = document.getElementById('ai-zone-picker-btn');
+            const pathBtn = document.getElementById('ai-path-picker-btn');
             const xyBtn = document.getElementById('ai-xy-picker-btn');
             
             if (!picker) return;
@@ -1243,7 +1331,9 @@ Output: Valid raw JSON object only.
             // Close other pickers
             if (fixPicker) fixPicker.classList.add('hidden');
             if (xyPanel) xyPanel.classList.add('hidden');
+            if (pathPicker) pathPicker.classList.add('hidden');
             if (fixBtn) fixBtn.classList.remove('active');
+            if (pathBtn) pathBtn.classList.remove('active');
             if (xyBtn) xyBtn.classList.remove('active');
 
             if (!picker.classList.contains('hidden')) {
@@ -1254,6 +1344,40 @@ Output: Valid raw JSON object only.
                 populateZonePicker();
                 picker.classList.remove('hidden');
                 if (zoneBtn) zoneBtn.classList.add('active');
+                if (history) history.classList.add('hidden');
+            }
+        }
+
+        function togglePathPicker() {
+            const history = document.getElementById('ai-preset-chat-history');
+            const picker = document.getElementById('ai-fixture-picker');
+            const zonePicker = document.getElementById('ai-zone-picker');
+            const pathPicker = document.getElementById('ai-path-picker');
+            const xyPanel = document.getElementById('ai-preset-xy-panel');
+            
+            const fixBtn = document.getElementById('ai-fix-picker-btn');
+            const zoneBtn = document.getElementById('ai-zone-picker-btn');
+            const pathBtn = document.getElementById('ai-path-picker-btn');
+            const xyBtn = document.getElementById('ai-xy-picker-btn');
+            
+            if (!pathPicker) return;
+            
+            // Close other pickers
+            if (picker) picker.classList.add('hidden');
+            if (zonePicker) zonePicker.classList.add('hidden');
+            if (xyPanel) xyPanel.classList.add('hidden');
+            if (fixBtn) fixBtn.classList.remove('active');
+            if (zoneBtn) zoneBtn.classList.remove('active');
+            if (xyBtn) xyBtn.classList.remove('active');
+
+            if (!pathPicker.classList.contains('hidden')) {
+                pathPicker.classList.add('hidden');
+                if (pathBtn) pathBtn.classList.remove('active');
+                if (history) history.classList.remove('hidden');
+            } else {
+                populatePathPicker();
+                pathPicker.classList.remove('hidden');
+                if (pathBtn) pathBtn.classList.add('active');
                 if (history) history.classList.add('hidden');
             }
         }
@@ -1349,14 +1473,12 @@ Output: Valid raw JSON object only.
             const textarea = document.getElementById('ai-preset-textarea');
             if (!textarea) return;
             
-            const tag = `[zone:${zoneName}]`;
+            const tag = ` [zone:${zoneName}]`;
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
             const text = textarea.value;
             
             textarea.value = text.substring(0, start) + tag + text.substring(end);
-            
-            // Put cursor after the tag
             textarea.selectionStart = textarea.selectionEnd = start + tag.length;
             textarea.focus();
             
@@ -1365,6 +1487,63 @@ Output: Valid raw JSON object only.
             if (picker) picker.classList.add('hidden');
             const zoneBtn = document.getElementById('ai-zone-picker-btn');
             if (zoneBtn) zoneBtn.classList.remove('active');
+            
+            const history = document.getElementById('ai-preset-chat-history');
+            if (history) history.classList.remove('hidden');
+        }
+
+        function populatePathPicker() {
+            const picker = document.getElementById('ai-path-picker');
+            if (!picker) return;
+            
+            const paths = [
+                { id: 'circle', name: 'Circle', desc: 'Smooth orbital motion' },
+                { id: 'lissajous', name: 'Lissajous', desc: 'Basic weaving pattern' },
+                { id: 'lissajous_complex', name: 'Complex Lissajous', desc: 'Asymmetric intricate weave' },
+                { id: 'diagonal_tl_br', name: 'Diagonal (TL to BR)', desc: 'Top-Left to Bottom-Right' },
+                { id: 'diagonal_tr_bl', name: 'Diagonal (TR to BL)', desc: 'Top-Right to Bottom-Left' },
+                { id: 'horiz_sweep', name: 'Horizontal Sweep', desc: 'Full width side-to-side' },
+                { id: 'vert_sweep', name: 'Vertical Sweep', desc: 'Full height up-and-down' }
+            ];
+
+            picker.innerHTML = paths.map((path) => {
+                return `
+                    <div class="path-picker-item" onclick="insertPathTag('${path.id}')"
+                        style="padding:10px 15px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; transition:background 0.2s;">
+                        <div>
+                            <div style="font-weight:bold; color:var(--accent); text-transform:uppercase; font-size:12px;">${path.name}</div>
+                            <div style="font-size:9px; color:var(--text-dim);">${path.desc}</div>
+                        </div>
+                        <div style="font-size:9px; color:var(--text-dim);">[path:${path.id}]</div>
+                    </div>
+                `;
+            }).join('');
+            
+            if (!document.getElementById('path-picker-hover-style')) {
+                const style = document.createElement('style');
+                style.id = 'path-picker-hover-style';
+                style.innerHTML = `.path-picker-item:hover { background: rgba(255,255,255,0.1); }`;
+                document.head.appendChild(style);
+            }
+        }
+
+        function insertPathTag(pathId) {
+            const textarea = document.getElementById('ai-preset-textarea');
+            if (!textarea) return;
+            
+            const tag = ` [path:${pathId}]`;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            
+            textarea.value = text.substring(0, start) + tag + text.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+            textarea.focus();
+            
+            const picker = document.getElementById('ai-path-picker');
+            if (picker) picker.classList.add('hidden');
+            const pathBtn = document.getElementById('ai-path-picker-btn');
+            if (pathBtn) pathBtn.classList.remove('active');
             
             const history = document.getElementById('ai-preset-chat-history');
             if (history) history.classList.remove('hidden');
@@ -1408,24 +1587,14 @@ Output: Valid raw JSON object only.
         function _buildStageContext() {
             const stageInstances = db.stage || [];
             const profiles = db.profiles || [];
-
-            window.aiSessionCalibrationOverrides = window.aiSessionCalibrationOverrides || {};
+            const posData = db.positional_data || [];
 
             return stageInstances.map(inst => {
                 const prof = profiles.find(p => p.id === inst.profileId);
                 const channels = prof ? (prof.channels || []) : [];
                 
-                let combinedCalibration = null;
-                if (prof && prof.calibration) {
-                    combinedCalibration = JSON.parse(JSON.stringify(prof.calibration));
-                }
-                const overrides = window.aiSessionCalibrationOverrides[inst.profileId];
-                if (overrides) {
-                    if (!combinedCalibration) combinedCalibration = {};
-                    if (overrides.x) combinedCalibration.x = { ...combinedCalibration.x, ...overrides.x };
-                    if (overrides.y) combinedCalibration.y = { ...combinedCalibration.y, ...overrides.y };
-                    if (overrides.zoom) combinedCalibration.zoom = { ...combinedCalibration.zoom, ...overrides.zoom };
-                }
+                // Find matching calibration set by ADDRESS
+                const calibration = posData.find(set => String(set.address) === String(inst.address));
 
                 return {
                     id: inst.id,
@@ -1433,15 +1602,31 @@ Output: Valid raw JSON object only.
                     zone: inst.zone || 'center',
                     profileName: prof ? prof.name : 'Unknown',
                     roles: channels.map(ch => ch.role || ch.name || 'unknown'),
-                    calibration: combinedCalibration
+                    calibration: calibration ? {
+                        x: calibration.x,
+                        y: calibration.y,
+                        zoom: calibration.zoom
+                    } : null
                 };
             });
         }
 
+        let lastSentPresetAiText = "";
+
         async function sendPresetAiPrompt() {
             const textarea = document.getElementById('ai-preset-textarea');
-            const text = (textarea?.value || '').trim();
-            if (!text || isProcessingPresetAi) return;
+            let text = (textarea?.value || '').trim();
+            if (!text) {
+                if (lastSentPresetAiText && !isProcessingPresetAi) {
+                    text = lastSentPresetAiText;
+                } else {
+                    return;
+                }
+            } else {
+                lastSentPresetAiText = text;
+            }
+            
+            if (isProcessingPresetAi) return;
 
             addPresetAiChatMessage('user', text);
             textarea.value = '';
@@ -1477,45 +1662,63 @@ Output: Valid raw JSON object only.
             }
 
             const stageContext = _buildStageContext();
-
-            // ADD SPATIAL AWARENESS CONTEXT
-            const spatialContext = stageContext.filter(f => f.calibration).map(f => {
-                const c = f.calibration;
-                let desc = `Fixture ${f.id}: `;
-                if (c.x && c.y) desc += `X(Left:${c.x.left}, Right:${c.x.right}), Y(Top:${c.y.top}, Bottom:${c.y.bottom})`;
-                if (c.zoom) {
-                    if (c.x && c.y) desc += ", ";
-                    desc += `Zoom(Smallest:${c.zoom.smallest}, Largest:${c.zoom.largest})`;
-                }
-                return desc;
-            }).join('\n');
+            const calibrated = stageContext.filter(f => f.calibration);
+            const uncalibrated = stageContext.filter(f => !f.calibration);
+            let spatialDescription = "";
+            
+            if (calibrated.length > 0) {
+                spatialDescription += "CALIBRATED FIXTURES (STRICT LIMITS):\n";
+                spatialDescription += calibrated.map(f => {
+                    const c = f.calibration;
+                    let d = `- Fixture ${f.id} [Zone: ${f.zone}]: `;
+                    if (c.x && c.y) d += `X(Left:${c.x.left}, Right:${c.x.right}), Y(Top:${c.y.top}, Bottom:${c.y.bottom})`;
+                    if (c.zoom) d += `, Zoom(Smallest:${c.zoom.smallest}, Largest:${c.zoom.largest})`;
+                    return d;
+                }).join('\n');
+                spatialDescription += "\n- INSTRUCTION: When moving these, STAY WITHIN the boundaries above.";
+            }
+            if (uncalibrated.length > 0) {
+                spatialDescription += "\n\nUNCALIBRATED FIXTURES (USE GENERIC 0-255):\n";
+                spatialDescription += uncalibrated.map(f => `- Fixture ${f.id} [Zone: ${f.zone}] (Generic 0-255)`).join('\n');
+            }
 
             const systemPrompt = `Role: Expert Stage Lighting Designer for RaveBox Preset System.
 Task: ${current_editing_preset_id ? 'Refine an existing' : 'Generate a new'} preset based on the user's description.
 
-${spatialContext ? `REAL-WORLD FIXTURE CALIBRATION (CRITICAL):
-The following fixtures are physically calibrated. Use these specific values for spatial effects (Circle, Figure-8, Pulse):
-${spatialContext}
-- Instruction: When generating X/Y sweeps or behaviors for these fixtures, ONLY use values between the labeled boundaries.
-- Example: If Fixture s1 is X(Left:10, Right:90), use '10-90-10' for a full horizontal sweep.` : "NOTICE: No fixtures are calibrated. Use generic 0-255 ranges for movement."}
+FIXTURE SPATIAL CONTEXT (CRITICAL):
+${spatialDescription || "NOTICE: No stage fixtures found. Use global mode."}
+
+ZONES & TARGETING:
+- Fixtures are assigned to zones (e.g., "top", "bottom", "left", "right", "center").
+- If the user specifies a zone (e.g., "[zone:top]"), you MUST only target fixtures belonging to that zone.
+- If a fixture is NOT in the requested zone, do NOT include it in the overrides.
 
 ROLE MAPPING:
 KNOWN_ROLES: ${window.KNOWN_ROLES ? window.KNOWN_ROLES.join(', ') : 'pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, generic, dimmer, mode, clip, group, background, tex, shader, speed'}
 
-SPATIAL FORMULA COOKBOOK:
+SPATIAL FORMULA COOKBOOK (Templates for X/Y):
 1. CIRCLE: pos_x: "[Left]-[Right]-[Left]", pos_y: "[Top]-[Bottom]-[Top] + 16"
-2. FIGURE-8: pos_x: "[Left]-[Right]-[Left]-[Right]-[Left]", pos_y: "[Top]-[Bottom]-[Top] + 32"
-3. PULSE ZOOM: zoom: "[Smallest]-[Largest]-[Smallest]"
-If user says "center", use (Left+Right)/2.
+2. LISSAJOUS: pos_x: "[Left]-[Right]-[Left]-[Right]-[Left]", pos_y: "[Top]-[Bottom]-[Top] + 16"
+3. COMPLEX LISSAJOUS: pos_x: "[Left]-[Right]-[Left]-[Right]-[Left]-[Right]-[Left]", pos_y: "[Top]-[Bottom]-[Top]-[Bottom]-[Top] + 16"
+4. DIAGONAL (TL to BR): pos_x: "[Left]-[Right]-[Left]", pos_y: "[Top]-[Bottom]-[Top]"
+5. DIAGONAL (TR to BL): pos_x: "[Right]-[Left]-[Right]", pos_y: "[Top]-[Bottom]-[Top]"
+6. HORIZ SWEEP: pos_x: "[Left]-[Right]-[Left]", pos_y: "[Center]"
+7. VERT SWEEP: pos_x: "[Center]", pos_y: "[Top]-[Bottom]-[Top]"
+
+[PATH] TAGS:
+- If the user provides a tag like [path:circle], [path:lissajous], etc., you MUST replace it with the EXACT sequence formulas from the cookbook above.
+- Replace "[Left]", "[Right]", "[Top]", "[Bottom]", and "[Center]" with the actual numeric values from the FIXTURE SPATIAL CONTEXT provided below.
+- Example: If s1 is Left:32, Right:96, then [path:horiz_sweep] for s1 is pos_x: "32-96-32", pos_y: "64" (center).
 
 TRIGGER LOGIC:
 - Multiple triggers within a single preset are evaluated with AND logic. 
 - All conditions (e.g. Vibe is High AND Volume > 50%) must be met for the preset to activate.
 
 OVERRIDE SCHEMA:
-- "mode": "value" (Static DMX OR Coordinate Sequences like '10-90-10')
-- "mode": "behavior" (Oscillators like 'sine', 'saw', 'pulse', 'sparkle')
-- If mode is "behavior", "source" should be an audio source (bass, volume, global_time).
+- ALL VALUES MUST BE NUMERIC OR NUMERIC SEQUENCES (e.g., "128", "10-90-10", or "10-90-10 + 16").
+- "mode": "value" is the standard for all functions.
+- NEVER use behavioral strings like "sine", "saw", "pulse", or "sparkle" for spatial movement (X, Y, Zoom).
+- Calculate movement sequences based on the REAL-WORLD CALIBRATION boundaries provided above.
 - Instance JSON: {id: "<target>", target: "<target>", type: "instance", role: "<role>", value: <val>, channels: [{name: "<role>", value: <val>, mode: "value"}]}
 
 - CURRENT LIVE UI STATE:
@@ -1537,7 +1740,7 @@ Output: Return a JSON object with EXACTLY this structure:
       ],
       "overrides": [
          { "type": "instance", "fixture": "fixture_id", "role": "dimmer", "value": 255 },
-         { "type": "global", "role": "strobe", "value": "sine", "channels": [{ "name": "strobe", "value": "sine", "mode": "behavior", "source": "bass" }] }
+         { "type": "global", "role": "color_solid", "value": "10-250-10", "channels": [{ "name": "color_solid", "value": "10-250-10", "mode": "value", "source": "volume" }] }
       ]
     }
   ],
@@ -1656,7 +1859,7 @@ Output: Valid raw JSON object only.`;
                                 }) : [{ 
                                     name: role, 
                                     value: val, 
-                                    mode: (typeof val === 'string' && val.includes('-')) ? 'value' : 'value' 
+                                    mode: 'value'
                                 }];
 
                                 return {
@@ -1724,7 +1927,7 @@ Output: Valid raw JSON object only.`;
             const newTriggers = currentPresetTriggers || [];
             const newOverrides = currentPresetOverrides || [];
 
-            const modal = document.getElementById('ai-preset-diff-modal');
+            const modal = document.getElementById('ai-preset-diff-container');
             const body = document.getElementById('ai-preset-diff-body');
             if (!modal || !body) return;
             body.innerHTML = "";
@@ -1804,12 +2007,12 @@ Output: Valid raw JSON object only.`;
                 body.innerHTML = `<div style="padding:40px; text-align:center; color:var(--text-dim);">No changes detected — this is a fresh preset.</div>`;
             }
 
-            modal.classList.add('active');
+            modal.classList.remove('hidden');
         }
 
         function closePresetAiDiff() {
-            const modal = document.getElementById('ai-preset-diff-modal');
-            if (modal) modal.classList.remove('active');
+            const modal = document.getElementById('ai-preset-diff-container');
+            if (modal) modal.classList.add('hidden');
         }
 
         function undoPresetAi() {
@@ -2038,3 +2241,9 @@ Output: Valid raw JSON object only.`;
         window.populateFixturePicker = populateFixturePicker;
         window.insertFixtureTag = insertFixtureTag;
         window.insertZoneTag = insertZoneTag;
+
+        // Settings & Model management
+        window.openAiSettings = openAiSettings;
+        window.closeAiSettings = closeAiSettings;
+        window.saveAiSettings = saveAiSettings;
+        window.updateModelLabelDisplay = updateModelLabelDisplay;

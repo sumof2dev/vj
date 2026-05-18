@@ -39,9 +39,10 @@ class ChannelConfig:
         # If a rule for "vibe X" is tagged with the current active sync variant, it takes precedence.
         matching_indices = []
         if global_sync_indices and not is_transient:
-            variant = global_sync_indices.get(search_vibe, 0) + 1
-            tagged_vibe = f"{search_vibe} {variant}"
-            matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == tagged_vibe]
+            variant = global_sync_indices.get(search_vibe, "")
+            if variant:
+                tagged_vibe = f"{search_vibe} {variant}"
+                matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == tagged_vibe]
             
         if not matching_indices:
             # Fallback to standard vibe matching
@@ -54,9 +55,10 @@ class ChannelConfig:
             
             # Check for synchronized fallback (e.g. "any 1")
             if global_sync_indices:
-                variant = global_sync_indices.get('any', 0) + 1
-                tagged_any = f"any {variant}"
-                matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == tagged_any]
+                variant = global_sync_indices.get('any', "")
+                if variant:
+                    tagged_any = f"any {variant}"
+                    matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == tagged_any]
 
             if not matching_indices:
                 matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') in ['any', 'any/fallback']]
@@ -120,7 +122,6 @@ class LogicMatrix:
         # Musical Phasing: 1/4/8/16 beat cycles
         self.beat_count = int(audio.get('beat_count', self.beat_count))
         bar_phase = ((self.beat_count % 4) + beat_phase) / 4.0
-        two_bar_phase = ((self.beat_count % 8) + beat_phase) / 8.0
         four_bar_phase = ((self.beat_count % 16) + beat_phase) / 16.0
 
         self.state = {
@@ -128,21 +129,18 @@ class LogicMatrix:
             'mids': float(audio.get('mid', 0.0)),
             'highs': float(audio.get('high', 0.0)),
             'volume': float(audio.get('vol', 0.0)),
-            'spectral flux': float(audio.get('flux', 0.0)),
             'impact': float(audio.get('impact', 0.0)),
             'beat phase': beat_phase,
             'bar phase': bar_phase,
-            '2 bar phase': two_bar_phase,
             '4 bar phase': four_bar_phase,
             'static': 1.0,
             'zero': 0.0
         }
 
-        # Add specific frequency bins (0-5)
-        for i, val in enumerate(audio.get('bins', [0.0]*6)):
-            if i < 6:
-                # Increase sensitivity since individual bins are not locally normalized like broad bands
-                self.state[f'bin {i}'] = min(1.0, float(val) * 2.0)
+        # Add specific frequency bins (0 and 4 only)
+        bins = audio.get('bins', [0.0]*6)
+        if len(bins) > 0: self.state['bin 0'] = min(1.0, float(bins[0]) * 2.0)
+        if len(bins) > 4: self.state['bin 4'] = min(1.0, float(bins[4]) * 2.0)
 
 class DMXEngine:
     def __init__(self):
@@ -165,9 +163,8 @@ class DMXEngine:
         self.auto_one_shots = [] # Zero-hold presets triggered by audio (all simultaneous)
         self.manual_active_presets = set() # Set of preset IDs manually forced ON
         
-        # Pause & Recovery System
+        # Pause System
         self.is_paused = False
-        self.pause_debt = 0.0
         
         self._one_shot_active = False
         self._last_drop_time = 0.0
@@ -180,10 +177,12 @@ class DMXEngine:
         self._last_transient = 'steady'
         self._preset_holds = {}
         self._preset_sweep_phases = {}
+        self._processed_phases_this_frame = set()
         self._silence_start = None
         self.blackout = False
         self._was_silent = False
         self._last_variant_change_time = 0.0
+        self._last_frame_one_shot_ids = set()
         
         self.behavior_defaults = {}
         self._descriptors_path = os.path.join('backend', 'descriptors.json')
@@ -224,24 +223,30 @@ class DMXEngine:
         self._reload_thread.start()
 
     def _resolve_spectral_variant(self, audio):
-        """Returns (variant_index 0-2, dominant_bin 0-5) based on most energetic bin pair."""
+        """Returns variant string ('bass', 'treble', or '') based on frequency dominance."""
         raw_bins = audio.get('bins', [0.0] * 6)
         bins = [float(b) for b in raw_bins] if raw_bins else [0.0] * 6
         
-        # Targeted Competition Logic (v3 - Analysis Driven)
-        # 1: bin 1 only (Punch/Low-Mid)
-        # 2: bin 2 only (Mid)
-        # 3: bin 3-5 (Highs)
-        v1 = bins[1]
-        v2 = bins[2]
-        v3 = max(bins[3], bins[4], bins[5])
+        bass_energy = bins[0] + bins[1]
+        mid_energy = bins[2] + bins[3]
+        treble_energy = bins[4] + bins[5]
         
-        energies = [v1, v2, v3]
-        variant = energies.index(max(energies)) if max(energies) > 0.001 else 0
+        total = bass_energy + mid_energy + treble_energy + 1e-6
+        bass_ratio = bass_energy / total
+        treble_ratio = treble_energy / total
         
-        # Dominant bin index still reported for logging/debugging
-        dominant = bins.index(max(bins)) if max(bins) > 0 else 0
+        variant = ""
+        dominant = 0
         
+        if bass_ratio > 0.40 and treble_ratio < 0.20:
+            variant = "bass"
+            dominant = 0 if bins[0] > bins[1] else 1
+        elif treble_ratio > 0.40 and bass_ratio < 0.20:
+            variant = "treble"
+            dominant = 4 if bins[4] > bins[5] else 5
+        else:
+            dominant = bins.index(max(bins)) if max(bins) > 0 else 0
+            
         return variant, dominant
 
     def _load_profiles(self):
@@ -397,23 +402,13 @@ class DMXEngine:
     def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
         self._dt = dt
         self.prev_universe[:] = self.universe[:]
+        self._processed_phases_this_frame.clear()
         
-        
-        # PAUSE & RECOVERY LOGIC
+        # PAUSE LOGIC
         if self.is_paused:
-            self.pause_debt += dt
             self.eff_speed = 0.0
         else:
-            if self.pause_debt > 0.0:
-                # Catch up logic: recover lost time by boosting speed
-                # Quicker recovery (up to 5x total) the longer its held
-                recovery_mult = 1.0 + min(4.0, self.pause_debt * 0.5)
-                # Burn the debt (we are gaining 'recovery_mult - 1' extra seconds per real second)
-                burned = dt * (recovery_mult - 1.0)
-                self.pause_debt = max(0.0, self.pause_debt - burned)
-                self.eff_speed = self.base_speed * recovery_mult
-            else:
-                self.eff_speed = self.base_speed
+            self.eff_speed = self.base_speed
         
         self.eff_intensity = self.base_intensity
         self._eff_dt = dt * self.eff_speed
@@ -529,36 +524,82 @@ class DMXEngine:
             if is_active:
                 possible_auto_presets.append(p_data)
                 
-        # Separate matching presets into sustained (one randomly chosen) and one-shots (all active)
+        # Separate matching presets into sustained (one randomly chosen) and one-shots (exclusion logic)
         auto_sustained = [p for p in possible_auto_presets if int(p.get('decay', 0)) > 0]
-        self.auto_one_shots = [p for p in possible_auto_presets if int(p.get('decay', 0)) == 0]
+        potential_one_shots = [p for p in possible_auto_presets if int(p.get('decay', 0)) == 0]
+
+        # --- SUSTAINED EXCLUSION LOGIC ---
+        # "if preset1 is active, prrset 2 may not override if hold time > 0"
+        # Check if any held presets are still active (Decay logic)
+        now = time.time()
+        
+        if self.is_paused:
+            # Shift all holds forward by dt so they don't expire while paused
+            for p_id in self._preset_holds:
+                self._preset_holds[p_id] += dt
+        
+        held_presets = []
+        for p_id, hold_until in list(self._preset_holds.items()):
+            if now < hold_until:
+                p_data = next((p for p in self.presets if str(p.get('id', '')) == p_id), None)
+                if p_data: held_presets.append(p_data)
+            else:
+                self._preset_holds.pop(p_id, None)
 
         self.auto_active_presets = []
-        if auto_sustained:
+        if held_presets:
+            # A sustained preset is already active/decaying. Block all new ones.
+            pass
+        elif auto_sustained:
             # If multiple sustained presets match, pick one at random
-            # We use beat_count as a seed so the "random" choice is stable per beat
             seed = self.logic.beat_count
             rng = random.Random(seed)
             self.auto_active_presets = [rng.choice(auto_sustained)]
             
-        # --- PRESET DECAY LOGIC ---
-        now = time.time()
-        for p in self.auto_active_presets:
-            p_id = str(p.get('id', ''))
-            decay = int(p.get('decay', 0))
-            if decay > 0:
+            # Start decay timer for the chosen one
+            for p in self.auto_active_presets:
+                p_id = str(p.get('id', ''))
+                decay = int(p.get('decay', 0))
                 self._preset_holds[p_id] = now + decay if decay != 999 else now + 999999
         
-        # Check if any held presets are still active
-        held_presets = []
-        for p_id, hold_until in list(self._preset_holds.items()):
-            if now < hold_until:
-                # Find the preset data
-                p_data = next((p for p in self.presets if str(p.get('id', '')) == p_id), None)
-                if p_data and p_data not in self.auto_active_presets:
-                    held_presets.append(p_data)
+        # --- ONE-SHOT EXCLUSION LOGIC ---
+        # "if preset2 was active first, preset 1 is not allowed if they target the same fixture+role"
+        self.auto_one_shots = []
+        existing_one_shots = []
+        new_one_shots = []
+        
+        for p in potential_one_shots:
+            p_id = str(p.get('id', ''))
+            if p_id in self._last_frame_one_shot_ids:
+                existing_one_shots.append(p)
             else:
-                self._preset_holds.pop(p_id, None)
+                new_one_shots.append(p)
+                
+        self.auto_one_shots.extend(existing_one_shots)
+        
+        def get_preset_footprint(preset):
+            fp = set()
+            for ov in preset.get('overrides', []):
+                t = str(ov.get('target', ov.get('id', ov.get('type', '')))).lower()
+                r = str(ov.get('role', ov.get('name', ''))).lower()
+                if t and r: fp.add(f"{t}:{r}")
+                for ch in ov.get('channels', []):
+                    cr = str(ch.get('role', ch.get('name', ''))).lower()
+                    if t and cr: fp.add(f"{t}:{cr}")
+            return fp
+
+        active_footprint = set()
+        for p in self.auto_one_shots:
+            active_footprint.update(get_preset_footprint(p))
+                    
+        for p in new_one_shots:
+            p_footprint = get_preset_footprint(p)
+            # Allow if no overlap with already active/accepted one-shots
+            if not active_footprint.intersection(p_footprint):
+                self.auto_one_shots.append(p)
+                active_footprint.update(p_footprint)
+                
+        self._last_frame_one_shot_ids = {str(p.get('id', '')) for p in self.auto_one_shots}
                 
         # --- MERGE MANUAL PRESETS ---
         manual_presets_list = []
@@ -572,13 +613,17 @@ class DMXEngine:
                 # Fallback to lowered only if exact match fails
                 manual_presets_list.append(p_data)
 
+        manual_sustained = [p for p in manual_presets_list if int(p.get('decay', 0)) > 0]
+        manual_one_shots = [p for p in manual_presets_list if int(p.get('decay', 0)) == 0]
+
         # Update combined list for external observers and priority processing
-        # Order: Held -> New Sustained -> Manual -> One-Shots (highest priority/overwrite)
-        self.active_presets = held_presets + self.auto_active_presets + manual_presets_list + self.auto_one_shots
+        # Order: Held -> New Sustained -> Manual Sustained -> Auto One-Shots -> Manual One-Shots
+        self.active_presets = held_presets + self.auto_active_presets + manual_sustained + self.auto_one_shots + manual_one_shots
 
         self.active_visual_commands = []
         force_next_visual = False
         force_next_fx = False
+        system_pause_requested = False
         for p_data in self.active_presets:
             p_id = p_data.get('id', p_data.get('name'))
             for ov in p_data.get('overrides', []):
@@ -586,9 +631,8 @@ class DMXEngine:
                     for ch in ov.get('channels', []):
                         fn = ch.get('name', 'none').lower()
                         ov_key = f"visual_{p_id}_{fn}"
-                        # Use the raw dt for preset sweeps; they handle their own time-warping via speed logic if needed
-                        # Wait, for consistency across the engine, we use raw dt here and apply eff_speed multiplier to the result
-                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 0), dt)
+                        # Standardize on effective dt (self._eff_dt) to ensure visualizers stay in sync with fixture speeds
+                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 0), self._eff_dt)
                         self.active_visual_commands.append({
                             "function": fn,
                             "value": resolved_val
@@ -602,16 +646,31 @@ class DMXEngine:
                         resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 100), dt)
                         
                         if fn == 'pause':
-                            # Trigger pause if value is high (>= 128)
-                            self.set_pause(resolved_val >= 128)
+                            if resolved_val >= 128:
+                                system_pause_requested = True
 
-        if 'left' in audio and 'right' in audio:
-            self.logic_l.update(dt, audio['left'], self.transient, self.eff_speed, self.eff_intensity)
-            self.logic_r.update(dt, audio['right'], self.transient, self.eff_speed, self.eff_intensity)
+        # Apply system pause state (auto-unpauses when no active preset requests it)
+        if system_pause_requested and not self.is_paused:
+            print(f"DEBUG: System Pause Requested by active presets")
+            
+        if self.is_paused != system_pause_requested:
+            self.set_pause(system_pause_requested)
+
+        if not self.is_paused:
+            if 'left' in audio and 'right' in audio:
+                self.logic_l.update(dt, audio['left'], self.transient, self.eff_speed, self.eff_intensity)
+                self.logic_r.update(dt, audio['right'], self.transient, self.eff_speed, self.eff_intensity)
+            else:
+                self.logic_l = self.logic
+                self.logic_r = self.logic
+                self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
         else:
-            self.logic_l = self.logic
-            self.logic_r = self.logic
-            self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
+            # When paused, ensure left/right logic references are still valid even if not updating
+            if 'left' in audio and 'right' in audio:
+                pass 
+            else:
+                self.logic_l = self.logic
+                self.logic_r = self.logic
         
         # Removed legacy rhythm triggers
         
@@ -627,7 +686,7 @@ class DMXEngine:
         # Spectral Resolution (Determines synchronized 1, 2, or 3 variant)
         # Stability: Only rotate variant if energy is significant (>0.1) or vibe changed
         if vibe_changed or silence_recovered or transient_changed:
-            old_variant = self.sync_indices.get(current_vibe, 0)
+            old_variant = self.sync_indices.get(current_vibe, "")
             variant, dominant = self._resolve_spectral_variant(audio)
             
             # Dampen variant changes: Only rotate if volume is above 0.1 or it's a major vibe change
@@ -650,7 +709,8 @@ class DMXEngine:
 
             if variant_changed or vibe_changed:
                 reason = 'vibe' if vibe_changed else ('silence recovery' if silence_recovered else f'transient → {self.transient}')
-                print(f"🎚️ Sync Variant [{reason}]: {current_vibe} → {variant + 1} (dominant bin: {dominant})")
+                v_str = f" {variant}" if variant else ""
+                print(f"🎚️ Sync Variant [{reason}]: {current_vibe} →{v_str} (dominant bin: {dominant})")
 
         should_switch = False
         current_beat = audio.get('beat_count', 0)
@@ -702,27 +762,36 @@ class DMXEngine:
             self.lab_dmx_val = 0
 
         # 1. Base Layer Processing (Profiles + Auto Sustained + Held Presets)
-        # Held presets are included here to ensure they continue to apply their state during decay
         for i, inst in enumerate(self.stage_instances):
             self._process_instance(inst, i, audio, held_presets + self.auto_active_presets, self.sync_indices, use_raw_dt=False)
 
-        # 2. OVERRIDES (Manual Presets & One-Shots)
-        # These overwrite the automated base layer and sustained presets.
-        # One-shots (decay=0) are added last to ensure they overwrite everything else.
-        for i, inst in enumerate(self.stage_instances):
-            overwrites = manual_presets_list + self.auto_one_shots
-            if overwrites:
-                self._apply_presets_to_instance(inst, i, audio, overwrites, use_raw_dt=True)
+        # 2. Automated One-Shot Layer (Hold = 0)
+        if self.auto_one_shots:
+            for i, inst in enumerate(self.stage_instances):
+                self._apply_presets_to_instance(inst, i, audio, self.auto_one_shots, use_raw_dt=False)
 
-        for addr, val in self.overrides.items():
-            if 0 < addr < len(self.universe):
-                self.universe[addr] = max(0, min(255, int(val)))
+        # 3. Manual Sustained Layer (Hold > 0)
+        # Higher priority than automated one-shots, allows manual clicks to override auto patterns
+        if manual_sustained:
+            for i, inst in enumerate(self.stage_instances):
+                self._apply_presets_to_instance(inst, i, audio, manual_sustained, use_raw_dt=False)
 
-        # 3. GLOBAL BLACKOUT OVERRIDE
-        # The absolute final master. Nothing escapes blackout.
+        # 4. Manual One-Shot Layer
+        if manual_one_shots:
+            for i, inst in enumerate(self.stage_instances):
+                self._apply_presets_to_instance(inst, i, audio, manual_one_shots, use_raw_dt=False)
+
+        # 5. GLOBAL BLACKOUT OVERRIDE
+        # Blackout everything underneath
         if self.blackout:
             for i in range(1, len(self.universe)):
                 self.universe[i] = 0
+
+        # 6. Hardware Overrides (Sliders/Console)
+        # The absolute final word for any DMX channel, overrides even blackout
+        for addr, val in self.overrides.items():
+            if 0 < addr < len(self.universe):
+                self.universe[addr] = max(0, min(255, int(val)))
 
     def get_active_preset_names(self):
         """Returns a list of names for currently active presets."""
@@ -800,6 +869,25 @@ class DMXEngine:
         # Pre-resolve dt to use for this batch of presets
         dt_to_use = self._dt if use_raw_dt else self._eff_dt
 
+        # 1. First Pass: Identify which roles are explicitly overridden by presets
+        overridden_roles = set()
+        for p_data in active_presets:
+            for ov in p_data.get('overrides', []):
+                if ov.get('type') == 'instance':
+                    target_id = ov.get('target', ov.get('id'))
+                    if (str(target_id).lower() == str(inst['id']).lower() or 
+                        str(target_id).lower() == str(inst.get('profileName', '')).lower() or 
+                        (inst.get('zone') and str(inst.get('zone')).lower() == str(target_id).lower())):
+                        
+                        # Use strictly the role field from the override
+                        ov_top_role = str(ov.get('role', '')).lower()
+                        if ov_top_role:
+                            overridden_roles.add(ov_top_role)
+                        for ov_ch in ov.get('channels', []):
+                            ov_ch_role = str(ov_ch.get('role', ov_ch.get('name', ''))).lower()
+                            if ov_ch_role:
+                                overridden_roles.add(ov_ch_role)
+
         for ch_idx, ch_def in enumerate(channels):
             offset = ch_def.get('addrOffset')
             if offset is None: offset = ch_idx
@@ -807,7 +895,9 @@ class DMXEngine:
             if not (0 < final_addr < len(self.universe)): continue
 
             preset_override_val = None
-            target_role = ch_def.get('role', ch_def.get('name'))
+            # Strictly use the role field as assigned in the UI dropdown
+            target_role = str(ch_def.get('role', '')).lower()
+            if not target_role: continue
 
             for p_data in active_presets:
                 overrides = p_data.get('overrides', [])
@@ -823,18 +913,24 @@ class DMXEngine:
                                    (inst.get('zone') and str(inst.get('zone')).lower() == str(target_id).lower()))
                         
                         if is_match:
+                            # 1. Check if the top-level override role matches
+                            ov_top_role = str(ov.get('role', '')).lower()
+                            
                             for ov_ch in ov.get('channels', []):
-                                ov_name = ov_ch.get('name')
-                                ov_role = ov_ch.get('role')
-                                # Strict match: Does the override role match the target role? 
-                                # Or does the override name match the target role/name?
-                                if (ov_role and ov_role == target_role) or ov_name == target_role or ov_name == ch_def.get('name'):
+                                # Match strictly by the role defined in the preset override
+                                ov_ch_role = str(ov_ch.get('role', ov_ch.get('name', ''))).lower()
+                                
+                                # A match occurs if:
+                                # - The specific channel role/name matches the profile role
+                                # - OR the top-level override role matches the profile role
+                                if ov_ch_role == target_role or ov_top_role == target_role:
                                     matched_ov_ch = ov_ch
                                     break
                     elif ov_type == 'global':
-                        if target_id == target_role or target_id == f"Global: {target_role}" or ov.get('name') == target_role:
+                        ov_role = str(ov.get('role', ov.get('name', ''))).lower()
+                        if target_role == ov_role or f"global: {target_role}" == ov_role:
                             for ov_ch in ov.get('channels', []):
-                                if (ov_ch.get('role') and ov_ch.get('role') == target_role) or (ov_ch.get('name') == target_role):
+                                if str(ov_ch.get('role', '')).lower() == target_role:
                                     matched_ov_ch = ov_ch
                                     break
                             if matched_ov_ch is None and 'value' in ov:
@@ -843,7 +939,11 @@ class DMXEngine:
 
                     if matched_ov_ch is not None:
                         if matched_ov_ch.get('mode') == 'behavior':
-                            bkey = f"preset_{p_id}_{ov.get('id','g')}_{target_role}_{zone_idx}"
+                            z_idx = 0
+                            if 'left' in zone_str: z_idx = 1
+                            elif 'right' in zone_str: z_idx = 2
+                            
+                            bkey = f"preset_{p_id}_{ov.get('id','g')}_{target_role}_{z_idx}"
                             preset_override_val = self._evaluate_preset_behavior(
                                 matched_ov_ch, active_audio, active_logic, bkey, use_raw_dt
                             )
@@ -886,6 +986,7 @@ class DMXEngine:
 
         speed = float(mods.get('speed', 0.5))
         react = float(mods.get('react', 0.5))
+        gain = float(mods.get('gain', 1.0))
         hold_type = str(mods.get('hold_type', 'none')).lower()
         
         # Calibration
@@ -920,6 +1021,18 @@ class DMXEngine:
 
         # 1. Resolve Driver Magnitude (E)
         E = logic_matrix.state.get(source, 0.0)
+        
+        # Apply Threshold Gate
+        threshold = float(mods.get('threshold', 0.0))
+        is_gated = False
+        if E < threshold:
+            E = 0.0
+            is_gated = True
+        else:
+            if threshold < 1.0:
+                E = (E - threshold) / (1.0 - threshold)
+            else:
+                E = 0.0
 
         # 2. State Maintenance
         if 'phase' not in st: 
@@ -958,7 +1071,7 @@ class DMXEngine:
             return max(0, min(255, int(eff_center)))
         
         elif behavior == 'direct':
-            y = (E * 2.0) - 1.0
+            y = (E * react * 2.0) - 1.0
             
         elif behavior in ['sine', 'square', 'saw', 'triangle']:
             if source in ['beat', 'bar']:
@@ -993,11 +1106,6 @@ class DMXEngine:
             st['last_E'] = E
             y = (st['spike_val'] * 2.0) - 1.0
 
-        elif behavior == 'hum':
-            st['t'] += dt * speed * 2.5
-            osc = math.sin(st['t']) * react * 0.2
-            y = ((E + osc) * 2.0) - 1.0
-
         elif behavior == 'fuzzy':
             st['t'] += dt * speed * 1.8
             noise = (self.logic._noise1d(st['t']) * 2.0 - 1.0) * react * 0.25
@@ -1009,6 +1117,9 @@ class DMXEngine:
 
         elif behavior == 'direct_stepped':
             y = (math.floor(E * 8) / 8 * 2.0) - 1.0
+            
+        if is_gated:
+            y = -1.0
             
         # --- CHANNEL MODULATION (Logic) ---
         mod_type = mods.get('mod_type', 'none')
@@ -1036,7 +1147,7 @@ class DMXEngine:
             
         # --- Y → DMX MAPPING ---
         # Mapping normalized y to DMX
-        y = max(-1.0, min(1.0, y))
+        y = max(-1.0, min(1.0, y * gain))
         if use_intensity:
             y *= self.eff_intensity  # Scale amplitude within range, not absolute DMX
         
@@ -1069,6 +1180,7 @@ class DMXEngine:
         if not isinstance(val, str):
             return 0
 
+
         # 1. Parse Offset (at the very end of the string)
         offset = 0.0
         main_val = val
@@ -1090,8 +1202,11 @@ class DMXEngine:
             self._preset_sweep_phases[ov_key] = 0.0
         
         # Rate: 60 bits per second (Legacy speed standard)
-        rate = 60.0 
-        self._preset_sweep_phases[ov_key] += dt * rate
+        # FIX: Only increment ONCE per frame per key to prevent multi-channel speedup
+        if ov_key not in self._processed_phases_this_frame:
+            rate = 60.0 
+            self._preset_sweep_phases[ov_key] += dt * rate
+            self._processed_phases_this_frame.add(ov_key)
         
         # Each part occupies a consistent "64 bit" phase window
         part_duration = 64.0
@@ -1107,14 +1222,27 @@ class DMXEngine:
         part_str = seq_parts[part_idx]
 
         # 4. Resolve the specific part (Value or Sweep)
+        keywords = {
+            'on': 255, 'high': 255, 'max': 255, 'full': 255,
+            'off': 0, 'low': 0, 'min': 0, 'zero': 0,
+            'slow': 64, 'med': 128, 'mid': 128, 'fast': 200, 'punch': 255
+        }
+
         if '-' in part_str:
             try:
-                # Handle multi-dash chains like "32-96-32"
-                points = [float(p.strip()) for p in part_str.split('-') if p.strip()]
+                # Handle multi-dash chains like "32-96-32" or "slow-fast"
+                raw_points = [p.strip().lower() for p in part_str.split('-') if p.strip()]
+                points = []
+                for rp in raw_points:
+                    if rp in keywords:
+                        points.append(float(keywords[rp]))
+                    else:
+                        points.append(float(rp))
+
                 num_points = len(points)
                 if num_points < 2: return int(points[0]) if points else 0
                 
-                # Divide the part's duration into sub-segments for the chain
+                # ... (rest of the interpolation logic remains same)
                 num_segments = max(1, len(points) - 1)
                 sub_duration = part_duration / num_segments
                 
@@ -1125,8 +1253,6 @@ class DMXEngine:
                 v_start = points[sub_idx]
                 v_end = points[sub_idx + 1]
                 
-                # Interpolate within the sub-segment
-                # Removed the "-1.0" to ensure continuous motion across segments
                 t = sub_local_phase / sub_duration if sub_duration > 0 else 0.0
                 t = max(0.0, min(1.0, t))
                 
@@ -1135,6 +1261,9 @@ class DMXEngine:
                 return 0.0
         
         try:
+            low_part = part_str.strip().lower()
+            if low_part in keywords:
+                return float(keywords[low_part])
             return float(part_str)
         except:
             return 0.0
@@ -1171,7 +1300,7 @@ class DMXEngine:
         if self.is_paused:
             print("🛑 ENGINE PAUSED")
         else:
-            print(f"▶️ ENGINE RESUMED (Debt: {self.pause_debt:.2f}s)")
+            print("▶️ ENGINE RESUMED")
     # Removed legacy _detect_bass_style
 
     def apply_overrides(self, ol, sl=[]):

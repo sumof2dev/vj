@@ -218,17 +218,13 @@
             <div id="profile-editor-view" style="display:none">
             <div class="row" style="justify-content:space-between; align-items: center; margin-bottom: 10px;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <button class="btn btn-sm" onclick="showProfileList()">← Back</button>
                     <h2 style="margin:0; border:none; padding:0;">Profile Editor</h2>
-                    <div id="editor-heartbeat"
-                        style="font-size:8px; background:#333; color:white; padding:1px 6px; border-radius:4px; font-weight:bold; transition: background 0.2s;">
-                        IDLE</div>
                 </div>
             </div>
 
             <div style="display:flex; gap:8px; margin-bottom: 20px;">
-                <button class="btn btn-primary btn-sm" onclick="refineProfileGlobal()">Refine Profile</button>
-                <button class="btn btn-sm" onclick="downloadBehaviorProfile()">Export JSON</button>
+                <button class="btn btn-primary btn-sm" onclick="refineProfileGlobal()">Refine</button>
+                <button class="btn btn-sm" onclick="downloadBehaviorProfile()">Export</button>
             </div>
             
             <input type="file" id="load-behavior-input" style="display:none"
@@ -256,7 +252,8 @@
                         <input type="text" id="prof-name" placeholder="e.g., Aggressive Wash">
                         <input type="hidden" id="prof-base-fixture">
                     </div>
-                    <button class="btn btn-primary" onclick="saveProfile()" style="height:38px;" title="Sync changes to the server backend">Save Profile</button>
+                    <button class="btn btn-primary" onclick="saveProfile()" style="height:38px;" title="Sync changes to the server backend">Save</button>
+                    <button class="btn" onclick="showProfileList()" style="height:38px;">Cancel</button>
                 </div>
 
                 <div id="prof-mappings" style="margin-top: 10px;"></div>

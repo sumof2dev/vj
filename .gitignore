@@ -73,3 +73,4 @@ logs/
 # antigravity rules
 .agent/rules/setup
 vj_secondary_install.tar.gz
+vj_local_install.tar.gz

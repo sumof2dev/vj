@@ -864,7 +864,7 @@
 
     <div class="container">
         <h1>RaveBox <a href="console.html"
-                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v510261247</span></h1>
+                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v518260909</span></h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
@@ -1074,8 +1074,23 @@
         if (window.isCustomTunnel || window.isCustomSubdomain || (window.location.hostname.endsWith('ravebox.love') && !window.isOriginalCloud)) {
             document.getElementById('hostBadge').style.cursor = 'default';
         }
+        let engineActive = false;
+        let statusPollingRate = 3000;
+        let lastKnownActive = false;
+        let wsReconnectDelay = 2000;
+        let wsErrorCount = 0;
+
+        function getVisualizerUrl() {
+            const savedHost = localStorage.getItem('vj_backend_host');
+            const isConnected = !!savedHost || window.isCustomSubdomain || window.isCustomTunnel;
+            if (!engineActive || !isConnected || !window.LAUNCHER_API) {
+                return './standalone.html';
+            }
+            return './visualdmx.html';
+        }
+
         // Point links within the same origin (Port Independent)
-        document.getElementById('link-visual').href = `./visualdmx.html`;
+        document.getElementById('link-visual').href = getVisualizerUrl();
         document.getElementById('link-setup').href = `./setup.html`;
         document.getElementById("link-help").href = "./help.html";
 
@@ -1089,9 +1104,6 @@
             window.open(`https://${target}:${port}`, '_blank');
         }
 
-        let engineActive = false;
-        let statusPollingRate = 3000;
-        let lastKnownActive = false;
 
         async function updateStatus() {
             if (document.hidden) {
@@ -1115,6 +1127,8 @@
                 const nodeSvc = data.node || { active: false, status: "inactive" };
                 const isActive = isNodePref ? nodeSvc.active : engineSvc.active;
                 engineActive = isActive;
+                document.getElementById('link-visual').href = getVisualizerUrl();
+                
                 statusPollingRate = isActive ? 3000 : 8000;
                 const badge = document.getElementById("status");
                 if (badge) {
@@ -1209,7 +1223,6 @@
 
         // --- DASHBOARD WEBSOCKET ---
         let ws = null;
-        let wsErrorCount = 0;
         let lastSpotifyData = null;
         let bgPreference = 'spotify'; // Alternates every minute
 
@@ -1241,7 +1254,6 @@
             // Random interval between 30s and 60s for more frequent switching during testing
             const nextInterval = 30000 + Math.random() * 30000;
             
-            console.log("🔄 [BG] Switching to:", bgPreference.toUpperCase(), "| Next in:", Math.round(nextInterval/1000), "s");
             updateBackgroundUI();
             
             setTimeout(rotateBackground, nextInterval);
@@ -1306,6 +1318,7 @@
         }
 
         function connectLiveDashboard() {
+            if (!engineActive) return;
             // Prevent multiple simultaneous connection attempts
             if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
 
@@ -1317,6 +1330,7 @@
             ws.binaryType = 'arraybuffer';
             ws.onopen = () => {
                 wsErrorCount = 0;
+                wsReconnectDelay = 2000;
                 // SSL issue check moved to help.html
                 document.getElementById('liveDashboard').style.display = 'flex';
                 // Trigger reflow to fade in
@@ -1494,18 +1508,20 @@
 
             ws.onerror = (err) => {
                 wsErrorCount++;
-                console.error("WebSocket Error:", err);
+                // Throttle error logging
+                if (wsErrorCount <= 3) console.error("WebSocket Error:", err);
             };
 
-            let wsReconnectDelay = 2000;
             ws.onclose = () => {
                 document.getElementById('liveDashboard').style.opacity = '0';
                 setTimeout(() => document.getElementById('liveDashboard').style.display = 'none', 500);
 
+                if (!engineActive) return;
+
                 // Exponential backoff for reconnections
                 const backoff = document.hidden ? 15000 : wsReconnectDelay;
                 setTimeout(() => {
-                    connectLiveDashboard();
+                    if (engineActive) connectLiveDashboard();
                     // Increase delay for next time, cap at 30s
                     wsReconnectDelay = Math.min(wsReconnectDelay * 1.5, 30000);
                 }, backoff);
@@ -1529,8 +1545,7 @@
                         lastStateUpdate = msg;
                         // Immediate update for state changes (vibe, overrides)
                         if (msg.vibe) {
-                            const variantTag = msg.vibe_variant ? `<sup>${msg.vibe_variant}</sup>` : '';
-                            document.getElementById('hubVibe').innerHTML = msg.vibe.toUpperCase() + variantTag;
+                            document.getElementById('hubVibe').innerHTML = msg.vibe.toUpperCase();
                         }
                         if (msg.transient) document.getElementById('hubTransient').textContent = msg.transient.toUpperCase();
                         if (msg.error) {
@@ -1624,19 +1639,6 @@
         // Connect live dashboard listener
         connectLiveDashboard();
 
-        // Gesture Support: Swipe Left -> VisualDMX, Swipe Right -> Setup
-        let touchStartX = 0;
-        document.addEventListener('touchstart', e => {
-            touchStartX = e.touches[0].clientX;
-        }, { passive: true });
-
-        document.addEventListener('touchend', e => {
-            const touchEndX = e.changedTouches[0].clientX;
-            const deltaX = touchEndX - touchStartX;
-            if (Math.abs(deltaX) > 100) { // Threshold for swipe
-                if (deltaX < -100) window.location.href = './visualdmx.html'; // Swipe Left
-            }
-        }, { passive: true });
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {

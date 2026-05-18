@@ -2,5 +2,6 @@
     "prompt": "tie die blotter",
     "type": "base",
     "luminance": 0.757,
-    "contrast": 0.118
+    "contrast": 0.118,
+    "heavy": true
 }

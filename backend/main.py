@@ -829,20 +829,52 @@ def pack_binary_state(current_time):
     speed_factor = dmx_engine.eff_speed if dmx_engine else 0.6
     GLOBAL_CLOCK += dt_val * speed_factor
     m_time = GLOBAL_CLOCK
-    flux = audio_state.get('flux', 0.0)
-    bass = audio_state.get('bass', 0.0)
-    mid = audio_state.get('mid', 0.0)
-    high = audio_state.get('high', 0.0)
-    vol = audio_state.get('vol', 0.0)
-    bpm = audio_state.get('bpm', 120.0)
-    beat_phase = audio_state.get('beat_phase', 0.0)
-    
-    bins = audio_state.get('bins', [0]*6)
-    while len(bins) < 6: bins.append(0)
-    
-    beat = 1 if audio_state.get('beat', False) else 0
-    b_onset = 1 if audio_state.get('bass_onset', False) else 0
-    h_onset = 1 if audio_state.get('high_onset', False) else 0
+    if dmx_engine and dmx_engine.is_paused:
+        # Use frozen values to stop visualizer jitter while paused
+        if not hasattr(pack_binary_state, 'frozen_audio'):
+            pack_binary_state.frozen_audio = {
+                'flux': audio_state.get('flux', 0.0),
+                'bass': audio_state.get('bass', 0.0),
+                'mid': audio_state.get('mid', 0.0),
+                'high': audio_state.get('high', 0.0),
+                'vol': audio_state.get('vol', 0.0),
+                'bpm': audio_state.get('bpm', 120.0),
+                'beat_phase': audio_state.get('beat_phase', 0.0),
+                'bins': audio_state.get('bins', [0.0]*6)[:]
+            }
+        
+        frozen = pack_binary_state.frozen_audio
+        flux = frozen['flux']
+        bass = frozen['bass']
+        mid = frozen['mid']
+        high = frozen['high']
+        vol = frozen['vol']
+        bpm = frozen['bpm']
+        beat_phase = frozen['beat_phase']
+        bins = frozen['bins']
+        
+        beat = 0
+        b_onset = 0
+        h_onset = 0
+    else:
+        # Clear frozen state when playing
+        if hasattr(pack_binary_state, 'frozen_audio'):
+            delattr(pack_binary_state, 'frozen_audio')
+            
+        flux = audio_state.get('flux', 0.0)
+        bass = audio_state.get('bass', 0.0)
+        mid = audio_state.get('mid', 0.0)
+        high = audio_state.get('high', 0.0)
+        vol = audio_state.get('vol', 0.0)
+        bpm = audio_state.get('bpm', 120.0)
+        beat_phase = audio_state.get('beat_phase', 0.0)
+        
+        bins = audio_state.get('bins', [0]*6)
+        while len(bins) < 6: bins.append(0)
+        
+        beat = 1 if audio_state.get('beat', False) else 0
+        b_onset = 1 if audio_state.get('bass_onset', False) else 0
+        h_onset = 1 if audio_state.get('high_onset', False) else 0
     
     ax_a = ax_b = ax_c = ax_d = ax_e = 0.0
     if dmx_engine and dmx_engine.logic:

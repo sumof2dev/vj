@@ -8,11 +8,9 @@ This project has strict mathematical and architectural standards. If you are ask
 
 ## Context Map:
 
-- **Audio Pipeline & Vibe Engine:** Read `.agent/docs/audio_flow_explanation.md` and `.agent/docs/architecture_audio.md`
-  *(Trigger: user mentions audio, transients, main.py analysis, vibe states, or rhythm-aware intelligence)*
+- **Audio, DMX & Vibe Engine:** Read `.agent/docs/audio_flow_explanation.md`
+  *(Trigger: user mentions audio, transients, main.py, vibe states, dmx_engine.py, fixtures, LFOs, or hardware translation)*
 
-- **DMX Logic & Hardware Translation:** Read `.agent/docs/architecture_dmx.md`
-  *(Trigger: user mentions dmx_engine.py, fixtures, 0.6 base speed, LFOs, DMX priority layers, or hardware translation)*
 
 - **Web UI & Shader Management:** Read `.agent/docs/architecture_ui.md`
   *(Trigger: user mentions player.html, GLSL, WebGL, shaders, frontend styling, or the setup UI)*

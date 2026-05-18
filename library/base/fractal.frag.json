@@ -2,5 +2,6 @@
     "prompt": "fractal rainbow",
     "type": "base",
     "luminance": 0.363,
-    "contrast": 0.335
+    "contrast": 0.335,
+    "heavy": true
 }

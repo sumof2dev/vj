@@ -2,5 +2,6 @@
     "prompt": "purple pink rings",
     "type": "base",
     "luminance": 0.422,
-    "contrast": 0.272
+    "contrast": 0.272,
+    "heavy": true
 }
