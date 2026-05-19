@@ -79,8 +79,11 @@ done
 # 1. Start Backend (Unbuffered output for logging)
 if [ "$START_ENGINE" = true ]; then
     echo "🧠 Starting Engine..."
-    # Check for virtual environment (prioritize venv over .venv)
-    if [ -f "venv/bin/python3" ]; then
+    # Check for virtual environment (prioritize venv_local over venv)
+    if [ -f "venv_local/bin/python3" ]; then
+        PYTHON_CMD="venv_local/bin/python3"
+        echo "🐍 Using venv_local Python"
+    elif [ -f "venv/bin/python3" ]; then
         PYTHON_CMD="venv/bin/python3"
         echo "🐍 Using venv Python"
     elif [ -f ".venv/bin/python3" ]; then
@@ -99,7 +102,9 @@ if [ "$START_SERVER" = true ]; then
     echo "🌐 Starting Server..."
     # reuse PYTHON_CMD if set, else define it
     if [ -z "$PYTHON_CMD" ]; then
-        if [ -f "venv/bin/python3" ]; then
+        if [ -f "venv_local/bin/python3" ]; then
+            PYTHON_CMD="venv_local/bin/python3"
+        elif [ -f "venv/bin/python3" ]; then
             PYTHON_CMD="venv/bin/python3"
         elif [ -f ".venv/bin/python3" ]; then
             PYTHON_CMD=".venv/bin/python3"
