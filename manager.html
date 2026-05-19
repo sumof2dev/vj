@@ -165,6 +165,8 @@
         }
 
         .container.console-mode {
+            max-width: 800px;
+            width: 95%;
             padding: 0 !important;
             overflow: hidden; /* Console mode handles its own internal scrolling */
         }
@@ -1587,6 +1589,7 @@
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
             ws = new WebSocket(wsUrl);
+            window.ws = ws;
             ws.binaryType = 'arraybuffer';
             ws.onopen = () => {
                 wsErrorCount = 0;

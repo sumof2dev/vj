@@ -496,7 +496,7 @@ window.updateUniversalHUD = function() {
             const p = (window.db && window.db.presets) ? window.db.presets.find(x => String(x.id) === id || String(x.name) === id) : null;
             const name = p ? p.name : id;
             const isActive = activeIds.includes(id);
-            badgesHtml += `<span class="hud-preset-badge ${isActive ? '' : 'dim'}">${name}</span>`;
+            badgesHtml += `<span class="hud-preset-badge ${isActive ? '' : 'dim'}" onclick="window.togglePreset('${id}')" style="cursor: pointer;">${name}</span>`;
         });
         
         presetsCont.innerHTML = badgesHtml;
@@ -512,6 +512,15 @@ window.updateUniversalHUD = function() {
                 <span class="vol">${entry.vol}%</span>
             </div>
         `).join('');
+    }
+};
+
+window.togglePreset = function(presetId) {
+    if (!presetId) return;
+    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetId, exclusive: true }));
+    } else {
+        console.warn("WebSocket not connected, cannot toggle preset:", presetId);
     }
 };
 
