@@ -242,7 +242,7 @@ window.BACKEND_ROOT = BACKEND_ROOT;
 window.LAUNCHER_API = BACKEND_ROOT;
 LAUNCHER_API = BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "518260909";
+window.APP_VERSION = "518261628";
 
 if (setupLocation.protocol === 'file:') {
     console.error("❌ Running from file:// protocol is not supported. Please use http://localhost:8085/manager.html");
@@ -351,7 +351,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v518260909)");
+    console.log("✅ RaveBox Core Ready (v518261628)");
 }
 
 // Kick off sync immediately
@@ -680,7 +680,7 @@ window.togglePresetEditor = function(show) {
     }
 };
 
-window.APP_VERSION = "518260909";
+window.APP_VERSION = "518261628";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
@@ -749,6 +749,7 @@ function loadNodeIp() {
             const type = data.master?.node_type || 'dmx';
             input.value = ip;
             input.dataset.active = active;
+            input.readOnly = true; // Lock it on load since it's already saved
             if (typeSelect) typeSelect.value = type;
             updateNodeUiState(input, active);
             updateHardwareType();

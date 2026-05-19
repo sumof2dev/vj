@@ -4,10 +4,14 @@
 # This makes the VJ Engine run automatically when the device boots.
 
 IS_EVT=false
+IS_NODE=false
 for arg in "$@"; do
     if [ "$arg" == "--evt" ]; then
         IS_EVT=true
         echo "🧪 EVT Mode: Using isolated service names."
+    fi
+    if [ "$arg" == "--node" ]; then
+        IS_NODE=true
     fi
     if [ "$arg" == "-y" ] || [ "$arg" == "--non-interactive" ]; then
         NON_INTERACTIVE=true
@@ -29,6 +33,44 @@ if [ "$IS_EVT" = true ]; then
 fi
 
 CURRENT_DIR=$(pwd)
+
+# --- Bootstrap Virtual Environment if missing ---
+if [ ! -d "venv" ]; then
+    echo "📦 Virtual environment 'venv' not found. Bootstrapping..."
+    if ! command -v python3 &> /dev/null; then
+        echo "❌ python3 is not installed. Please install it first."
+        exit 1
+    fi
+    
+    python3 -m venv venv || {
+        echo "❌ Failed to create virtual environment. Attempting to install python3-venv..."
+        sudo apt-get update && sudo apt-get install -y python3-venv
+        python3 -m venv venv
+    }
+fi
+
+# --- Ensure dependencies are installed ---
+VENV_PY="$CURRENT_DIR/venv/bin/python3"
+echo "📦 Verifying virtual environment dependencies..."
+"$VENV_PY" -m pip install --upgrade pip --quiet || true
+
+if [ "$IS_NODE" = true ]; then
+    if ! "$VENV_PY" -c "import serial" &>/dev/null; then
+        echo "📦 Installing pyserial in venv..."
+        "$VENV_PY" -m pip install pyserial
+    fi
+else
+    if [ -f "$CURRENT_DIR/backend/requirements.txt" ]; then
+        echo "📦 Verifying/Installing backend requirements..."
+        "$VENV_PY" -m pip install -r "$CURRENT_DIR/backend/requirements.txt"
+    else
+        if ! "$VENV_PY" -c "import serial" &>/dev/null; then
+            echo "📦 Installing pyserial in venv..."
+            "$VENV_PY" -m pip install pyserial
+        fi
+    fi
+fi
+echo "✅ Virtual environment dependencies verified."
 
 echo "🔧 Setting up VJ Engine as a System Service ($SERVICE_NAME)..."
 
@@ -97,13 +139,6 @@ echo "   - Reloading systemd..."
 sudo systemctl daemon-reload
 echo "   - Enabling auto-start on boot..."
 
-# NODE MODE CHECK
-IS_NODE=false
-for arg in "$@"; do
-    if [ "$arg" == "--node" ]; then
-        IS_NODE=true
-    fi
-done
 
 if [ "$IS_NODE" = true ]; then
     echo "🌐 NODE MODE: Enabling node service, disabling others."

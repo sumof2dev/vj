@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RaveBox</title>
     <link rel="stylesheet" href="setup.css">
+    <link rel="stylesheet" href="engine_tab.css">
     <link rel="manifest" href="manifest.json">
     <style>
         :root {
@@ -154,6 +155,18 @@
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.12);
             transition: all 0.3s ease;
+            
+            /* ADDED FOR CONSOLE INTEGRATION */
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .container.console-mode {
+            padding: 0 !important;
+            overflow: hidden; /* Console mode handles its own internal scrolling */
         }
 
         @media (max-width: 480px) {
@@ -836,6 +849,77 @@
             cursor: ew-resize; z-index: 10; border-radius: 1px; box-shadow: 0 0 5px rgba(0,0,0,0.5);
             touch-action: none;
         }
+        
+        /* --- CONSOLE VIEW STYLES --- */
+        #live-console-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+
+        /* Console Header HUD Overrides */
+        .console-header .universal-hud {
+            position: relative !important;
+            top: 0 !important;
+            background: none !important;
+            backdrop-filter: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            overflow: hidden !important;
+        }
+        .console-header .hud-presets {
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 11px !important;
+            color: var(--primary) !important;
+            font-weight: 800 !important;
+        }
+        .console-header .hud-vibe-log {
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 10px !important;
+            color: var(--text-dim) !important;
+            max-width: 150px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        /* Clean Divider Accordion */
+        .engine-accordion summary::after {
+            display: none !important;
+        }
+        .engine-accordion summary {
+            outline: none;
+        }
+
+        @media (max-width: 600px) {
+            #live-console-grid {
+                gap: 8px;
+                padding: 12px;
+            }
+            .engine-accordion summary {
+                height: 30px !important;
+                min-height: 30px !important;
+            }
+            .engine-accordion summary div {
+                width: 40px !important;
+                height: 4px !important;
+                opacity: 0.3;
+            }
+        }
     </style>
 
 </head>
@@ -862,9 +946,20 @@
         </div>
     </div>
 
-    <div class="container">
-        <h1>RaveBox <a href="console.html"
-                style="color: inherit; text-decoration: none;">Control</a> <span style="font-size: 9px; opacity: 0.3;">VJ Manager v518260909</span></h1>
+    <div class="container" id="main-container">
+        <!-- New Manager Accordion -->
+        <details id="manager-accordion" class="engine-accordion" open style="margin: 0; border:none; border-bottom:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0; overflow: visible;" ontoggle="handleManagerToggle(this)">
+            <summary style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; justify-content:center; align-items:center; background: rgba(255,255,255,0.02); display: none;" id="manager-summary">
+                <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+            </summary>
+            <div class="accordion-content" style="padding-top: 0; padding-bottom: 10px;">
+                <!-- Top Right Console Tab -->
+                <div id="toggleConsoleBtn" style="width: 50%; margin-left: auto; height: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.02); border-radius: 0 24px 0 12px; margin-top: -1.2rem; margin-right: calc(-1.2rem - 15px); margin-bottom: 15px; border-left: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onclick="toggleConsoleView(event)" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                    <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                </div>
+                <h1 style="margin: 0 0 10px 0; display: block; text-align: left;">
+                    RaveBox Control <span style="font-size: 9px; opacity: 0.3; margin-left: 5px;">VJ Manager</span>
+                </h1>
 
         <div id="status" class="status-badge inactive">Checking Status...</div>
 
@@ -907,8 +1002,7 @@
                 </div>
             </div>
 
-            <div class="dash-panel" id="eqToggle" style="cursor: pointer; transition: background 0.2s;"
-                onclick="toggleSysControls()">
+            <div class="dash-panel" id="eqToggle" style="transition: background 0.2s; position: relative;">
                 <div class="thinking-grid">
                     <div class="logic-state" id="hubTransient">STEADY</div>
                     <div class="bin-viz" id="hubBins">
@@ -930,6 +1024,10 @@
                         <span style="font-size: 0.6rem; opacity: 0.5;">VIBE</span>
                     </div>
                     <span class="stat-val" id="hubGrid" style="transition: color 0.1s;">PULSE</span>
+                </div>
+                <!-- Bottom Left SysControls Tab -->
+                <div id="eqSysToggleBtn" style="width: 50%; height: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.02); border-radius: 0 12px 0 16px; margin-left: -12px; margin-bottom: -12px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onclick="toggleSysControls(event)" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                    <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
                 </div>
             </div>
 
@@ -980,16 +1078,106 @@
                 </div>
 
                 <button id="saveDefaultsBtn" class="btn"
-                    style="width:100%; height: 36px; padding: 0; font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); margin-top: 10px; color: var(--text-dim);">
+                    style="width:100%; height: 36px; padding: 0; font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); margin-top: 10px; margin-bottom: 15px; color: var(--text-dim);">
                     💾 Save Defaults
                 </button>
+                
+                <!-- Bottom Left SysControls Tab (Shown when expanded) -->
+                <div id="sysSysToggleBtn" style="width: 50%; height: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.02); border-radius: 0 12px 0 16px; margin-left: -12px; margin-bottom: -12px; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onclick="toggleSysControls(event)" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                    <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                </div>
             </div>
 
 
             
-        </div>
+        </div> <!-- End liveDashboard -->
+            </div> <!-- End manager-accordion content -->
+        </details>
 
-    </div>
+        <!-- CONSOLE VIEW (Initially Hidden) -->
+        <div id="console-view" style="display: none; width: 100%; flex-direction: column; flex: 1; min-height: 0;">
+            <!-- CONDENSED TIMELINE AT THE TOP (COLLAPSIBLE) -->
+            <details id="console-timeline-details" open class="engine-accordion" style="margin: 0; border:none; border-bottom:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0;" ontoggle="if(this.open) { if(typeof startConsoleTimelineLoop === 'function') startConsoleTimelineLoop(); }">
+                <summary style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
+                    <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                </summary>
+                <div id="console-timeline-container" style="display: flex; flex-direction: column; background: rgba(0,0,0,0.3); overflow: hidden;">
+                    <div style="height: 80px; display: flex;">
+                        <div style="flex: 1; position: relative; height: 100%;">
+                            <canvas id="console-timeline-canvas" style="width: 100%; height: 100%; cursor: crosshair;"></canvas>
+                            <div id="audio-timeline-inspect" style="position: absolute; top: 0; left: 0; height: 100%; width: 2px; background: linear-gradient(to bottom, transparent, var(--accent), transparent); display: none; pointer-events: none; box-shadow: 0 0 15px var(--accent);">
+                                <div id="audio-timeline-tooltip" style="position: absolute; top: 10px; left: 15px; background: rgba(10,10,12,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; white-space: nowrap; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10;"></div>
+                            </div>
+                        </div>
+                        <div style="width: 75px; padding: 10px 8px; display: flex; flex-direction: column; gap: 5px; border-left: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2); justify-content: center;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <div style="width:6px; height:6px; border-radius:1px; background:#ff3366; box-shadow: 0 0 5px rgba(255,51,102,0.3);"></div>
+                                <span style="color: #ff3366; font-size: 8px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.8;">Bass</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <div style="width:6px; height:6px; border-radius:1px; background:var(--accent); box-shadow: 0 0 5px rgba(0,242,255,0.3);"></div>
+                                <span style="color: var(--accent); font-size: 8px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.8;">Mid</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <div style="width:6px; height:6px; border-radius:1px; background:#ffaa00; box-shadow: 0 0 5px rgba(255,170,0,0.3);"></div>
+                                <span style="color: #ffaa00; font-size: 8px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.8;">High</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <div style="width:6px; height:6px; border-radius:1px; background:rgba(255,255,255,0.3);"></div>
+                                <span style="color: rgba(255,255,255,0.3); font-size: 8px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">Flux</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- PRESET HUD INTEGRATED INTO TIMELINE CONTAINER -->
+                    <div id="universal-hud" class="universal-hud" style="margin:0; border:none; background:rgba(0,0,0,0.2); padding:5px 15px; box-shadow:none; border-top:1px solid rgba(255,255,255,0.05); min-height: 25px; display: flex; align-items: center;">
+                        <div id="hud-presets" class="hud-presets" style="margin:0; font-size:10px; display:flex; gap:5px; flex-wrap:wrap;"></div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- TOP BAR (CLEANED UP HEADER) -->
+            <div class="console-header" style="padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div id="hud-vibe-log" class="hud-vibe-log" style="margin:0; border:none; background:none; padding:0; box-shadow:none; font-size:10px; opacity:0.8; flex: 1;"></div>
+            </div>
+
+            <!-- CAMERA FEED ABOVE GRID -->
+            <div id="live-console-feed-container" style="display:none; padding:10px; background: #000; border-bottom: 1px solid var(--border); flex-shrink: 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div style="font-size:10px; font-weight:800; color:var(--accent);">● LIVE FEED</div>
+                    <button class="btn btn-sm" onclick="toggleLiveConsoleFeed(false)">✕ CLOSE FEED</button>
+                </div>
+                <img id="live-console-feed-img" style="width:100%; border-radius:8px; display:block;" src="">
+            </div>
+
+            <div id="live-console-grid">
+                <!-- Buttons will be injected here -->
+            </div>
+
+            <!-- 3. SLIDER SETUP (Live Override) -->
+            <details class="engine-accordion" style="margin: 0; border:none; border-top:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0;" ontoggle="if(this.open) { renderSliderSetup(); this.scrollIntoView({behavior:'smooth'}); } else { window.scrollTo({top:0, behavior:'smooth'}); }">
+                <summary style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
+                    <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                </summary>
+                <div class="accordion-content" style="background:rgba(0,0,0,0.2); padding: 8px;">
+                    <!-- Fixture Picker -->
+                    <div id="pres-slider-setup-picker" style="display:flex; flex-wrap:nowrap; gap:8px; margin-bottom:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px;">
+                        <!-- Fixture pills injected here -->
+                    </div>
+
+                    <!-- Strips Container -->
+                    <div id="pres-slider-setup-strips" style="display:flex; gap:10px; overflow-x:auto; padding:10px 0; min-height:160px; scrollbar-width: thin; scrollbar-color: var(--accent) transparent;">
+                        <!-- Sliders injected here -->
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);">
+                        <button class="btn btn-sm" onclick="clearSliderSetup()" style="font-size:10px; opacity:0.6; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">CLEAR ALL OVERRIDES</button>
+                        <!-- Hide Capture button in Console as there's no active preset editor context -->
+                        <button class="btn btn-primary btn-sm" onclick="recordSliderSetup()" id="pres-slider-record-btn" style="display:none; font-size:10px;">CAPTURE</button>
+                    </div>
+                </div>
+            </details>
+        </div> <!-- End console-view -->
+    </div> <!-- End main-container -->
 
     <!-- PAIRING MODAL -->
     <div id="pairModal" class="modal-overlay">
@@ -1017,11 +1205,77 @@
         </div>
     </div>
 
-        <div class="links">
-            <a id="link-visual" href="#">Visualizer</a>
-            <a id="link-setup" href="#">Setup</a>
+    <div class="links">
+        <a id="link-visual" href="#">Visualizer</a>
+        <a id="link-setup" href="#">Setup</a>
 
-            <a id="link-help" href="#">Help</a>
+        <a id="link-help" href="#">Help</a>
+    </div>
+
+    <!-- ASSIGNMENT MODAL (Mirrored from setup.html) -->
+    <div id="live-assignment-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2001; align-items:center; justify-content:center; padding:20px;">
+        <div class="card" style="width:100%; max-width:400px; padding:20px; background:#16161a; border-radius:24px; border:1px solid rgba(255,255,255,0.1);">
+            <div class="card-title">Assign Button <span id="assign-btn-idx">#1</span></div>
+            
+            <label>Function Type</label>
+            <select id="assign-type" onchange="updateAssignmentOptions()" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px; margin-top:5px;">
+                <option value="none">None</option>
+                <option value="preset">Preset</option>
+                <option value="slider">2 Axis (XY)</option>
+                <option value="dmx_slider">DMX Slider (Console)</option>
+                <option value="knob">Knob (Rotary)</option>
+                <option value="live_feed">Live Feed Toggle</option>
+                <option value="blackout">Blackout</option>
+            </select>
+
+            <div id="assign-preset-wrap" style="display:none; margin-top:15px;">
+                <label>Select Preset</label>
+                <select id="assign-preset-id" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px; margin-top:5px;"></select>
+            </div>
+
+            <div id="assign-slider-wrap" style="display:none; margin-top:10px;">
+                <!-- CHANNEL Y (Vertical / Default) -->
+                <div style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:10px; border-left: 3px solid var(--accent);">
+                    <div style="font-size:10px; font-weight:800; color:var(--accent); margin-bottom:5px;">CHANNEL Y (VERTICAL)</div>
+                    <label>Profile</label>
+                    <select id="assign-profile-id" onchange="updateAssignmentChannels('assign-channel-idx', this.value)" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></select>
+                    <label style="margin-top:8px; display:block;">Channel</label>
+                    <select id="assign-channel-idx" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></select>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+                        <div><label>Min</label><input type="number" id="assign-min" value="0" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></div>
+                        <div><label>Max</label><input type="number" id="assign-max" value="255" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></div>
+                    </div>
+                </div>
+
+                <!-- CHANNEL X (Horizontal - Optional) -->
+                <div id="assign-x-wrap" style="padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; border-left: 3px solid var(--accent-alt);">
+                    <div style="font-size:10px; font-weight:800; color:var(--accent-alt); margin-bottom:5px;">CHANNEL X (HORIZONTAL - OPTIONAL)</div>
+                    <label>Profile</label>
+                    <select id="assign-profile-id-x" onchange="updateAssignmentChannels('assign-channel-idx-x', this.value)" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;">
+                        <option value="">-- None (Single Axis) --</option>
+                    </select>
+                    <label style="margin-top:8px; display:block;">Channel</label>
+                    <select id="assign-channel-idx-x" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></select>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+                        <div><label>Min</label><input type="number" id="assign-min-x" value="0" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></div>
+                        <div><label>Max</label><input type="number" id="assign-max-x" value="255" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <label style="margin-top:15px; display:block;">Button Color</label>
+            <div style="display:flex; gap:8px; margin-top:5px;">
+                <button class="color-swatch" onclick="setAssignColor('#7c4dff')" style="background:#7c4dff; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+                <button class="color-swatch" onclick="setAssignColor('#00ffcc')" style="background:#00ffcc; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+                <button class="color-swatch" onclick="setAssignColor('#ff4757')" style="background:#ff4757; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+                <button class="color-swatch" onclick="setAssignColor('#2ed573')" style="background:#2ed573; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+                <button class="color-swatch" onclick="setAssignColor('#ffa502')" style="background:#ffa502; width:30px; height:30px; border-radius:4px; cursor:pointer; border:2px solid transparent;"></button>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn" onclick="closeAssignment()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAssignment()">Save</button>
+            </div>
         </div>
     </div>
     <script>
@@ -1033,6 +1287,8 @@
         window.API_BASE = window.API_BASE || "";
     </script>
     <script src="shared_setup.js"></script>
+    <script src="profile_logic.js"></script>
+    <script src="live_controller.js"></script>
     <script>
         // Routing and globals are handled by shared_setup.js
         console.log("📍 Host:", window.host, "| Launcher:", window.LAUNCHER_API);
@@ -1273,15 +1529,19 @@
         function toggleSysControls() {
             const panel = document.getElementById('sysControls');
             const toggle = document.getElementById('eqToggle');
+            const eqBtn = document.getElementById('eqSysToggleBtn');
+            
             if (panel.style.display === 'none') {
                 panel.style.display = 'block';
                 toggle.style.background = 'rgba(255, 255, 255, 0.08)';
                 toggle.style.borderRadius = '16px 16px 0 0';
+                if (eqBtn) eqBtn.style.display = 'none';
                 ws.send(JSON.stringify({ type: 'get_params' }));
             } else {
                 panel.style.display = 'none';
                 toggle.style.background = 'rgba(0, 0, 0, 0.4)';
                 toggle.style.borderRadius = '16px';
+                if (eqBtn) eqBtn.style.display = 'flex';
             }
         }
 
@@ -1541,8 +1801,15 @@
                     if (msg.type === 'current_params') {
                         syncUI(msg);
                     }
-                    if (msg.type === 'state') {
+                    if (msg.type === 'state' || msg.type === 'audio_state') {
+                        window.latestAudioState = msg;
+                        
+                        if (msg.overrides && Array.isArray(msg.overrides)) {
+                            window.latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
+                        }
+                        
                         lastStateUpdate = msg;
+                        if (typeof window.updateUniversalHUD === 'function') window.updateUniversalHUD();
                         // Immediate update for state changes (vibe, overrides)
                         if (msg.vibe) {
                             document.getElementById('hubVibe').innerHTML = msg.vibe.toUpperCase();
@@ -1631,7 +1898,25 @@
                     bar.style.background = barColor;
                     bar.style.opacity = 0.4 + (energy * 0.6);
                 }
-            }, 100);
+
+                // Console logic merge
+                if (!window.latestDmxUniverse) window.latestDmxUniverse = new Uint8Array(513);
+                for (let i = 1; i <= 512; i++) {
+                    window.latestDmxUniverse[i] = view.getUint8(86 + i);
+                }
+
+                if (!window.latestAudioState) window.latestAudioState = {};
+                window.latestAudioState.flux = view.getFloat32(4, true);
+                window.latestAudioState.bass = view.getFloat32(8, true);
+                window.latestAudioState.mid = view.getFloat32(12, true);
+                window.latestAudioState.high = view.getFloat32(16, true);
+                window.latestAudioState.vol = vol;
+                window.latestAudioState.bpm = bpm;
+                window.latestAudioState.beat = beat === 1;
+
+                if (typeof window.updateLiveConsoleVisuals === "function") window.updateLiveConsoleVisuals();
+                if (typeof window.updateSliderSetupVisuals === "function") window.updateSliderSetupVisuals();
+            }, 50);
         }
 
 
@@ -1664,6 +1949,54 @@
             localStorage.setItem('vj_show_scanlines', !showScanlines);
             console.log("📺 Scanlines:", showScanlines ? "ACTIVE" : "HIDDEN", "(Next refresh will flip)");
         })();
+
+        // --- CONSOLE VIEW LOGIC ---
+        function toggleConsoleView(e) {
+            if (e) e.stopPropagation();
+            const managerAccordion = document.getElementById('manager-accordion');
+            const consoleView = document.getElementById('console-view');
+            const container = document.getElementById('main-container');
+            
+            if (managerAccordion.open) {
+                managerAccordion.open = false;
+                consoleView.style.display = 'flex';
+                document.getElementById('manager-summary').style.display = 'flex';
+                container.classList.add('console-mode');
+            }
+        }
+
+        function handleManagerToggle(details) {
+            const consoleView = document.getElementById('console-view');
+            const summary = document.getElementById('manager-summary');
+            const container = document.getElementById('main-container');
+            if (details.open) {
+                consoleView.style.display = 'none';
+                summary.style.display = 'none';
+                container.classList.remove('console-mode');
+            } else {
+                consoleView.style.display = 'flex';
+                summary.style.display = 'flex';
+                container.classList.add('console-mode');
+            }
+        }
+
+        function initConsole() {
+            if (typeof loadLiveConfig === 'function') loadLiveConfig();
+            if (typeof renderLiveTab === 'function') renderLiveTab();
+            if (typeof startConsoleTimelineLoop === 'function') startConsoleTimelineLoop();
+        }
+
+        if (window.RAVEBOX_READY) {
+            initConsole();
+        } else {
+            window.addEventListener('RAVEBOX_READY', initConsole);
+        }
+
+        const originalRender = window.renderLiveTab;
+        window.renderLiveTab = function() {
+            if (typeof originalRender === 'function') originalRender();
+            else if (typeof window.renderLiveTabActual === 'function') window.renderLiveTabActual();
+        };
     </script>
 </body>
 

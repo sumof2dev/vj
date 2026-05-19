@@ -44,6 +44,10 @@ rsync -avz --progress \
     --exclude='.agent' \
     --exclude='scratch' \
     --exclude='fixtures' \
+    --exclude='venv_local' \
+    --exclude='training_data' \
+    --exclude='backup-unused' \
+    --exclude='.lgd-nfy0' \
     ./ "$REMOTE_USER@$TARGET:$REMOTE_PATH/"
 
 # Determine if we should set up as a node

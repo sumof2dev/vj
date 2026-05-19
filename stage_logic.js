@@ -81,6 +81,7 @@ var switchTab = window.switchTab || function() { };
                         </select>
                         <input type="text" id="dmx-node-ip-input" placeholder="Enter IP Address" 
                                style="width:140px; height:28px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:var(--accent); font-family:monospace; font-weight:800; font-size:11px; padding:0 12px; outline:none; text-align:center;" 
+                               onclick="editNodeIp()"
                                onblur="lockNodeIp()" onkeydown="if(event.key==='Enter') lockNodeIp()">
                         <label class="modern-switch" title="Toggle Hardware Output" style="margin-left: 5px;">
                             <input type="checkbox" id="hardware-node-toggle" onchange="toggleNodeMode()">

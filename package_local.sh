@@ -29,6 +29,10 @@ key.pem
 vj_local_install.tar.gz
 vj_secondary_install.tar.gz
 .lgd-nfy0
+venv_local
+training_data
+backup-unused
+.wrangler
 EOF
 
 # Package the directory

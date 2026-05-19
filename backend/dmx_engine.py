@@ -39,8 +39,9 @@ class ChannelConfig:
         # If a rule for "vibe X" is tagged with the current active sync variant, it takes precedence.
         matching_indices = []
         if global_sync_indices and not is_transient:
-            variant = global_sync_indices.get(search_vibe, "")
-            if variant:
+            variant_val = global_sync_indices.get(search_vibe, None)
+            if variant_val is not None:
+                variant = variant_val + 1 if isinstance(variant_val, int) else variant_val
                 tagged_vibe = f"{search_vibe} {variant}"
                 matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == tagged_vibe]
             
@@ -55,8 +56,9 @@ class ChannelConfig:
             
             # Check for synchronized fallback (e.g. "any 1")
             if global_sync_indices:
-                variant = global_sync_indices.get('any', "")
-                if variant:
+                variant_val = global_sync_indices.get('any', None)
+                if variant_val is not None:
+                    variant = variant_val + 1 if isinstance(variant_val, int) else variant_val
                     tagged_any = f"any {variant}"
                     matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == tagged_any]
 
@@ -686,8 +688,12 @@ class DMXEngine:
         # Spectral Resolution (Determines synchronized 1, 2, or 3 variant)
         # Stability: Only rotate variant if energy is significant (>0.1) or vibe changed
         if vibe_changed or silence_recovered or transient_changed:
-            old_variant = self.sync_indices.get(current_vibe, "")
-            variant, dominant = self._resolve_spectral_variant(audio)
+            old_variant = self.sync_indices.get(current_vibe, 1) # Default to 1 (neutral/mid index)
+            variant_str, dominant = self._resolve_spectral_variant(audio)
+            
+            # Map string variant to integer index (0: bass, 1: neutral, 2: treble)
+            mapping = {"bass": 0, "": 1, "treble": 2}
+            variant = mapping.get(variant_str, 1)
             
             # Dampen variant changes: Only rotate if volume is above 0.1 or it's a major vibe change
             # This prevents ghost cycling during quiet passages or noise floor jitter
@@ -697,6 +703,9 @@ class DMXEngine:
                     variant_changed = True
                     self._last_variant_change_time = now
             
+            if not variant_changed and not vibe_changed:
+                variant = old_variant
+
             self.sync_indices[current_vibe] = variant
             self.sync_indices['any'] = variant
             
@@ -709,8 +718,7 @@ class DMXEngine:
 
             if variant_changed or vibe_changed:
                 reason = 'vibe' if vibe_changed else ('silence recovery' if silence_recovered else f'transient → {self.transient}')
-                v_str = f" {variant}" if variant else ""
-                print(f"🎚️ Sync Variant [{reason}]: {current_vibe} →{v_str} (dominant bin: {dominant})")
+                print(f"🎚️ Sync Variant [{reason}]: {current_vibe} → {variant + 1} (dominant bin: {dominant})")
 
         should_switch = False
         current_beat = audio.get('beat_count', 0)
