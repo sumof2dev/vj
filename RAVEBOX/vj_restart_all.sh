@@ -3,10 +3,10 @@
 
 echo "🔄 Restarting all VJ services..."
 
-sudo systemctl restart vj-launcher
-sudo systemctl restart vj-server
-sudo systemctl restart vj-camera
-sudo systemctl restart vj-engine
+sudo systemctl restart vj-launcher.service
+sudo systemctl restart vj-server.service
+sudo systemctl restart vj-camera.service
+sudo systemctl restart vj-engine.service
 
 echo "✅ All services restarted."
 ./vjstatus.sh

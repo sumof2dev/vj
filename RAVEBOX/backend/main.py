@@ -457,8 +457,8 @@ def audio_callback(indata, frames, time_info, status):
     global audio_state, last_callback_time
     last_callback_time = time.time()
     
-    if status:
-        print(status)
+    # if status:
+    #     print(status)
     
     # PRIORITY: If we received injected audio recently (which shouldn't happen anymore), return
     if time.time() - last_injection_time < 2.0:
@@ -704,6 +704,13 @@ def audio_worker_thread():
             if vibe_engine:
                 vibe_results = vibe_engine.update(audio_state)
                 audio_state.update(vibe_results) # 'vibe', 'mods', etc.
+                # Propagate vibe and mods to left/right sub-dicts
+                for key in ['vibe', 'mods']:
+                    if key in vibe_results:
+                        if 'left' in audio_state and isinstance(audio_state['left'], dict):
+                            audio_state['left'][key] = vibe_results[key]
+                        if 'right' in audio_state and isinstance(audio_state['right'], dict):
+                            audio_state['right'][key] = vibe_results[key]
                 
                 # Check for completed snippet
                 snippet = vibe_results.get('snippet')
@@ -819,8 +826,19 @@ def pack_binary_state(current_time):
         int(base_l), int(fx_l), int(fg_l)
     )
     
-    # Return 86 + 513 = 599 bytes
-    return header + bytes(univ)[:513].ljust(513, b'\x00')
+    # Pack HPSS bands (24 bytes)
+    hpss_payload = struct.pack('<ffffff',
+        float(audio_state.get('bass_p', 0.0)),
+        float(audio_state.get('mid_p', 0.0)),
+        float(audio_state.get('high_p', 0.0)),
+        float(audio_state.get('bass_h', 0.0)),
+        float(audio_state.get('mid_h', 0.0)),
+        float(audio_state.get('high_h', 0.0))
+    )
+    
+    # Return 86 + 513 + 24 = 623 bytes
+    return header + bytes(univ)[:513].ljust(513, b'\x00') + hpss_payload
+
 
 async def fast_broadcast_loop():
     """Handles 60FPS DMX updates and high-frequency WebSocket packet generation."""
@@ -1758,7 +1776,7 @@ def restart_audio_stream(device_input):
     print(f"🎤 Starting Audio Stream ({current_audio_mode}): {name} (Index: {idx})")
     
     try:
-        audio_stream = sd.InputStream(device=idx, channels=1, callback=audio_callback, blocksize=BLOCK_SIZE, samplerate=SAMPLE_RATE)
+        audio_stream = sd.InputStream(device=idx, channels=2, callback=audio_callback, blocksize=BLOCK_SIZE, samplerate=SAMPLE_RATE)
         audio_stream.start()
         audio_state["device_name"] = name
         print(f"✅ Audio Stream Started: {name}")

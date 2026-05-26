@@ -918,6 +918,120 @@ async function saveAssignment() {
 }
 
 // --- AUDIO TIMELINE VISUALIZER ---
+window.selectedAudio = window.selectedAudio || new Set(['b', 'h', 'f', 'vl', 'bp', 'mp', 'hp']);
+window.selectedAddrs = window.selectedAddrs || new Set();
+window.timelineZoom = window.timelineZoom || 1.0;
+
+window.getTrackedDmxAddresses = function() {
+    const list = [];
+    const stage = (window.db && window.db.stage) || [];
+    const profiles = (window.db && window.db.profiles) || [];
+
+    stage.forEach(inst => {
+        const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+        const profile = profiles.find(p => p.id === inst.profileId);
+        if (profile && profile.channels) {
+            profile.channels.forEach((ch, idx) => {
+                const offset = parseInt(ch.addrOffset !== undefined ? ch.addrOffset : idx);
+                const addr = baseAddr + offset;
+                const roleName = ch.role || ch.name || `CH${offset}`;
+                list.push({
+                    addr: addr,
+                    role: `${inst.id}: ${roleName}`,
+                    fixtureId: inst.id,
+                    roleName: roleName
+                });
+            });
+        }
+    });
+
+    // Sort by address
+    list.sort((a, b) => a.addr - b.addr);
+    return list;
+};
+
+window.updateChannelGrid = function() {
+    const container = document.getElementById('channel-grid');
+    if (!container) return;
+
+    const list = window.getTrackedDmxAddresses();
+    const activeCountEl = document.getElementById('grid-selection-count');
+    if (activeCountEl) {
+        activeCountEl.innerText = `${window.selectedAddrs.size} Selected`;
+    }
+
+    container.innerHTML = list.map(item => {
+        const isActive = window.selectedAddrs.has(item.addr);
+        const color = `hsla(${(item.addr * 45) % 360}, 70%, 70%, 1)`;
+        const val = window.latestDmxUniverse ? window.latestDmxUniverse[item.addr] || 0 : 0;
+        
+        return `
+            <div class="channel-chip ${isActive ? 'active' : ''}" 
+                 onclick="window.toggleChannel(${item.addr})"
+                 style="border-left: 4px solid ${color};"
+                 title="${item.role}">
+                <span class="chip-label">${item.addr}:${item.role}</span>
+                <span class="chip-val" id="val-${item.addr}">${val}</span>
+            </div>
+        `;
+    }).join('');
+};
+
+window.toggleAudio = function(key) {
+    if (window.selectedAudio.has(key)) {
+        window.selectedAudio.delete(key);
+    } else {
+        window.selectedAudio.add(key);
+    }
+    const el = document.getElementById('leg-' + key);
+    if (el) el.classList.toggle('off', !window.selectedAudio.has(key));
+};
+
+window.adjustZoom = function(amount) {
+    const zoomLevels = [0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0];
+    let curIdx = zoomLevels.indexOf(window.timelineZoom);
+    if (curIdx === -1) {
+        let minDiff = Infinity;
+        curIdx = 1;
+        for (let i = 0; i < zoomLevels.length; i++) {
+            let diff = Math.abs(zoomLevels[i] - window.timelineZoom);
+            if (diff < minDiff) { minDiff = diff; curIdx = i; }
+        }
+    }
+    let nextIdx = Math.max(0, Math.min(zoomLevels.length - 1, curIdx + amount));
+    window.timelineZoom = zoomLevels[nextIdx];
+    
+    const canvas = document.getElementById('audio-timeline-canvas');
+    if (canvas) {
+        canvas.style.width = (window.timelineZoom * 100) + '%';
+    }
+    const valEl = document.getElementById('zoom-val');
+    if (valEl) {
+        valEl.innerText = window.timelineZoom + 'x';
+    }
+};
+
+window.resetZoom = function() {
+    window.timelineZoom = 1.0;
+    const canvas = document.getElementById('audio-timeline-canvas');
+    if (canvas) {
+        canvas.style.width = '100%';
+    }
+    const valEl = document.getElementById('zoom-val');
+    if (valEl) {
+        valEl.innerText = '1x';
+    }
+};
+
+window.toggleChannel = function(addr) {
+    if (window.selectedAddrs.has(addr)) {
+        window.selectedAddrs.delete(addr);
+    } else {
+        window.selectedAddrs.add(addr);
+    }
+    window.updateChannelGrid();
+};
+
 let audioTimelineBuffer = [];
 const TIMELINE_MAX_FRAMES = 300; // ~10 seconds of history at 30fps
 
@@ -929,6 +1043,19 @@ setInterval(() => {
             mid: window.latestAudioState.mid || 0,
             high: window.latestAudioState.high || 0,
             flux: window.latestAudioState.flux || 0,
+            vol: window.latestAudioState.vol || 0,
+            // HPSS bands
+            bass_p: window.latestAudioState.bass_p || 0,
+            mid_p: window.latestAudioState.mid_p || 0,
+            high_p: window.latestAudioState.high_p || 0,
+            bass_h: window.latestAudioState.bass_h || 0,
+            mid_h: window.latestAudioState.mid_h || 0,
+            high_h: window.latestAudioState.high_h || 0,
+            // active presets
+            presets: [...(window.activePresets || [])],
+            // DMX state
+            v: Array.from(window.latestDmxUniverse || []),
+            // vibe and transient
             vibe: window.latestAudioState.vibe || 'mid',
             transient: window.latestAudioState.transient || 'steady'
         });
@@ -953,8 +1080,39 @@ function openAudioTimelineModal() {
             opacity: 0; transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none;
         `;
         modal.innerHTML = `
+            <style>
+                #audio-timeline-modal .timeline-wrapper { position: relative; width: 100%; height: 260px; background: #000; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; overflow-x: auto; overflow-y: hidden; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+                #audio-timeline-modal canvas { display: block; height: 100%; cursor: crosshair; }
+                
+                #audio-timeline-modal .legend { display: flex; flex-direction: column; gap: 12px; font-size: 11px; font-weight: bold; justify-content: center; background: rgba(26, 26, 36, 0.85); backdrop-filter: blur(10px); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-top: 15px; }
+                #audio-timeline-modal .legend span { cursor: pointer; transition: all 0.2s ease; }
+                #audio-timeline-modal .legend span:hover { opacity: 0.8; }
+                #audio-timeline-modal .legend span.off { opacity: 0.25; text-decoration: line-through; }
+
+                #audio-timeline-modal .channel-grid-wrapper { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+                #audio-timeline-modal .grid-header { font-size: 12px; font-weight: bold; color: #888; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+                #audio-timeline-modal .channel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; max-height: 120px; overflow-y: auto; padding-right: 5px; }
+                
+                #audio-timeline-modal .channel-chip { 
+                    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); 
+                    padding: 4px 10px; border-radius: 6px; font-size: 10px; cursor: pointer;
+                    transition: all 0.2s; white-space: nowrap; overflow: hidden;
+                    min-height: 28px; display: flex; align-items: center; justify-content: space-between;
+                }
+                #audio-timeline-modal .channel-chip:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15); }
+                #audio-timeline-modal .channel-chip.active { background: rgba(0, 242, 255, 0.1); border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 242, 255, 0.1); }
+                
+                #audio-timeline-modal .chip-label { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; color: #fff; text-align: left; }
+                #audio-timeline-modal .chip-val { 
+                    background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 4px; 
+                    font-family: monospace; font-weight: bold; min-width: 20px; text-align: center; color: #fff;
+                }
+                
+                #audio-timeline-modal .step-btn { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); width: 30px; padding: 2px 0; border-radius: 4px; cursor: pointer; font-weight: bold; }
+                #audio-timeline-modal .step-btn:hover { background: rgba(255,255,255,0.15); }
+            </style>
             <div style="background: #111114; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; width: 95%; max-width: 1100px; padding: 30px; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 100px rgba(0, 242, 255, 0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 25px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
                     <div>
                         <h2 style="margin: 0; color: #fff; font-weight: 800; font-size: 1.8rem; letter-spacing: -0.5px; display:flex; align-items:center; gap:12px;">
                             <span style="color:var(--accent); text-shadow: 0 0 20px rgba(0,242,255,0.4);">📈</span> Audio & DMX Timeline
@@ -964,40 +1122,71 @@ function openAudioTimelineModal() {
                     <button onclick="closeAudioTimelineModal()" style="background: rgba(255,255,255,0.05); border: none; color: #fff; font-size: 20px; width:40px; height:40px; border-radius:50%; cursor: pointer; display:flex; align-items:center; justify-content:center; transition: all 0.2s;">&times;</button>
                 </div>
 
-                <div style="background: #000; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; position: relative; height: 420px; overflow: hidden; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
-                    <canvas id="audio-timeline-canvas" style="width: 100%; height: 100%; cursor: crosshair;"></canvas>
+                <div class="timeline-wrapper">
+                    <canvas id="audio-timeline-canvas" style="width: ${window.timelineZoom * 100}%; height: 100%; cursor: crosshair; display: block;"></canvas>
                     <div id="audio-timeline-inspect" style="position: absolute; top: 0; left: 0; height: 100%; width: 2px; background: linear-gradient(to bottom, transparent, var(--accent), transparent); display: none; pointer-events: none; box-shadow: 0 0 15px var(--accent);">
-                        <div id="audio-timeline-tooltip" style="position: absolute; top: 50px; left: 15px; background: rgba(10,10,12,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 12px; font-family: \'JetBrains Mono\', monospace; font-size: 12px; font-weight: bold; white-space: nowrap; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10;"></div>
+                        <div id="audio-timeline-tooltip" style="position: absolute; top: 30px; left: 15px; background: rgba(10,10,12,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: bold; white-space: nowrap; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10;"></div>
                     </div>
                 </div>
 
-                <div style="margin-top: 20px; display: flex; align-items: center; gap: 25px; padding: 0 10px;">
-                    <div style="display: flex; gap: 20px;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="width:10px; height:10px; border-radius:2px; background:#ff3366; box-shadow: 0 0 10px rgba(255,51,102,0.4);"></span>
-                            <span style="color: #ff3366; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8;">Bass</span>
+                <div class="legend">
+                    <!-- Row 1: Standard Bands & Zoom Controls -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; width: 100%;">
+                        <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
+                            <span style="color:#888; font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:default; pointer-events:none; margin-right:5px;">Standard:</span>
+                            <span id="leg-b" class="${window.selectedAudio.has('b') ? '' : 'off'}" style="color:#ff4757;" onclick="window.toggleAudio('b')">— Audio Bass</span>
+                            <span id="leg-f" class="${window.selectedAudio.has('f') ? '' : 'off'}" style="color:#f1c40f;" onclick="window.toggleAudio('f')">— Spectral Flux</span>
+                            <span id="leg-h" class="${window.selectedAudio.has('h') ? '' : 'off'}" style="color:#1e90ff;" onclick="window.toggleAudio('h')">— Audio High</span>
+                            <span id="leg-vl" class="${window.selectedAudio.has('vl') ? '' : 'off'}" style="color:#fff;" onclick="window.toggleAudio('vl')">— Master Vol</span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="width:10px; height:10px; border-radius:2px; background:var(--accent); box-shadow: 0 0 10px rgba(0,242,255,0.4);"></span>
-                            <span style="color: var(--accent); font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8;">Mid</span>
+                        
+                        <div style="display:flex; gap:8px; align-items:center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 15px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 15px; color:#fff;">
+                            <span style="opacity:0.5; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;">Timeline Zoom</span>
+                            <button class="step-btn" onclick="window.adjustZoom(-1)">−</button>
+                            <span id="zoom-val" style="width: 30px; text-align:center;">${window.timelineZoom}x</span>
+                            <button class="step-btn" onclick="window.adjustZoom(1)">+</button>
+                            <button class="step-btn" style="width: 50px;" onclick="window.resetZoom()">Reset</button>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="width:10px; height:10px; border-radius:2px; background:#ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.4);"></span>
-                            <span style="color: #ffaa00; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8;">High</span>
+                        
+                        <div style="display:flex; gap:15px; opacity:0.6; font-size:11px; color:#fff;">
+                            <span style="color:#fff; text-shadow: 0 0 5px #fff; cursor: default;">▬▬ DMX Tracked</span>
+                            <span style="color:#fff; cursor: default;">| Beat Flash</span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="width:10px; height:10px; border-radius:2px; background:rgba(255,255,255,0.3);"></span>
-                            <span style="color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">Flux</span>
+                    </div>
+                    
+                    <!-- Row 2: HPSS Percussive & Harmonic Bands -->
+                    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:20px; width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;">
+                        <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
+                            <span style="color:#888; font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:default; pointer-events:none; margin-right:5px;">Percussive (HPSS):</span>
+                            <span id="leg-bp" class="${window.selectedAudio.has('bp') ? '' : 'off'}" style="color:#ff3838;" onclick="window.toggleAudio('bp')">— Bass Perc</span>
+                            <span id="leg-mp" class="${window.selectedAudio.has('mp') ? '' : 'off'}" style="color:#ff9f43;" onclick="window.toggleAudio('mp')">— Mid Perc</span>
+                            <span id="leg-hp" class="${window.selectedAudio.has('hp') ? '' : 'off'}" style="color:#2ed573;" onclick="window.toggleAudio('hp')">— High Perc</span>
+                        </div>
+                        <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 15px;">
+                            <span style="color:#888; font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:default; pointer-events:none; margin-right:5px;">Harmonic (HPSS):</span>
+                            <span id="leg-bh" class="${window.selectedAudio.has('bh') ? '' : 'off'}" style="color:#a55eea;" onclick="window.toggleAudio('bh')">— Bass Harm</span>
+                            <span id="leg-mh" class="${window.selectedAudio.has('mh') ? '' : 'off'}" style="color:#45aaf2;" onclick="window.toggleAudio('mh')">— Mid Harm</span>
+                            <span id="leg-hh" class="${window.selectedAudio.has('hh') ? '' : 'off'}" style="color:#fd9644;" onclick="window.toggleAudio('hh')">— High Harm</span>
                         </div>
                     </div>
                 </div>
 
-                <div id="timeline-presets-container" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding: 0 10px;">
-                        <h4 style="margin: 0; color: #fff; font-size: 11px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.5;">Interactive Preset Bubbles</h4>
+                <div class="channel-grid-wrapper">
+                    <div class="grid-header">
+                        <span>DMX CHANNELS</span>
+                        <span id="grid-selection-count" style="font-size: 11px; opacity: 0.6;">0 Selected</span>
+                    </div>
+                    <div id="channel-grid" class="channel-grid">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <div id="timeline-presets-container" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; padding: 0 10px;">
+                        <h4 style="margin: 0; color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.5;">Interactive Preset Bubbles</h4>
                         <span style="font-size:9px; color:var(--accent); font-weight:800; opacity:0.6; letter-spacing:0.5px;">CLICK TO TRIGGER (EXCLUSIVE)</span>
                     </div>
-                    <div id="timeline-preset-bubbles" style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 140px; overflow-y: auto; padding: 0 10px;">
+                    <div id="timeline-preset-bubbles" style="display: flex; flex-wrap: wrap; gap: 8px; max-height: 100px; overflow-y: auto; padding: 0 10px;">
                         <!-- Dynamically populated -->
                     </div>
                 </div>
@@ -1007,9 +1196,11 @@ function openAudioTimelineModal() {
 
         // Interaction for tooltip
         initTimelineInspector('audio-timeline-canvas', 'audio-timeline-inspect', 'audio-timeline-tooltip');
-        
+
+        const canvas = document.getElementById('audio-timeline-canvas');
+        const inspect = document.getElementById('audio-timeline-inspect');
         canvas.addEventListener('mouseleave', () => inspect.style.display = 'none');
-        
+
         // Modal close on overlay click
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeAudioTimelineModal();
@@ -1018,6 +1209,7 @@ function openAudioTimelineModal() {
 
     modal.style.opacity = '1';
     modal.style.pointerEvents = 'auto';
+    window.updateChannelGrid();
     startAudioTimelineLoop();
 }
 
@@ -1045,15 +1237,44 @@ function initTimelineInspector(canvasId, inspectId, tooltipId) {
         if (data) {
             inspect.style.display = 'block';
             inspect.style.left = x + 'px';
-            tooltip.innerHTML = `
-                <div style="margin-bottom:6px; color:#aaa; font-size:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:4px;">T-MINUS ${((TIMELINE_MAX_FRAMES - frameIdx) / 30).toFixed(1)}s</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px 15px;">
-                    <span style="color:#ff3366">BASS:</span> <span>${data.bass.toFixed(3)}</span>
-                    <span style="color:var(--accent)">MID:</span> <span>${data.mid.toFixed(3)}</span>
-                    <span style="color:#ffaa00">HIGH:</span> <span>${data.high.toFixed(3)}</span>
-                    <span style="color:#fff; opacity:0.5">FLUX:</span> <span>${data.flux.toFixed(3)}</span>
+            
+            let html = `
+                <div style="margin-bottom:6px; color:#aaa; font-size:10px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:4px; display:flex; justify-content:space-between;">
+                    <span>T-MINUS ${((audioTimelineBuffer.length - 1 - frameIdx) / 30).toFixed(1)}s</span>
+                    <span style="color:var(--accent)">${((data.vol || 0) * 100).toFixed(0)}% VOL</span>
                 </div>
+                <div style="display:grid; grid-template-columns: auto auto auto; gap: 6px 12px; font-size: 11px;">
             `;
+            // Standard values
+            html += `
+                <span style="color:#ff4757">BASS:</span> <span>${(data.bass || 0).toFixed(2)}</span> <span></span>
+                <span style="color:#1e90ff">HIGH:</span> <span>${(data.high || 0).toFixed(2)}</span> <span></span>
+                <span style="color:#f1c40f">FLUX:</span> <span>${(data.flux || 0).toFixed(2)}</span> <span></span>
+            `;
+            // HPSS Percussive
+            if (data.bass_p !== undefined) {
+                html += `
+                    <span style="color:#ff3838">B_PC:</span> <span>${(data.bass_p || 0).toFixed(2)}</span> <span></span>
+                    <span style="color:#ff9f43">M_PC:</span> <span>${(data.mid_p || 0).toFixed(2)}</span> <span></span>
+                    <span style="color:#2ed573">H_PC:</span> <span>${(data.high_p || 0).toFixed(2)}</span> <span></span>
+                `;
+            }
+            // Tracked DMX Channels
+            if (window.selectedAddrs.size > 0) {
+                html += `
+                    <div style="grid-column: span 3; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 4px; padding-top: 4px; font-weight:bold; color:#888;">DMX CHANNELS</div>
+                `;
+                window.selectedAddrs.forEach(addr => {
+                    const color = `hsla(${(addr * 45) % 360}, 70%, 70%, 1)`;
+                    const val = data.v ? data.v[addr] || 0 : 0;
+                    html += `
+                        <span style="color:${color}">CH ${addr}:</span> <span>${val}</span> <span></span>
+                    `;
+                });
+            }
+            html += `</div>`;
+            tooltip.innerHTML = html;
+
             if (x > rect.width * 0.7) {
                 tooltip.style.left = 'auto';
                 tooltip.style.right = '15px';
@@ -1111,13 +1332,13 @@ function updateTimelinePresetBubbles() {
     let newHtml = presets.map(p => {
         const isActive = activeIds.includes(String(p.id));
         return `<div class="timeline-preset-bubble ${isActive ? 'active' : ''}" 
-                     onclick="window.togglePreset('${p.id}')"
-                     style="padding: 6px 14px; background: ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; 
-                            color: ${isActive ? '#000' : '#fff'}; border-radius: 20px; font-size: 11px; 
-                            font-weight: 800; cursor: pointer; transition: all 0.2s; white-space: nowrap;
-                            border: 1px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.1)'};
-                            box-shadow: ${isActive ? '0 0 15px rgba(0,242,255,0.3)' : 'none'};
-                            text-transform: uppercase; letter-spacing: 0.5px;">
+                      onclick="window.togglePreset('${p.id}')"
+                      style="padding: 6px 14px; background: ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; 
+                             color: ${isActive ? '#000' : '#fff'}; border-radius: 20px; font-size: 11px; 
+                             font-weight: 800; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+                             border: 1px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.1)'};
+                             box-shadow: ${isActive ? '0 0 15px rgba(0,242,255,0.3)' : 'none'};
+                             text-transform: uppercase; letter-spacing: 0.5px;">
                     ${p.name}
                 </div>`;
     }).join('');
@@ -1190,7 +1411,6 @@ function drawPerformanceRow(ctx, w, h) {
 
 function drawAudioTimeline(canvas, ctx) {
     if (!canvas) return;
-    // Resize internal buffer to match display
     const dpr = window.devicePixelRatio || 1;
     if (canvas.width !== canvas.clientWidth * dpr) {
         canvas.width = canvas.clientWidth * dpr;
@@ -1204,11 +1424,34 @@ function drawAudioTimeline(canvas, ctx) {
 
     const perfHeight = drawPerformanceRow(ctx, w, h);
     const graphTop = perfHeight;
-    const graphH = h - graphTop;
 
     updateTimelinePresetBubbles();
 
-    // Grid lines
+    const presetHeight = 12;
+    const presetPadding = 3;
+    const activePresetsAtT = new Map();
+    const intervals = {};
+
+    audioTimelineBuffer.forEach((f, idx) => {
+        const names = new Set(f.presets || []);
+        Object.keys(intervals).forEach(name => {
+            if (!names.has(name) && activePresetsAtT.has(name)) {
+                intervals[name].push({ s: activePresetsAtT.get(name), e: idx });
+                activePresetsAtT.delete(name);
+            }
+        });
+        names.forEach(name => {
+            if (!intervals[name]) intervals[name] = [];
+            if (!activePresetsAtT.has(name)) activePresetsAtT.set(name, idx);
+        });
+    });
+    activePresetsAtT.forEach((s, name) => {
+        intervals[name].push({ s, e: audioTimelineBuffer.length });
+    });
+
+    const graphBottom = h - (Object.keys(intervals).length * (presetHeight + presetPadding)) - 10;
+    const graphH = Math.max(50, graphBottom - graphTop);
+
     ctx.strokeStyle = 'rgba(255,255,255,0.03)';
     ctx.lineWidth = 1;
     for (let i = 1; i < 4; i++) {
@@ -1226,6 +1469,33 @@ function drawAudioTimeline(canvas, ctx) {
 
     if (audioTimelineBuffer.length < 2) return;
 
+    let row = 0;
+    const sortedNames = Object.keys(intervals).sort();
+    sortedNames.forEach(name => {
+        const y = h - (row + 1) * (presetHeight + presetPadding);
+        ctx.fillStyle = 'rgba(0, 255, 204, 0.15)';
+        ctx.strokeStyle = 'rgba(0, 255, 204, 0.8)';
+        ctx.lineWidth = 1;
+
+        intervals[name].forEach(inv => {
+            const x1 = (inv.s / TIMELINE_MAX_FRAMES) * w;
+            const x2 = (inv.e / TIMELINE_MAX_FRAMES) * w;
+            const width = Math.max(2, x2 - x1);
+
+            ctx.fillRect(x1, y, width, presetHeight);
+            ctx.strokeRect(x1, y, width, presetHeight);
+
+            if (width > 40) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px Roboto, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(name.toUpperCase(), x1 + width / 2, y + presetHeight / 2, width - 10);
+            }
+        });
+        row++;
+    });
+
     const drawLine = (key, color, width, alpha = 1, fill = false) => {
         ctx.strokeStyle = color;
         ctx.globalAlpha = alpha;
@@ -1233,19 +1503,20 @@ function drawAudioTimeline(canvas, ctx) {
         ctx.beginPath();
         
         const points = [];
+        let started = false;
         for (let i = 0; i < audioTimelineBuffer.length; i++) {
             const x = (i / TIMELINE_MAX_FRAMES) * w;
-            const val = Math.max(0, Math.min(1.0, audioTimelineBuffer[i][key]));
-            const y = graphTop + (graphH - (val * graphH * 0.85) - (graphH * 0.05)); // Adjusted padding
+            const val = Math.max(0, Math.min(1.0, audioTimelineBuffer[i][key] || 0));
+            const y = graphTop + (graphH - (val * graphH * 0.85) - (graphH * 0.05));
             points.push({x, y});
-            if (i === 0) ctx.moveTo(x, y);
+            if (!started) { ctx.moveTo(x, y); started = true; }
             else ctx.lineTo(x, y);
         }
         ctx.stroke();
         
-        if (fill) {
-            ctx.lineTo(points[points.length-1].x, h);
-            ctx.lineTo(points[0].x, h);
+        if (fill && points.length > 0) {
+            ctx.lineTo(points[points.length - 1].x, graphTop + graphH);
+            ctx.lineTo(points[0].x, graphTop + graphH);
             ctx.closePath();
             ctx.globalAlpha = alpha * 0.08;
             ctx.fillStyle = color;
@@ -1254,10 +1525,45 @@ function drawAudioTimeline(canvas, ctx) {
         ctx.globalAlpha = 1.0;
     };
 
-    drawLine('flux', 'rgba(255,255,255,0.5)', 1, 0.4);
-    drawLine('high', '#ffaa00', 2, 1, true);
-    drawLine('mid', '#00f2ff', 2, 1, true);
-    drawLine('bass', '#ff3366', 3, 1, true);
+    if (window.selectedAudio.has('f')) drawLine('flux', 'rgba(255,255,255,0.5)', 1, 0.4);
+    if (window.selectedAudio.has('h')) drawLine('high', '#ffaa00', 2, 1, true);
+    if (window.selectedAudio.has('mid')) drawLine('mid', '#00f2ff', 2, 1, true);
+    if (window.selectedAudio.has('b')) drawLine('bass', '#ff3366', 3, 1, true);
+    if (window.selectedAudio.has('vl')) drawLine('vol', 'rgba(255,255,255,0.7)', 2, 1, true);
+
+    if (window.selectedAudio.has('bp')) drawLine('bass_p', 'rgba(255, 56, 56, 0.6)', 1.5, 0.8);
+    if (window.selectedAudio.has('mp')) drawLine('mid_p', 'rgba(255, 159, 67, 0.6)', 1.5, 0.8);
+    if (window.selectedAudio.has('hp')) drawLine('high_p', 'rgba(46, 213, 115, 0.6)', 1.5, 0.8);
+    if (window.selectedAudio.has('bh')) drawLine('bass_h', 'rgba(165, 94, 234, 0.6)', 1.5, 0.8);
+    if (window.selectedAudio.has('mh')) drawLine('mid_h', 'rgba(69, 170, 242, 0.6)', 1.5, 0.8);
+    if (window.selectedAudio.has('hh')) drawLine('high_h', 'rgba(253, 150, 68, 0.6)', 1.5, 0.8);
+
+    window.selectedAddrs.forEach(addr => {
+        const color = `hsla(${(addr * 45) % 360}, 70%, 70%, 1)`;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        let started = false;
+        for (let i = 0; i < audioTimelineBuffer.length; i++) {
+            const x = (i / TIMELINE_MAX_FRAMES) * w;
+            const val = (audioTimelineBuffer[i].v && audioTimelineBuffer[i].v[addr] || 0) / 255.0;
+            const y = graphTop + (graphH - (val * graphH * 0.85) - (graphH * 0.05));
+            if (!started) { ctx.moveTo(x, y); started = true; }
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    });
+
+    if (window.latestDmxUniverse) {
+        const list = window.getTrackedDmxAddresses();
+        list.forEach(item => {
+            const valEl = document.getElementById(`val-${item.addr}`);
+            if (valEl) {
+                const val = window.latestDmxUniverse[item.addr] || 0;
+                valEl.innerText = val;
+            }
+        });
+    }
 }
 function updateLiveConsoleHighlights() {
     if (!window.latestAudioState) return;

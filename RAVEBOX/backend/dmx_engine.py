@@ -130,6 +130,12 @@ class LogicMatrix:
             'bass': float(audio.get('bass', 0.0)),
             'mids': float(audio.get('mid', 0.0)),
             'highs': float(audio.get('high', 0.0)),
+            'bass_p': float(audio.get('bass_p', 0.0)),  # Maps pure kick transients to DMX core lookups
+            'mids_p': float(audio.get('mid_p', 0.0)),   # Maps pure snare transients to DMX core lookups
+            'highs_p': float(audio.get('high_p', 0.0)), # Maps pure hat transients to DMX core lookups
+            'bass_h': float(audio.get('bass_h', 0.0)),
+            'mids_h': float(audio.get('mid_h', 0.0)),
+            'highs_h': float(audio.get('high_h', 0.0)),
             'volume': float(audio.get('vol', 0.0)),
             'impact': float(audio.get('impact', 0.0)),
             'beat phase': beat_phase,
@@ -404,6 +410,40 @@ class DMXEngine:
                 # print(f"Hot reload error: {e}")
                 pass
 
+    def _get_zone_context(self, zone_str, audio):
+        zone_str = str(zone_str or '').lower()
+        
+        # 1. Spatial routing
+        if 'left' in zone_str:
+            active_logic = self.logic_l
+            spatial_audio = audio.get('left', audio)
+        elif 'right' in zone_str:
+            active_logic = self.logic_r
+            spatial_audio = audio.get('right', audio)
+        else:
+            active_logic = self.logic
+            spatial_audio = audio
+            
+        # 2. HPSS filtering
+        if 'harmony' in zone_str:
+            active_audio = {
+                **spatial_audio,
+                'bass': spatial_audio.get('bass_h', 0.0),
+                'mid': spatial_audio.get('mid_h', 0.0),
+                'high': spatial_audio.get('high_h', 0.0),
+            }
+        elif 'percussive' in zone_str:
+            active_audio = {
+                **spatial_audio,
+                'bass': spatial_audio.get('bass_p', 0.0),
+                'mid': spatial_audio.get('mid_p', 0.0),
+                'high': spatial_audio.get('high_p', 0.0),
+            }
+        else:
+            active_audio = spatial_audio
+            
+        return active_logic, active_audio
+
     def update(self, dt: float, audio: Dict, visual_states: Dict = None, gamepad: Dict = None):
         self._dt = dt
         self.prev_universe[:] = self.universe[:]
@@ -662,18 +702,16 @@ class DMXEngine:
             self.set_pause(system_pause_requested)
 
         if not self.is_paused:
+            self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
             if 'left' in audio and 'right' in audio:
                 self.logic_l.update(dt, audio['left'], self.transient, self.eff_speed, self.eff_intensity)
                 self.logic_r.update(dt, audio['right'], self.transient, self.eff_speed, self.eff_intensity)
             else:
                 self.logic_l = self.logic
                 self.logic_r = self.logic
-                self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
         else:
-            # When paused, ensure left/right logic references are still valid even if not updating
-            if 'left' in audio and 'right' in audio:
-                pass 
-            else:
+            # Ensure references are valid when paused
+            if 'left' not in audio or 'right' not in audio:
                 self.logic_l = self.logic
                 self.logic_r = self.logic
         
@@ -831,11 +869,8 @@ class DMXEngine:
             base_addr = int(inst.get('address', 1)) + int(inst.get('offset', 0))
         except: return
         
-        # Simple global routing - Left/Right/Center usually inferred from zone name for now
-        zone_str = str(inst.get('zone', '')).lower()
-        if 'left' in zone_str: active_logic = self.logic_l; active_audio = audio.get('left', audio)
-        elif 'right' in zone_str: active_logic = self.logic_r; active_audio = audio.get('right', audio)
-        else: active_logic = self.logic; active_audio = audio
+        # Resolve spatial and HPSS routing for the assigned zone
+        active_logic, active_audio = self._get_zone_context(inst.get('zone'), audio)
         
 
 
@@ -872,10 +907,8 @@ class DMXEngine:
             base_addr = int(inst.get('address', 1)) + int(inst.get('offset', 0))
         except: return
 
-        zone_str = str(inst.get('zone', '')).lower()
-        if 'left' in zone_str: active_logic = self.logic_l; active_audio = audio.get('left', audio)
-        elif 'right' in zone_str: active_logic = self.logic_r; active_audio = audio.get('right', audio)
-        else: active_logic = self.logic; active_audio = audio
+        # Resolve spatial and HPSS routing for the assigned zone
+        active_logic, active_audio = self._get_zone_context(inst.get('zone'), audio)
 
         # Pre-resolve dt to use for this batch of presets
         dt_to_use = self._dt if use_raw_dt else self._eff_dt
@@ -1035,7 +1068,15 @@ class DMXEngine:
         eff_center = (eff_min + eff_max) / 2.0
 
         # 1. Resolve Driver Magnitude (E)
-        E = logic_matrix.state.get(source, 0.0)
+        audio_key = source
+        if source == 'mids': audio_key = 'mid'
+        elif source == 'highs': audio_key = 'high'
+        elif source == 'volume': audio_key = 'vol'
+        
+        if audio and audio_key in audio:
+            E = float(audio[audio_key])
+        else:
+            E = logic_matrix.state.get(source, 0.0)
         
         # Apply Threshold Gate
         threshold = float(mods.get('threshold', 0.0))
@@ -1216,16 +1257,16 @@ class DMXEngine:
         if ov_key not in self._preset_sweep_phases:
             self._preset_sweep_phases[ov_key] = 0.0
         
+        # Each part occupies a consistent "64 bit" phase window
+        part_duration = 64.0
+        total_cycle = num_parts * part_duration
+        
         # Rate: 60 bits per second (Legacy speed standard)
         # FIX: Only increment ONCE per frame per key to prevent multi-channel speedup
         if ov_key not in self._processed_phases_this_frame:
             rate = 60.0 
-            self._preset_sweep_phases[ov_key] += dt * rate
+            self._preset_sweep_phases[ov_key] = (self._preset_sweep_phases[ov_key] + dt * rate) % total_cycle
             self._processed_phases_this_frame.add(ov_key)
-        
-        # Each part occupies a consistent "64 bit" phase window
-        part_duration = 64.0
-        total_cycle = num_parts * part_duration
         
         # Apply offset and wrap
         eff_phase = (self._preset_sweep_phases[ov_key] + offset) % total_cycle

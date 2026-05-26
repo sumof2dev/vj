@@ -158,6 +158,12 @@ window.SOURCES = [
     { id: 'bass', label: 'Bass' },
     { id: 'mids', label: 'Mids' },
     { id: 'highs', label: 'Highs' },
+    { id: 'bass_p', label: 'Bass Percussive' },
+    { id: 'mids_p', label: 'Mids Percussive' },
+    { id: 'highs_p', label: 'Highs Percussive' },
+    { id: 'bass_h', label: 'Bass Harmonic' },
+    { id: 'mids_h', label: 'Mids Harmonic' },
+    { id: 'highs_h', label: 'Highs Harmonic' },
     { id: 'volume', label: 'Volume' },
     { id: 'impact', label: 'Impact' },
     { id: 'beat phase', label: 'Beat Phase' },
@@ -239,8 +245,10 @@ if (isLocal && (API_BASE_ROOT.includes(':8000') || BACKEND_ROOT.includes(':8001'
 
 window.API_BASE_ROOT = API_BASE_ROOT;
 window.BACKEND_ROOT = BACKEND_ROOT;
-window.LAUNCHER_API = BACKEND_ROOT;
-LAUNCHER_API = BACKEND_ROOT;
+// Local proxy routing to bypass self-signed cert warnings on port 8001
+const isLocalConnection = (setupHostname === 'localhost' || setupHostname === '127.0.0.1' || !setupHostname.includes('.'));
+window.LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
+LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
 window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
 window.APP_VERSION = "519261024";
 
@@ -446,7 +454,7 @@ var syncAllProfiles = window.syncAllProfiles = async function() {
 
 // --- DMX & AUDIO STATE ---
 window.latestDmxUniverse = new Uint8Array(513);
-window.latestAudioState = { vol: 0.1, bins: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], vibe: 'mid', transient: 'steady', beat: false };
+window.latestAudioState = { vol: 0.1, bins: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], vibe: 'mid', transient: 'steady', beat: false, bass_p: 0.0, mid_p: 0.0, high_p: 0.0, bass_h: 0.0, mid_h: 0.0, high_h: 0.0 };
 window.vibeHistory = [];
 window.latestOverrides = new Set();
 window.ws = null;

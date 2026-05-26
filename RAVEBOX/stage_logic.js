@@ -273,6 +273,27 @@ var switchTab = window.switchTab || function() { };
 
             const uniqueAllProfs = getUniqueProfiles();
             
+            // Map legacy zones to nearest standard first
+            let mutated = false;
+            (db.stage || []).forEach(s => {
+                let currentZone = String(s.zone || '').trim().toLowerCase();
+                let mappedZone = '';
+                if (currentZone.includes('left')) {
+                    mappedZone = currentZone.includes('percussive') ? 'left percussive' : 'left harmony';
+                } else if (currentZone.includes('right')) {
+                    mappedZone = currentZone.includes('percussive') ? 'right percussive' : 'right harmony';
+                } else if (currentZone.includes('center')) {
+                    mappedZone = currentZone.includes('percussive') ? 'center percussive' : 'center harmony';
+                }
+                if (s.zone !== mappedZone) {
+                    s.zone = mappedZone;
+                    mutated = true;
+                }
+            });
+            if (mutated) {
+                saveDB();
+            }
+
             // Group by Zone
             const grouped = {};
             (db.stage || []).forEach(s => {
@@ -319,7 +340,15 @@ var switchTab = window.switchTab || function() { };
                             <span style="opacity:0.2; color:#fff; flex-shrink:0;">|</span>
                             <input type="text" value="${s.id}" style="background:none; border:none; color:#555; font-size:10px; font-weight:bold; letter-spacing:0.5px; outline:none; padding:0; width:auto; min-width:30px; flex:1;" onchange="updateInstanceId('${s.id}', this.value)" title="Fixture ID / Name">
                             <span style="opacity:0.2; color:#fff; flex-shrink:0;">|</span>
-                            <input type="text" value="${s.zone || ''}" placeholder="ZONE" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:var(--accent-alt); font-size:9px; font-weight:900; letter-spacing:0.5px; outline:none; padding:2px 4px; width:70px; border-radius:3px; text-transform:uppercase;" onchange="updateInstanceZone('${s.id}', this.value)" title="Zone Assignment">
+                            <select onchange="updateInstanceZone('${s.id}', this.value)" title="Zone Assignment" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:var(--accent-alt); font-size:9px; font-weight:900; letter-spacing:0.5px; outline:none; padding:2px; width:120px; border-radius:3px;">
+                                <option value="" ${!s.zone ? 'selected' : ''}>UNZONED</option>
+                                <option value="left harmony" ${s.zone === 'left harmony' ? 'selected' : ''}>LEFT HARMONY</option>
+                                <option value="left percussive" ${s.zone === 'left percussive' ? 'selected' : ''}>LEFT PERCUSSIVE</option>
+                                <option value="center harmony" ${s.zone === 'center harmony' ? 'selected' : ''}>CENTER HARMONY</option>
+                                <option value="center percussive" ${s.zone === 'center percussive' ? 'selected' : ''}>CENTER PERCUSSIVE</option>
+                                <option value="right harmony" ${s.zone === 'right harmony' ? 'selected' : ''}>RIGHT HARMONY</option>
+                                <option value="right percussive" ${s.zone === 'right percussive' ? 'selected' : ''}>RIGHT PERCUSSIVE</option>
+                            </select>
                         </div>
                         <div style="display:flex; gap:4px;">
                             <button class="btn btn-sm" style="width:22px; height:22px; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.3;" onclick="goToProfile('${s.profileId}')" title="Edit Profile">
@@ -1168,6 +1197,17 @@ var switchTab = window.switchTab || function() { };
                     for (let i = 0; i < 513; i++) {
                         latestDmxUniverse[i] = view.getUint8(86 + i);
                     }
+
+                    // 2.1 UPDATE HPSS STATE (offset 599)
+                    if (view.byteLength >= 623) {
+                        latestAudioState.bass_p = view.getFloat32(599, true);
+                        latestAudioState.mid_p = view.getFloat32(603, true);
+                        latestAudioState.high_p = view.getFloat32(607, true);
+                        latestAudioState.bass_h = view.getFloat32(611, true);
+                        latestAudioState.mid_h = view.getFloat32(615, true);
+                        latestAudioState.high_h = view.getFloat32(619, true);
+                    }
+
 
                     // 3. TRIGGER THROTTLED UI UPDATES
                     if (document.getElementById('tab-test')?.classList.contains('active') || 

@@ -150,7 +150,13 @@ class Recorder:
                 "vl": round(audio_state.get("vol", 0.0), 3),
                 "vb": audio_state.get("vibe", "mid"),
                 "tr": audio_state.get("transient", "steady"),
-                "bt": bool(audio_state.get("beat", False))
+                "bt": bool(audio_state.get("beat", False)),
+                "bp": round(audio_state.get("bass_p", 0.0), 3),
+                "mp": round(audio_state.get("mid_p", 0.0), 3),
+                "hp": round(audio_state.get("high_p", 0.0), 3),
+                "bh": round(audio_state.get("bass_h", 0.0), 3),
+                "mh": round(audio_state.get("mid_h", 0.0), 3),
+                "hh": round(audio_state.get("high_h", 0.0), 3)
             }
         
         # Capture active presets for timeline visualization

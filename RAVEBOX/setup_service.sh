@@ -190,8 +190,13 @@ then
     ./start.sh --kill-only 2>/dev/null
     
     echo "   - Starting service..."
-    sudo systemctl start $SERVICE_NAME
-    echo "✅ Service Started! Check status with: sudo systemctl status $SERVICE_NAME"
+    if [ "$IS_NODE" = true ]; then
+        sudo systemctl start $NODE_SERVICE
+        echo "✅ Service Started! Check status with: sudo systemctl status $NODE_SERVICE"
+    else
+        sudo systemctl start $SERVICE_NAME
+        echo "✅ Service Started! Check status with: sudo systemctl status $SERVICE_NAME"
+    fi
 else
     echo "✅ Setup Complete. Service will start on next reboot."
 fi

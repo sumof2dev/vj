@@ -92,8 +92,8 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # NEW: Global Proxy for Launcher Status (if hit on 8000)
-        if path == '/status':
-             self._proxy_to_launcher('/status')
+        if path in ['/status', '/api/status']:
+             self._proxy_to_launcher(self.path)
              return
 
         if path == '/capture':
@@ -106,16 +106,16 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
              self.end_headers()
              return
 
-        if path == '/start':
-             self._proxy_to_launcher('/start')
+        if path in ['/start', '/api/start']:
+             self._proxy_to_launcher(self.path)
              return
 
-        if path == '/stop':
-             self._proxy_to_launcher('/stop')
+        if path in ['/stop', '/api/stop']:
+             self._proxy_to_launcher(self.path)
              return
 
-        if path == '/restart' or path == '/api/restart':
-             self._proxy_to_launcher('/restart')
+        if path in ['/restart', '/api/restart']:
+             self._proxy_to_launcher(self.path)
              return
         
         if path == '/api/camera/start':
@@ -132,6 +132,10 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
 
         if path == '/shell':
              self._proxy_to_launcher(self.path) # Forward the full query string
+             return
+
+        if path.startswith('/api/spotify/auth'):
+             self._proxy_to_launcher(self.path)
              return
 
 

@@ -8,7 +8,7 @@
         body { background: #0f0f13; color: #fff; font-family: sans-serif; margin: 0; padding: 0; min-height: 100vh; overscroll-behavior: none; touch-action: pan-y; }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; }
         
-        .sticky-viewer { padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #0f0f13; z-index: 10; border-bottom: 2px solid #222; position: sticky; top: 0; }
+        .sticky-viewer { padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #0f0f13; z-index: 10; border-bottom: 2px solid #222; position: relative; }
         .scrollable-content { padding: 20px; }
 
         .controls { display: flex; gap: 10px; background: #1a1a24; padding: 15px; border-radius: 8px; border: 1px solid #333; justify-content: space-between; align-items: center; }
@@ -29,12 +29,12 @@
         .no-video audio { display: block; width: 100%; height: 40px; margin-top: 5px; }
         .no-video .status { position: relative; top: 0; left: 0; margin-bottom: 8px; display: inline-block; }
         
-        .timeline-wrapper { position: relative; width: 100%; height: 160px; background: #000; border: 1px solid #333; border-radius: 8px; overflow-x: auto; overflow-y: hidden; }
+        .timeline-wrapper { position: relative; width: 100%; min-height: 160px; height: auto; background: #000; border: 1px solid #333; border-radius: 8px; overflow-x: auto; overflow-y: hidden; }
         canvas { display: block; height: 100%; cursor: crosshair; }
         .status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; font-family: monospace; font-size: 12px; }
         
-        .legend { display: flex; gap: 20px; font-size: 12px; font-weight: bold; justify-content: center; background: #1a1a24; padding: 8px; border-radius: 8px; border: 1px solid #333; }
-        .legend span { cursor: pointer; transition: opacity 0.2s; }
+        .legend { display: flex; flex-direction: column; gap: 12px; font-size: 11px; font-weight: bold; justify-content: center; background: rgba(26, 26, 36, 0.85); backdrop-filter: blur(10px); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
+        .legend span { cursor: pointer; transition: all 0.2s ease; }
         .legend span:hover { opacity: 0.8; }
         .legend span.off { opacity: 0.25; text-decoration: line-through; }
         .status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; font-family: monospace; font-size: 12px; }
@@ -114,22 +114,44 @@
         </div>
 
         <div class="legend" id="legend">
-            <div style="display:flex; gap:20px;">
-                <span id="leg-b" style="color:#ff4757;" onclick="toggleAudio('b')">— Audio Bass</span>
-                <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Spectral Flux</span>
-                <span id="leg-h" style="color:#1e90ff;" onclick="toggleAudio('h')">— Audio High</span>
-                <span id="leg-vl" style="color:#fff;" onclick="toggleAudio('vl')">— Master Vol</span>
+            <!-- Row 1: Standard Bands & Zoom Controls -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; width: 100%;">
+                <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
+                    <span style="color:#888; font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:default; pointer-events:none; margin-right:5px;">Standard:</span>
+                    <span id="leg-b" style="color:#ff4757;" onclick="toggleAudio('b')">— Audio Bass</span>
+                    <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Spectral Flux</span>
+                    <span id="leg-h" style="color:#1e90ff;" onclick="toggleAudio('h')">— Audio High</span>
+                    <span id="leg-vl" style="color:#fff;" onclick="toggleAudio('vl')">— Master Vol</span>
+                </div>
+                
+                <div style="display:flex; gap:8px; align-items:center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 15px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 15px;">
+                    <span style="opacity:0.5; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;">Timeline Zoom</span>
+                    <button class="step-btn" onclick="adjustZoom(-1)">−</button>
+                    <span id="zoom-val" style="width: 30px; text-align:center;">1x</span>
+                    <button class="step-btn" onclick="adjustZoom(1)">+</button>
+                    <button class="step-btn" style="width: 50px;" onclick="resetZoom()">Reset</button>
+                </div>
+                
+                <div style="display:flex; gap:15px; opacity:0.6; font-size:11px;">
+                    <span style="color:#fff; text-shadow: 0 0 5px #fff; cursor: default;">▬▬ DMX Output</span>
+                    <span style="color:#fff; cursor: default;">| Beat Flash</span>
+                </div>
             </div>
-            <div style="display:flex; gap:10px; align-items:center; border-left: 1px solid #333; padding-left: 15px;">
-                <span style="opacity:0.5; font-size: 10px; text-transform: uppercase;">Timeline Zoom</span>
-                <button class="step-btn" onclick="adjustZoom(-1)">−</button>
-                <span id="zoom-val" style="width: 30px; text-align:center;">1x</span>
-                <button class="step-btn" onclick="adjustZoom(1)">+</button>
-                <button class="step-btn" style="width: 50px;" onclick="resetZoom()">Reset</button>
-            </div>
-            <div style="display:flex; gap:15px; opacity:0.6;">
-                <span style="color:#fff; text-shadow: 0 0 5px #fff; cursor: default;">▬▬ DMX Output</span>
-                <span style="color:#fff; cursor: default;">| Beat Flash</span>
+            
+            <!-- Row 2: HPSS Percussive & Harmonic Bands -->
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:20px; width: 100%; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;">
+                <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
+                    <span style="color:#888; font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:default; pointer-events:none; margin-right:5px;">Percussive (HPSS):</span>
+                    <span id="leg-bp" class="off" style="color:#ff3838;" onclick="toggleAudio('bp')">— Bass Perc</span>
+                    <span id="leg-mp" class="off" style="color:#ff9f43;" onclick="toggleAudio('mp')">— Mid Perc</span>
+                    <span id="leg-hp" class="off" style="color:#2ed573;" onclick="toggleAudio('hp')">— High Perc</span>
+                </div>
+                <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 15px;">
+                    <span style="color:#888; font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:default; pointer-events:none; margin-right:5px;">Harmonic (HPSS):</span>
+                    <span id="leg-bh" class="off" style="color:#a55eea;" onclick="toggleAudio('bh')">— Bass Harm</span>
+                    <span id="leg-mh" class="off" style="color:#45aaf2;" onclick="toggleAudio('mh')">— Mid Harm</span>
+                    <span id="leg-hh" class="off" style="color:#fd9644;" onclick="toggleAudio('hh')">— High Harm</span>
+                </div>
             </div>
         </div>
     </div>
@@ -294,7 +316,23 @@
             const containerWidth = wrapper.clientWidth;
             const virtualWidth = containerWidth * zoomLevel;
             canvas.width = virtualWidth;
-            canvas.height = wrapper.clientHeight;
+            
+            // Calculate height dynamically
+            let numPresets = 0;
+            if (logData && logData.length > 0) {
+                const uniquePresets = new Set();
+                logData.forEach(f => {
+                    if (f.p) f.p.forEach(p => uniquePresets.add(p));
+                });
+                numPresets = uniquePresets.size;
+            }
+            const presetHeight = 18;
+            const presetPadding = 4;
+            // Ensure graph area has at least 150px height
+            const targetHeight = performanceHeight + 10 + 150 + 10 + (numPresets * (presetHeight + presetPadding)) + 15;
+            
+            canvas.height = Math.max(160, targetHeight);
+            wrapper.style.height = canvas.height + 'px';
         }
         drawTimeline();
     }
@@ -655,6 +693,14 @@
         if (selectedAudio.has('f')) drawBand(f => f.a ? f.a.f : null, 'rgba(241, 196, 15, 0.6)', 1.5);
         if (selectedAudio.has('vl')) drawBand(f => f.a ? f.a.vl : null, 'rgba(255, 255, 255, 0.7)', 2, true);
 
+        // HPSS Bands
+        if (selectedAudio.has('bp')) drawBand(f => f.a ? f.a.bp : null, 'rgba(255, 56, 56, 0.6)', 1.5);
+        if (selectedAudio.has('mp')) drawBand(f => f.a ? f.a.mp : null, 'rgba(255, 159, 67, 0.6)', 1.5);
+        if (selectedAudio.has('hp')) drawBand(f => f.a ? f.a.hp : null, 'rgba(46, 213, 115, 0.6)', 1.5);
+        if (selectedAudio.has('bh')) drawBand(f => f.a ? f.a.bh : null, 'rgba(165, 94, 234, 0.6)', 1.5);
+        if (selectedAudio.has('mh')) drawBand(f => f.a ? f.a.mh : null, 'rgba(69, 170, 242, 0.6)', 1.5);
+        if (selectedAudio.has('hh')) drawBand(f => f.a ? f.a.hh : null, 'rgba(253, 150, 68, 0.6)', 1.5);
+
         selectedAddrs.forEach(addr => {
             const color = `hsla(${(addr * 45) % 360}, 70%, 70%, 1)`;
             drawBand(f => (f.v[addr] || 0) / 255.0, color, 3, true);
@@ -673,6 +719,9 @@
                     const tr = (frame.a.tr || 'steady');
                     const vol = ((frame.a.vl || 0) * 100).toFixed(0);
                     txt += ` | <b>${vb}</b> | ${tr} | Vol: ${vol}% | Bass: ${(frame.a.b*100).toFixed(0)}%`;
+                    if (frame.a.bp !== undefined) {
+                        txt += ` | P-Bass: ${(frame.a.bp*100).toFixed(0)}% H-Bass: ${(frame.a.bh*100).toFixed(0)}%`;
+                    }
                 }
                 statusEl.innerHTML = txt;
 

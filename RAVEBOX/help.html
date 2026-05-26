@@ -756,6 +756,19 @@ dtoverlay=hifiberry-dacplus</pre>
                             style="background:rgba(255, 51, 102, 0.1); color:#ff3366; font-size:0.75rem;"
                             onclick="runNodeDebug('sudo reboot')">🚀 Reboot OS</button>
                     </div>
+
+                    <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+                    
+                    <h4 style="color: var(--text); font-size: 0.85rem; margin-bottom: 10px;">Local Node Control (This Device)</h4>
+                    <p style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 15px;">Start or stop the DMX node service on the device you are currently using to view this page. Requires a local RaveBox installation.</p>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <button class="btn"
+                            style="background:rgba(29, 185, 84, 0.2); color:var(--primary); font-size:0.75rem;"
+                            onclick="runLocalNode('start')">▶️ Start Local Node</button>
+                        <button class="btn"
+                            style="background:rgba(255, 51, 102, 0.2); color:#ff3366; font-size:0.75rem;"
+                            onclick="runLocalNode('stop')">⏹️ Stop Local Node</button>
+                    </div>
                 </div>
             </div>
 
@@ -1037,6 +1050,23 @@ dtoverlay=hifiberry-dacplus</pre>
             }
             const sshCmd = `ssh -o StrictHostKeyChecking=no ${ip} "${cmd}"`;
             runDebug(sshCmd);
+        }
+
+        async function runLocalNode(action) {
+            try {
+                // Send request to the local device's launcher
+                const url = `https://127.0.0.1:8001/api/${action}?node=true`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.success || data.mode === "manual_fallback") {
+                    alert(`Local node ${action} successful!`);
+                } else {
+                    alert(`Error: ${data.error || data.output}`);
+                }
+            } catch (e) {
+                alert(`Failed to connect to local launcher on 127.0.0.1:8001.\n\nMake sure you have RaveBox installed on this laptop and that the launcher is running. If it is running, you may need to open https://127.0.0.1:8001 in a new tab to bypass the self-signed cert warning.\n\nError: ${e.message}`);
+                console.error(e);
+            }
         }
 
         async function pushUpdateToNode() {

@@ -9,20 +9,29 @@ CRITICAL REQUIREMENTS:
 1. Performance is paramount. NEVER use heavy 3D raymarching or extensive loops. You MUST aim for 60fps on a Pi 5 GPU.
 2. Output ONLY the raw GLSL code wrapped in \`\`\`glsl ... \`\`\`. Very important!
 
-Available uniforms:
+Available uniforms (separated via real-time HPSS extraction):
 uniform float u_time;
-uniform float u_clock; // audio-modulated integrated time for continuous smooth rotation
-uniform float u_bass; // 0.0 to 1.5, synchronized to bass impact
-uniform float u_flux; // 0.0 to 1.5, synchronized to overall energy flux
-uniform float u_high; // 0.0 to 1.5, synchronized to high-frequency / hi-hat energy
-uniform float u_vol;  // 0.0 to 1.5, tied to overall volume
-uniform float u_beat_phase; // 0.0 to 1.0, sawtooth ramp synchronized to the beat
-uniform float u_beat_pulse; // 1.0 to 0.0, exponential decay pulse on every beat
+uniform float u_clock;       // audio-modulated integrated time for continuous smooth rotation
+uniform float u_flux;        // 0.0 to 1.5, overall broadband energy flux
+uniform float u_vol;         // 0.0 to 1.5, overall volume
+uniform float u_beat_phase;  // 0.0 to 1.0, sawtooth ramp synchronized to the beat
+uniform float u_beat_pulse;  // 1.0 to 0.0, exponential decay pulse on every beat
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
 uniform sampler2D u_image2;
-uniform float u_strobe;   // 0.0 or 1.0, flips at ~10Hz when strobe command active
-uniform float u_blackout; // 1.0 when blackout command active
+uniform float u_strobe;      // 0.0 or 1.0, flips at ~25Hz when active
+uniform float u_blackout;    // 1.0 when blackout command active
+
+// HPSS Percussive Channels (Transient Attacks)
+uniform float u_bass_p;      // Punchy kick attacks (0.0 to 1.5) -> Use for hard shape-snaps and space folds
+uniform float u_mid_p;       // Snappy snare/clap transients (0.0 to 1.5) -> Use for glitches and palette flashes
+uniform float u_high_p;      // Crisp hi-hat sizzles (0.0 to 1.5) -> Use for chromatic edges and noise jitter
+
+// HPSS Harmonic Channels (Tonal Content)
+uniform float u_bass_h;      // Continuous sub-bass / synth grooves (0.0 to 1.5) -> Use for fluid waves
+uniform float u_mid_h;       // Melodic synth plucks / vocals (0.0 to 1.5) -> Use for coordinate warping
+uniform float u_high_h;      // Sustained strings / high shimmers (0.0 to 1.5) -> Use for pattern masking
+
 
 Must contain:
 precision highp float;
@@ -44,8 +53,9 @@ precision highp float;
 varying vec2 vUv;
 uniform float u_time;
 uniform float u_clock;
-uniform float u_bass;
-uniform float u_high;
+uniform float u_bass_p;
+uniform float u_bass_h;
+uniform float u_high_p;
 uniform float u_beat_pulse;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
@@ -60,12 +70,12 @@ void main() {
     float angle = atan(uv.y, uv.x);
     
     // Beat pulse expands segments
-    float segments = 4.0 + floor((u_bass + u_beat_pulse * 0.2) * 4.0) * 2.0;
+    float segments = 4.0 + floor((u_bass_p + u_beat_pulse * 0.2) * 4.0) * 2.0;
     angle = mod(angle, 6.28318 / segments);
     angle = abs(angle - (3.14159 / segments));
     
     vec2 polarUv = vec2(cos(angle), sin(angle)) * radius;
-    polarUv *= 0.8 - (u_bass * 0.2) - (u_high * 0.15); 
+    polarUv *= 0.8 - (u_bass_h * 0.2) - (u_high_p * 0.15); 
     polarUv += u_clock * 0.2; 
     
     vec3 color = texture2D(u_image, fract(polarUv)).rgb;
@@ -79,8 +89,8 @@ const KALEIDO_SHADER = `
 precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
-uniform float u_bass;
-uniform float u_high;
+uniform float u_bass_p;
+uniform float u_bass_h;
 uniform float u_dual;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
@@ -93,14 +103,14 @@ void main() {
     float radius = length(uv);
     float angle = atan(uv.y, uv.x);
     
-    float segments = 4.0 + floor(u_bass * 4.0) * 2.0;
+    float segments = 4.0 + floor(u_bass_p * 4.0) * 2.0;
     float segmentAngle = 6.28318 / segments;
     
     angle = mod(angle, segmentAngle);
     angle = abs(angle - (segmentAngle / 2.0));
     
     vec2 polarUv = vec2(cos(angle), sin(angle)) * radius;
-    polarUv *= 0.8 - (u_bass * 0.2); 
+    polarUv *= 0.8 - (u_bass_h * 0.2); 
     polarUv += u_clock * 0.2; 
     
     vec3 tex1 = texture2D(u_image, fract(polarUv)).rgb;
@@ -108,7 +118,7 @@ void main() {
     
     // Luma-Punch: Reveal tex2 through the highlights of tex1
     float luma = dot(tex1, vec3(0.299, 0.587, 0.114));
-    float threshold = 0.5 - (u_bass * 0.25);
+    float threshold = 0.5 - (u_bass_p * 0.25);
     float mask = smoothstep(threshold - 0.1, threshold + 0.1, luma);
     
     vec3 color = mix(tex1, tex2, mask * u_dual);
@@ -122,8 +132,9 @@ precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
 uniform float u_flux;
-uniform float u_high;
-uniform float u_bass;
+uniform float u_high_p;
+uniform float u_bass_p;
+uniform float u_mid_p;
 uniform float u_beat_pulse;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
@@ -135,13 +146,13 @@ void main() {
     uv.x *= u_resolution.x / u_resolution.y;
     
     // Slices jitter aggressively on the beat pulse
-    float sliceLine = floor(uv.y * (30.0 + u_bass * 20.0) + u_clock * 8.0);
+    float sliceLine = floor(uv.y * (30.0 + u_bass_p * 20.0) + u_clock * 8.0);
     
     if (rand(sliceLine) < (u_flux * 0.5 + u_beat_pulse * 0.3)) {
         uv.x += (u_flux * 0.2 + u_beat_pulse * 0.1) * sin(u_clock * 20.0 + sliceLine);
     }
     
-    float split = (u_high * 0.08 + u_beat_pulse * 0.05) * rand(sliceLine + 1.0);
+    float split = (u_high_p * 0.08 + u_mid_p * 0.04 + u_beat_pulse * 0.05) * rand(sliceLine + 1.0);
     
     float r = texture2D(u_image, fract(vec2(uv.x + split, uv.y) + 0.5)).r;
     float g = texture2D(u_image, fract(uv + 0.5)).g;
@@ -149,7 +160,7 @@ void main() {
     
     vec3 color = vec3(r, g, b);
     // Double pulse on the beat
-    color += (u_bass * 0.15) + (u_beat_pulse * 0.2);
+    color += (u_bass_p * 0.15) + (u_beat_pulse * 0.2);
     
     gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
 }
@@ -159,7 +170,7 @@ const FLUX_MELT_SHADER = `
 precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
-uniform float u_bass;
+uniform float u_bass_p;
 uniform float u_flux;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
@@ -193,7 +204,7 @@ void main() {
                   fbm(scrollUv + q + vec2(8.3,2.8) + 0.126*u_clock));
                   
     // Add sharp ripple on bass impact
-    r += sin(length(uv) * 20.0 - u_clock * 10.0) * (u_bass * 0.05);
+    r += sin(length(uv) * 20.0 - u_clock * 10.0) * (u_bass_p * 0.05);
     
     vec3 color = texture2D(u_image, fract(uv + r * meltPower + 0.5)).rgb;
     gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
@@ -204,8 +215,8 @@ precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
 uniform float u_flux;
-uniform float u_bass;
-uniform float u_high;
+uniform float u_bass_h;
+uniform float u_high_p;
 uniform float u_beat_pulse;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
@@ -221,9 +232,9 @@ void main() {
     
     vec2 tunnelUv;
     tunnelUv.x = (angle / 3.14159);
-    tunnelUv.y = (0.2 / (radius + 0.05)) + u_clock * 0.5 + u_bass * 0.2 + u_beat_pulse * 0.1;
+    tunnelUv.y = (0.2 / (radius + 0.05)) + u_clock * 0.5 + u_bass_h * 0.2 + u_beat_pulse * 0.1;
     
-    tunnelUv.x += (u_high * 0.05 + u_beat_pulse * 0.03) * sin(tunnelUv.y * 50.0);
+    tunnelUv.x += (u_high_p * 0.05 + u_beat_pulse * 0.03) * sin(tunnelUv.y * 50.0);
     
     vec3 color = texture2D(u_image, fract(tunnelUv)).rgb;
     // Tunnel walls flash with intensity on beat
@@ -237,9 +248,9 @@ const FRACTAL_CRYSTAL_SHADER = `
 precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
-uniform float u_bass;
+uniform float u_bass_p;
 uniform float u_flux;
-uniform float u_high;
+uniform float u_high_p;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
 
@@ -254,8 +265,8 @@ void main() {
     
     // KIFS Space Folding: Fold the space over itself 4 times
     for(int i = 0; i < 4; i++) {
-        // u_bass opens and closes the geometric folds
-        z = abs(z) - (0.3 + u_bass * 0.15); 
+        // u_bass_p opens and closes the geometric folds
+        z = abs(z) - (0.3 + u_bass_p * 0.15); 
         
         // Twist each fold slightly differently
         z *= rot(u_clock * 0.3 + float(i) * 0.5); 
@@ -268,8 +279,8 @@ void main() {
     // Map the folded coordinates back to the texture space
     vec2 sampleUv = (z / scale) + 0.5;
     
-    // u_high adds chromatic aberration to the sharp edges
-    float split = u_high * 0.05;
+    // u_high_p adds chromatic aberration to the sharp edges
+    float split = u_high_p * 0.05;
     float r = texture2D(u_image, fract(sampleUv + split)).r;
     float g = texture2D(u_image, fract(sampleUv)).g;
     float b = texture2D(u_image, fract(sampleUv - split)).b;
@@ -288,9 +299,10 @@ precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
 uniform float u_time;
-uniform float u_bass;
+uniform float u_bass_p;
 uniform float u_flux;
-uniform float u_high;
+uniform float u_high_p;
+uniform float u_high_h;
 uniform float u_dual;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
@@ -313,7 +325,7 @@ void main() {
     vec2 uv = vUv - 0.5;
     uv.x *= u_resolution.x / u_resolution.y;
     
-    float gridScale = 8.0 - (u_bass * 3.0);
+    float gridScale = 8.0 - (u_bass_p * 3.0);
     vec4 hex = hexCoords(uv * gridScale);
     
     vec2 localUv = hex.xy;
@@ -321,7 +333,7 @@ void main() {
     float cellRand = rand(cellId);
     
     localUv *= rot(cellRand * 6.28 + u_clock + (u_flux * 2.0));
-    localUv *= 1.0 - (u_high * 0.5 * cellRand);
+    localUv *= 1.0 - (u_high_h * 0.5 * cellRand);
     
     vec2 sampleUv = (localUv / gridScale) + 0.5;
     sampleUv += u_clock * 0.1; 
@@ -331,14 +343,14 @@ void main() {
     
     // Luma-Punch with Random ID modulation
     float luma = dot(tex1, vec3(0.299, 0.587, 0.114));
-    float threshold = 0.5 - (u_bass * 0.2) - (cellRand * 0.1);
+    float threshold = 0.5 - (u_bass_p * 0.2) - (cellRand * 0.1);
     float mask = smoothstep(threshold - 0.1, threshold + 0.1, luma);
     
     vec3 color = mix(tex1, tex2, mask * u_dual);
     
     float hexEdge = max(abs(hex.x), abs(hex.x * 0.5 + hex.y * 0.866025));
     float border = smoothstep(0.4, 0.45, hexEdge);
-    float flash = step(0.9, fract(cellRand + u_time * 5.0)) * u_high;
+    float flash = step(0.9, fract(cellRand + u_time * 5.0)) * u_high_p;
     color = mix(color + flash, vec3(0.0), border);
     
     gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
@@ -348,9 +360,9 @@ const CONCENTRIC_RINGS_SHADER = `
 precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
-uniform float u_bass;
+uniform float u_bass_p;
 uniform float u_flux;
-uniform float u_high;
+uniform float u_high_h;
 uniform float u_dual;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
@@ -363,7 +375,7 @@ void main() {
     float radius = length(uv);
     float angle = atan(uv.y, uv.x);
 
-    float ringCount = 6.0 + floor(u_bass * 3.0) * 2.0;
+    float ringCount = 6.0 + floor(u_bass_p * 3.0) * 2.0;
     float scaledRadius = radius * ringCount;
     float ringId = floor(scaledRadius);
     
@@ -379,7 +391,7 @@ void main() {
     // Luma-Punch: Ring Id alternates between bright-punch and dark-punch
     float luma = dot(tex1, vec3(0.299, 0.587, 0.114));
     float isInverse = mod(ringId, 2.0);
-    float threshold = mix(0.5 - (u_bass * 0.3), 0.5 + (u_bass * 0.3), isInverse);
+    float threshold = mix(0.5 - (u_bass_p * 0.3), 0.5 + (u_bass_p * 0.3), isInverse);
     float mask = smoothstep(threshold - 0.1, threshold + 0.1, luma);
     if (isInverse > 0.5) mask = 1.0 - mask;
     
@@ -387,7 +399,7 @@ void main() {
     
     float ringFract = fract(scaledRadius);
     float borderMask = smoothstep(0.0, 0.03, ringFract) * smoothstep(1.0, 0.97, ringFract);
-    vec3 gapColor = vec3(u_high * 0.8);
+    vec3 gapColor = vec3(u_high_h * 0.8);
     color = mix(gapColor, color, borderMask);
     
     gl_FragColor = vec4(clamp((color - 0.1) / 0.9, 0.0, 1.0), 1.0);
@@ -397,9 +409,9 @@ const CHECKERBOARD_DEPTH_SHADER = `
 precision highp float;
 varying vec2 vUv;
 uniform float u_clock;
-uniform float u_bass;
+uniform float u_bass_p;
 uniform float u_flux;
-uniform float u_high;
+uniform float u_high_p;
 uniform vec2 u_resolution;
 uniform sampler2D u_image;
 
@@ -423,8 +435,8 @@ void main() {
     // Checkerboard math (returns 0.0 or 1.0)
     float check = mod(id.x + id.y, 2.0);
 
-    // u_bass drives how far the alternate tiles sink into the screen
-    float depth = check * (u_bass * 1.5 + (u_high * 0.5)); 
+    // u_bass_p drives how far the alternate tiles sink into the screen
+    float depth = check * (u_bass_p * 1.5 + (u_high_p * 0.5)); 
 
     // Scale local UVs to create the faux-3D push away effect
     localUv *= 1.0 + depth;
@@ -749,7 +761,7 @@ export default function App() {
                 setActiveShaderId('spotify-art');
 
                 const warpIdx = (styleIndex !== undefined)
-                    ? (styleIndex % PRESET_WARPS.length)
+                    ? (styleIndex % (PRESET_WARPS.length - 1)) + 1
                     : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1);
 
                 if (styleIndex !== undefined || activeWarpIndex === null) {
@@ -772,6 +784,7 @@ export default function App() {
                 currentVideoRef.current.pause();
                 currentVideoRef.current.removeAttribute('src');
                 currentVideoRef.current.load();
+                currentVideoRef.current = null;
             }
 
             const video = document.createElement('video');
@@ -812,7 +825,7 @@ export default function App() {
                 applyNewTexture(texture);
 
                 const warpIdx = (styleIndex !== undefined)
-                    ? (styleIndex % PRESET_WARPS.length)
+                    ? (styleIndex % (PRESET_WARPS.length - 1)) + 1
                     : (activeWarpIndex !== null ? activeWarpIndex : Math.floor(Math.random() * PRESET_WARPS.length));
 
                 if (activeWarpIndex === null || styleIndex !== undefined) {
@@ -887,6 +900,13 @@ export default function App() {
             u_high: 'uniform float u_high;',
             u_vol: 'uniform float u_vol;',
             u_beat_phase: 'uniform float u_beat_phase;',
+            u_beat_pulse: 'uniform float u_beat_pulse;',
+            u_bass_p: 'uniform float u_bass_p;',
+            u_mid_p: 'uniform float u_mid_p;',
+            u_high_p: 'uniform float u_high_p;',
+            u_bass_h: 'uniform float u_bass_h;',
+            u_mid_h: 'uniform float u_mid_h;',
+            u_high_h: 'uniform float u_high_h;',
             u_resolution: 'uniform vec2 u_resolution;',
             u_image: 'uniform sampler2D u_image;',
             u_image2: 'uniform sampler2D u_image2;',
@@ -1081,6 +1101,7 @@ export default function App() {
                     currentVideoRef.current.pause();
                     currentVideoRef.current.removeAttribute('src');
                     currentVideoRef.current.load();
+                    currentVideoRef.current = null;
                 }
 
                 const video = document.createElement('video');
@@ -1149,6 +1170,12 @@ export default function App() {
         u_vol: { value: 0 },
         u_beat_phase: { value: 0 },
         u_beat_pulse: { value: 0 },
+        u_bass_p: { value: 0 },
+        u_mid_p: { value: 0 },
+        u_high_p: { value: 0 },
+        u_bass_h: { value: 0 },
+        u_mid_h: { value: 0 },
+        u_high_h: { value: 0 },
         u_dual: { value: 0.0 }, // Toggle for 2nd image masking (0.0 or 1.0)
         u_image: { value: new THREE.Texture() },
         u_image2: { value: new THREE.Texture() },
@@ -1335,7 +1362,16 @@ export default function App() {
 
         const handleResize = () => { renderer.setSize(window.innerWidth, window.innerHeight); uniformsRef.current.u_resolution.value.set(window.innerWidth, window.innerHeight); };
         window.addEventListener("resize", handleResize);
-        return () => { window.removeEventListener("resize", handleResize); renderer.dispose(); };
+        return () => {
+            window.removeEventListener("resize", handleResize);
+            renderer.dispose();
+            if (currentVideoRef.current) {
+                currentVideoRef.current.pause();
+                currentVideoRef.current.removeAttribute('src');
+                currentVideoRef.current.load();
+                currentVideoRef.current = null;
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -1344,6 +1380,8 @@ export default function App() {
 
         const targetMods = { flux: 0, bass: 0, high: 0, vol: 0, beat_phase: 0 };
         const smoothedMods = { flux: 0, bass: 0, high: 0, vol: 0, beat_phase: 0 };
+        const targetHpss = { bass_p: 0, mid_p: 0, high_p: 0, bass_h: 0, mid_h: 0, high_h: 0 };
+        const smoothedHpss = { bass_p: 0, mid_p: 0, high_p: 0, bass_h: 0, mid_h: 0, high_h: 0 };
         let lastTime = performance.now();
 
         const connect = () => {
@@ -1361,6 +1399,16 @@ export default function App() {
                     targetMods.vol = view.getFloat32(20, true);
                     targetMods.beat_phase = view.getFloat32(28, true);
                     effIntensityRef.current = view.getUint8(59) / 255.0;
+
+                    // Unpack 6 HPSS bands from the tail payload block (offset 599, 24 bytes)
+                    if (event.data.byteLength >= 623) {
+                        targetHpss.bass_p = view.getFloat32(599, true);
+                        targetHpss.mid_p  = view.getFloat32(603, true);
+                        targetHpss.high_p = view.getFloat32(607, true);
+                        targetHpss.bass_h = view.getFloat32(611, true);
+                        targetHpss.mid_h  = view.getFloat32(615, true);
+                        targetHpss.high_h = view.getFloat32(619, true);
+                    }
 
                     // Store EQ data for settings monitor
                     if (event.data.byteLength >= 56) {
@@ -1413,7 +1461,7 @@ export default function App() {
                                     if (source.category === 'tex') loadFromLibrary(source, baseIdx);
                                     else if (source.category === 'spotify' && spotifyTextureRef.current) {
                                         applyNewTexture(spotifyTextureRef.current);
-                                        const warpIdx = baseIdx % PRESET_WARPS.length;
+                                        const warpIdx = (baseIdx % (PRESET_WARPS.length - 1)) + 1;
                                         setActiveWarpIndex(warpIdx);
                                         applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
                                         setStatus("🎵 Spotify Art Live");
@@ -1471,7 +1519,9 @@ export default function App() {
                                         spotifyTextureRef.current = tex;
                                         // Trigger immediate update on song change
                                         applyNewTexture(tex);
-                                        const warpIdx = Math.floor(Math.random() * PRESET_WARPS.length);
+                                        const warpIdx = autoCycleRef.current
+                                            ? Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1
+                                            : Math.floor(Math.random() * PRESET_WARPS.length);
                                         if (autoCycleRef.current) setActiveWarpIndex(warpIdx);
                                         const finalWarpIdx = autoCycleRef.current ? warpIdx : (activeWarpIndex ?? warpIdx);
                                         applyNewShader(PRESET_WARPS[finalWarpIdx].code, 'tex');
@@ -1502,7 +1552,16 @@ export default function App() {
             smoothedMods.bass += (targetMods.bass - smoothedMods.bass) * sf;
             smoothedMods.high += (targetMods.high - smoothedMods.high) * sf;
             smoothedMods.vol += (targetMods.vol - smoothedMods.vol) * sf;
-            smoothedMods.beat_phase = targetMods.beat_phase; 
+            smoothedMods.beat_phase = targetMods.beat_phase;
+
+            // Smooth HPSS channels (percussive channels get snappier tracking)
+            const hpssSf = sf;
+            smoothedHpss.bass_p += (targetHpss.bass_p - smoothedHpss.bass_p) * hpssSf;
+            smoothedHpss.mid_p  += (targetHpss.mid_p  - smoothedHpss.mid_p)  * hpssSf;
+            smoothedHpss.high_p += (targetHpss.high_p - smoothedHpss.high_p) * hpssSf;
+            smoothedHpss.bass_h += (targetHpss.bass_h - smoothedHpss.bass_h) * hpssSf;
+            smoothedHpss.mid_h  += (targetHpss.mid_h  - smoothedHpss.mid_h)  * hpssSf;
+            smoothedHpss.high_h += (targetHpss.high_h - smoothedHpss.high_h) * hpssSf;
 
             // Accumulate local high-frequency flutter (Bass/Flux pulses)
             // We scale these by dt but NOT by effSpeedRef, as backend mTime already handles global warp
@@ -1514,9 +1573,19 @@ export default function App() {
             // Master intensity scalar for the whole visual system
             const masterAlpha = effIntensityRef.current * dimmingScaleRef.current;
             uniformsRef.current.u_flux.value = smoothedMods.flux * dimmingScaleRef.current;
-            uniformsRef.current.u_bass.value = smoothedMods.bass * dimmingScaleRef.current;
-            uniformsRef.current.u_high.value = smoothedMods.high * dimmingScaleRef.current;
             uniformsRef.current.u_vol.value = smoothedMods.vol * dimmingScaleRef.current;
+
+            // HPSS uniforms with dimming
+            uniformsRef.current.u_bass_p.value = smoothedHpss.bass_p * dimmingScaleRef.current;
+            uniformsRef.current.u_mid_p.value  = smoothedHpss.mid_p  * dimmingScaleRef.current;
+            uniformsRef.current.u_high_p.value = smoothedHpss.high_p * dimmingScaleRef.current;
+            uniformsRef.current.u_bass_h.value = smoothedHpss.bass_h * dimmingScaleRef.current;
+            uniformsRef.current.u_mid_h.value  = smoothedHpss.mid_h  * dimmingScaleRef.current;
+            uniformsRef.current.u_high_h.value = smoothedHpss.high_h * dimmingScaleRef.current;
+
+            // Legacy aliases: map u_bass/u_high to HPSS percussive for backward compatibility
+            uniformsRef.current.u_bass.value = smoothedHpss.bass_p * dimmingScaleRef.current;
+            uniformsRef.current.u_high.value = smoothedHpss.high_p * dimmingScaleRef.current;
             uniformsRef.current.u_beat_phase.value = smoothedMods.beat_phase;
             
             // Calculate a snappy exponential pulse (1.0 -> 0.0) from the linear phase
