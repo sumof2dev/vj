@@ -54,3 +54,8 @@ If you are modifying the UI, check this list to ensure you are not re-introducin
 - **The Problem:** Hardcoding versions causes endless caching loops during development. 
 - **The Standard:** All caching is handled at the infrastructure level via `dev_server.py` headers and Service Worker bypasses. 
 - **Action:** If the user complains that "files are not updating" or "clear the cache," DO NOT append version numbers to HTML script/link tags. Instead, verify that the `dev_server.py` is sending `Cache-Control: no-store` headers.
+
+## 5. Deployment and Pi Node Restarts
+
+> [!CAUTION]
+> NEVER execute `./push_update.sh` or run any commands that restart the remote Pi device/services WITHOUT explicit user acknowledgement and confirmation in the chat first. Even if you believe the deployment is complete, ask the user before pushing updates or restarting the Pi.

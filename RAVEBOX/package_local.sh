@@ -26,6 +26,11 @@ visualizer_src/node_modules
 visualizer_src/dist
 cert.pem
 key.pem
+*.pem
+*creds*.json
+*credentials*.json
+.env
+*.env
 vj_local_install.tar.gz
 vj_secondary_install.tar.gz
 .lgd-nfy0

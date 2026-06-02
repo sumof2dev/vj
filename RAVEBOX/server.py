@@ -25,7 +25,13 @@ sys.path.insert(0, BACKEND_DIR)
 
 class ProductionHandler(http.server.SimpleHTTPRequestHandler):
     """HTTP handler for VJ Production"""
-    
+
+    def handle_one_request(self):
+        try:
+            super().handle_one_request()
+        except (ConnectionResetError, BrokenPipeError):
+            pass  # Client disconnected mid-transfer (normal for video streaming)
+
     def end_headers(self):
         # Disable caching for all responses to ensure real-time updates
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
@@ -74,6 +80,22 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         # API: List Recordings
         if path == '/api/recordings' or path == '/api/recordings/':
             self._handle_list_recordings()
+            return
+
+        # API: Download Recording Zip
+        if path == '/api/recordings/download' or path == '/api/recordings/download/':
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            session = qs.get('session', [None])[0]
+            self._handle_download_recording(session)
+            return
+
+        # API: Serve Cached Audit Results (computed by minisforum CLI)
+        if path == '/api/audit':
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            session = qs.get('session', [None])[0]
+            self._handle_audit(session)
             return
 
         # API: List Images
@@ -143,6 +165,29 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_get_descriptors()
             return
 
+        if path == '/api/client_info':
+            client_ip = self.client_address[0]
+            cf_ip = self.headers.get('CF-Connecting-IP')
+            xff_ip = self.headers.get('X-Forwarded-For')
+            is_local = False
+            if not cf_ip and not xff_ip:
+                if client_ip in ['127.0.0.1', '::1', 'localhost']:
+                    is_local = True
+                else:
+                    try:
+                        import socket
+                        host_ips = socket.gethostbyname_ex(socket.gethostname())[2]
+                        if client_ip in host_ips:
+                            is_local = True
+                    except Exception:
+                        pass
+            self._send_json({"is_local": is_local, "client_ip": client_ip})
+            return
+
+        if path == '/api/audio_stream':
+            self._handle_audio_stream()
+            return
+
         return super().do_GET()
 
     def do_PUT(self):
@@ -186,6 +231,14 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         # API: Save Training
         if path == '/api/training/save':
             self._handle_save_training()
+            return
+
+        # API: Save Audit Results (received from minisforum CLI)
+        if path == '/api/audit/save':
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            session = qs.get('session', [None])[0]
+            self._handle_save_audit(session)
             return
 
         # NEW: Add Premade Descriptor
@@ -297,7 +350,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         self.send_error(501, "Not Implemented")
 
     def _handle_list_fixtures(self):
-        """Recursively list all .json files in fixtures/"""
+        """List all .json files in fixtures/ and its immediate subdirectories (non-recursive)"""
         fixtures_dir = os.path.join(BASE_DIR, 'fixtures')
         try:
             if not os.path.exists(fixtures_dir):
@@ -306,16 +359,21 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
                 os.makedirs(os.path.join(fixtures_dir, 'profiles'))
 
             results = []
-            for root, dirs, files in os.walk(fixtures_dir):
-                # Ignore the backup directory during listing
-                if 'backup' in dirs:
-                    dirs.remove('backup')
-                
-                for f in files:
-                    if f.endswith('.json') and not f.startswith('.'):
-                        # Calculate path relative to 'fixtures'
-                        rel_path = os.path.relpath(os.path.join(root, f), fixtures_dir)
-                        results.append(rel_path)
+            for item in sorted(os.listdir(fixtures_dir)):
+                if item == 'backup' or item.startswith('.'):
+                    continue
+                item_path = os.path.join(fixtures_dir, item)
+                if os.path.isfile(item_path):
+                    if item.endswith('.json'):
+                        results.append(item)
+                elif os.path.isdir(item_path):
+                    for sub_item in sorted(os.listdir(item_path)):
+                        if sub_item.startswith('.'):
+                            continue
+                        sub_item_path = os.path.join(item_path, sub_item)
+                        if os.path.isfile(sub_item_path):
+                            if sub_item.endswith('.json'):
+                                results.append(f"{item}/{sub_item}")
             self._send_json(results)
         except Exception as e:
             print(f"❌ Error listing fixtures: {e}")
@@ -352,6 +410,155 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._send_json(data)
         except Exception as e:
             self.send_error(500, str(e))
+
+    def _handle_audio_stream(self):
+        """Stream live audio from the best available loopback/monitor device as a progressive WAV"""
+        try:
+            import numpy as np
+            import sounddevice as sd
+            import queue
+            HAS_SOUND = True
+        except ImportError:
+            HAS_SOUND = False
+
+        if not HAS_SOUND:
+            self.send_error(500, "Audio streaming dependencies (numpy, sounddevice) not found on server")
+            return
+
+        # Find the best available loopback/monitor device index and channel count
+        device_idx = None
+        input_channels = 1
+        samplerate = 44100
+        bits_per_sample = 16
+
+        try:
+            import pulsectl
+            with pulsectl.Pulse('audio-stream-finder') as p:
+                sinks = p.sink_list()
+                
+                # 1. Prioritize Ravebox-Bridge if it exists
+                bridge = next((s for s in sinks if "Ravebox-Bridge" in s.name), None)
+                if bridge:
+                    target_name = bridge.monitor_source_name
+                else:
+                    # 2. Fallback to default sink's monitor (crucial for remote nodes/Pi)
+                    server_info = p.server_info()
+                    default_sink_name = server_info.default_sink_name
+                    sink = next((s for s in sinks if s.name == default_sink_name), None)
+                    target_name = sink.monitor_source_name if sink else None
+
+                if target_name:
+                    devices = sd.query_devices()
+                    for idx, dev in enumerate(devices):
+                        if dev.get('name') == target_name and dev.get('max_input_channels', 0) > 0:
+                            device_idx = idx
+                            input_channels = int(dev.get('max_input_channels', 1))
+                            break
+        except Exception as e:
+            print(f"⚠️ pulsectl device lookup failed in audio_stream: {e}")
+
+        # Fallback to sounddevice keyword search if pulsectl failed or target not matched
+        if device_idx is None:
+            try:
+                devices = sd.query_devices()
+                target_keywords = ["monitor", "loopback", "stereo mix"]
+                for idx, dev in enumerate(devices):
+                    if dev.get('max_input_channels', 0) > 0:
+                        name_lower = dev['name'].lower()
+                        if any(kw in name_lower for kw in target_keywords):
+                            device_idx = idx
+                            input_channels = int(dev.get('max_input_channels', 1))
+                            break
+            except Exception as e:
+                print(f"⚠️ sounddevice keyword search failed in audio_stream: {e}")
+
+        # Ultimate fallback to default input
+        if device_idx is None:
+            try:
+                default_in = sd.query_devices(kind='input')
+                device_idx = None # None means system default in sounddevice
+                input_channels = int(default_in.get('max_input_channels', 1))
+            except Exception as e:
+                print(f"⚠️ default input fallback failed: {e}")
+                input_channels = 1
+
+        # Send response headers
+        self.send_response(200)
+        self.send_header('Content-Type', 'audio/wav')
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        self.send_header('Connection', 'keep-alive')
+        self.end_headers()
+
+        # Send WAV header representing infinite size
+        header = bytearray(44)
+        header[0:4] = b'RIFF'
+        header[4:8] = (0xFFFFFFFF).to_bytes(4, 'little')
+        header[8:12] = b'WAVE'
+        header[12:16] = b'fmt '
+        header[16:20] = (16).to_bytes(4, 'little')
+        header[20:22] = (1).to_bytes(2, 'little') # PCM format
+        header[22:24] = input_channels.to_bytes(2, 'little')
+        header[24:28] = samplerate.to_bytes(4, 'little')
+        header[28:32] = (samplerate * input_channels * bits_per_sample // 8).to_bytes(4, 'little')
+        header[32:34] = (input_channels * bits_per_sample // 8).to_bytes(2, 'little')
+        header[34:36] = bits_per_sample.to_bytes(2, 'little')
+        header[36:40] = b'data'
+        header[40:44] = (0xFFFFFFFF).to_bytes(4, 'little')
+
+        try:
+            self.wfile.write(bytes(header))
+        except Exception as e:
+            print(f"⚠️ Failed to write WAV header to client: {e}")
+            return
+
+        audio_q = queue.Queue(maxsize=100)
+
+        def callback(indata, frames, time_info, status):
+            try:
+                audio_q.put_nowait(indata.copy())
+            except queue.Full:
+                pass
+
+        try:
+            stream = sd.InputStream(
+                device=device_idx,
+                samplerate=samplerate,
+                channels=input_channels,
+                callback=callback
+            )
+            print(f"🎙️ Starting client audio stream connection from {self.client_address} (Device Index: {device_idx}, Channels: {input_channels})")
+            stream.start()
+        except Exception as e:
+            print(f"⚠️ Failed to open sounddevice stream: {e}")
+            return
+
+        try:
+            while True:
+                # Read from queue
+                try:
+                    data = audio_q.get(timeout=0.5)
+                except queue.Empty:
+                    # Check if stream is still active
+                    if not stream.active:
+                        break
+                    continue
+
+                # Convert float32 to int16 PCM
+                int_data = (data * 32767).astype(np.int16)
+                self.wfile.write(int_data.tobytes())
+        except (ConnectionResetError, BrokenPipeError):
+            print(f"🎙️ Client disconnected from audio stream: {self.client_address}")
+        except Exception as e:
+            print(f"⚠️ Error during audio stream: {e}")
+        finally:
+            try:
+                stream.stop()
+                stream.close()
+            except:
+                pass
+            print(f"🎙️ Audio stream connection closed for {self.client_address}")
 
     def _handle_get_remote_settings(self):
         """Read vj_remote_settings.json from root"""
@@ -659,6 +866,117 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             print(f"❌ Error listing recordings: {e}")
             self.send_error(500, str(e))
 
+    def _handle_download_recording(self, session):
+        """Zip and send a recording session folder."""
+        if not session or '..' in session:
+            self.send_error(400, "Invalid session")
+            return
+
+        rec_dir = os.path.join(BASE_DIR, 'recordings', session)
+        if not os.path.exists(rec_dir) or not os.path.isdir(rec_dir):
+            self.send_error(404, "Recording not found")
+            return
+
+        import io
+        import zipfile
+
+        try:
+            memory_file = io.BytesIO()
+            with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for root, dirs, files in os.walk(rec_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        # We want the files in the zip to be inside a folder with the session's name
+                        arcname = os.path.join(session, os.path.relpath(file_path, rec_dir))
+                        zipf.write(file_path, arcname)
+
+            zip_data = memory_file.getvalue()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/zip')
+            self.send_header('Content-Disposition', f'attachment; filename="{session}.zip"')
+            self.send_header('Content-Length', str(len(zip_data)))
+            self.end_headers()
+            self.wfile.write(zip_data)
+        except Exception as e:
+            print(f"❌ Error zipping recording: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_audit(self, session):
+        """Serve cached audit results, generating them if they don't exist."""
+        if not session or '..' in session:
+            self.send_error(400, "Invalid session")
+            return
+
+        cache_path = os.path.join(BASE_DIR, 'recordings', session, 'audit_results.json')
+
+        if not os.path.exists(cache_path):
+            print(f"🔍 Audit results not found for {session}. Generating locally using offline_audit_engine...")
+            import subprocess
+            venv_python = None
+            for venv in ['venv_local', 'venv', '.venv']:
+                p = os.path.join(BASE_DIR, venv, 'bin', 'python3')
+                if os.path.isfile(p):
+                    venv_python = p
+                    break
+            if not venv_python:
+                venv_python = 'python3'
+            
+            cmd = [
+                venv_python,
+                os.path.join(BASE_DIR, 'offline_audit_engine.py'),
+                '--local-dir',
+                os.path.join(BASE_DIR, 'recordings', session)
+            ]
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                if res.returncode != 0:
+                    print(f"❌ offline_audit_engine failed with code {res.returncode}")
+                    print(f"Stdout: {res.stdout}")
+                    print(f"Stderr: {res.stderr}")
+            except Exception as e:
+                print(f"❌ Error running offline_audit_engine: {e}")
+
+        if not os.path.exists(cache_path):
+            self._send_json({"status": "not_found", "message": f"No audit results for {session}."})
+            return
+
+        try:
+            with open(cache_path, 'r') as f:
+                result = json.load(f)
+            self._send_json(result)
+        except Exception as e:
+            print(f"❌ Audit Read Error: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_save_audit(self, session):
+        """Receive and save audit results from minisforum CLI."""
+        if not session or '..' in session:
+            self.send_error(400, "Invalid session")
+            return
+
+        rec_dir = os.path.join(BASE_DIR, 'recordings', session)
+        if not os.path.exists(rec_dir):
+            self.send_error(404, f"Recording session not found: {session}")
+            return
+
+        try:
+            length = int(self.headers['Content-Length'])
+            body = self.rfile.read(length)
+            # Validate JSON
+            json.loads(body)
+
+            cache_path = os.path.join(rec_dir, 'audit_results.json')
+            with open(cache_path, 'wb') as f:
+                f.write(body)
+
+            print(f"\u2705 Saved audit results: recordings/{session}/audit_results.json ({len(body):,} bytes)")
+            self._send_json({"status": "ok"})
+        except json.JSONDecodeError:
+            self.send_error(400, "Invalid JSON")
+        except Exception as e:
+            print(f"\u274c Audit Save Error: {e}")
+            self.send_error(500, str(e))
+
     def _handle_list_images(self):
         """List all saved image files in library/images/"""
         img_root = os.path.join(BASE_DIR, 'library', 'images')
@@ -807,28 +1125,109 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
              self.end_headers()
 
     def _proxy_to_launcher(self, subpath):
-        """Proxy a request to the launcher service on 8001"""
+        """Proxy a request to the launcher service on 8001, with direct fallback"""
         import urllib.request
         import ssl
         try:
-             # Ignore SSL verification for local launcher proxy
              ctx = ssl.create_default_context()
              ctx.check_hostname = False
              ctx.verify_mode = ssl.CERT_NONE
 
-             # Launcher might use http or https (check for certs)
              protocol = 'https' if os.path.exists(os.path.join(BASE_DIR, 'cert.pem')) else 'http'
              url = f"{protocol}://127.0.0.1:8001{subpath}"
              
              req = urllib.request.Request(url)
-             with urllib.request.urlopen(req, timeout=20, context=ctx) as response:
+             with urllib.request.urlopen(req, timeout=5, context=ctx) as response:
                  self.send_response(200)
                  self.send_header('Content-Type', 'application/json')
                  self.end_headers()
                  self.wfile.write(response.read())
         except Exception as e:
-             print(f"❌ Proxy Error to {subpath}: {e}")
-             self.send_error(500, f"Launcher Proxy Error: {e}")
+             # Launcher not running — handle directly via process management
+             from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs
+             parsed = _urlparse(subpath)
+             path = parsed.path.rstrip('/')
+             query = _parse_qs(parsed.query)
+
+             if path in ['/status', '/api/status']:
+                 self._direct_status()
+             elif path in ['/start', '/api/start']:
+                 use_node = query.get('node', ['false'])[0] == 'true'
+                 self._direct_action('start', use_node)
+             elif path in ['/stop', '/api/stop']:
+                 use_node = query.get('node', ['false'])[0] == 'true'
+                 self._direct_action('stop', use_node)
+             elif path in ['/restart', '/api/restart']:
+                 use_node = query.get('node', ['false'])[0] == 'true'
+                 self._direct_action('restart', use_node)
+             else:
+                 print(f"❌ Proxy Error to {subpath}: {e}")
+                 self.send_error(500, f"Launcher Proxy Error: {e}")
+
+    def _direct_status(self):
+        """Return engine/node status by checking running processes directly."""
+        import subprocess as sp
+        def check_svc(pattern):
+            try:
+                result = sp.run(['pgrep', '-f', pattern], capture_output=True)
+                if result.returncode == 0:
+                    return {"status": "active (manual)", "active": True}
+                return {"status": "inactive", "active": False}
+            except Exception:
+                return {"status": "unknown", "active": False}
+
+        engine = check_svc('backend/main.py')
+        node = check_svc('backend/dmx_node.py')
+        response = {
+            "status": engine['status'],
+            "active": engine['active'],
+            "engine": engine,
+            "node": node
+        }
+        payload = json.dumps(response).encode()
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def _direct_action(self, action, use_node=False):
+        """Start/stop/restart engine or node directly via process management."""
+        import subprocess as sp
+        import time as _time
+        pattern = 'backend/dmx_node.py' if use_node else 'backend/main.py'
+
+        try:
+            if action in ['stop', 'restart']:
+                sp.run(['pkill', '-f', pattern], capture_output=True)
+
+            if action in ['start', 'restart']:
+                if action == 'restart':
+                    _time.sleep(1.5)
+                log_file = os.path.join(BASE_DIR, 'logs', f'{"vj-node" if use_node else "vj-engine"}.service.log')
+                os.makedirs(os.path.dirname(log_file), exist_ok=True)
+                python_cmd = None
+                for venv in ['venv_local', 'venv', '.venv']:
+                    p = os.path.join(BASE_DIR, venv, 'bin', 'python3')
+                    if os.path.isfile(p):
+                        python_cmd = p
+                        break
+                if not python_cmd:
+                    python_cmd = 'python3'
+                cmd = f"nohup {python_cmd} -u {pattern} > {log_file} 2>&1 &"
+                sp.Popen(cmd, shell=True, cwd=BASE_DIR, preexec_fn=os.setpgrp)
+
+            response = {"success": True, "action": action, "mode": "direct"}
+            payload = json.dumps(response).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(payload)
+        except Exception as e:
+            print(f"❌ Direct action error ({action}): {e}")
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
 
     def _handle_update_descriptor(self):
         """Update an existing premade descriptor's defaults in shared_setup.js"""
@@ -971,12 +1370,17 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             new_lines = []
             inserted = False
             for line in lines:
-                new_lines.append(line)
                 if "// PREMADE_ANCHOR" in line:
-                    js_entry = f"    {json.dumps(new_entry)},"
-                    # Insert BEFORE the anchor
-                    new_lines.insert(-1, js_entry + "\n")
+                    # Ensure previous entry has trailing comma
+                    for i in range(len(new_lines) - 1, -1, -1):
+                        stripped = new_lines[i].rstrip()
+                        if stripped.endswith('}'):
+                            new_lines[i] = stripped + ',\n'
+                            break
+                    js_entry = f"    {json.dumps(new_entry)}"
+                    new_lines.append(js_entry + "\n")
                     inserted = True
+                new_lines.append(line)
             
             if inserted:
                 with open(setup_path, 'w') as f:

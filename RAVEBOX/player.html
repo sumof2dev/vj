@@ -78,6 +78,7 @@
         .label-btn.building { border-left: 4px solid #f1c40f; }
         .label-btn.tension { border-left: 4px solid #9b59b6; }
         .label-btn.dropping { border-left: 4px solid #fff; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="paused">
@@ -92,13 +93,20 @@
                         Source: <span id="hostDisplay" style="color:#00f2ff; font-weight:bold;">Local</span>
                     </div>
                 </div>
-                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v519261024</span>
+                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v61260858</span>
             </div>
             <div class="playback-controls">
+                <select id="audio-source-select" style="background:#1a1a24; color:#fff; border:1px solid #444; border-radius:6px; padding:8px 12px; font-size:12px; font-weight:bold; cursor:pointer;" onchange="changeAudioSource(this.value)">
+                    <option value="none">None (Viewer Only)</option>
+                    <option value="engine">Engine (Normal)</option>
+                    <option value="playback">Playback (WAV Live)</option>
+                    <option value="librosa" id="opt-librosa" disabled>Librosa (Audited Only)</option>
+                </select>
                 <button class="step-btn" title="Step Back (0.05s) - Arrow Left" onclick="stepFrame(-1)">❮</button>
                 <button class="step-btn" title="Step Forward (0.05s) - Arrow Right" onclick="stepFrame(1)">❯</button>
                 <button class="secondary" id="btn-undo-train" style="display:none;" onclick="undoCorrection()">↩️ Undo</button>
                 <button class="secondary" id="btn-save-train" style="background:#27ae60; display:none;" onclick="saveTraining()">💾 Save Training</button>
+                <button class="secondary" id="btn-deep-audit" style="background:#8e44ad;" onclick="triggerDeepAudit()">🔍 Deep Audit</button>
                 <button class="secondary" onclick="openSessionBrowser()">📂 Browse</button>
             </div>
         </div>
@@ -119,8 +127,9 @@
                 <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
                     <span style="color:#888; font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:default; pointer-events:none; margin-right:5px;">Standard:</span>
                     <span id="leg-b" style="color:#ff4757;" onclick="toggleAudio('b')">— Audio Bass</span>
-                    <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Spectral Flux</span>
+                    <span id="leg-m" class="off" style="color:#ff9f43;" onclick="toggleAudio('m')">— Audio Mid</span>
                     <span id="leg-h" style="color:#1e90ff;" onclick="toggleAudio('h')">— Audio High</span>
+                    <span id="leg-f" style="color:#f1c40f;" onclick="toggleAudio('f')">— Spectral Flux</span>
                     <span id="leg-vl" style="color:#fff;" onclick="toggleAudio('vl')">— Master Vol</span>
                 </div>
                 
@@ -151,6 +160,11 @@
                     <span id="leg-bh" class="off" style="color:#a55eea;" onclick="toggleAudio('bh')">— Bass Harm</span>
                     <span id="leg-mh" class="off" style="color:#45aaf2;" onclick="toggleAudio('mh')">— Mid Harm</span>
                     <span id="leg-hh" class="off" style="color:#fd9644;" onclick="toggleAudio('hh')">— High Harm</span>
+                </div>
+                <div id="truth-legend-group" class="hidden" style="display:flex; gap:15px; flex-wrap:wrap; align-items:center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 15px;">
+                    <span style="color:#888; font-size:9px; text-transform:uppercase; letter-spacing:1px; cursor:default; pointer-events:none; margin-right:5px;">Ground Truth (Librosa):</span>
+                    <span id="leg-tf" class="off" style="color:#2ecc71;" onclick="toggleAudio('tf')">╌╌ Truth Envs</span>
+                    <span id="leg-tb" class="off" style="color:#2ecc71;" onclick="toggleAudio('tb')">▲ Truth Beat</span>
                 </div>
             </div>
         </div>
@@ -207,7 +221,10 @@
 <script>
     // Routing and endpoints are managed by shared_setup.js
     const P_API_BASE = API_BASE_ROOT;
-    const P_WS_URL = (isOriginalCloud ? 'wss://wss.ravebox.love' : (isCustomTunnel ? (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://' + wsHost : (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://' + host + ':8765/'));
+    let P_WS_URL = (isOriginalCloud ? 'wss://wss.ravebox.love' : (isCustomTunnel ? (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://' + wsHost : (window.location.protocol === 'https:' ? 'wss' : 'ws') + '://' + host + ':8765/'));
+    if ((isCustomTunnel || window.isCustomSubdomain) && !wsHost.startsWith('ws-')) {
+        P_WS_URL = P_WS_URL.replace(/\/+$/, '') + '/ws';
+    }
 
     function changeHost() {
         const current = localStorage.getItem('vj_backend_host') || window.location.hostname;
@@ -265,6 +282,7 @@
     let maxTime = 0;
     let trackedAddrs = [];
     let channelRoles = {};
+    let truthData = null;  // Stores offline non-causal audio profile metadata matrices
     
     // Training Workflow State
     let trainingCorrections = [];
@@ -389,9 +407,12 @@
                 item.innerHTML = `
                     <div>
                         <div style="font-weight:bold;">${s.name}</div>
-                        <div style="font-size:11px; color:#444; margin-top:4px;">${dur} | ${s.channels} channels</div>
+                        <div style="font-size:11px; color:#888; margin-top:4px;">${dur} | ${s.channels} channels</div>
                     </div>
-                    <div style="font-size:12px; color:#666; font-family:monospace;">${date}</div>
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <span style="font-size:12px; color:#666; font-family:monospace;">${date}</span>
+                        <button class="step-btn" title="Download ZIP" onclick="event.stopPropagation(); window.open('${P_API_BASE}/api/recordings/download?session=' + encodeURIComponent('${s.id}'))" style="background:#27ae60; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:12px; cursor:pointer;">⬇️ ZIP</button>
+                    </div>
                 `;
                 item.onclick = () => selectSession(s.id, s.name);
                 listEl.appendChild(item);
@@ -419,6 +440,23 @@
         selectedAddrs.clear();
         trackedAddrs = [];
         channelRoles = {};
+        truthData = null;
+
+        const selectEl = document.getElementById('audio-source-select');
+        if (selectEl) {
+            selectEl.value = 'none';
+            changeAudioSource('none');
+        }
+        const optLibrosa = document.getElementById('opt-librosa');
+        if (optLibrosa) optLibrosa.disabled = true;
+        
+        // Reset interactive truth layer options on new track initialization
+        const group = document.getElementById('truth-legend-group');
+        if (group) group.classList.add('hidden');
+        document.getElementById('leg-tf').classList.add('off');
+        document.getElementById('leg-tb').classList.add('off');
+        selectedAudio.delete('tf');
+        selectedAudio.delete('tb');
 
         // reset ui for fallback logic
         vid.closest('.video-wrapper').classList.remove('no-video');
@@ -454,8 +492,10 @@
                     trackedAddrs = Object.keys(logData[0].v).sort((a,b) => parseInt(a)-parseInt(b));
                 }
                 updateChannelGrid();
+                buildRecordedBeatTimes();
             }
             resizeCanvas();
+            checkAndLoadAudit(folder);
         } catch (e) {
             statusEl.innerText = `Error: ${e.message}`;
             logData = [];
@@ -668,6 +708,19 @@
             }
         });
 
+        // Plot Librosa Absolute Beat Locations Layer
+        if (selectedAudio.has('tb') && truthData && truthData.beat_times) {
+            truthData.beat_times.forEach(t_time => {
+                const x = (t_time / maxTime) * w;
+                ctx.fillStyle = '#2ecc71';
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x - 5, 7);
+                ctx.lineTo(x + 5, 7);
+                ctx.fill();
+            });
+        }
+
         function drawBand(getDataFn, color, thickness, isShadow = false) {
             ctx.strokeStyle = color;
             ctx.lineWidth = thickness;
@@ -689,6 +742,7 @@
         }
 
         if (selectedAudio.has('h')) drawBand(f => f.a ? f.a.h : null, 'rgba(30, 144, 255, 0.4)', 1.5);
+        if (selectedAudio.has('m')) drawBand(f => f.a ? f.a.m : null, 'rgba(255, 159, 67, 0.4)', 1.5);
         if (selectedAudio.has('b')) drawBand(f => f.a ? f.a.b : null, 'rgba(255, 71, 87, 0.5)', 2);
         if (selectedAudio.has('f')) drawBand(f => f.a ? f.a.f : null, 'rgba(241, 196, 15, 0.6)', 1.5);
         if (selectedAudio.has('vl')) drawBand(f => f.a ? f.a.vl : null, 'rgba(255, 255, 255, 0.7)', 2, true);
@@ -700,6 +754,69 @@
         if (selectedAudio.has('bh')) drawBand(f => f.a ? f.a.bh : null, 'rgba(165, 94, 234, 0.6)', 1.5);
         if (selectedAudio.has('mh')) drawBand(f => f.a ? f.a.mh : null, 'rgba(69, 170, 242, 0.6)', 1.5);
         if (selectedAudio.has('hh')) drawBand(f => f.a ? f.a.hh : null, 'rgba(253, 150, 68, 0.6)', 1.5);
+
+        // Ground Truth Envelopes Draw Function
+        function drawTruthBand(truthKey, color, thickness) {
+            if (!truthData || !truthData.stft_timeline || !truthData[truthKey]) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = thickness;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            let started = false;
+            
+            const timeline = truthData.stft_timeline;
+            const values = truthData[truthKey];
+            for (let i = 0; i < timeline.length; i++) {
+                const t_time = timeline[i];
+                if (t_time > maxTime) break;
+                const val = values[i];
+                const x = (t_time / maxTime) * w;
+                const y = graphTop + (graphH - (val * graphH));
+                
+                if (!started) { ctx.moveTo(x, y); started = true; } 
+                else { ctx.lineTo(x, y); }
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Plot Librosa Continuous Flow Onset Envelope Curve
+        if (selectedAudio.has('tf') && truthData) {
+            // General Flux Truth
+            if (truthData.timeline && truthData.flux_truth) {
+                ctx.strokeStyle = '#2ecc71';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                let started = false;
+                for (let i = 0; i < truthData.timeline.length; i++) {
+                    const t_time = truthData.timeline[i];
+                    if (t_time > maxTime) break;
+                    const val = truthData.flux_truth[i];
+                    const x = (t_time / maxTime) * w;
+                    const y = graphTop + (graphH - (val * graphH));
+                    
+                    if (!started) { ctx.moveTo(x, y); started = true; } 
+                    else { ctx.lineTo(x, y); }
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // Standard EQ Truth overlays
+            if (selectedAudio.has('b')) drawTruthBand('bass_truth', 'rgba(255, 71, 87, 0.8)', 1.5);
+            if (selectedAudio.has('m')) drawTruthBand('mid_truth', 'rgba(255, 159, 67, 0.8)', 1.5);
+            if (selectedAudio.has('h')) drawTruthBand('high_truth', 'rgba(30, 144, 255, 0.8)', 1.5);
+            if (selectedAudio.has('vl')) drawTruthBand('vol_truth', 'rgba(255, 255, 255, 0.8)', 1.5);
+            
+            // HPSS Truth overlays
+            if (selectedAudio.has('bp')) drawTruthBand('perc_bass', 'rgba(255, 56, 56, 0.8)', 1.5);
+            if (selectedAudio.has('mp')) drawTruthBand('perc_mid', 'rgba(255, 159, 67, 0.8)', 1.5);
+            if (selectedAudio.has('hp')) drawTruthBand('perc_high', 'rgba(46, 213, 115, 0.8)', 1.5);
+            if (selectedAudio.has('bh')) drawTruthBand('harm_bass', 'rgba(165, 94, 234, 0.8)', 1.5);
+            if (selectedAudio.has('mh')) drawTruthBand('harm_mid', 'rgba(69, 170, 242, 0.8)', 1.5);
+            if (selectedAudio.has('hh')) drawTruthBand('harm_high', 'rgba(253, 150, 68, 0.8)', 1.5);
+        }
 
         selectedAddrs.forEach(addr => {
             const color = `hsla(${(addr * 45) % 360}, 70%, 70%, 1)`;
@@ -896,6 +1013,401 @@
             alert("Error: " + e.message);
             document.getElementById('btn-save-train').innerText = '💾 Save Training';
         }
+    }
+
+    async function checkAndLoadAudit(folder) {
+        if (!folder) return;
+        try {
+            const res = await fetch(`${P_API_BASE}/api/audit?session=${folder}`);
+            if (res.ok) {
+                const responseData = await res.json();
+                if (responseData.status !== 'not_found') {
+                    truthData = responseData.truth;
+                    const group = document.getElementById('truth-legend-group');
+                    if (group) group.classList.remove('hidden');
+                    const optLibrosa = document.getElementById('opt-librosa');
+                    if (optLibrosa) optLibrosa.disabled = false;
+                    
+                    let statusMsg = `✅ Audit Loaded! F-Measure: <b>${(responseData.summary.beat_alignment_f_measure * 100).toFixed(1)}%</b> | Flux RMSE: <b>${responseData.summary.envelope_tracking_rmse.toFixed(4)}</b>`;
+                    if (responseData.summary.percussive_flux_rmse !== undefined) {
+                        statusMsg += ` | Perc RMSE: <b>${responseData.summary.percussive_flux_rmse.toFixed(4)}</b>`;
+                    }
+                    if (responseData.summary.standard && Object.keys(responseData.summary.standard).length > 0) {
+                        const standardEntries = Object.entries(responseData.summary.standard).map(([k, v]) => `${k.replace('_rmse', '')}: ${v.toFixed(4)}`).join(' | ');
+                        statusMsg += `<br><span style="font-size:10px; opacity:0.7;">Standard: ${standardEntries}</span>`;
+                    }
+                    if (responseData.summary.hpss && Object.keys(responseData.summary.hpss).length > 0) {
+                        const hpssEntries = Object.entries(responseData.summary.hpss).map(([k, v]) => `${k}: ${v.toFixed(4)}`).join(' | ');
+                        statusMsg += `<br><span style="font-size:10px; opacity:0.7;">HPSS: ${hpssEntries}</span>`;
+                    }
+                    if (responseData.summary.vibe_distribution && Object.keys(responseData.summary.vibe_distribution).length > 0) {
+                        const vibeEntries = Object.entries(responseData.summary.vibe_distribution).map(([k, v]) => `${k}: ${(v * 100).toFixed(1)}%`).join(' | ');
+                        statusMsg += `<br><span style="font-size:10px; opacity:0.7;">Vibe Dist: ${vibeEntries}</span>`;
+                    }
+                    statusEl.innerHTML = statusMsg;
+                    drawTimeline();
+                }
+            }
+        } catch (e) {
+            console.warn("Could not check/load audit data automatically:", e);
+        }
+    }
+
+    async function triggerDeepAudit() {
+        if (!currentSessionId) return;
+        const btn = document.getElementById('btn-deep-audit');
+        const origText = btn.innerText;
+        btn.innerText = "⏳ Loading...";
+        statusEl.innerText = "Checking for audit results...";
+        
+        try {
+            const res = await fetch(`${P_API_BASE}/api/audit?session=${currentSessionId}`);
+            if (!res.ok) throw new Error("Server error: " + res.statusText);
+            const responseData = await res.json();
+            
+            // Check if results exist yet
+            if (responseData.status === 'not_found') {
+                const hostIp = window.location.hostname;
+                statusEl.innerHTML = `
+                    <span style="color:#f1c40f;">⚠️ No audit results yet.</span> Run on minisforum:<br>
+                    <code style="font-size:10px; background:#222; padding:3px 6px; border-radius:3px; display:block; margin:4px 0;">python3 offline_audit_engine.py --host ${hostIp}:8000 --session "${currentSessionId}"</code>
+                    <span style="font-size:11px; opacity:0.8;">Or copy files via SCP:</span><br>
+                    <code style="font-size:10px; background:#222; padding:3px 6px; border-radius:3px; display:block; margin:4px 0;">scp -r sumof2@${hostIp}:~/projects/RAVEBOX/recordings/"${currentSessionId}" ./recordings/</code>
+                `;
+                return;
+            }
+            
+            truthData = responseData.truth;
+            const group = document.getElementById('truth-legend-group');
+            if (group) group.classList.remove('hidden');
+            const optLibrosa = document.getElementById('opt-librosa');
+            if (optLibrosa) optLibrosa.disabled = false;
+            
+            let statusMsg = `✅ Audit Complete! F-Measure: <b>${(responseData.summary.beat_alignment_f_measure * 100).toFixed(1)}%</b> | Flux RMSE: <b>${responseData.summary.envelope_tracking_rmse.toFixed(4)}</b>`;
+            if (responseData.summary.percussive_flux_rmse !== undefined) {
+                statusMsg += ` | Perc RMSE: <b>${responseData.summary.percussive_flux_rmse.toFixed(4)}</b>`;
+            }
+            if (responseData.summary.standard && Object.keys(responseData.summary.standard).length > 0) {
+                const standardEntries = Object.entries(responseData.summary.standard).map(([k, v]) => `${k.replace('_rmse', '')}: ${v.toFixed(4)}`).join(' | ');
+                statusMsg += `<br><span style="font-size:10px; opacity:0.7;">Standard: ${standardEntries}</span>`;
+            }
+            if (responseData.summary.hpss && Object.keys(responseData.summary.hpss).length > 0) {
+                const hpssEntries = Object.entries(responseData.summary.hpss).map(([k, v]) => `${k}: ${v.toFixed(4)}`).join(' | ');
+                statusMsg += `<br><span style="font-size:10px; opacity:0.7;">HPSS: ${hpssEntries}</span>`;
+            }
+            if (responseData.summary.vibe_distribution && Object.keys(responseData.summary.vibe_distribution).length > 0) {
+                const vibeEntries = Object.entries(responseData.summary.vibe_distribution).map(([k, v]) => `${k}: ${(v * 100).toFixed(1)}%`).join(' | ');
+                statusMsg += `<br><span style="font-size:10px; opacity:0.7;">Vibe Dist: ${vibeEntries}</span>`;
+            }
+            statusEl.innerHTML = statusMsg;
+            
+            // Toggle visibility layers ON automatically for immediate review
+            selectedAudio.add('tf');
+            selectedAudio.add('tb');
+            document.getElementById('leg-tf').classList.remove('off');
+            document.getElementById('leg-tb').classList.remove('off');
+            
+            drawTimeline();
+        } catch (e) {
+            alert("Audit failed: " + e.message);
+            statusEl.innerText = "Audit failed.";
+        } finally {
+            btn.innerText = origText;
+        }
+    }
+
+    let injectionInterval = null;
+    let lastProcessedTime = -1;
+    let lastBeatIndex = -1;
+
+    function changeAudioSource(mode) {
+        console.log("Audio source mode selected:", mode);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            if (mode === 'engine') {
+                ws.send(JSON.stringify({ type: "master_params", audio_source: "auto" }));
+            }
+        }
+        if (mode === 'librosa' || mode === 'playback') {
+            startInjectionLoop();
+        } else {
+            stopInjectionLoop();
+        }
+    }
+
+    function startInjectionLoop() {
+        if (injectionInterval) clearInterval(injectionInterval);
+        injectionInterval = setInterval(() => {
+            if (!activeMedia || activeMedia.paused) return;
+            const selectEl = document.getElementById('audio-source-select');
+            if (!selectEl) return;
+            const mode = selectEl.value;
+            if (mode === 'librosa') {
+                injectLibrosaFrame(activeMedia.currentTime);
+            } else if (mode === 'playback') {
+                injectPlaybackFrame(activeMedia.currentTime);
+            }
+        }, 50);
+    }
+
+    function stopInjectionLoop() {
+        if (injectionInterval) {
+            clearInterval(injectionInterval);
+            injectionInterval = null;
+        }
+    }
+
+    function getClosestSTFTIndex(time) {
+        if (!truthData || !truthData.stft_timeline || truthData.stft_timeline.length === 0) return -1;
+        const step = 512 / 44100;
+        let idx = Math.round(time / step);
+        if (idx < 0) idx = 0;
+        if (idx >= truthData.stft_timeline.length) idx = truthData.stft_timeline.length - 1;
+        return idx;
+    }
+
+    function injectLibrosaFrame(time) {
+        if (!truthData || !truthData.stft_timeline || !ws || ws.readyState !== WebSocket.OPEN) return;
+        
+        const idx = getClosestSTFTIndex(time);
+        if (idx < 0) return;
+        
+        const bass = truthData.bass_truth ? truthData.bass_truth[idx] || 0.0 : 0.0;
+        const mid = truthData.mid_truth ? truthData.mid_truth[idx] || 0.0 : 0.0;
+        const high = truthData.high_truth ? truthData.high_truth[idx] || 0.0 : 0.0;
+        const vol = truthData.vol_truth ? truthData.vol_truth[idx] || 0.0 : 0.0;
+        const flux = truthData.flux_truth ? truthData.flux_truth[idx] || 0.0 : 0.0;
+        const bass_p = truthData.perc_bass ? truthData.perc_bass[idx] || 0.0 : 0.0;
+        const mid_p = truthData.perc_mid ? truthData.perc_mid[idx] || 0.0 : 0.0;
+        const high_p = truthData.perc_high ? truthData.perc_high[idx] || 0.0 : 0.0;
+        const bass_h = truthData.harm_bass ? truthData.harm_bass[idx] || 0.0 : 0.0;
+        const mid_h = truthData.harm_mid ? truthData.harm_mid[idx] || 0.0 : 0.0;
+        const high_h = truthData.harm_high ? truthData.harm_high[idx] || 0.0 : 0.0;
+        const vol_h = truthData.vol_h_truth ? truthData.vol_h_truth[idx] || 0.0 : 0.0;
+        const spectral_complexity_h = truthData.spectral_complexity_h ? truthData.spectral_complexity_h[idx] || 0.5 : 0.5;
+        
+        let vibe = "mid";
+        let transient = "steady";
+        if (logData && logData.length > 0) {
+            let binaryLow = 0;
+            let binaryHigh = logData.length - 1;
+            while (binaryLow <= binaryHigh) {
+                let mid = Math.floor((binaryLow + binaryHigh) / 2);
+                if (logData[mid].t < time) {
+                    binaryLow = mid + 1;
+                } else {
+                    binaryHigh = mid - 1;
+                }
+            }
+            let bestIdx = binaryLow;
+            if (binaryLow > 0 && Math.abs(logData[binaryLow].t - time) > Math.abs(logData[binaryLow - 1].t - time)) {
+                bestIdx = binaryLow - 1;
+            }
+            if (bestIdx >= logData.length) bestIdx = logData.length - 1;
+            
+            const frame = logData[bestIdx];
+            if (frame && frame.a) {
+                vibe = frame.a.vb !== undefined ? frame.a.vb : "mid";
+                transient = frame.a.tr !== undefined ? frame.a.tr : "steady";
+            }
+        }
+        
+        let beatIdx = -1;
+        for (let i = 0; i < truthData.beat_times.length; i++) {
+            if (truthData.beat_times[i] <= time) {
+                beatIdx = i;
+            } else {
+                break;
+            }
+        }
+        
+        let isBeat = false;
+        if (time < lastProcessedTime || Math.abs(time - lastProcessedTime) > 0.5) {
+            lastBeatIndex = beatIdx;
+        } else {
+            if (beatIdx > lastBeatIndex) {
+                isBeat = true;
+                lastBeatIndex = beatIdx;
+            }
+        }
+        lastProcessedTime = time;
+        
+        let beatCount = beatIdx >= 0 ? beatIdx : 0;
+        let isBar = false;
+        if (isBeat && (beatCount % 4 === 0)) {
+            isBar = true;
+        }
+        
+        let beatPhase = 0.0;
+        if (beatIdx >= 0 && beatIdx < truthData.beat_times.length - 1) {
+            let t_start = truthData.beat_times[beatIdx];
+            let t_end = truthData.beat_times[beatIdx + 1];
+            if (time >= t_start && time < t_end) {
+                beatPhase = (time - t_start) / (t_end - t_start);
+            }
+        } else if (beatIdx === truthData.beat_times.length - 1) {
+            let avgInterval = 0.5;
+            if (truthData.beat_times.length > 1) {
+                avgInterval = (truthData.beat_times[truthData.beat_times.length - 1] - truthData.beat_times[0]) / (truthData.beat_times.length - 1);
+            }
+            let t_start = truthData.beat_times[beatIdx];
+            beatPhase = Math.min(0.99, (time - t_start) / avgInterval);
+        }
+        
+        const payload = {
+            type: "audio_inject",
+            data: {
+                bass: bass,
+                mid: mid,
+                high: high,
+                vol: vol,
+                flux: flux,
+                bass_p: bass_p,
+                mid_p: mid_p,
+                high_p: high_p,
+                bass_h: bass_h,
+                mid_h: mid_h,
+                high_h: high_h,
+                vol_h: vol_h,
+                spectral_complexity_h: spectral_complexity_h,
+                beat: isBeat,
+                bar: isBar,
+                beat_phase: beatPhase,
+                beat_count: beatCount,
+                vibe: vibe,
+                vb: vibe,
+                transient: transient,
+                tr: transient,
+                bins: [bass, bass * 0.8, mid, mid * 0.8, high, high * 0.8]
+            }
+        };
+        
+        ws.send(JSON.stringify(payload));
+    }
+
+    let recordedBeatTimes = [];
+    let lastPlaybackBeatIndex = -1;
+    let lastPlaybackProcessedTime = -1;
+
+    function buildRecordedBeatTimes() {
+        recordedBeatTimes = [];
+        if (!logData || logData.length === 0) return;
+        for (let i = 0; i < logData.length; i++) {
+            if (logData[i].a && logData[i].a.bt) {
+                const t = logData[i].t;
+                if (recordedBeatTimes.length === 0 || t - recordedBeatTimes[recordedBeatTimes.length - 1] > 0.2) {
+                    recordedBeatTimes.push(t);
+                }
+            }
+        }
+        console.log("🛠️ Built recorded beat times:", recordedBeatTimes.length, "beats found.");
+    }
+
+    function injectPlaybackFrame(time) {
+        if (!logData || logData.length === 0 || !ws || ws.readyState !== WebSocket.OPEN) return;
+        
+        let binaryLow = 0;
+        let binaryHigh = logData.length - 1;
+        while (binaryLow <= binaryHigh) {
+            let mid = Math.floor((binaryLow + binaryHigh) / 2);
+            if (logData[mid].t < time) {
+                binaryLow = mid + 1;
+            } else {
+                binaryHigh = mid - 1;
+            }
+        }
+        let bestIdx = binaryLow;
+        if (binaryLow > 0 && Math.abs(logData[binaryLow].t - time) > Math.abs(logData[binaryLow - 1].t - time)) {
+            bestIdx = binaryLow - 1;
+        }
+        if (bestIdx >= logData.length) bestIdx = logData.length - 1;
+        
+        const frame = logData[bestIdx];
+        if (!frame || !frame.a) return;
+        
+        const a = frame.a;
+        const bass = a.b !== undefined ? a.b : 0.0;
+        const mid = a.m !== undefined ? a.m : 0.0;
+        const high = a.h !== undefined ? a.h : 0.0;
+        const flux = a.f !== undefined ? a.f : 0.0;
+        const vol = a.vl !== undefined ? a.vl : 0.0;
+        const bass_p = a.bp !== undefined ? a.bp : 0.0;
+        const mid_p = a.mp !== undefined ? a.mp : 0.0;
+        const high_p = a.hp !== undefined ? a.hp : 0.0;
+        const bass_h = a.bh !== undefined ? a.bh : 0.0;
+        const mid_h = a.mh !== undefined ? a.mh : 0.0;
+        const high_h = a.hh !== undefined ? a.hh : 0.0;
+        const vibe = a.vb !== undefined ? a.vb : "mid";
+        const transient = a.tr !== undefined ? a.tr : "steady";
+        
+        let beatIdx = -1;
+        for (let i = 0; i < recordedBeatTimes.length; i++) {
+            if (recordedBeatTimes[i] <= time) {
+                beatIdx = i;
+            } else {
+                break;
+            }
+        }
+        
+        let isBeat = false;
+        if (time < lastPlaybackProcessedTime || Math.abs(time - lastPlaybackProcessedTime) > 0.5) {
+            lastPlaybackBeatIndex = beatIdx;
+        } else {
+            if (beatIdx > lastPlaybackBeatIndex) {
+                isBeat = true;
+                lastPlaybackBeatIndex = beatIdx;
+            }
+        }
+        lastPlaybackProcessedTime = time;
+        
+        let beatCount = beatIdx >= 0 ? beatIdx : 0;
+        let isBar = false;
+        if (isBeat && (beatCount % 4 === 0)) {
+            isBar = true;
+        }
+        
+        let beatPhase = 0.0;
+        if (beatIdx >= 0 && beatIdx < recordedBeatTimes.length - 1) {
+            let t_start = recordedBeatTimes[beatIdx];
+            let t_end = recordedBeatTimes[beatIdx + 1];
+            if (time >= t_start && time < t_end) {
+                beatPhase = (time - t_start) / (t_end - t_start);
+            }
+        } else if (beatIdx === recordedBeatTimes.length - 1) {
+            let avgInterval = 0.5;
+            if (recordedBeatTimes.length > 1) {
+                avgInterval = (recordedBeatTimes[recordedBeatTimes.length - 1] - recordedBeatTimes[0]) / (recordedBeatTimes.length - 1);
+            }
+            let t_start = recordedBeatTimes[beatIdx];
+            beatPhase = Math.min(0.99, (time - t_start) / avgInterval);
+        }
+        
+        const payload = {
+            type: "audio_inject",
+            data: {
+                bass: bass,
+                mid: mid,
+                high: high,
+                vol: vol,
+                flux: flux,
+                bass_p: bass_p,
+                mid_p: mid_p,
+                high_p: high_p,
+                bass_h: bass_h,
+                mid_h: mid_h,
+                high_h: high_h,
+                beat: isBeat,
+                bar: isBar,
+                beat_phase: beatPhase,
+                beat_count: beatCount,
+                vibe: vibe,
+                vb: vibe,
+                transient: transient,
+                tr: transient,
+                bins: [bass, bass * 0.8, mid, mid * 0.8, high, high * 0.8]
+            }
+        };
+        
+        ws.send(JSON.stringify(payload));
     }
 
     // Auto-load if 'session' param is in URL, else find latest

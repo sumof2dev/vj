@@ -1,0 +1,52 @@
+{
+  "beat_times": [],
+  "timeline": [
+    0.0
+  ],
+  "flux_truth": [
+    0.0
+  ],
+  "percussive_flux_truth": [
+    0.0
+  ],
+  "stft_timeline": [
+    0.0
+  ],
+  "perc_bass": [
+    0.0
+  ],
+  "perc_mid": [
+    0.0
+  ],
+  "perc_high": [
+    0.0
+  ],
+  "harm_bass": [
+    0.0
+  ],
+  "harm_mid": [
+    0.0
+  ],
+  "harm_high": [
+    0.0
+  ],
+  "bass_truth": [
+    0.0
+  ],
+  "mid_truth": [
+    0.0
+  ],
+  "high_truth": [
+    0.0
+  ],
+  "vol_truth": [
+    0.0
+  ],
+  "vol_h_truth": [
+    0.0
+  ],
+  "spectral_complexity_h": [
+    0.0
+  ],
+  "global_bpm": 0.0
+}

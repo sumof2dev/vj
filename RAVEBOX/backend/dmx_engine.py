@@ -43,11 +43,17 @@ class ChannelConfig:
             if variant_val is not None:
                 variant = variant_val + 1 if isinstance(variant_val, int) else variant_val
                 tagged_vibe = f"{search_vibe} {variant}"
-                matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == tagged_vibe]
+                matching_indices = [
+                    i for i, r in enumerate(self.rules)
+                    if r.get('vibe') == tagged_vibe and not r.get('muted') and not r.get('modifiers', {}).get('muted', False)
+                ]
             
         if not matching_indices:
             # Fallback to standard vibe matching
-            matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == search_vibe]
+            matching_indices = [
+                i for i, r in enumerate(self.rules)
+                if r.get('vibe') == search_vibe and not r.get('muted') and not r.get('modifiers', {}).get('muted', False)
+            ]
         
         # Handle fallback to 'any' for non-transient vibes
         if not matching_indices and not is_transient:
@@ -60,15 +66,21 @@ class ChannelConfig:
                 if variant_val is not None:
                     variant = variant_val + 1 if isinstance(variant_val, int) else variant_val
                     tagged_any = f"any {variant}"
-                    matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') == tagged_any]
+                    matching_indices = [
+                        i for i, r in enumerate(self.rules)
+                        if r.get('vibe') == tagged_any and not r.get('muted') and not r.get('modifiers', {}).get('muted', False)
+                    ]
 
             if not matching_indices:
-                matching_indices = [i for i, r in enumerate(self.rules) if r.get('vibe') in ['any', 'any/fallback']]
+                matching_indices = [
+                    i for i, r in enumerate(self.rules)
+                    if r.get('vibe') in ['any', 'any/fallback'] and not r.get('muted') and not r.get('modifiers', {}).get('muted', False)
+                ]
 
-        # 4. Absolute Fallback: If still nothing, use the first non-disabled rule
+        # 4. Absolute Fallback: If still nothing, use the first non-disabled, non-muted rule
         if not matching_indices:
             for r in self.rules:
-                if r.get('vibe') != 'never':
+                if r.get('vibe') != 'never' and not r.get('muted') and not r.get('modifiers', {}).get('muted', False):
                     return r
             return None # Revert to default channel value
 
@@ -137,12 +149,17 @@ class LogicMatrix:
             'mids_h': float(audio.get('mid_h', 0.0)),
             'highs_h': float(audio.get('high_h', 0.0)),
             'volume': float(audio.get('vol', 0.0)),
-            'impact': float(audio.get('impact', 0.0)),
+            'impact': float(audio.get('flux', 0.0)),
+            'spectral flux': float(audio.get('flux', 0.0)),
             'beat phase': beat_phase,
             'bar phase': bar_phase,
             '4 bar phase': four_bar_phase,
             'static': 1.0,
-            'zero': 0.0
+            'zero': 0.0,
+            'kick': float(audio.get('kick_behavior', 0.0)),   # Scaled 0-1: max on kick hit, 0 otherwise
+            'snare': float(audio.get('snare_behavior', 0.0)), # Scaled 0-1: max on snare hit, 0 otherwise
+            'cymbal': float(audio.get('cymbal_behavior', 0.0)), # Scaled 0-1: max on cymbal hit, 0 otherwise
+            'beat': 1.0 if audio.get('beat', False) else 0.0
         }
 
         # Add specific frequency bins (0 and 4 only)
@@ -866,7 +883,7 @@ class DMXEngine:
         if not channels: return
 
         try:
-            base_addr = int(inst.get('address', 1)) + int(inst.get('offset', 0))
+            base_addr = int(inst.get('address', 1))
         except: return
         
         # Resolve spatial and HPSS routing for the assigned zone
@@ -904,7 +921,7 @@ class DMXEngine:
         if not channels: return
 
         try:
-            base_addr = int(inst.get('address', 1)) + int(inst.get('offset', 0))
+            base_addr = int(inst.get('address', 1))
         except: return
 
         # Resolve spatial and HPSS routing for the assigned zone
@@ -1036,7 +1053,7 @@ class DMXEngine:
         c_center = int(cal.get('center', fixture_cal.get('center', (c_min + c_max) // 2)))
 
         # Scale speed and react by the range span relative to 255
-        range_span = float(c_max - c_min)
+        range_span = abs(float(c_max - c_min))
         scale_factor = range_span / 255.0 if range_span > 0 else 1.0
 
         speed = float(mods.get('speed', 0.5)) * scale_factor
@@ -1044,39 +1061,59 @@ class DMXEngine:
         gain = float(mods.get('gain', 1.0))
         hold_type = str(mods.get('hold_type', 'none')).lower()
 
-        # --- DYNAMIC VIBE PARTITIONING ---
-        current_vibe = audio.get('vibe', 'mid') if audio else 'mid'
-        l_bound = 0.0
-        r_bound = 1.0
-        
-        if vibe_splits:
-            s1 = vibe_splits.get('chillMid', 33) / 100.0
-            s2 = vibe_splits.get('midHigh', 66) / 100.0
-            
-            if current_vibe == 'chill':
-                r_bound = s1
-            elif current_vibe == 'mid':
-                l_bound = s1
-                r_bound = s2
-            elif current_vibe == 'high':
-                l_bound = s2
-        
-        # Calculate Effective Sub-Range
-        span = c_max - c_min
-        eff_min = c_min + (span * l_bound)
-        eff_max = c_min + (span * r_bound)
-        eff_center = (eff_min + eff_max) / 2.0
+        # --- DYNAMIC VIBE PARTITIONING (Removed) ---
+        # Vibe partitioning completely removed per user request
+        eff_min = float(c_min)
+        eff_max = float(c_max)
+        eff_center = float(c_center)
 
         # 1. Resolve Driver Magnitude (E)
         audio_key = source
         if source == 'mids': audio_key = 'mid'
         elif source == 'highs': audio_key = 'high'
         elif source == 'volume': audio_key = 'vol'
+        elif source == 'kick': audio_key = 'kick_behavior'
+        elif source == 'snare': audio_key = 'snare_behavior'
+        elif source == 'cymbal': audio_key = 'cymbal_behavior'
+        elif source == 'beat':
+            if 'beat_env' not in st:
+                st['beat_env'] = 0.0
+            
+            curr_beat_count = audio.get('beat_count', 0) if audio else 0
+            curr_beat_state = bool(audio.get('beat', False)) if audio else False
+            
+            if 'last_source_beat_count' not in st:
+                st['last_source_beat_count'] = curr_beat_count
+            if 'last_source_beat_state' not in st:
+                st['last_source_beat_state'] = curr_beat_state
+                
+            has_beat = False
+            if curr_beat_state and not st['last_source_beat_state']:
+                has_beat = True
+            elif curr_beat_count > st['last_source_beat_count']:
+                has_beat = True
+                
+            st['last_source_beat_count'] = curr_beat_count
+            st['last_source_beat_state'] = curr_beat_state
+            
+            # If beat occurred, reset envelope to 1.0 (Beat (Binary) is volume-independent)
+            if has_beat:
+                st['beat_env'] = 1.0
+            
+            # Decay envelope: speed of 1.0 means fast decay, 0.0 means slow/no decay
+            speed = float(mods.get('speed', 0.5))
+            decay_rate = 1.0 + (speed * 20.0) # decay rate between 1.0 and 21.0
+            st['beat_env'] = max(0.0, st['beat_env'] - dt * decay_rate * st['beat_env'])
+            
+            E = st['beat_env']
+            audio_key = None
+        elif source in ['spectral flux', 'impact']: audio_key = 'flux'
         
-        if audio and audio_key in audio:
-            E = float(audio[audio_key])
-        else:
-            E = logic_matrix.state.get(source, 0.0)
+        if audio_key is not None:
+            if audio and audio_key in audio:
+                E = float(audio[audio_key])
+            else:
+                E = logic_matrix.state.get(source, 0.0)
         
         # Apply Threshold Gate
         threshold = float(mods.get('threshold', 0.0))
@@ -1096,15 +1133,29 @@ class DMXEngine:
 
         # 3. Hold Logic (Pulse-aware transitions)
         curr_beat_count = audio.get('beat_count', 0) if audio else 0
-        if 'last_beat_count' not in st: st['last_beat_count'] = curr_beat_count
+        curr_beat_state = bool(audio.get('beat', False)) if audio else False
+        
+        if 'last_hold_beat_count' not in st: st['last_hold_beat_count'] = curr_beat_count
+        if 'last_hold_beat_state' not in st: st['last_hold_beat_state'] = curr_beat_state
         
         # Detect if a NEW beat has occurred since the last engine frame
-        has_new_beat = (curr_beat_count > st['last_beat_count'])
-        # Also detect a "Bar" (every 4 beats)
-        has_new_bar = has_new_beat and (curr_beat_count % 4 == 0)
+        has_new_beat = False
+        if curr_beat_state and not st['last_hold_beat_state']:
+            has_new_beat = True
+        elif curr_beat_count > st['last_hold_beat_count']:
+            has_new_beat = True
+            
+        # Also detect a "Bar" (every 4 beats or when the bar flag is active)
+        has_new_bar = False
+        if has_new_beat:
+            if audio and audio.get('bar', False):
+                has_new_bar = True
+            elif curr_beat_count % 4 == 0:
+                has_new_bar = True
         
         # Update state for next frame
-        st['last_beat_count'] = curr_beat_count
+        st['last_hold_beat_count'] = curr_beat_count
+        st['last_hold_beat_state'] = curr_beat_state
         
         trigger_hold = False
         if hold_type == 'beat' and has_new_beat: trigger_hold = True
@@ -1130,7 +1181,7 @@ class DMXEngine:
             y = (E * react * 2.0) - 1.0
             
         elif behavior in ['sine', 'square', 'saw', 'triangle']:
-            if source in ['beat', 'bar']:
+            if source in ['beat phase', 'bar phase', '4 bar phase', 'bar']:
                 p = E # Rhythmic phase lock
             else:
                 freq = (speed * 0.1) + (E * 5.0 * react)
@@ -1177,30 +1228,7 @@ class DMXEngine:
         if is_gated:
             y = -1.0
             
-        # --- CHANNEL MODULATION (Logic) ---
-        mod_type = mods.get('mod_type', 'none')
-        mod_target = mods.get('mod_target')
-        
-        if mod_type != 'none' and mod_target is not None and all_channels:
-            try:
-                target_idx = int(mod_target)
-                if 0 <= target_idx < len(all_channels):
-                    target_ch = all_channels[target_idx]
-                    target_offset = target_ch.get('addrOffset')
-                    if target_offset is None: target_offset = target_idx
-                    target_addr = base_addr + int(target_offset)
-                    
-                    if 0 < target_addr < len(self.prev_universe):
-                        target_val_normalized = self.prev_universe[target_addr] / 255.0
-                        
-                        if mod_type == "dampen_amp":
-                            y = y * (1.0 - target_val_normalized)
-                        elif mod_type == "clamp":
-                            y = min(y, (target_val_normalized * 2.0) - 1.0)
-                        elif mod_type == "gate":
-                            if target_val_normalized < 0.1: y = -1.0
-            except: pass
-            
+
         # --- Y → DMX MAPPING ---
         # Mapping normalized y to DMX
         y = max(-1.0, min(1.0, y * gain))
@@ -1253,6 +1281,21 @@ class DMXEngine:
         num_parts = len(seq_parts)
         if num_parts == 0: return 0
 
+        # Pre-parse each part for speed multipliers (e.g. "32-96-32x2" -> ("32-96-32", 2.0))
+        import re
+        parsed_parts = []
+        for p in seq_parts:
+            p_clean = p.strip()
+            speed_mult = 1.0
+            match = re.search(r'x\s*([0-9]+(?:\.[0-9]+)?)$', p_clean.lower())
+            if match:
+                try:
+                    speed_mult = float(match.group(1))
+                    p_clean = p_clean.rsplit('x', 1)[0].strip()
+                except ValueError:
+                    pass
+            parsed_parts.append((p_clean, speed_mult))
+
         # 3. Maintain/Update Phase Accumulator
         if ov_key not in self._preset_sweep_phases:
             self._preset_sweep_phases[ov_key] = 0.0
@@ -1261,11 +1304,16 @@ class DMXEngine:
         part_duration = 64.0
         total_cycle = num_parts * part_duration
         
+        # Determine current part based on current phase (before incrementing)
+        current_phase = (self._preset_sweep_phases[ov_key] + offset) % total_cycle
+        current_part_idx = min(int(current_phase // part_duration), num_parts - 1)
+        _, speed_mult = parsed_parts[current_part_idx]
+
         # Rate: 60 bits per second (Legacy speed standard)
         # FIX: Only increment ONCE per frame per key to prevent multi-channel speedup
         if ov_key not in self._processed_phases_this_frame:
             rate = 60.0 
-            self._preset_sweep_phases[ov_key] = (self._preset_sweep_phases[ov_key] + dt * rate) % total_cycle
+            self._preset_sweep_phases[ov_key] = (self._preset_sweep_phases[ov_key] + dt * rate * speed_mult) % total_cycle
             self._processed_phases_this_frame.add(ov_key)
         
         # Apply offset and wrap
@@ -1275,7 +1323,7 @@ class DMXEngine:
         part_idx = min(int(eff_phase // part_duration), num_parts - 1)
         local_phase = eff_phase % part_duration # 0.0 to 64.0
         
-        part_str = seq_parts[part_idx]
+        part_str, _ = parsed_parts[part_idx]
 
         # 4. Resolve the specific part (Value or Sweep)
         keywords = {
@@ -1384,7 +1432,7 @@ class DMXEngine:
         
         if not channels: return
         
-        base = int(inst.get('address', 1)) + int(inst.get('offset', 0))
+        base = int(inst.get('address', 1))
         for idx, ch in enumerate(channels):
             addr = base + idx
             if addr in self.overrides: del self.overrides[addr]

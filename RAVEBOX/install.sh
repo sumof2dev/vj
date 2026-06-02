@@ -21,21 +21,7 @@ echo -e "${CYAN}   🚀 RaveBox VJ Engine - Full Installation        ${NC}"
 echo -e "${CYAN}====================================================${NC}"
 
 # --- 0. Pre-Flight & Arguments ---
-IS_EVT=false
 TARGET_DIR=$(pwd)
-for arg in "$@"; do
-    if [ "$arg" == "--evt" ]; then
-        IS_EVT=true
-        echo -e "${MAGENTA}🧪 Running in EVT Mode (Engineering Verification Test)${NC}"
-    fi
-done
-
-if [ "$IS_EVT" = true ]; then
-    # In EVT mode, we might want to install to a specific subdir if not already there
-    if [[ "$TARGET_DIR" != *"vj_evt"* ]]; then
-        echo -e "${YELLOW}Note: Standard EVT placement is in 'vj_evt' folder.${NC}"
-    fi
-fi
 
 # Detect Hardware
 PI_MODEL=$(cat /proc/device-tree/model 2>/dev/null || echo "Unknown")
@@ -149,11 +135,7 @@ chmod +x generate_cert.sh
 echo ""
 echo -e "${YELLOW}[Step 6/6] Installing System Services...${NC}"
 chmod +x setup_service.sh
-if [ "$IS_EVT" = true ]; then
-    ./setup_service.sh --evt
-else
-    ./setup_service.sh
-fi
+./setup_service.sh
 
 echo ""
 echo -e "${CYAN}====================================================${NC}"
@@ -168,12 +150,10 @@ echo -e "${YELLOW}2. SPOTIFY API${NC} (Bypassing developer tokens):"
 echo -e "   Go to: ${CYAN}https://$(hostname -I | awk '{print $1}'):8000/help.html${NC}"
 echo -e "   Follow the guide to register your own Client ID & Secret."
 echo ""
-echo -e "${YELLOW}3. GLOBAL ACCESS / CLOUD PAIRING${NC}:"
-   echo -e "   - Our architecture now defaults to a ${GREEN}Cloud-First Production Flow${NC}."
-   echo -e "   - To connect this device to ravebox.love, you must manually pair it"
-   echo -e "     with a Cloudflare Tunnel via the Zero Trust Dashboard."
-   echo -e "   - Refer to ${CYAN}setup.md${NC} for exact ingress port mappings (8000/8001)."
-   echo -e "   - Run ${CYAN}./setup_tunnel.sh${NC} to install packages and purge ghost configurations."
+echo -e "${YELLOW}3. REMOTE CLOUD PAIRING (PLUG & PLAY MODEL)${NC}:"
+echo -e "   - Each standalone hardware module registers its own isolated proxy."
+echo -e "   - Run ${CYAN}./setup_tunnel.sh${NC} to ensure the cloudflared binary engine is ready."
+echo -e "   - Paste your Cloudflare Zero-Trust connector token string to complete onboarding."
 
 echo ""
 echo -e "${GREEN}LFG! Your RaveBox is ready. See you at ravebox.love${NC}"

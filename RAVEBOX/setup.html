@@ -48,7 +48,7 @@
             </div>
             <div class="sidebar-title">
                 <div class="brand">RAVE<span>BOX</span></div>
-                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v519261024</span></div>
+                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v61260858</span></div>
             </div>
         </div>
 
@@ -87,6 +87,7 @@
             <span class="nav-text">Send It</span>
         </div>
 
+
         <div class="nav-btn" onclick="window.location.href='manager.html'" title="Home">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -109,23 +110,6 @@
             </div>
         </div>
 
-        <!-- GOVEE LAN NODES -->
-        <div class="card hidden" id="govee-nodes-card" style="border-color: rgba(255, 165, 0, 0.2); margin-bottom: 20px;">
-            <div class="row" style="display:flex; justify-content:space-between; align-items:center; padding: 12px 15px; background:rgba(255,165,0,0.03); border-bottom: 1px solid rgba(255,165,0,0.05);">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="font-weight:900; font-size:11px; letter-spacing:1px; color:orange;">🌐 GOVEE LAN NODES</div>
-                    <div style="font-size:9px; opacity:0.4; color:orange;">CH 400+</div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="govee-ip-input" placeholder="192.168.1.XX" 
-                        style="width:120px; height:24px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,165,0,0.2); border-radius:4px; color:#fff; font-family:monospace; font-size:10px; padding:0 8px; outline:none;">
-                    <button class="btn btn-primary btn-sm" style="height:24px; padding:0 10px; font-size:10px; background:orange; border-color:orange; color:#000;" onclick="addGoveeNode()">Add</button>
-                </div>
-            </div>
-            <div id="govee-nodes-list" style="padding:5px 0;">
-                <!-- Govee IPs injected here -->
-            </div>
-        </div>
 
         <!-- PROFILES & MANAGEMENT -->
         <div class="card" id="all-profiles-card" style="border-color: rgba(0, 242, 255, 0.2);">
@@ -421,7 +405,7 @@
     <div id="tab-test" class="tab-content">
 
         <h2>Tune & Engine</h2>
-        <p style="color:var(--text-dim)">Sanity checks, live laboratory, training data collection, and live tuning.</p>
+        <p style="color:var(--text-dim)">Live laboratory and live tuning.</p>
 
         <details class="engine-accordion" open>
             <summary>Record and Analyze</summary>
@@ -567,112 +551,7 @@
             </div>
         </details>
 
-        <details class="engine-accordion">
-            <summary>The Collector</summary>
-            <div class="accordion-content">
-                <!-- TRAINING HUB (Feature Collector) -->
-            <div id="trainingHub" class="dash-panel" style="margin-top: 10px; border-color: rgba(249, 202, 36, 0.3);">
-                <div class="dash-header">
-                    <span style="color:#f9ca24;">Feature Collector</span>
-                    <span style="font-size: 9px; opacity:0.6;">30s BEFORE / 10s AFTER</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <button class="btn" style="background:rgba(42, 90, 138, 0.4); border-color:#2a5a8a;" onclick="captureSnippet('chill')">Chill</button>
-                    <button class="btn" style="background:rgba(90, 90, 42, 0.4); border-color:#5a5a2a;" onclick="captureSnippet('mid')">Mid</button>
-                    <button class="btn" style="background:rgba(162, 155, 230, 0.4); border-color:#a29be6;" onclick="captureSnippet('building')">Building</button>
-                    <button class="btn" style="background:rgba(249, 202, 36, 0.4); border-color:#f9ca24;" onclick="captureSnippet('tension')">Tension</button>
-                    <button class="btn" style="background:rgba(235, 77, 75, 0.4); border-color:#eb4d4b; font-weight:900;" onclick="captureSnippet('dropping')">THE DROP</button>
-                    <button class="btn" style="background:rgba(138, 42, 90, 0.4); border-color:#8a2a5a;" onclick="captureSnippet('high')">High Vibe</button>
-                </div>
-                <div id="snippet-feedback" style="font-size:10px; color:#888; text-align:center; margin-top:8px;">Tap when energy transitions occur</div>
-            </div>
 
-        
-            </div>
-        </details>
-
-        <details class="engine-accordion">
-            <summary>The Sanity Check</summary>
-            <div class="accordion-content">
-                <!-- SECTION: CALIBRATION (Sanity Check) -->
-            <div id="section-calibration" class="section">
-                <h1>Sanity Check</h1>
-                <p>Verify audio engine logic integrity against a factory source of truth.</p>
-                
-                <div id="calInitial" class="help-card" style="text-align: center;">
-                    <p>Verify engine performance against a synthetic EDM track or audit the live configuration against Gold Standards.</p>
-                    <div class="btn-grid-responsive" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
-                        <button class="btn btn-save" style="background: var(--accent); color: #000;" onclick="startCalibration()">Run Engine Calibration</button>
-                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Run Gold Standard Audit</button>
-
-                        <button class="btn btn-save" style="background: #333; color: #fff;" onclick="toggleLongTermAnalysis()">Long Term Analysis</button>
-                    </div>
-
-                </div>
-
-                <div id="longTermStatus" class="help-card" class="hidden" style=" text-align: center; border-color: var(--accent);">
-                    <h3>Long Term Analysis Recording</h3>
-                    <div id="longTermTimer" style="font-family: monospace; font-size: 2.5rem; color: var(--accent); margin-bottom: 10px;">00:00:00</div>
-                    <div style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 20px;">
-                        Samples: <span id="longTermSamples" style="color:#fff">0</span> | 
-                        Est. Size: <span id="longTermMemory" style="color:#fff">0 KB</span>
-                    </div>
-                    <button class="btn btn-save" style="background: #ff3366; color: #fff; width: auto; padding: 10px 30px;" onclick="toggleLongTermAnalysis()">Stop & Save Analysis</button>
-                </div>
-
-                <div id="calRunning" class="help-card" class="hidden" style=" text-align: center;">
-                    <h3>Analysis in Progress...</h3>
-                    <div id="calRunningBpm">---</div>
-                    <div class="cal-progress-wrap">
-                        <div id="calProgressBar" class="cal-progress-bar"></div>
-                    </div>
-                </div>
-
-                <div id="calResults" class="help-card" class="hidden"  >
-                    <h3>Calibration Summary</h3>
-                    <div class="cal-grid">
-                        <div class="cal-item">
-                            <h4>Beats (Recall)</h4>
-                            <div id="calRecall">--</div>
-                        </div>
-                        <div class="cal-item">
-                            <h4>BPM Accuracy</h4>
-                            <div id="calBpmAcc">--</div>
-                        </div>
-                        <div id="calHealthWrap" class="cal-item" style="grid-column: span 2;  border-color: rgba(0, 242, 255, 0.3); background: rgba(0, 242, 255, 0.05);">
-                            <h4>Environmental Audit</h4>
-                            <div id="calSignalHealth" style="font-weight: bold; font-size: 0.85rem; margin-bottom: 4px;">--</div>
-                            <div id="calSettingsSummary" style="color: var(--text-dim); font-size: 0.7rem; line-height: 1.4;">--</div>
-                        </div>
-                    </div>
-                    
-                    <h4 style="margin: 15px 0 10px; color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Engine Logic Checks</h4>
-                    <div id="calChecksList" style="display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Items injected here -->
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
-                        <button class="btn btn-save" style="background: rgba(255,255,255,0.1); color: #fff;" onclick="startCalibration()">Re-Run Calibration</button>
-                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Run Audit</button>
-                    </div>
-                </div>
-
-                <div id="auditResults" class="help-card" class="hidden"  >
-                    <h3>Gold Standard Audit</h3>
-                    <p id="auditOverall" style="font-weight: bold; margin-bottom: 15px;"></p>
-                    <div id="auditChecksList" style="display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Items injected here -->
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
-                        <button class="btn btn-save" style="background: var(--secondary); color: #fff;" onclick="startAudit()">Re-Run Audit</button>
-                        <button class="btn btn-save" style="background: var(--accent); color: #000;" onclick="startCalibration()">Run Calibration</button>
-                    </div>
-                </div>
-            </div>
-        
-    
-            </div>
-        </details>
 
     </div>
 

@@ -694,6 +694,7 @@
     <!-- PDF.js for manual text extraction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <script src="shared_setup.js"></script>
 </head>
 
 <body>
@@ -955,11 +956,13 @@
         import { GoogleGenerativeAI } from "google-genai-sdk";
 
         // Global State
-        let db;
-        try {
-            db = JSON.parse(localStorage.getItem('ravebox_v2_db')) || { fixtures: [], profiles: [], stage: [], presets: [] };
-        } catch (e) {
-            db = { fixtures: [], profiles: [], stage: [], presets: [] };
+        let db = window.db;
+        if (!db) {
+            try {
+                db = JSON.parse(localStorage.getItem('ravebox_v2_db')) || { fixtures: [], profiles: [], stage: [], presets: [] };
+            } catch (e) {
+                db = { fixtures: [], profiles: [], stage: [], presets: [] };
+            }
         }
 
         // Ensure standard structure
@@ -1080,7 +1083,7 @@
             const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
 
             // Smart Tunnel: Resolve secret codes to *.ravebox.love
-            const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+            const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && host !== 'localhost' && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
             const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
 
             const baseHost = (isCustomTunnel ? boxName.replace(/^(api-|ws-)/, '') : boxName);
@@ -1088,7 +1091,10 @@
 
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const port = localStorage.getItem('vj_ws_port') || '8765';
-            const url = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${port}`);
+            let url = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${port}`);
+            if ((isCustomTunnel || window.isCustomSubdomain) && !wsHost.startsWith('ws-')) {
+                url = url.replace(/\/+$/, '') + '/ws';
+            }
 
             if (ws) {
                 ws.onclose = null; // Prevent reconnection loop when we manually close
@@ -1485,7 +1491,7 @@ ${limitText}
             if (!original) return;
 
             const copy = JSON.parse(JSON.stringify(original));
-            copy.id = 'prof_' + Date.now();
+            copy.id = window.generateFriendlyId('p', db.profiles.map(p => p.id));
             copy.name = (copy.name || "Unnamed Profile") + " (Copy)";
             
             // Cleanup
@@ -1847,38 +1853,52 @@ ${limitText}
             const profId = window.currentFixture.id;
 
             // 1. Save Locally
-            db.profiles = db.profiles.filter(p => p.id !== profId);
+            db.profiles = (db.profiles || []).filter(p => p.id !== profId);
             db.profiles.push(window.currentFixture);
-            localStorage.setItem('ravebox_v2_db', JSON.stringify(db));
+            if (typeof window.saveDB === 'function') {
+                window.saveDB();
+            } else {
+                localStorage.setItem('ravebox_v2_db', JSON.stringify(db));
+            }
 
             // 2. Save to Server
-            try {
-                const protocol = window.location.protocol;
-                const host = localStorage.getItem('vj_backend_host') || window.location.hostname || 'localhost';
-
-                // Helper to build API URL
-                const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
-                const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
-                const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
-                const apiHost = isCustomTunnel ? 'api-' + boxName : (host === 'ravebox.love' ? 'api.ravebox.love' : host);
-                const port = (isOriginalCloud || isCustomTunnel) ? '' : ':8000';
-
-                const apiBase = `${protocol}//${apiHost}${port}/api/fixtures/`;
-                const profUrl = apiBase + `profiles/${profId}.json`;
-                const profResp = await fetch(profUrl, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(window.currentFixture)
-                });
-
-                if (profResp.ok) {
+            if (typeof window.saveProfileToServer === 'function') {
+                const success = await window.saveProfileToServer(window.currentFixture);
+                if (success) {
                     window.location.href = 'setup.html?tab=profile&id=' + profId;
                 } else {
-                    throw new Error(`Server error (${profResp.status})`);
+                    console.warn("⚠️ Server save failed via saveProfileToServer, redirecting anyway");
+                    window.location.href = 'setup.html?tab=profile&id=' + profId;
                 }
-            } catch (e) {
-                console.warn("⚠️ Server save failed:", e);
-                window.location.href = 'setup.html?tab=profile&id=' + profId;
+            } else {
+                try {
+                    const protocol = window.location.protocol;
+                    const host = localStorage.getItem('vj_backend_host') || window.location.hostname || 'localhost';
+
+                    // Helper to build API URL
+                    const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && host !== 'localhost' && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+                    const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+                    const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+                    const apiHost = isCustomTunnel ? 'api-' + boxName : (host === 'ravebox.love' ? 'api.ravebox.love' : host);
+                    const port = (isOriginalCloud || isCustomTunnel) ? '' : ':8000';
+
+                    const apiBase = `${protocol}//${apiHost}${port}/api/fixtures/`;
+                    const profUrl = apiBase + `profiles/${profId}.json`;
+                    const profResp = await fetch(profUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(window.currentFixture)
+                    });
+
+                    if (profResp.ok) {
+                        window.location.href = 'setup.html?tab=profile&id=' + profId;
+                    } else {
+                        throw new Error(`Server error (${profResp.status})`);
+                    }
+                } catch (e) {
+                    console.warn("⚠️ Legacy Server save failed:", e);
+                    window.location.href = 'setup.html?tab=profile&id=' + profId;
+                }
             }
         };
 

@@ -1,0 +1,226 @@
+diff --git a/RAVEBOX/backend/audio_analyzer.py b/RAVEBOX/backend/audio_analyzer.py
+index b525173..eac467a 100644
+--- a/RAVEBOX/backend/audio_analyzer.py
++++ b/RAVEBOX/backend/audio_analyzer.py
+@@ -56,7 +56,7 @@ class AudioAnalyzer:
+         self.smoothing_configs = [0.70, 0.70, 0.70, 0.85, 0.85, 0.90]
+         
+         # Real-time HPSS sliding window components
+-        self.hpss_window = 7  # Frame count window size inferred from real-time phase delay tolerance thresholds
++        self.hpss_window = 5  # Frame count window size inferred from real-time phase delay tolerance thresholds
+         self.fft_history = collections.deque(maxlen=self.hpss_window)
+         self.history_bass_p = collections.deque(maxlen=self.rolling_window_size)
+         self.history_mid_p  = collections.deque(maxlen=self.rolling_window_size)
+@@ -73,6 +73,15 @@ class AudioAnalyzer:
+         self.current_hit_type = "NONE"
+         self.hit_lockouts = {"KICK": 0, "SNARE": 0, "CYMBAL": 0}
+ 
++        # Percussive classification thresholds
++        self.kick_threshold = 0.25
++        self.cymbal_threshold = 0.18
++        self.snare_threshold_low = 0.32
++        self.snare_threshold_high = 0.45
++        self.kick_peak_gate = 0.40
++        self.snare_peak_gate = 0.45
++
++
+     def get_signal_health(self):
+         """Analyze raw peak history to detect environment-level issues (Spotify vol, ALSA)."""
+         if not self.history_raw_max or len(self.history_raw_max) < 20:
+@@ -184,7 +193,7 @@ class AudioAnalyzer:
+             mask_h = np.ones_like(fft_raw) * 0.5
+         else:
+             # Horizontal (time-axis) median filter tracking to extract steady harmonic components
+-            harmonic_fft = np.median(self.fft_history, axis=0)
++            harmonic_fft = np.nanmedian(self.fft_history, axis=0)
+             
+             # Vertical (frequency-axis) median filter tracking to isolate sharp percussive lines
+             pad_size = 2  # Local padding size mathematically required to center a 5-bin evaluation window
+@@ -193,15 +202,21 @@ class AudioAnalyzer:
+             stacked = np.stack([
+                 padded[0:L], padded[1:L+1], padded[2:L+2], padded[3:L+3], padded[4:L+4]
+             ], axis=0)
+-            percussive_fft = np.median(stacked, axis=0)
++            percussive_fft = np.nanmedian(stacked, axis=0)
+             
+-            # Soft masking calculation to resolve structural energy assignment profiles
++            # Masking calculation to resolve structural energy assignment profiles
+             h_sq = harmonic_fft ** 2
+             p_sq = percussive_fft ** 2
+-            eps = 1e-6  # Variance constraint constant inferred for floating-point calculation stability
+-            mask_p = p_sq / (h_sq + p_sq + eps)
+-            mask_h = h_sq / (h_sq + p_sq + eps)
++            eps = 1e-6
++
++            # Binary mask for percussive: bin wins if percussive median dominates
++            percussive_bias = 0.85
++            mask_p = (p_sq > (h_sq * percussive_bias)).astype(np.float32)
+             percussive_fft = fft_raw * mask_p
++
++            # Soft mask preserved for harmonic (smooth tonal continuity)
++            mask_h = h_sq / (h_sq + p_sq + eps)
++            mask_h = np.nan_to_num(mask_h, nan=0.5).astype(np.float32)
+             harmonic_fft = fft_raw * mask_h
+ 
+         # 2. Map to 16 WLED Bins (Decoupled Stream Generation)
+@@ -219,9 +234,9 @@ class AudioAnalyzer:
+             chunk_p = percussive_fft[start:current_fft_idx]
+             chunk_h = harmonic_fft[start:current_fft_idx]
+             
+-            if chunk.size > 0: wled_bins[i] = np.mean(chunk)
+-            if chunk_p.size > 0: wled_bins_p[i] = np.mean(chunk_p)
+-            if chunk_h.size > 0: wled_bins_h[i] = np.mean(chunk_h)
++            if chunk.size > 0: wled_bins[i] = np.nanmean(chunk)
++            if chunk_p.size > 0: wled_bins_p[i] = np.nanmean(chunk_p)
++            if chunk_h.size > 0: wled_bins_h[i] = np.nanmean(chunk_h)
+ 
+         # 3. Calculate Raw Bands (Isolated processing routing vectors)
+         raw_bass = np.mean(wled_bins[0:4])
+@@ -274,6 +289,17 @@ class AudioAnalyzer:
+         global_peak = max(self.cumulative_max, max(self.history_raw_max) if self.history_raw_max else self.cumulative_max)
+         self.history_raw_max.append(current_raw_max)
+ 
++        # Automatic Gain Control (AGC) for digital loopback
++        if self.history_raw_max:
++            recent_peak = max(self.history_raw_max)
++            if recent_peak > 0.1:
++                target_gain = global_peak / recent_peak
++                target_gain = max(0.5, min(4.0, target_gain))
++                if target_gain > self.gain:
++                    self.gain = self.gain * 0.999 + target_gain * 0.001
++                else:
++                    self.gain = self.gain * 0.98 + target_gain * 0.02
++
+         if raw_vol > 0.00001:  # Lowered from 0.0002 for sensitvity
+             self.last_sound_time = now
+         elif now - self.last_sound_time > 5.0:
+@@ -416,32 +442,44 @@ class AudioAnalyzer:
+                 else:
+                     lockout = 0.35  # Cold-start fallback
+ 
+-                if now - self.prev_beat_timestamp > lockout:
++                time_elapsed = now - self.prev_beat_timestamp
++                is_half_tempo_trigger = False
++                if len(self.beat_intervals) >= 2 and self.pll_period > 0.65:
++                    half_period = self.pll_period * 0.5
++                    if half_period >= self.lockout_floor:
++                        half_tolerance = self.pll_period * 0.125
++                        if abs(time_elapsed - half_period) < half_tolerance:
++                            is_half_tempo_trigger = True
++
++                if (time_elapsed > lockout) or is_half_tempo_trigger:
+                     is_beat = True
+                     self.beat_count += 1
+                     delta = now - self.prev_beat_timestamp
+ 
+-                    # Integer multiplier matching for syncopation resilience
+-                    time_elapsed = now - self.prev_beat_timestamp
+-                    elapsed_cycles = max(1, round(time_elapsed / self.pll_period))
+-
+-                    # Phase-locked grid correction relative to closest rhythmic step
+-                    expected_beat = self.prev_beat_timestamp + (elapsed_cycles * self.pll_period)
+-                    phase_error = now - expected_beat
+-                    tolerance = self.pll_period * 0.25
+-
+-                    if abs(phase_error) < tolerance and len(self.beat_intervals) >= 2:
+-                        # Soft PLL pull: absorb 35% of timing deviation
+-                        self.prev_beat_timestamp = expected_beat + phase_error * self.pll_correction
+-                    else:
+-                        # Hard reset: tempo transition or cold start
++                    if delta > 1.5:
++                        # Long gap detection (breakdown or silence). Treat as cold start/reset.
+                         self.prev_beat_timestamp = now
+-
+-                    self.bpm_list.append(60.0 / delta)
+-                    if len(self.bpm_list) > 12:
+-                        self.bpm_list.pop(0)
+-                    self.bpm = sum(self.bpm_list) / len(self.bpm_list)
+-                    self.beat_intervals.append(delta)
++                    else:
++                        # Integer multiplier matching for syncopation resilience
++                        elapsed_cycles = max(1, round(time_elapsed / self.pll_period))
++
++                        # Phase-locked grid correction relative to closest rhythmic step
++                        expected_beat = self.prev_beat_timestamp + (elapsed_cycles * self.pll_period)
++                        phase_error = now - expected_beat
++                        tolerance = self.pll_period * 0.25
++
++                        if abs(phase_error) < tolerance and len(self.beat_intervals) >= 2:
++                            # Soft PLL pull: absorb 35% of timing deviation
++                            self.prev_beat_timestamp = expected_beat + phase_error * self.pll_correction
++                        else:
++                            # Hard reset: tempo transition
++                            self.prev_beat_timestamp = now
++
++                        self.bpm_list.append(60.0 / delta)
++                        if len(self.bpm_list) > 12:
++                            self.bpm_list.pop(0)
++                        self.bpm = sum(self.bpm_list) / len(self.bpm_list)
++                        self.beat_intervals.append(delta)
+         
+         # Store weighted flux for adaptive thresholding
+         # (CRITICAL: History must match current flux for the multiplier to be valid)
+@@ -463,27 +501,23 @@ class AudioAnalyzer:
+         snare_score = attacks_p[2] + attacks_p[3] + (attacks_p[1] * 0.7)
+         cymbal_score = attacks_p[4] + attacks_p[5]
+ 
+-        # Threshold boundaries; inferred from empirical transient classification testing
+-        t_thresh = 0.18  
+-        cym_thresh = 0.12
+-
+         # Check thresholds + lockouts + dynamic peak ratio gates
+-        is_kick = (kick_score > t_thresh and 
+-                   raw_bins_p[0] > self.cumulative_bins_p_max[0] * 0.35 and 
++        is_kick = (kick_score > self.kick_threshold and 
++                   raw_bins_p[0] > self.cumulative_bins_p_max[0] * self.kick_peak_gate and 
+                    self.hit_lockouts["KICK"] == 0)
+         
+         # If there is a kick, check snare ratio to suppress low-end bleed
+         if is_kick:
+-            is_snare = (snare_score > 0.38 and 
++            is_snare = (snare_score > self.snare_threshold_high and 
+                         snare_score > kick_score * 0.40 and 
+-                        max(raw_bins_p[2], raw_bins_p[3]) > max(self.cumulative_bins_p_max[2], self.cumulative_bins_p_max[3]) * 0.15 and 
++                        max(raw_bins_p[2], raw_bins_p[3]) > max(self.cumulative_bins_p_max[2], self.cumulative_bins_p_max[3]) * self.snare_peak_gate and 
+                         self.hit_lockouts["SNARE"] == 0)
+         else:
+-            is_snare = (snare_score > 0.22 and 
+-                        max(raw_bins_p[2], raw_bins_p[3]) > max(self.cumulative_bins_p_max[2], self.cumulative_bins_p_max[3]) * 0.15 and 
++            is_snare = (snare_score > self.snare_threshold_low and 
++                        max(raw_bins_p[2], raw_bins_p[3]) > max(self.cumulative_bins_p_max[2], self.cumulative_bins_p_max[3]) * self.snare_peak_gate and 
+                         self.hit_lockouts["SNARE"] == 0)
+             
+-        is_cymbal = (cymbal_score > cym_thresh and 
++        is_cymbal = (cymbal_score > self.cymbal_threshold and 
+                      self.hit_lockouts["CYMBAL"] == 0)
+ 
+         # Prioritize hi-hat over snare if high frequency energy dominates
+@@ -679,7 +713,27 @@ class AudioAnalyzer:
+             mono_state['left'] = left_dict
+             mono_state['right'] = right_dict
+ 
+-        return mono_state
++        # Sanitize numpy scalars to native Python types for JSON serialization
++        def _sanitize(obj):
++            if isinstance(obj, dict):
++                return {k: _sanitize(v) for k, v in obj.items()}
++            elif isinstance(obj, list):
++                return [_sanitize(i) for i in obj]
++            elif isinstance(obj, tuple):
++                return tuple(_sanitize(i) for i in obj)
++            elif isinstance(obj, np.ndarray):
++                return _sanitize(obj.tolist())
++            elif isinstance(obj, (np.floating, float)):
++                if np.isnan(obj) or np.isinf(obj):
++                    return 0.0
++                return float(obj)
++            elif isinstance(obj, (np.integer, int)):
++                return int(obj)
++            elif isinstance(obj, (np.bool_, bool)):
++                return bool(obj)
++            return obj
++
++        return _sanitize(mono_state)
+ 
+     def get_empty_state(self):
+          state = { 

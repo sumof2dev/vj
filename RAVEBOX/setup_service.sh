@@ -3,13 +3,8 @@
 # VJ Engine - System Service Setup
 # This makes the VJ Engine run automatically when the device boots.
 
-IS_EVT=false
 IS_NODE=false
 for arg in "$@"; do
-    if [ "$arg" == "--evt" ]; then
-        IS_EVT=true
-        echo "🧪 EVT Mode: Using isolated service names."
-    fi
     if [ "$arg" == "--node" ]; then
         IS_NODE=true
     fi
@@ -23,14 +18,6 @@ SERVER_SERVICE="vj-server.service"
 LAUNCHER_SERVICE="vj-launcher.service"
 CAMERA_SERVICE="vj-camera.service"
 NODE_SERVICE="vj-node.service"
-
-if [ "$IS_EVT" = true ]; then
-    SERVICE_NAME="vj-engine-evt.service"
-    SERVER_SERVICE="vj-server-evt.service"
-    LAUNCHER_SERVICE="vj-launcher-evt.service"
-    CAMERA_SERVICE="vj-camera-evt.service"
-    NODE_SERVICE="vj-node-evt.service"
-fi
 
 CURRENT_DIR=$(pwd)
 
@@ -57,6 +44,13 @@ if [ ! -d "venv" ]; then
 fi
 
 # --- Ensure dependencies are installed ---
+if [ "$IS_NODE" = false ]; then
+    if ! dpkg -s python3-dev &>/dev/null; then
+        echo "📦 python3-dev not found. Installing system headers for Python C extensions..."
+        sudo apt-get update && sudo apt-get install -y python3-dev
+    fi
+fi
+
 VENV_PY="$CURRENT_DIR/venv/bin/python3"
 echo "📦 Verifying virtual environment dependencies..."
 "$VENV_PY" -m pip install --upgrade pip --quiet || true
@@ -136,12 +130,9 @@ sudo usermod -a -G dialout $USER || true
 # 5. Ensure user can run systemctl for these services without password
 echo "   - Setting up sudo permissions for remote management..."
 SUDOERS_FILE="/etc/sudoers.d/vj-launcher"
-if [ "$IS_EVT" = true ]; then
-    SUDOERS_FILE="/etc/sudoers.d/vj-launcher-evt"
-fi
 
 # Define explicit services to avoid wildcard parser restrictions on command arguments
-SERVICES=("$SERVICE_NAME" "$SERVER_SERVICE" "$LAUNCHER_SERVICE" "$CAMERA_SERVICE" "$NODE_SERVICE")
+SERVICES=("$SERVICE_NAME" "$SERVER_SERVICE" "$LAUNCHER_SERVICE" "$CAMERA_SERVICE" "$NODE_SERVICE" "cloudflared.service")
 CMD_LIST=""
 for svc in "${SERVICES[@]}"; do
     CMD_LIST="$CMD_LIST/usr/bin/systemctl start $svc, /usr/bin/systemctl stop $svc, /usr/bin/systemctl restart $svc, /usr/bin/systemctl status $svc, /usr/bin/systemctl is-active $svc, /usr/bin/systemctl enable $svc, /usr/bin/systemctl disable $svc, /usr/bin/journalctl -u $svc, "
@@ -152,7 +143,15 @@ SUDO_CMD="$USER ALL=(ALL) NOPASSWD: $CMD_LIST"
 echo "$SUDO_CMD" | sudo tee "$SUDOERS_FILE" > /dev/null
 sudo chmod 440 "$SUDOERS_FILE"
 
-# 5. Reload and Enable
+# 5. Handle Session Linger & Reload
+# Ensures the user session directory persists at boot before interactive login
+echo "   - Enabling loginctl user session lingering for sound stability..."
+sudo loginctl enable-linger $USER
+
+echo "   - Allocating persistent logging layout profiles..."
+mkdir -p "$CURRENT_DIR/logs"
+chmod 775 "$CURRENT_DIR/logs"
+
 echo "   - Reloading systemd..."
 sudo systemctl daemon-reload
 echo "   - Enabling auto-start on boot..."
@@ -169,11 +168,11 @@ else
     sudo systemctl enable $SERVICE_NAME
     sudo systemctl enable $SERVER_SERVICE
     sudo systemctl enable $LAUNCHER_SERVICE
-    sudo systemctl enable $CAMERA_SERVICE
+    sudo systemctl disable $CAMERA_SERVICE 2>/dev/null || true
     sudo systemctl start $SERVICE_NAME
     sudo systemctl start $LAUNCHER_SERVICE
     sudo systemctl start $SERVER_SERVICE
-    sudo systemctl start $CAMERA_SERVICE
+    sudo systemctl stop $CAMERA_SERVICE 2>/dev/null || true
 fi
 
 # 4. Start immediately?

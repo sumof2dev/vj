@@ -66,6 +66,18 @@ function toggleLiveEditMode() {
     const gear = document.getElementById('live-gear-btn');
     if (controls) controls.style.display = liveEditMode ? 'flex' : 'none';
     if (gear) gear.style.background = liveEditMode ? 'var(--danger)' : '#333';
+    
+    // Update summary button state if exists
+    const summaryBtn = document.getElementById('summary-gear-btn');
+    const summaryBtnText = document.getElementById('summary-gear-btn-text');
+    if (summaryBtn && summaryBtnText) {
+        summaryBtn.style.background = liveEditMode ? 'rgba(255, 71, 87, 0.12)' : 'rgba(255,255,255,0.04)';
+        summaryBtn.style.borderColor = liveEditMode ? 'rgba(255, 71, 87, 0.3)' : 'rgba(255,255,255,0.08)';
+        summaryBtnText.innerText = liveEditMode ? '✓ DONE EDITING' : '⚙ EDIT CONSOLE';
+        summaryBtnText.style.color = liveEditMode ? 'var(--danger)' : 'var(--primary)';
+        summaryBtnText.style.textShadow = liveEditMode ? '0 0 5px rgba(255, 71, 87, 0.2)' : '0 0 5px rgba(0, 242, 255, 0.25)';
+    }
+
     renderLiveTab();
 }
 
@@ -98,15 +110,16 @@ async function saveLiveConfigToServer() {
 
 async function loadLiveConfigFromServer() {
     if (!window.db.savedConsoles || window.db.savedConsoles.length === 0) {
-        alert("No saved consoles found on server.");
+        alert("No saved consoles found.");
         return;
     }
-    const list = (window.db.savedConsoles || []).map((c, i) => `${i + 1}. ${(c._fileName || '').split('/').pop().replace('.json','')}`).join('\n');
-    const choice = prompt("Select a console to load (number):\n" + list);
-    if (!choice) return;
-    const idx = parseInt(choice) - 1;
-    const consoleMeta = window.db.savedConsoles[idx];
-    if (!consoleMeta) return;
+    const name = prompt("Enter the name of the console to load:\n" + window.db.savedConsoles.map(c => c.name).join('\n'));
+    if (!name) return;
+    const consoleMeta = window.db.savedConsoles.find(c => c.name.toLowerCase() === name.toLowerCase());
+    if (!consoleMeta) {
+        alert("Console not found.");
+        return;
+    }
 
     console.log(`🔄 [LIVE CONSOLE] Loading ${consoleMeta._fileName}...`);
     try {
@@ -132,32 +145,11 @@ function renderLiveTab() {
     if (!grid) return;
 
     let html = '';
-    // Show existing buttons + 4 extra slots in Edit Mode to allow addition
-    const displayCount = liveEditMode ? Math.max(16, liveConfig.length + 4) : liveConfig.length;
+    const displayCount = 20; // 4 wide by 5 tall grid
 
     for (let i = 0; i < displayCount; i++) {
-        // Special Hijack: Index 3 (Top-Right in a 4-col grid) is always Gear/Home
-        if (i === 3) {
-            html += `
-                <div class="live-btn system-slot" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); height:100px; display:flex; gap:15px; align-items:center; justify-content:center; cursor:default; position:relative; overflow:hidden; border-radius:15px; grid-column: 4 / 5; grid-row: 1 / 2;">
-                    <button class="btn btn-sm" id="live-gear-btn" onclick="toggleLiveEditMode()" title="Settings" style="padding: 8px; border-radius: 50%; width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); cursor:pointer; transition:all 0.2s;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                        </svg>
-                    </button>
-                    <button class="btn btn-sm" onclick="window.location.href='manager.html'" title="Home" style="padding: 8px; border-radius: 50%; width: 40px; height: 40px; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); cursor:pointer; transition:all 0.2s;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                        </svg>
-                    </button>
-                </div>
-            `;
-            continue;
-        }
-
-        const cfg = liveConfig[i] || { type: 'none', color: '#333' };
+        const rawCfg = liveConfig[i];
+        const cfg = (rawCfg && typeof rawCfg === 'object') ? rawCfg : { type: 'none', color: '#333' };
         let content = '';
         let label = '';
         let sublabel = '';
@@ -176,7 +168,7 @@ function renderLiveTab() {
             const instY = (window.db.stage || []).find(s => s.id === cfg.targetId);
             const profY = instY ? (window.db.profiles || []).find(p => p.id === instY.profileId) : null;
             const chY = (profY && profY.channels) ? profY.channels[cfg.channelIdx] : null;
-            const addrY = (instY && chY) ? (parseInt(instY.address) || 1) + (parseInt(instY.offset) || 0) + (parseInt(chY.addrOffset) || cfg.channelIdx) : null;
+            const addrY = (instY && chY) ? (parseInt(instY.address) || 1) + (parseInt(chY.addrOffset) || cfg.channelIdx) : null;
             const isOverriddenY = addrY !== null && window.latestOverrides && window.latestOverrides.has(addrY);
             const valY = addrY !== null ? (window.latestDmxUniverse[addrY] || (window.latestAudioState && window.latestAudioState.manual_overrides ? window.latestAudioState.manual_overrides[addrY] : 0) || 0) : 0;
             
@@ -196,7 +188,7 @@ function renderLiveTab() {
                 const instX = (window.db.stage || []).find(s => s.id === cfg.targetIdX);
                 const profX = instX ? (window.db.profiles || []).find(p => p.id === instX.profileId) : null;
                 const chX = (profX && profX.channels) ? profX.channels[cfg.channelIdxX] : null;
-                const addrX = (instX && chX) ? (parseInt(instX.address) || 1) + (parseInt(instX.offset) || 0) + (parseInt(chX.addrOffset) || cfg.channelIdxX) : null;
+                const addrX = (instX && chX) ? (parseInt(instX.address) || 1) + (parseInt(chX.addrOffset) || cfg.channelIdxX) : null;
                 const isOverriddenX = addrX !== null && window.latestOverrides && window.latestOverrides.has(addrX);
                 const valX = addrX !== null ? (window.latestDmxUniverse[addrX] || (window.latestAudioState && window.latestAudioState.manual_overrides ? window.latestAudioState.manual_overrides[addrX] : 0) || 0) : 0;
                 
@@ -213,7 +205,7 @@ function renderLiveTab() {
             const inst = (window.db.stage || []).find(s => s.id === cfg.targetId);
             const prof = inst ? (window.db.profiles || []).find(p => p.id === inst.profileId) : null;
             const ch = (prof && prof.channels) ? prof.channels[cfg.channelIdx] : null;
-            const addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
+            const addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
             const isOverridden = addr !== null && window.latestOverrides && window.latestOverrides.has(addr);
             const val = addr !== null ? (window.latestDmxUniverse[addr] || (window.latestAudioState && window.latestAudioState.manual_overrides ? window.latestAudioState.manual_overrides[addr] : 0) || 0) : 0;
             
@@ -233,7 +225,7 @@ function renderLiveTab() {
             const inst = (window.db.stage || []).find(s => s.id === cfg.targetId);
             const prof = inst ? (window.db.profiles || []).find(p => p.id === inst.profileId) : null;
             const ch = (prof && prof.channels) ? prof.channels[cfg.channelIdx] : null;
-            const addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
+            const addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
             const isOverridden = addr !== null && window.latestOverrides && window.latestOverrides.has(addr);
             const val = addr !== null ? (window.latestDmxUniverse[addr] || (window.latestAudioState && window.latestAudioState.manual_overrides ? window.latestAudioState.manual_overrides[addr] : 0) || 0) : 0;
             
@@ -374,7 +366,7 @@ function handleLivePointerDown(e, idx) {
         const inst = (window.db.stage || []).find(s => s.id === cfg.targetId);
         const prof = inst ? (window.db.profiles || []).find(p => p.id === inst.profileId) : null;
         const ch = (prof && prof.channels) ? prof.channels[cfg.channelIdx] : null;
-        const addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
+        const addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
         window.wasSliderOverriddenAtStart = addr !== null && window.latestOverrides && window.latestOverrides.has(addr);
 
         // Send immediate override so slider responds on first touch
@@ -543,7 +535,7 @@ function processOverride(targetId, chIdx, val, isHome, btn, axis = 'y') {
     const ch = profile.channels ? profile.channels[chIdx] : null;
     if (!ch) return;
 
-    const addr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0) + (parseInt(ch.addrOffset) || chIdx);
+    const addr = (parseInt(inst.address) || 1) + (parseInt(ch.addrOffset) || chIdx);
     
     if (isHome) {
         if (window.latestOverrides.has(addr)) {
@@ -742,14 +734,14 @@ async function clearSliderOverrides(cfg) {
     const profY = instY ? (window.db.profiles || []).find(p => p.id === instY.profileId) : null;
     if (instY && profY) {
         const ch = profY.channels[cfg.channelIdx];
-        if (ch) addrs.push((parseInt(instY.address) || 1) + (parseInt(instY.offset) || 0) + (parseInt(ch.addrOffset) || cfg.channelIdx));
+        if (ch) addrs.push((parseInt(instY.address) || 1) + (parseInt(ch.addrOffset) || cfg.channelIdx));
     }
     if (cfg.targetIdX) {
         const instX = (window.db.stage || []).find(s => s.id === cfg.targetIdX);
         const profX = instX ? (window.db.profiles || []).find(p => p.id === instX.profileId) : null;
         if (instX && profX) {
             const ch = profX.channels[cfg.channelIdxX];
-            if (ch) addrs.push((parseInt(instX.address) || 1) + (parseInt(instX.offset) || 0) + (parseInt(ch.addrOffset) || cfg.channelIdxX));
+            if (ch) addrs.push((parseInt(instX.address) || 1) + (parseInt(ch.addrOffset) || cfg.channelIdxX));
         }
     }
     if (addrs.length > 0 && window.ws && window.ws.readyState === WebSocket.OPEN) {
@@ -928,7 +920,7 @@ window.getTrackedDmxAddresses = function() {
     const profiles = (window.db && window.db.profiles) || [];
 
     stage.forEach(inst => {
-        const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+        const baseAddr = parseInt(inst.address) || 1;
         const profile = profiles.find(p => p.id === inst.profileId);
         if (profile && profile.channels) {
             profile.channels.forEach((ch, idx) => {
@@ -1613,13 +1605,13 @@ window.updateLiveConsoleVisuals = function() {
             const inst = (window.db.stage || []).find(s => s.id === cfg.targetId);
             const prof = inst ? (window.db.profiles || []).find(p => p.id === inst.profileId) : null;
             const ch = (prof && prof.channels) ? prof.channels[cfg.channelIdx] : null;
-            addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
+            addr = (inst && ch) ? (parseInt(inst.address) || 1) + (parseInt(ch.addrOffset) || cfg.channelIdx) : null;
             
             if (cfg.type === 'slider' && cfg.targetIdX) {
                 const instX = (window.db.stage || []).find(s => s.id === cfg.targetIdX);
                 const profX = instX ? (window.db.profiles || []).find(p => p.id === instX.profileId) : null;
                 const chX = (profX && profX.channels) ? profX.channels[cfg.channelIdxX] : null;
-                addrX = (instX && ch) ? (parseInt(instX.address) || 1) + (parseInt(instX.offset) || 0) + (parseInt(chX.addrOffset) || cfg.channelIdxX) : null;
+                addrX = (instX && chX) ? (parseInt(instX.address) || 1) + (parseInt(chX.addrOffset) || cfg.channelIdxX) : null;
             }
         }
 

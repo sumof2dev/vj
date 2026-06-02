@@ -6,6 +6,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=sumof2
+# CRITICAL: Allow service to access User Audio (PulseAudio/Pipewire)
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=PULSE_RUNTIME_PATH=/run/user/1000/pulse
 WorkingDirectory=/home/sumof2/vj
 ExecStart=/home/sumof2/vj/start.sh --server-only
 Restart=always

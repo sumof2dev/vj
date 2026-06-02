@@ -59,9 +59,9 @@ fi
 echo -e "\n${BOLD}Connectivity${RESET}"
 
 # Local server reachable?
-if curl -sk --max-time 2 https://127.0.0.1:8000/ >/dev/null 2>&1; then
+if curl -sk --max-time 2 https://127.0.0.1:8000/manager.html >/dev/null 2>&1; then
     echo -e "  ${GREEN}●${RESET} Local HTTPS (8000)  ${GREEN}reachable${RESET}"
-elif curl -s --max-time 2 http://127.0.0.1:8000/ >/dev/null 2>&1; then
+elif curl -s --max-time 2 http://127.0.0.1:8000/manager.html >/dev/null 2>&1; then
     echo -e "  ${GREEN}●${RESET} Local HTTP (8000)  ${GREEN}reachable${RESET}"
 else
     echo -e "  ${RED}○${RESET} Local (8000)  ${DIM}unreachable${RESET}"

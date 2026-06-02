@@ -3,7 +3,7 @@
         "id": "pulse_beat",
         "label": "Pulse with Beat",
         "behavior": "direct",
-        "source": "bin 0",
+        "source": "beat phase",
         "speed": 0.2,
         "react": 0.8,
         "hold_type": "none",
@@ -60,7 +60,7 @@
         "id": "kick_drum_step",
         "label": "kick drum step",
         "behavior": "direct",
-        "source": "bass",
+        "source": "kick",
         "speed": 0,
         "react": 0.45,
         "hold_type": "beat",
@@ -70,7 +70,7 @@
         "id": "hi_hat",
         "label": "hi hat",
         "behavior": "direct",
-        "source": "highs",
+        "source": "cymbal",
         "speed": 1,
         "react": 1,
         "hold_type": "none",
@@ -139,13 +139,12 @@
     {
         "id": "new_trigger_state",
         "label": "New Trigger State",
-        "behavior": "static",
+        "behavior": "direct",
         "source": "volume",
         "speed": 0.5,
         "react": 0.5,
         "hold_type": "none",
-        "rel_center": 0.498,
-        "value": 127
+        "rel_center": 0.498
     },
     {
         "id": "smoother_fuzzy",
@@ -161,7 +160,7 @@
         "id": "kick_spike",
         "label": "Kick spike",
         "behavior": "saw",
-        "source": "bass",
+        "source": "kick",
         "speed": 1,
         "react": 0.85,
         "hold_type": "none",
@@ -184,6 +183,56 @@
         "source": "mids",
         "speed": 1,
         "react": 1,
+        "hold_type": "none",
+        "rel_center": 0.498
+    },
+    {
+        "id": "kick_hit",
+        "label": "Kick Hit (Direct)",
+        "behavior": "direct",
+        "source": "kick",
+        "speed": 1,
+        "react": 1,
+        "hold_type": "none",
+        "rel_center": 0.498
+    },
+    {
+        "id": "snare_hit",
+        "label": "Snare Hit (Direct)",
+        "behavior": "direct",
+        "source": "snare",
+        "speed": 1,
+        "react": 1,
+        "hold_type": "none",
+        "rel_center": 0.498
+    },
+    {
+        "id": "cymbal_hit",
+        "label": "Cymbal Hit (Direct)",
+        "behavior": "direct",
+        "source": "cymbal",
+        "speed": 1,
+        "react": 1,
+        "hold_type": "none",
+        "rel_center": 0.498
+    },
+    {
+        "id": "beat_hit",
+        "label": "Beat Hit (Binary)",
+        "behavior": "direct",
+        "source": "beat",
+        "speed": 1,
+        "react": 1,
+        "hold_type": "none",
+        "rel_center": 0.498
+    },
+    {
+        "id": "volume_direct",
+        "label": "Volume direct",
+        "behavior": "direct",
+        "source": "volume",
+        "speed": 0.5,
+        "react": 0.5,
         "hold_type": "none",
         "rel_center": 0.498
     }

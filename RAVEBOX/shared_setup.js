@@ -1,6 +1,6 @@
 console.log("shared_setup.js loading...");
 
-window.enforceDmxLimit = function(el) {
+window.enforceDmxLimit = function (el) {
     let val = el.value.replace(/\D/g, ''); // Digits only
     if (val === '') {
         // Allow empty
@@ -14,14 +14,14 @@ window.enforceDmxLimit = function(el) {
     return val;
 };
 
-window.generateFriendlyId = function(type, existingIds = []) {
+window.generateFriendlyId = function (type, existingIds = []) {
     const words = ['rave', 'box', 'cave', 'theone', 'beaver', 'slimy', 'hasty', 'baggage', 'rock', 'toy', 'tease', 'mildly', 'fat', 'twist', 'good', 'miami', 'grab', 'cash', 'money', 'bills', 'yeet', 'nocap', 'uhhuh', 'kiss', 'climb', 'drop', 'grandma', 'love', 'roses', 'cinch', 'knot', 'xray', 'rip', 'tit', 'wish', 'head', 'rash', 'play', 'unload', 'brave', 'daddy'];
     const now = new Date();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     const word = words[Math.floor(Math.random() * words.length)];
     const baseId = `${mm}${dd}.${type}.${word}`;
-    
+
     let finalId = baseId;
     let counter = 1;
     while (existingIds.includes(finalId)) {
@@ -31,7 +31,7 @@ window.generateFriendlyId = function(type, existingIds = []) {
     return finalId;
 };
 
-window.showToast = function(msg, duration = 3000, type = 'info') {
+window.showToast = function (msg, duration = 3000, type = 'info') {
     let el = document.getElementById('toast-container');
     if (!el) {
         el = document.createElement('div');
@@ -42,11 +42,11 @@ window.showToast = function(msg, duration = 3000, type = 'info') {
 
     const toast = document.createElement('div');
     toast.style.cssText = `background:rgba(0,0,0,0.9); color:#fff; padding:12px 24px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); border-left:4px solid var(--accent); backdrop-filter:blur(20px); font-size:13px; font-weight:900; box-shadow:0 15px 45px rgba(0,0,0,0.6); transform:translateY(40px); opacity:0; transition:all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); pointer-events:auto; letter-spacing:0.5px; text-transform:uppercase;`;
-    
+
     if (type === 'warning') toast.style.borderLeftColor = '#f1c40f';
     else if (type === 'error') toast.style.borderLeftColor = '#e74c3c';
     else if (type === 'success') toast.style.borderLeftColor = 'var(--success)';
-    
+
     toast.innerText = msg;
     el.appendChild(toast);
 
@@ -62,7 +62,7 @@ window.showToast = function(msg, duration = 3000, type = 'info') {
     }, duration);
 };
 
-window.addEventListener('error', function(e) {
+window.addEventListener('error', function (e) {
     console.error("❌ GLOBAL ERROR:", e.message, "at", e.filename, ":", e.lineno);
     const el = document.getElementById('debug-error-overlay');
     if (el) {
@@ -73,7 +73,7 @@ window.addEventListener('error', function(e) {
 
 // --- 0. IMMEDIATE GLOBAL BINDING ---
 var RAVEBOX_READY = false;
-var activeTestFixtures = []; 
+var activeTestFixtures = [];
 var activeTestFunctions = new Set();
 var current_editing_preset_id = null;
 var currentPresetTriggers = [];
@@ -132,25 +132,30 @@ window.BEHAVIORS = [
 ];
 
 window.EASY_DESCRIPTORS = [
-    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "bin 0", "speed": 0.2, "react": 0.8, "hold_type": "none", "rel_center": 0.498},
-    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "bass", "speed": 0.1, "react": 0.25, "hold_type": "none", "rel_center": 0.498},
-    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "stochastic", "source": "mids", "speed": 0.5, "react": 0.45, "hold_type": "beat", "rel_center": 0.498},
-    {"id": "rapid_climb", "label": "Rapid Climb", "behavior": "direct", "source": "impact", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
-    {"id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5},
-    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "mids", "speed": 0.3, "react": 0.15, "hold_type": "beat", "rel_center": 0.498},
-    {"id": "kick_drum_step", "label": "kick drum step", "behavior": "direct", "source": "bass", "speed": 0, "react": 0.45, "hold_type": "beat", "rel_center": 0.004},
-    {"id": "hi_hat", "label": "hi hat", "behavior": "direct", "source": "highs", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
-    {"id": "random_bar_hold", "label": "Random Bar Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "bar", "rel_center": 0.5},
-    {"id": "random_beat_hold", "label": "Random Beat Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "beat", "rel_center": 0.5},
-    {"id": "beat_jump", "label": "Beat Jump", "behavior": "direct", "source": "beat phase", "speed": 0.2, "react": 0.4, "hold_type": "none", "rel_center": 0.502},
-    {"id": "direct_hold", "label": "Direct and Hold", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.2, "hold_type": "beat", "rel_center": 0.502},
-    {"id": "hi_hit", "label": "Hi Hit", "behavior": "saw", "source": "highs", "speed": 0.2, "react": 0.65, "hold_type": "none", "rel_center": 0.498},
-    {"id": "fuzzy_mids", "label": "Fuzzy Mids", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "none", "rel_center": 0.502},
-    {"id": "new_trigger_state", "label": "New Trigger State", "behavior": "static", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498, "value": 127},
-    {"id": "smoother_fuzzy", "label": "Smoother fuzzy", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "beat", "rel_center": 0.502},
-    {"id": "kick_spike", "label": "Kick spike", "behavior": "saw", "source": "bass", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498},
-    {"id": "beat", "label": "beat", "behavior": "beat phase", "source": "volume", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498},
-    {"id": "spiky_mid", "label": "spiky mid", "behavior": "spike", "source": "mids", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    { "id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "beat phase", "speed": 0.2, "react": 0.8, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "bass", "speed": 0.1, "react": 0.25, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "snap_phrase", "label": "Snap Phrase", "behavior": "stochastic", "source": "mids", "speed": 0.5, "react": 0.45, "hold_type": "beat", "rel_center": 0.498 },
+    { "id": "rapid_climb", "label": "Rapid Climb", "behavior": "direct", "source": "impact", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5 },
+    { "id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "mids", "speed": 0.3, "react": 0.15, "hold_type": "beat", "rel_center": 0.498 },
+    { "id": "kick_drum_step", "label": "kick drum step", "behavior": "direct", "source": "kick", "speed": 0, "react": 0.45, "hold_type": "beat", "rel_center": 0.004 },
+    { "id": "hi_hat", "label": "hi hat", "behavior": "direct", "source": "cymbal", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "random_bar_hold", "label": "Random Bar Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "bar", "rel_center": 0.5 },
+    { "id": "random_beat_hold", "label": "Random Beat Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "beat", "rel_center": 0.5 },
+    { "id": "beat_jump", "label": "Beat Jump", "behavior": "direct", "source": "beat phase", "speed": 0.2, "react": 0.4, "hold_type": "none", "rel_center": 0.502 },
+    { "id": "direct_hold", "label": "Direct and Hold", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.2, "hold_type": "beat", "rel_center": 0.502 },
+    { "id": "hi_hit", "label": "Hi Hit", "behavior": "saw", "source": "highs", "speed": 0.2, "react": 0.65, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "fuzzy_mids", "label": "Fuzzy Mids", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "none", "rel_center": 0.502 },
+    { "id": "new_trigger_state", "label": "New Trigger State", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "smoother_fuzzy", "label": "Smoother fuzzy", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "beat", "rel_center": 0.502 },
+    { "id": "kick_spike", "label": "Kick spike", "behavior": "saw", "source": "kick", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "beat", "label": "beat", "behavior": "beat phase", "source": "volume", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "spiky_mid", "label": "spiky mid", "behavior": "spike", "source": "mids", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "kick_hit", "label": "Kick Hit (Direct)", "behavior": "direct", "source": "kick", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "snare_hit", "label": "Snare Hit (Direct)", "behavior": "direct", "source": "snare", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "cymbal_hit", "label": "Cymbal Hit (Direct)", "behavior": "direct", "source": "cymbal", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "beat_hit", "label": "Beat Hit (Binary)", "behavior": "direct", "source": "beat", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    {"id": "volume_direct", "label": "Volume direct", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498},
     // PREMADE_ANCHOR
 ];
 
@@ -168,7 +173,11 @@ window.SOURCES = [
     { id: 'impact', label: 'Impact' },
     { id: 'beat phase', label: 'Beat Phase' },
     { id: 'bin 0', label: 'Bin 0' },
-    { id: 'bin 4', label: 'Bin 4' }
+    { id: 'bin 4', label: 'Bin 4' },
+    { id: 'kick', label: 'Kick' },
+    { id: 'snare', label: 'Snare' },
+    { id: 'cymbal', label: 'Cymbal' },
+    { id: 'beat', label: 'Beat (Binary)' }
 ];
 
 window.HOLD_TYPES = [
@@ -180,77 +189,110 @@ window.HOLD_TYPES = [
 
 
 // --- 1. CORE ROUTING ENGINE (FLATTENED) ---
-console.log("🛠️ Evaluating Routing...");
 const setupLocation = window.location;
 const setupHostname = setupLocation.hostname;
 
-let savedHost = localStorage.getItem('vj_backend_host');
-const onHostedDomain = (setupHostname === 'ravebox.love' || setupHostname === 'api.ravebox.love' || setupHostname.includes('storage.googleapis.com'));
+window.evaluateRouting = function () {
+    console.log("🛠️ Evaluating Routing...");
+    var urlParams = new URLSearchParams(setupLocation.search);
 
-if (!savedHost && onHostedDomain) {
-    console.warn("⚠️ No VJ Backend Host found. Use ?host=... or a Secret Code. Skipping prompt to avoid blocking.");
-}
-
-var urlParams = new URLSearchParams(setupLocation.search);
-var queryHost = urlParams.get('host');
-if (queryHost) {
-    localStorage.setItem('vj_backend_host', queryHost.trim());
-    // 1.5 Clean the URL to avoid re-triggering or cluttered URL bars
-    const newUrl = setupLocation.pathname + setupLocation.hash;
-    window.history.replaceState({}, '', newUrl);
-}
-
-savedHost = localStorage.getItem('vj_backend_host');
-window.isCustomSubdomain = setupHostname.endsWith('.ravebox.love') && !onHostedDomain;
-
-// If accessing directly via a custom tunnel (e.g. mybox.ravebox.love), the URL itself is the source of truth.
-// We must ignore any old "Secret Codes" from localStorage, otherwise it prompts or misroutes.
-if (window.isCustomSubdomain) {
-    savedHost = null;
-    if (localStorage.getItem('vj_backend_host')) {
-            localStorage.removeItem('vj_backend_host');
+    // Support global disconnection parameter
+    if (urlParams.get('disconnect') === 'true') {
+        localStorage.removeItem('vj_backend_host');
+        window.location.href = 'index.html';
+        return;
     }
-}
 
-host = savedHost || (onHostedDomain ? '' : setupHostname);
+    // Support URL parameter pairing / host setting
+    var queryHost = urlParams.get('host');
+    if (queryHost) {
+        localStorage.setItem('vj_backend_host', queryHost.trim());
+        const cleanUrl = setupLocation.pathname + setupLocation.hash;
+        window.history.replaceState({}, '', cleanUrl);
+    }
 
-window.isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+    let savedHost = localStorage.getItem('vj_backend_host');
+    const onHostedDomain = (setupHostname === 'ravebox.love' || setupHostname === 'api.ravebox.love' || setupHostname.includes('storage.googleapis.com'));
+    window.onHostedDomain = onHostedDomain;
 
-var boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
-window.isCustomTunnel = (boxName || "").endsWith('.ravebox.love') && !window.isOriginalCloud;
+    if (onHostedDomain && !savedHost) {
+        window.location.href = 'index.html';
+        return;
+    }
 
-var baseHost = (window.isCustomTunnel ? boxName.replace(/^(api-|ws-)/, '') : boxName);
-window.apiHost = window.isCustomTunnel ? 'api-' + baseHost : host; // Keep for Launcher direct access if needed
-window.wsHost = window.isCustomTunnel ? 'ws-' + baseHost : host;
-window.host = host;
+    // Global redirect for hosted domain to local IP if a local backend is saved
+    if (onHostedDomain && savedHost) {
+        if (savedHost.includes('.') || savedHost.includes(':') || savedHost === 'localhost') {
+            let target = savedHost;
+            if (!target.startsWith('http://') && !target.startsWith('https://')) {
+                target = 'http://' + target;
+            }
+            if (!target.includes(':', 6)) {
+                target = target + ':8000';
+            }
+            const currentPath = window.location.pathname;
+            let page = currentPath.substring(currentPath.lastIndexOf('/') + 1);
+            if (!page || page === 'index.html') {
+                page = 'manager.html';
+            }
+            const newUrl = target.replace(/\/+$/, '') + '/' + page + setupLocation.search + setupLocation.hash;
+            console.log("Redirecting to local VJ host:", newUrl);
+            window.location.href = newUrl;
+        }
+    }
 
-var PROTO = (setupLocation.protocol === 'file:') ? 'http:' : setupLocation.protocol;
-var isLocal = (setupHostname === 'localhost' || setupHostname === '127.0.0.1' || setupHostname === '');
+    if (!savedHost && onHostedDomain) {
+        console.warn("⚠️ No VJ Backend Host found. Use ?host=... or a Secret Code. Skipping prompt to avoid blocking.");
+    }
+    window.isCustomSubdomain = setupHostname.endsWith('.ravebox.love') && !onHostedDomain;
 
-// Upgrade to HTTPS for known local SSL ports if we are on http: but have reason to believe https: is required
-if (isLocal && PROTO === 'http:' && (setupLocation.port === '8000' || setupLocation.port === '8001')) {
-    console.warn("⚠️ Local SSL detected on port " + setupLocation.port + ". Upgrading protocol to https:");
-    // Note: We don't force a redirect here to avoid loops, but we use it for API calls below
-}
+    // If accessing directly via a custom tunnel (e.g. mybox.ravebox.love), the URL itself is the source of truth.
+    // We must ignore any old "Secret Codes" from localStorage, otherwise it prompts or misroutes.
+    if (window.isCustomSubdomain) {
+        savedHost = null;
+        if (localStorage.getItem('vj_backend_host')) {
+            localStorage.removeItem('vj_backend_host');
+        }
+    }
 
-API_BASE_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : '')));
-BACKEND_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : '')));
+    host = savedHost || (onHostedDomain ? '' : setupHostname);
 
-// Final sanity check for local production servers (which are HTTPS in this codebase)
-if (isLocal && (API_BASE_ROOT.includes(':8000') || BACKEND_ROOT.includes(':8001'))) {
-    // If we are on http: but targeting 8000/8001, we MUST use https: to avoid ERR_CONNECTION_RESET
-    API_BASE_ROOT = API_BASE_ROOT.replace('http://', 'https://');
-    BACKEND_ROOT = BACKEND_ROOT.replace('http://', 'https://');
-}
+    window.isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
 
-window.API_BASE_ROOT = API_BASE_ROOT;
-window.BACKEND_ROOT = BACKEND_ROOT;
-// Local proxy routing to bypass self-signed cert warnings on port 8001
-const isLocalConnection = (setupHostname === 'localhost' || setupHostname === '127.0.0.1' || !setupHostname.includes('.'));
-window.LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
-LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
-window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-window.APP_VERSION = "519261024";
+    var boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && host !== 'localhost' && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+    window.isCustomTunnel = (boxName || "").endsWith('.ravebox.love') && !window.isOriginalCloud;
+
+    var baseHost = (window.isCustomTunnel ? boxName.replace(/^(api-|ws-)/, '') : boxName);
+    var isConsolidated = window.isCustomTunnel && !setupHostname.startsWith('api-') && !setupHostname.startsWith('ws-');
+    window.apiHost = (window.isCustomTunnel && !isConsolidated) ? 'api-' + baseHost : baseHost;
+    window.wsHost = (window.isCustomTunnel && (!isConsolidated || window.useWsLegacyFallback)) ? 'ws-' + baseHost : baseHost;
+    window.host = host;
+
+    var PROTO = (setupLocation.protocol === 'file:') ? 'http:' : setupLocation.protocol;
+    var isLocal = (setupHostname === 'localhost' || setupHostname === '127.0.0.1' || setupHostname === '');
+
+    // Force http: when talking to a local backend to prevent Mixed Content blocking.
+    // This covers cases where the user arrives from https://ravebox.love but has a local IP saved.
+    var hostIsLocal = savedHost && (savedHost === 'localhost' || savedHost === '127.0.0.1' || /^\d+\.\d+\.\d+\.\d+$/.test(savedHost));
+    if (hostIsLocal) {
+        PROTO = 'http:';
+    }
+
+    API_BASE_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + baseHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'api.ravebox.love' : host + ':8000')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + setupLocation.port : '')));
+    BACKEND_ROOT = (window.isCustomTunnel || window.isCustomSubdomain) ? (PROTO + '//' + window.apiHost) : (host ? (PROTO + '//' + (window.isOriginalCloud ? 'ravebox.love' : baseHost + ':8001')) : (PROTO + '//' + setupHostname + (setupLocation.port ? ':' + '8001' : '')));
+
+    window.API_BASE_ROOT = API_BASE_ROOT;
+    window.BACKEND_ROOT = BACKEND_ROOT;
+    // Local proxy routing to bypass self-signed cert warnings on port 8001
+    const isLocalConnection = (setupHostname === 'localhost' || setupHostname === '127.0.0.1' || !setupHostname.includes('.'));
+    window.LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
+    LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
+    window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
+    window.APP_VERSION = "61260858";
+};
+
+// Evaluate routing parameters immediately
+window.evaluateRouting();
 
 if (setupLocation.protocol === 'file:') {
     console.error("❌ Running from file:// protocol is not supported. Please use http://localhost:8085/manager.html");
@@ -303,7 +345,7 @@ async function initDatabaseSync() {
             if (listRes.ok) {
                 const allFiles = await listRes.json();
                 const profileFiles = allFiles.filter(f => f.startsWith('profiles/') && f.endsWith('.json'));
-                
+
                 const profileContents = await Promise.allSettled(
                     profileFiles.map(f => fetch(`${window.API_BASE}/${f}`).then(r => r.json()))
                 );
@@ -323,10 +365,10 @@ async function initDatabaseSync() {
         }
 
         console.log(`✅ [SYNC] Successfully synchronized ${syncCount} core files from server.`);
-        
+
         // 4. Data Normalization & Repair
         repairPresets();
-        
+
         // 5. Merge Descriptors into EASY_DESCRIPTORS
         if (window.db.descriptors && Array.isArray(window.db.descriptors)) {
             const existingIds = new Set(window.EASY_DESCRIPTORS.map(d => d.id));
@@ -349,17 +391,17 @@ async function initDatabaseSync() {
     } catch (e) {
         console.warn("⚠️ Database Sync failed, using LocalStorage fallback:", e);
     }
-    
+
     window.RAVEBOX_READY = true;
     window.dispatchEvent(new CustomEvent('RAVEBOX_READY'));
-    
+
     // Hide Loading Overlay
     const overlay = document.getElementById('loading-overlay');
     if (overlay) {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v519261024)");
+    console.log("✅ RaveBox Core Ready (v61260858)");
 }
 
 // Kick off sync immediately
@@ -380,7 +422,7 @@ window.addEventListener('storage', (event) => {
 });
 
 // Shared Persistence
-var saveDB = window.saveDB = async function(skipServer = false) {
+var saveDB = window.saveDB = async function (skipServer = false) {
     if (window.db.stage && Array.isArray(window.db.stage)) {
         window.db.stage.forEach(s => { if (s.fixtureId) delete s.fixtureId; });
     }
@@ -389,7 +431,7 @@ var saveDB = window.saveDB = async function(skipServer = false) {
     if (!skipServer) {
         console.log("💾 [DB] Syncing presets, stage, and console to server...");
         const syncPromises = [];
-        
+
         if (window.db.presets) syncPromises.push(fetch(`${window.API_BASE}/presets.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.presets) }));
         if (window.db.stage) syncPromises.push(fetch(`${window.API_BASE}/stage_config.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.stage) }));
         if (window.db.liveConsole) syncPromises.push(fetch(`${window.API_BASE}/live_console.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.liveConsole) }));
@@ -408,7 +450,7 @@ var saveDB = window.saveDB = async function(skipServer = false) {
  * Global Profile Persistence (Core)
  * Saves a single profile object to the server and local storage.
  */
-var saveProfileToServer = window.saveProfileToServer = async function(profileData) {
+var saveProfileToServer = window.saveProfileToServer = async function (profileData) {
     if (!profileData || !profileData.id) return false;
     const fileName = `profiles/${profileData.id}.json`;
     try {
@@ -438,7 +480,7 @@ var saveProfileToServer = window.saveProfileToServer = async function(profileDat
  * Full Rig Synchronization
  * Pushes all profiles in memory to the server.
  */
-var syncAllProfiles = window.syncAllProfiles = async function() {
+var syncAllProfiles = window.syncAllProfiles = async function () {
     console.log("🔄 Global Sync: Pushing all profiles to server...");
     let success = true;
     // Sequential to avoid slamming the RPi server with simultaneous file writes
@@ -461,7 +503,7 @@ window.ws = null;
 window.dmx_connected = false;
 
 // --- UI UTILITIES ---
-window.cycleTheme = function() {
+window.cycleTheme = function () {
     const themes = ['', 'theme-cyber', 'theme-industrial'];
     let currentIdx = 0;
     const bodyClass = document.body.className;
@@ -470,7 +512,7 @@ window.cycleTheme = function() {
         else if (t !== '' && bodyClass.includes(t)) currentIdx = i;
     });
     const nextIdx = (currentIdx + 1) % themes.length;
-    themes.forEach(t => { if(t) document.body.classList.remove(t); });
+    themes.forEach(t => { if (t) document.body.classList.remove(t); });
     const nextTheme = themes[nextIdx];
     if (nextTheme) { document.body.classList.add(nextTheme); localStorage.setItem('ravebox_setup_theme', nextTheme); }
     else localStorage.removeItem('ravebox_setup_theme');
@@ -481,7 +523,7 @@ if (savedTheme) document.body.classList.add(savedTheme);
 
 window.toggleSidebar = () => document.getElementById('sidebar')?.classList.toggle('collapsed');
 
-window.updateUniversalHUD = function() {
+window.updateUniversalHUD = function () {
     const hud = document.getElementById('universal-hud');
     if (!hud) return;
 
@@ -492,12 +534,12 @@ window.updateUniversalHUD = function() {
         let dimNames = [];
         if (window.latestAudioState.lissajous_active > 0.5) activeNames.push("Lissajous");
         if (window.latestAudioState.calibrated_preset_active) activeNames.push("Calibrated");
-        
+
         if (!window.everActivatedPresets) window.everActivatedPresets = new Set();
 
         const activeIds = (window.activePresets || (window.latestAudioState && window.latestAudioState.active_presets) || []).map(id => String(id));
         activeIds.forEach(id => window.everActivatedPresets.add(id));
-        
+
         // Render in the order they were first added to the Set (Insertion Order)
         let badgesHtml = '';
         window.everActivatedPresets.forEach(id => {
@@ -506,7 +548,7 @@ window.updateUniversalHUD = function() {
             const isActive = activeIds.includes(id);
             badgesHtml += `<span class="hud-preset-badge ${isActive ? '' : 'dim'}" onclick="window.togglePreset('${id}')" style="cursor: pointer;">${name}</span>`;
         });
-        
+
         presetsCont.innerHTML = badgesHtml;
     }
 
@@ -523,7 +565,7 @@ window.updateUniversalHUD = function() {
     }
 };
 
-window.togglePreset = function(presetId) {
+window.togglePreset = function (presetId) {
     if (!presetId) return;
     if (window.ws && window.ws.readyState === WebSocket.OPEN) {
         window.ws.send(JSON.stringify({ type: 'toggle_preset', preset_id: presetId, exclusive: true }));
@@ -532,14 +574,14 @@ window.togglePreset = function(presetId) {
     }
 };
 
-var updateUniqueFunctions = window.updateUniqueFunctions = function() {
+var updateUniqueFunctions = window.updateUniqueFunctions = function () {
     ['pres-add-global-func', 'test-function-picker'].forEach(id => {
         const sel = document.getElementById(id);
         if (sel) {
             const current = sel.value;
             const stageDrop = document.getElementById('pres-add-stage-fix');
             const isSpecialized = (id === 'pres-add-global-func') && stageDrop && ['system', 'visualdmx', 'calibrated'].includes(stageDrop.value);
-            
+
             if (isSpecialized) return; // Don't wipe specialized lists (Rate, Intensity, etc)
 
             sel.innerHTML = (id === 'test-function-picker' ? '<option value="">-- All Channels --</option>' : '<option value="">-- Select Function --</option>') +
@@ -552,28 +594,28 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function() {
     if (stageDrop) {
         const current = stageDrop.value;
         const options = (window.db.stage || []).map(inst => `<option value="${inst.id}">FIXTURE: ${inst.id}</option>`).join('');
-        stageDrop.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' + 
-                              '<option value="visualdmx">VISUALIZER (VisualDMX)</option>' +
-                              '<option value="system">SYSTEM (Engine Control)</option>' +
-                              options;
+        stageDrop.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' +
+            '<option value="visualdmx">VISUALIZER (VisualDMX)</option>' +
+            '<option value="system">SYSTEM (Engine Control)</option>' +
+            options;
         if (current) stageDrop.value = current;
     }
 };
 
 // --- NAVIGATION & UI REFRESH ---
-var switchTab = window.switchTab = function(tabId, noHistory = false) {
+var switchTab = window.switchTab = function (tabId, noHistory = false) {
     const isProfilePage = window.location.pathname.endsWith('/profile.html') || window.location.pathname === 'profile.html';
     if (isProfilePage && tabId !== 'tab-profile') { window.location.href = 'setup.html?tab=' + tabId.replace('tab-', ''); return; }
 
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
+
     const tabEl = document.getElementById(tabId);
     if (tabEl) tabEl.classList.add('active');
-    
+
     const btn = document.getElementById('nav-btn-' + tabId.replace('tab-', ''));
     if (btn) btn.classList.add('active');
-    
+
     if (tabId === 'tab-live') { if (typeof loadLiveConfig === 'function') loadLiveConfig(); if (typeof renderLiveTab === 'function') renderLiveTab(); }
     if (tabId === 'tab-test') { if (typeof renderTestTab === 'function') renderTestTab(); }
     if (tabId === 'tab-presets') { if (typeof renderSliderSetup === 'function') renderSliderSetup(); }
@@ -598,16 +640,14 @@ var switchTab = window.switchTab = function(tabId, noHistory = false) {
 
 var getUniqueProfiles = window.getUniqueProfiles = () => {
     const seen = new Set();
-    return (window.db.profiles || []).filter(p => { 
-        if (!p.id || seen.has(p.id)) return false; 
-        // Hide Govee LAN profiles from the main library list
-        if (p.id === 'govee.p.lan' || (p.name && p.name.includes('Govee LAN'))) return false;
-        seen.add(p.id); 
-        return true; 
+    return (window.db.profiles || []).filter(p => {
+        if (!p.id || seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
     });
 };
 
-var refreshUI = window.refreshUI = function() {
+var refreshUI = window.refreshUI = function () {
     if (typeof updateUniqueFunctions === 'function') updateUniqueFunctions();
     if (typeof renderProfileList === 'function') renderProfileList();
     if (typeof renderStageList === 'function') renderStageList();
@@ -615,7 +655,7 @@ var refreshUI = window.refreshUI = function() {
     if (window.currentTab === 'tab-presets' && typeof window.renderSliderSetup === 'function') window.renderSliderSetup();
 };
 
-var sendIt = window.sendIt = async function(event) {
+var sendIt = window.sendIt = async function (event) {
     const btn = event ? event.currentTarget : null;
     let originalText = btn ? (btn.innerText || "Send It") : "Send It";
     if (btn) { btn.innerText = "⏳ Saving..."; btn.disabled = true; }
@@ -646,12 +686,12 @@ var sendIt = window.sendIt = async function(event) {
         await fetch(`${API_BASE}/presets.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(window.db.presets) });
 
         if (btn) btn.innerText = "🔄 Restarting...";
-        try { await fetch(`${window.API_BASE_ROOT}/restart`, { method: 'POST' }); } catch (e) {}
+        try { await fetch(`${window.API_BASE_ROOT}/restart`, { method: 'POST' }); } catch (e) { }
 
         if (btn) {
             btn.innerText = "Saved!"; btn.style.background = "var(--success)";
-            setTimeout(() => { 
-                btn.innerText = originalText; btn.style.background = ""; btn.disabled = false; 
+            setTimeout(() => {
+                btn.innerText = originalText; btn.style.background = ""; btn.disabled = false;
                 if (window.location.pathname.endsWith('/profile.html') || window.location.pathname.endsWith('profile.html')) {
                     window.location.href = 'setup.html?tab=stage';
                 }
@@ -664,7 +704,7 @@ var sendIt = window.sendIt = async function(event) {
 };
 
 // --- BOOT COMPLETE ---
-window.togglePresetEditor = function(show) {
+window.togglePresetEditor = function (show) {
     const content = document.getElementById('preset-editor-content');
     const actionsTop = document.getElementById('preset-editor-actions-top');
     const addBtn = document.getElementById('preset-add-btn');
@@ -679,7 +719,7 @@ window.togglePresetEditor = function(show) {
         actionsTop.classList.remove('hidden');
         addBtn.classList.add('hidden');
         // Keep AI button visible (it will say "Edit" if editing)
-        if (aiBtn) aiBtn.classList.remove('hidden'); 
+        if (aiBtn) aiBtn.classList.remove('hidden');
         if (arrow) arrow.style.transform = 'rotate(180deg)';
         if (header) header.style.background = 'rgba(255,255,255,0.05)';
     } else {
@@ -689,7 +729,7 @@ window.togglePresetEditor = function(show) {
         if (aiBtn) aiBtn.classList.remove('hidden');
         if (arrow) arrow.style.transform = 'rotate(0deg)';
         if (header) header.style.background = 'rgba(255,255,255,0.02)';
-        
+
         // Deactivate test mode if active
         if (window.presetTestActive) {
             if (typeof window.testPreset === 'function') window.testPreset(false);
@@ -697,11 +737,11 @@ window.togglePresetEditor = function(show) {
     }
 };
 
-window.APP_VERSION = "519261024";
+window.APP_VERSION = "61260858";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---
-(function() {
+(function () {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
     const profileId = urlParams.get('id');
@@ -756,20 +796,24 @@ window.APP_VERSION = "519261024";
 
 function loadNodeIp() {
     const input = document.getElementById('dmx-node-ip-input');
-    const typeSelect = document.getElementById('hardware-output-type');
     if (!input) return;
-    fetch('/api/remote_settings')
+    fetch(window.API_BASE_ROOT + '/api/remote_settings')
         .then(r => r.ok ? r.json() : Promise.reject("Status " + r.status))
         .then(data => {
             const ip = data.master?.node_ip || "";
             const active = data.master?.node_active !== false; // Default true
-            const type = data.master?.node_type || 'dmx';
             input.value = ip;
             input.dataset.active = active;
             input.readOnly = true; // Lock it on load since it's already saved
-            if (typeSelect) typeSelect.value = type;
             updateNodeUiState(input, active);
             updateHardwareType();
+
+            // Populate Target SSH Node IP if empty
+            const sshInput = document.getElementById('nodeTargetIP');
+            if (sshInput && !sshInput.value && ip) {
+                sshInput.value = ip;
+                localStorage.setItem('vj_node_target', ip);
+            }
         })
         .catch(e => console.warn("Failed to load node IP:", e));
 }
@@ -798,55 +842,37 @@ function updateNodeUiState(input, active) {
     }
 }
 
-window.toggleNodeMode = function() {
+window.toggleNodeMode = function () {
     const input = document.getElementById('dmx-node-ip-input');
     const toggle = document.getElementById('hardware-node-toggle');
     if (!input) return;
-    
+
     // Safety: only allow toggle if IP is locked (readOnly)
     if (!input.readOnly) {
         if (toggle) toggle.checked = input.dataset.active === 'true';
         console.warn("⚠️ Lock IP address before toggling output.");
         return;
     }
-    
+
     const nowActive = toggle ? toggle.checked : (input.dataset.active !== 'true');
     input.dataset.active = nowActive;
-    
+
     updateNodeUiState(input, nowActive);
     saveNodeIp(input.value, nowActive);
-    updateHardwareType(); 
+    updateHardwareType();
 };
 
-window.updateHardwareType = function() {
-    const type = document.getElementById('hardware-output-type')?.value || 'dmx';
+window.updateHardwareType = function () {
     const input = document.getElementById('dmx-node-ip-input');
-    const goveeCard = document.getElementById('govee-nodes-card');
-    
-    if (type === 'govee') {
-        if (input) {
-            input.placeholder = "Govee LAN Mode";
-            input.disabled = true;
-            input.style.opacity = "0.3";
-        }
-        const isActive = input?.dataset.active === 'true';
-        if (goveeCard) {
-            if (isActive) goveeCard.classList.remove('hidden');
-            else goveeCard.classList.add('hidden');
-        }
-    } else {
-        if (input) {
-            input.placeholder = "Enter IP Address";
-            input.disabled = false;
-            input.style.opacity = "1";
-        }
-        if (goveeCard) goveeCard.classList.add('hidden');
+    if (input) {
+        input.placeholder = "Enter IP Address";
+        input.disabled = false;
+        input.style.opacity = "1";
+        updateNodeUiState(input, input.dataset.active === 'true');
     }
-    
-    if (input) updateNodeUiState(input, input.dataset.active === 'true');
 };
 
-window.editNodeIp = function() {
+window.editNodeIp = function () {
     const input = document.getElementById('dmx-node-ip-input');
     if (!input) return;
     input.readOnly = false;
@@ -856,7 +882,7 @@ window.editNodeIp = function() {
     input.select();
 };
 
-window.lockNodeIp = function() {
+window.lockNodeIp = function () {
     const input = document.getElementById('dmx-node-ip-input');
     if (!input || input.readOnly) return;
     input.readOnly = true;
@@ -866,9 +892,8 @@ window.lockNodeIp = function() {
 };
 
 function saveNodeIp(nodeIp, active = true) {
-    const typeSelect = document.getElementById('hardware-output-type');
-    const nodeType = typeSelect ? typeSelect.value : 'dmx';
-    
+    const nodeType = 'dmx';
+
     fetch('/api/remote_settings')
         .then(r => r.ok ? r.json() : Promise.reject("Status " + r.status))
         .then(data => {
@@ -884,7 +909,7 @@ function saveNodeIp(nodeIp, active = true) {
         })
         .then(() => {
             console.log("📡 Node settings saved:", nodeIp, active, nodeType);
-            fetch('/api/restart', { method: 'POST' }).catch(() => {});
+            fetch('/api/restart', { method: 'POST' }).catch(() => { });
         })
         .catch(e => console.error("Failed to save node IP:", e));
 }
@@ -897,7 +922,7 @@ function saveNodeIp(nodeIp, active = true) {
  */
 function repairPresets() {
     if (!window.db.presets || !Array.isArray(window.db.presets)) return;
-    
+
     console.log("🛠️ Repairing preset references...");
     let repairedCount = 0;
 
@@ -961,4 +986,5 @@ document.addEventListener('DOMContentLoaded', () => {
  * Combined with overscroll-behavior: none in CSS, this intercepts horizontal swipes
  * starting from the screen edges to prevent accidental "Back" navigation in Chrome/Safari.
  */
+
 

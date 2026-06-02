@@ -490,6 +490,57 @@
             100% { opacity: 0.4; transform: scale(0.98); }
         }
 
+        /* Modern Toggle Switch */
+        .modern-switch {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 20px;
+        }
+
+        .modern-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .modern-switch .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255,255,255,0.05);
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .modern-switch .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #555;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+        }
+
+        .modern-switch input:checked + .slider {
+            background-color: rgba(0, 242, 255, 0.15);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+        }
+
+        .modern-switch input:checked + .slider:before {
+            transform: translateX(18px);
+            background-color: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+
         </style>
 </head>
 
@@ -739,6 +790,23 @@ dtoverlay=hifiberry-dacplus</pre>
                         <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 5px;">This IP is used for SSH commands and pushing code updates.</p>
                     </div>
 
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <span style="font-size:0.75rem; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">DMX Node Routing</span>
+                            <label class="modern-switch" title="Toggle DMX Node Streaming">
+                                <input type="checkbox" id="hardware-node-toggle" onchange="toggleNodeMode()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 12px; margin-top: -5px;">Route real-time DMX channel data to a DMX Node (ArtNet) over LAN.</p>
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" id="dmx-node-ip-input" placeholder="Enter IP Address" 
+                                   style="width:100%; height:38px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:var(--accent); font-family:monospace; font-weight:800; font-size:13px; padding:0 12px; outline:none; text-align:center;" 
+                                   onclick="editNodeIp()"
+                                   onblur="lockNodeIp()" onkeydown="if(event.key==='Enter') lockNodeIp()">
+                        </div>
+                    </div>
+
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <button class="btn"
                             style="background:rgba(0, 242, 255, 0.2); color:var(--accent); font-size:0.75rem;"
@@ -816,12 +884,6 @@ dtoverlay=hifiberry-dacplus</pre>
             last_beat: false, held_dmx: null, held_force: null
         };
 
-        // Long Term Analysis State
-        window.longTermRecording = false;
-        window.longTermData = [];
-        window.longTermStartTime = 0;
-        window.lastLongTermSampleAt = 0;
-        let longTermTimerInterval = null;
 
         // Routing Cleanup: Use the globally available urlParams from shared_setup.js
         if (typeof urlParams !== 'undefined' && urlParams.get('host')) {
@@ -1108,15 +1170,17 @@ dtoverlay=hifiberry-dacplus</pre>
         }
 
         // --- CALIBRATION LOGIC ---
-        // ws is defined globally in shared_setup.js
         let ws_retries = 0;
         function connectWS() {
-             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
-             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : (ws_retries > 0 ? 'wss' : 'ws');
-             const wsUrl = window.isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : (window.isCustomTunnel ? `${wsProtocol}://${window.wsHost}` : `${wsProtocol}://${window.host}:${savedPort}`);
-             
-             console.log("Connecting to VJ Engine: " + wsUrl);
-             ws = new WebSocket(wsUrl);
+              const savedPort = localStorage.getItem('vj_ws_port') || '8765';
+              const wsProtocol = window.location.protocol === 'https:' ? 'wss' : (ws_retries > 0 ? 'wss' : 'ws');
+              let wsUrl = window.isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : (window.isCustomTunnel ? `${wsProtocol}://${window.wsHost}` : `${wsProtocol}://${window.host}:${savedPort}`);
+              if ((window.isCustomTunnel || window.isCustomSubdomain) && !window.wsHost.startsWith('ws-')) {
+                  wsUrl = wsUrl.replace(/\/+$/, '') + '/ws';
+              }
+              
+              console.log("Connecting to VJ Engine: " + wsUrl);
+              ws = new WebSocket(wsUrl);
              ws.onopen = () => {
                  console.log("✅ Calibration Socket Open");
                  ws_retries = 0;
@@ -1130,8 +1194,7 @@ dtoverlay=hifiberry-dacplus</pre>
                  if (event.data instanceof ArrayBuffer) { if (window.labRunning || window.longTermRecording) parseBinaryState(event.data); return; }
                  try {
                       const msg = JSON.parse(event.data);
-                      if (msg.type && msg.type.startsWith('calibration_')) handleCalibrationMessage(msg);
-                      if (msg.type === 'audit_report') handleAuditMessage(msg);
+
                       if (msg.type === 'state') window.latestProbeValue = msg.lab_dmx_val || 0;
                  } catch(e) {
                      // Non-JSON or unsupported format
@@ -1206,6 +1269,7 @@ dtoverlay=hifiberry-dacplus</pre>
             connectWS();
             loadCreds();
             loadNodeTarget();
+            if (typeof loadNodeIp === 'function') loadNodeIp();
             showSection('setup', document.querySelector('.nav-item'));
             
             // Hide Loading Overlay

@@ -16,6 +16,9 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
     def do_GET(self):
@@ -49,14 +52,13 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
         elif self.path.startswith('/api/smart/control'):
             self.handle_smart_control()
         elif self.path.startswith('/api/usergen'):
-            # Forward usergen API calls to the main setup server (8000)
+            # Forward usergen requests back into the primary local production server loop directly on port 8000
             host = self.headers.get('Host').split(':')[0]
-            redirect_host = 'api-' + host if (host.endswith('.ravebox.love') and not host.startswith('api-')) else host
             schema = 'https' if host.endswith('.ravebox.love') else 'http'
             port_str = '' if host.endswith('.ravebox.love') else ':8000'
             
             self.send_response(302)
-            self.send_header('Location', f'{schema}://{redirect_host}{port_str}{self.path}')
+            self.send_header('Location', f'{schema}://{host}{port_str}{self.path}')
             self.end_headers()
             return
         elif self.path.startswith('/shell'):
@@ -123,7 +125,13 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             
             if not is_active:
                 # Fallback check
-                pattern = 'backend/main.py' if 'engine' in service else 'backend/dmx_node.py'
+                if 'engine' in service:
+                    pattern = 'backend/main.py'
+                elif 'camera' in service:
+                    pattern = 'scripts/calibration_server.py'
+                else:
+                    pattern = 'backend/dmx_node.py'
+
                 manual_check = subprocess.run(['pgrep', '-f', pattern], capture_output=True)
                 if manual_check.returncode == 0:
                     status = 'active (manual)'
@@ -133,16 +141,30 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
         except Exception:
             return {"status": "unknown", "active": False}
 
-    def run_systemd(self, action, service='vj-engine.service'):
+    def run_systemd(self, action, service=None):
+        if service is None:
+            service = 'vj-engine.service'
         try:
-            # We use sudo for systemctl. 
-            cmd = ['sudo', 'systemctl', action, service]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            
-            # --- FALLBACK FOR MANUAL RESTART/STOP ---
-            if result.returncode != 0 and action in ['restart', 'stop', 'start', 'status']:
-                pattern = 'backend/main.py' if 'engine' in service else 'backend/dmx_node.py'
-                
+            # Check if systemd service file exists to prefer systemd execution
+            is_svc_configured = os.path.exists(f'/etc/systemd/system/{service}')
+
+            if 'engine' in service:
+                pattern = 'backend/main.py'
+            elif 'camera' in service:
+                pattern = 'scripts/calibration_server.py'
+            else:
+                pattern = 'backend/dmx_node.py'
+
+            if is_svc_configured:
+                # Run standard systemd command
+                cmd = ['sudo', 'systemctl', action, service]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                success_val = (result.returncode == 0)
+                out_val = result.stdout
+                err_val = result.stderr
+                mode_val = "systemd"
+            else:
+                # Manual process fallback
                 if action == 'stop' or action == 'restart':
                     subprocess.run(['pkill', '-f', pattern])
                 
@@ -159,21 +181,10 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
                     cmd_manual = f"nohup venv/bin/python3 -u {pattern} > {log_file} 2>&1 &"
                     subprocess.Popen(cmd_manual, shell=True, preexec_fn=os.setpgrp)
                 
-                if action != 'status' and action != 'is-active':
-                    response = {
-                        "success": True,
-                        "action": action,
-                        "service": service,
-                        "mode": "manual_fallback",
-                        "output": f"Manual {action} executed"
-                    }
-                    payload = json.dumps(response).encode()
-                    self.send_response(200)
-                    self.send_header('Content-type', 'application/json')
-                    self.send_header('Content-Length', str(len(payload)))
-                    self.end_headers()
-                    self.wfile.write(payload)
-                    return
+                success_val = True
+                out_val = f"Manual {action} executed"
+                err_val = ""
+                mode_val = "manual_fallback"
 
             if action == 'is-active' or action == 'status':
                 svc_status = self._get_svc_status(service)
@@ -184,11 +195,12 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
                 }
             else:
                 response = {
-                    "success": result.returncode == 0,
+                    "success": success_val,
                     "action": action,
                     "service": service,
-                    "output": result.stdout,
-                    "error": result.stderr
+                    "mode": mode_val,
+                    "output": out_val,
+                    "error": err_val
                 }
                 
             payload = json.dumps(response).encode()
@@ -322,6 +334,9 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
     def error_response(self, message):
         self.send_response(500)
         self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
         self.wfile.write(json.dumps({"error": message}).encode())
 

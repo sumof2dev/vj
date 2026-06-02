@@ -564,10 +564,12 @@ export default function App() {
     const [showHistory, setShowHistory] = useState(false);
     const [filterTab, setFilterTab] = useState<'tex' | 'base'>('tex');
 
-    // UI Toggles
     const [showAiInput, setShowAiInput] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const [settingsSection, setSettingsSection] = useState<'eq' | 'perf' | 'api' | null>('eq');
+    const [settingsSection, setSettingsSection] = useState<'eq' | 'perf' | 'api' | 'audio' | null>('eq');
+    const [isListening, setIsListening] = useState(false);
+    const [isLocalHost, setIsLocalHost] = useState(false);
+    const liveAudioRef = useRef<HTMLAudioElement | null>(null);
     const [geminiKey, setGeminiKey] = useState(localStorage.getItem('vj_gemini_key') || '');
     const [aiModel, setAiModel] = useState(localStorage.getItem('vj_ai_model') || 'gemini-2.5-flash');
     const [highPerformance, setHighPerformance] = useState(localStorage.getItem('vj_high_perf') !== 'false');
@@ -584,6 +586,7 @@ export default function App() {
     const [activeShaderId, setActiveShaderId] = useState<string | null>(null);
     const [activeWarpIndex, setActiveWarpIndex] = useState<number | null>(null);
     const [currentSpotifyArt, setCurrentSpotifyArt] = useState<string | null>(null);
+    const [useLegacyWs, setUseLegacyWs] = useState(false);
 
     // Audio Sync Vibe
     const vibeRef = useRef('mid');
@@ -599,18 +602,25 @@ export default function App() {
 
     const { wsUrl, apiBase } = useMemo(() => {
         const savedHost = localStorage.getItem('vj_backend_host') || window.location.hostname;
-        const isLocal = savedHost === "localhost" || savedHost === "127.0.0.1";
+        const isLocal = savedHost === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(savedHost);
+        
+        // Local Dev: direct port-based routing, no tunnels
+        if (isLocal) {
+            return {
+                wsUrl: `ws://${savedHost}:8765/`,
+                apiBase: `http://${savedHost}:8000`
+            };
+        }
         
         // Finalize the Box Name (e.g. 'ravebox.love' or '1234.ravebox.love')
-        const boxName = (savedHost === 'ravebox') ? 'ravebox.love' : ((savedHost && !savedHost.includes('.') && !isLocal) ? `${savedHost}.ravebox.love` : savedHost);
+        const boxName = (savedHost === 'ravebox') ? 'ravebox.love' : ((savedHost && !savedHost.includes('.')) ? `${savedHost}.ravebox.love` : savedHost);
         
-        // Detect if we are on a consolidated custom tunnel (e.g. 419.ravebox.love)
-        // Rule: If it starts with a number or contains '-evt', it's Flow B.
-        const isConsolidated = /^\d+\./.test(boxName) || boxName.includes('-evt');
+        const isCustomTunnel = boxName.endsWith('.ravebox.love') && boxName !== 'ravebox.love';
+        const isConsolidated = isCustomTunnel && !boxName.startsWith('api-') && !boxName.startsWith('ws-');
         
         const useSSL = window.location.protocol === "https:" || boxName.includes('ravebox.love');
         
-        if (isConsolidated) {
+        if (isConsolidated && !useLegacyWs) {
             // Flow B: Consolidated Path-Based Routing (Trial Run / EVT)
             return {
                 wsUrl: `${useSSL ? "wss:" : "ws:"}//${boxName}/ws`,
@@ -633,7 +643,7 @@ export default function App() {
                 apiBase: `${useSSL ? "https:" : "http:"}//${baseHost}`
             };
         }
-    }, [window.location.hostname, window.location.protocol]);
+    }, [window.location.hostname, window.location.protocol, useLegacyWs]);
 
     const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -659,7 +669,50 @@ export default function App() {
         } catch (err) { console.error("Library load failed:", err); }
     };
 
-    useEffect(() => { fetchLibraries(); }, []);
+    const checkLocalHost = async () => {
+        try {
+            const resp = await fetch(`${apiBase}/api/client_info`);
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.is_local) {
+                    setIsLocalHost(true);
+                    return;
+                }
+            }
+        } catch (e) {}
+
+        const savedHost = localStorage.getItem('vj_backend_host') || window.location.hostname;
+        const isLoopback = savedHost === "localhost" || savedHost === "127.0.0.1" || savedHost === "0.0.0.0" || savedHost === "::1" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        setIsLocalHost(isLoopback);
+    };
+
+    useEffect(() => {
+        fetchLibraries();
+        checkLocalHost();
+    }, [apiBase]);
+
+    const toggleLiveAudio = () => {
+        if (!liveAudioRef.current) {
+            console.log("🔊 Opening live audio stream client...");
+            const audio = new Audio(`${apiBase}/api/audio_stream`);
+            liveAudioRef.current = audio;
+            setIsListening(true);
+            audio.play().catch(e => {
+                console.warn("⚠️ Audio playback failed. Check permissions or network connection.", e);
+                setIsListening(false);
+                liveAudioRef.current = null;
+            });
+        } else {
+            console.log("🔇 Stopping live audio stream client...");
+            try {
+                liveAudioRef.current.pause();
+                liveAudioRef.current.src = "";
+                liveAudioRef.current.load();
+            } catch(e) {}
+            liveAudioRef.current = null;
+            setIsListening(false);
+        }
+    };
 
     const saveImageToServer = async (base64Data: string) => {
         try {
@@ -1371,6 +1424,14 @@ export default function App() {
                 currentVideoRef.current.load();
                 currentVideoRef.current = null;
             }
+            if (liveAudioRef.current) {
+                try {
+                    liveAudioRef.current.pause();
+                    liveAudioRef.current.src = "";
+                    liveAudioRef.current.load();
+                } catch(e) {}
+                liveAudioRef.current = null;
+            }
         };
     }, []);
 
@@ -1517,16 +1578,14 @@ export default function App() {
                                     setCurrentSpotifyArt(msg.spotify.image_high);
                                     new THREE.TextureLoader().setCrossOrigin('anonymous').load(msg.spotify.image_high, (tex) => {
                                         spotifyTextureRef.current = tex;
-                                        // Trigger immediate update on song change
-                                        applyNewTexture(tex);
-                                        const warpIdx = autoCycleRef.current
-                                            ? Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1
-                                            : Math.floor(Math.random() * PRESET_WARPS.length);
-                                        if (autoCycleRef.current) setActiveWarpIndex(warpIdx);
-                                        const finalWarpIdx = autoCycleRef.current ? warpIdx : (activeWarpIndex ?? warpIdx);
-                                        applyNewShader(PRESET_WARPS[finalWarpIdx].code, 'tex');
-                                        setStatus("🎵 Spotify Art Detected");
-                                        setStatusColor("text-[#9d7cff]");
+                                        if (autoCycleRef.current) {
+                                            applyNewTexture(tex);
+                                            const warpIdx = Math.floor(Math.random() * (PRESET_WARPS.length - 1)) + 1;
+                                            setActiveWarpIndex(warpIdx);
+                                            applyNewShader(PRESET_WARPS[warpIdx].code, 'tex');
+                                            setStatus("🎵 Spotify Art Detected");
+                                            setStatusColor("text-[#9d7cff]");
+                                        }
                                     });
                                 }
                             } else if (!msg.spotify) {
@@ -1536,6 +1595,12 @@ export default function App() {
                             }
                         }
                     } catch (e) { }
+                }
+            };
+            socket.onerror = () => {
+                if (wsUrl.endsWith('/ws') && !useLegacyWs) {
+                    console.warn("⚠️ Consolidated WS connection failed, falling back to legacy ws-{box} subdomain...");
+                    setUseLegacyWs(true);
                 }
             };
             socket.onopen = () => { setStatus("Sync Active"); setStatusColor("text-emerald-400"); };
@@ -1702,6 +1767,7 @@ export default function App() {
                                         <textarea
                                             value={geminiPrompt}
                                             onChange={e => setGeminiPrompt(e.target.value)}
+                                            onFocus={() => setAutoCycle(false)}
                                             placeholder={`Describe a ${filterTab} shader... (Type "undo" to revert edit)`}
                                             className="w-full bg-black/40 text-white border border-white/20 rounded-lg p-2 text-[10px] focus:outline-none focus:border-fuchsia-500 placeholder:text-white/30 resize-none h-16"
                                         />
@@ -1878,6 +1944,41 @@ export default function App() {
                                 </div>
                             </div>
 
+                            {/* AUDIO — collapsed by default */}
+                            <div className="rounded-2xl border border-white/10 overflow-hidden flex flex-col">
+                                <div className={`transition-all duration-300 overflow-hidden ${settingsSection === 'audio' ? 'max-h-60' : 'max-h-0'}`}>
+                                    <div className="px-4 pt-4 pb-4 space-y-4 border-b border-white/5 flex flex-col items-center">
+                                        <button
+                                            onClick={toggleLiveAudio}
+                                            disabled={isLocalHost}
+                                            className={`w-full py-3 rounded-xl font-black tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 border ${
+                                                isLocalHost
+                                                    ? 'bg-white/5 border-white/5 text-white/20 cursor-not-allowed'
+                                                    : isListening
+                                                        ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+                                                        : 'bg-black/40 border-white/10 text-white/60 hover:bg-white/10 hover:text-white'
+                                            }`}
+                                        >
+                                            <Volume2 size={14} className={isListening ? 'animate-bounce' : ''} />
+                                            {isLocalHost
+                                                ? 'LOCAL HOST (STREAM DISABLED)'
+                                                : isListening
+                                                    ? 'LISTEN ACTIVE (TAP TO STOP)'
+                                                    : 'LISTEN LIVE (STREAM TO PHONE)'}
+                                        </button>
+                                        <span className="text-[8px] text-white/30 text-center leading-normal">
+                                            {isLocalHost
+                                                ? 'Audio is already playing locally on this host machine. Stream is disabled to prevent feedback doubling.'
+                                                : 'Streams real-time audio from the Ravebox bridge directly to this device.'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSettingsSection(settingsSection === 'audio' ? 'eq' : 'audio')} className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black tracking-widest text-white/60 hover:bg-white/10/50 transition-colors">
+                                    <div className="flex items-center gap-2"><Volume2 size={10} /> AUDIO STREAM</div>
+                                    <ChevronDown size={12} className={`transition-transform ${settingsSection === 'audio' ? 'rotate-180' : ''}`} />
+                                </button>
+                            </div>
+
                             {/* PERFORMANCE — collapsed by default */}
                             <div className="rounded-2xl border border-white/10 overflow-hidden flex flex-col">
                                 <div className={`transition-all duration-300 overflow-hidden ${settingsSection === 'perf' ? 'max-h-60' : 'max-h-0'}`}>
@@ -1998,8 +2099,15 @@ export default function App() {
                                 </div>
 
                                 <button
-                                    onClick={() => window.location.href = '/manager.html'}
-                                    className="flex flex-col items-end px-4 gap-1 ml-auto group transition-all border-none bg-transparent cursor-pointer"
+                                    onClick={() => {
+                                        const isVisualDmx = window.location.pathname.includes('visualdmx.html');
+                                        try {
+                                            window.top.location.href = isVisualDmx ? '/manager.html' : '/index.html';
+                                        } catch (e) {
+                                            window.location.href = isVisualDmx ? '/manager.html' : '/index.html';
+                                        }
+                                    }}
+                                    className="self-stretch flex flex-col justify-center items-end -my-2.5 py-2.5 px-4 ml-auto group transition-all border-none bg-transparent cursor-pointer"
                                 >
                                     <div className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${statusColor} group-hover:text-white transition-colors`}>
                                         <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${statusColor.replace('text-', 'bg-')}`} /> HOME

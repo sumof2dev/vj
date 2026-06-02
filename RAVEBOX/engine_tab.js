@@ -41,124 +41,7 @@ window.openBehaviorLab = function() {
     requestAnimationFrame(labLoop);
 };
 
-function startCalibration() {
-            if (!window.ws || window.ws.readyState !== WebSocket.OPEN) {
-                alert(`Cannot connect to engine at ${host}:${localStorage.getItem('vj_ws_port') || '8765'}.\n\nIf you are using SSL (HTTPS), click "Authorize" in the Debug tab first to accept the self-signed certificate for the engine port.`);
-                return;
-            }
-            document.getElementById('calInitial').style.display = 'none';
-            document.getElementById('calRunning').style.display = 'block';
-            document.getElementById('calResults').style.display = 'none';
-            document.getElementById('auditResults').style.display = 'none';
-            document.getElementById('calProgressBar').style.width = '0%';
-            window.ws.send(JSON.stringify({ type: 'run_calibration' }));
-        }
 
-        function startAudit() {
-            if (!window.ws || window.ws.readyState !== WebSocket.OPEN) {
-                alert("WebSocket not connected.");
-                return;
-            }
-            document.getElementById('calInitial').style.display = 'none';
-            document.getElementById('calRunning').style.display = 'block';
-            document.getElementById('calRunningBpm').textContent = "---";
-            document.querySelector('#calRunning h3').textContent = "Auditing Engine...";
-            document.getElementById('calProgressBar').style.width = '50%'; // Indeterminate look
-            
-            document.getElementById('calResults').style.display = 'none';
-            document.getElementById('auditResults').style.display = 'none';
-            console.log("📤 Requesting Gold Standard Audit...");
-            window.ws.send(JSON.stringify({ type: 'run_audit' }));
-        }
-
-        function handleCalibrationMessage(msg) {
-            if (msg.type === 'calibration_progress') {
-                document.getElementById('calProgressBar').style.width = (msg.progress * 100) + '%';
-                document.getElementById('calRunningBpm').textContent = Math.round(msg.bpm) + " BPM";
-            }
-            if (msg.type === 'calibration_report') {
-                document.getElementById('calRunning').style.display = 'none';
-                document.getElementById('calResults').style.display = 'block';
-
-                // Recall
-                const recallPc = Math.round(msg.recall * 100);
-                document.getElementById('calRecall').innerHTML = `<span class="${recallPc > 80 ? 'cal-pass' : 'cal-fail'}">${recallPc}%</span>`;
-                
-                // BPM
-                const bpmErr = msg.bpm_accuracy.error;
-                document.getElementById('calBpmAcc').innerHTML = `<span class="cal-bpm-val">${Math.round(msg.bpm_accuracy.actual)}</span> <span class="${bpmErr < 5 ? 'cal-pass' : 'cal-fail'}" style="font-size:0.6rem;">(±${bpmErr.toFixed(1)})</span>`;
-
-                // Detailed Checks
-                const list = document.getElementById('calChecksList');
-                list.innerHTML = '';
-                
-                [...msg.vibe_checks, ...msg.transient_checks].forEach(check => {
-                    const item = document.createElement('div');
-                    item.className = 'cal-item';
-                    item.style.display = 'flex';
-                    item.style.justifyContent = 'space-between';
-                    item.style.padding = '10px 15px';
-                    item.innerHTML = `
-                        <span style="color:var(--text-dim); font-weight:600;">${check.name}</span>
-                        <span class="${check.pass ? 'cal-pass' : 'cal-fail'}" style="font-weight:bold;">${check.pass ? 'PASS' : check.actual.toUpperCase()}</span>
-                    `;
-                    list.appendChild(item);
-                });
-
-                // Signal Health Audit
-                if (msg.signal_health) {
-                    const hw = document.getElementById('calHealthWrap');
-                    if (hw) {
-                        hw.style.display = 'block';
-                        const sh = document.getElementById('calSignalHealth');
-                        const st = msg.signal_health.status;
-                        sh.textContent = st + ": " + (msg.signal_health.message || "");
-                        sh.className = 'cal-status ' + (st === 'HEALTHY' ? 'cal-pass' : 'cal-fail');
-
-                        const ss = document.getElementById('calSettingsSummary');
-                        if (msg.settings) {
-                            ss.innerHTML = `Tested with <b>Gain: ${msg.settings.gain.toFixed(2)}</b> and <b>Reactivity: ${msg.settings.reactivity.toFixed(2)}</b>.<br>` + 
-                                          `Peak Input Signal (last 5s): ${msg.signal_health.peak}`;
-                        }
-                    }
-                }
-            }
-            if (msg.type === 'calibration_error') {
-                alert("Calibration Error: " + msg.message);
-                document.getElementById('calInitial').style.display = 'block';
-                document.getElementById('calRunning').style.display = 'none';
-            }
-        }
-
-        function handleAuditMessage(msg) {
-            document.getElementById('calRunning').style.display = 'none';
-            document.getElementById('auditResults').style.display = 'block';
-            const overall = document.getElementById('auditOverall');
-            overall.textContent = msg.overall_pass ? "ALL SYSTEMS GO: Gold Standard Compliance Verified" : "AUDIT FAILED: Non-Standard parameters detected";
-            overall.className = msg.overall_pass ? "cal-pass" : "cal-fail";
-
-            const list = document.getElementById('auditChecksList');
-            list.innerHTML = '';
-            
-            msg.checks.forEach(check => {
-                const item = document.createElement('div');
-                item.className = 'cal-item';
-                item.style.padding = '12px 15px';
-                item.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                        <span style="color:var(--accent); font-weight:700;">${check.name}</span>
-                        <span class="${check.pass ? 'cal-pass' : 'cal-fail'}" style="font-weight:bold;">${check.pass ? 'PASS' : 'FAIL'}</span>
-                    </div>
-                    <div style="font-size:0.7rem; color:var(--text-dim);">
-                        Target: <span style="color:#fff">${check.expected}</span> | 
-                        Actual: <span style="color:${check.pass ? '#fff' : '#f55'}">${check.actual}</span>
-                    </div>
-                `;
-                list.appendChild(item);
-            });
-        }
-
-        
         
 function initEngineTab() {
     if (!window.RAVEBOX_READY) {
@@ -191,11 +74,6 @@ initEngineTab();
             const behavior = (rule.behavior || 'static').toLowerCase();
             const source = (rule.source || 'volume').toLowerCase();
             
-            // Support both flat and nested (modifiers) formats with strict NaN protection
-            const speed = parseFloat(rule.modifiers?.speed ?? rule.speed ?? 0.5) || 0;
-            const react = parseFloat(rule.modifiers?.react ?? rule.react ?? 0.8) || 0;
-            const hold_type = (rule.modifiers?.hold_type ?? rule.hold_type ?? 'none').toLowerCase();
-            
             const c_min = parseInt(rule.cal?.min ?? rule.min ?? 0) || 0;
             const c_max = parseInt(rule.cal?.max ?? rule.max ?? 255) || 255;
             
@@ -206,6 +84,14 @@ initEngineTab();
             else if (rule.center !== undefined) c_center = parseInt(rule.center);
             
             if (isNaN(c_center)) c_center = 127;
+
+            const range_span = c_max - c_min;
+            const scale_factor = range_span > 0 ? (range_span / 255.0) : 1.0;
+
+            // Support both flat and nested (modifiers) formats with strict NaN protection
+            const speed = (parseFloat(rule.modifiers?.speed ?? rule.speed ?? 0.5) || 0) * scale_factor;
+            const react = (parseFloat(rule.modifiers?.react ?? rule.react ?? 0.8) || 0) * scale_factor;
+            const hold_type = (rule.modifiers?.hold_type ?? rule.hold_type ?? 'none').toLowerCase();
 
             // 1. Resolve Driver Magnitude (E)
             let E = 0;
@@ -218,6 +104,17 @@ initEngineTab();
             else if (source.startsWith('bin ')) {
                 const idx = parseInt(source.split(' ')[1]);
                 E = (audio.bins && audio.bins[idx] !== undefined) ? audio.bins[idx] : 0;
+            } else if (source === 'kick') E = audio.kick || 0;
+            else if (source === 'snare') E = audio.snare || 0;
+            else if (source === 'cymbal') E = audio.cymbal || 0;
+            else if (source === 'beat') {
+                if (st.beat_env === undefined) st.beat_env = 0.0;
+                if (audio.beat) {
+                    st.beat_env = 1.0;
+                }
+                const decayRate = 1.0 + (speed * 20.0);
+                st.beat_env = Math.max(0, st.beat_env - dt * decayRate * st.beat_env);
+                E = st.beat_env;
             } else if (source === 'static') E = 1.0;
             
             if (isNaN(E)) E = 0;
@@ -239,7 +136,7 @@ initEngineTab();
             if (behavior === 'static') {
                 return rule.value !== undefined ? rule.value : c_center;
             } else if (behavior === 'direct') {
-                y = (E * 2.0) - 1.0;
+                y = (E * react * 2.0) - 1.0;
             } else if (['sine', 'saw', 'square'].includes(behavior)) {
                 const freq = (speed * 0.1) + (E * 5.0 * react);
                 st.phase = (st.phase + dt * freq) % 1.0;
@@ -305,6 +202,12 @@ initEngineTab();
             labAudioState.bins = [];
             for (let i = 0; i < 6; i++) labAudioState.bins.push(dv.getFloat32(32 + i * 4, true));
 
+            if (dv.byteLength >= 635) {
+                labAudioState.kick = dv.getFloat32(623, true);
+                labAudioState.snare = dv.getFloat32(627, true);
+                labAudioState.cymbal = dv.getFloat32(631, true);
+            }
+
             const beat = dv.getUint8(56) === 1;
             if (beat && !labAudioState._lastBeat) {
                 labAudioState.lastBeatAt = Date.now();
@@ -321,62 +224,7 @@ initEngineTab();
             }
         }
 
-        function toggleLongTermAnalysis() {
-            if (!window.longTermRecording) {
-                if (!window.ws || window.ws.readyState !== WebSocket.OPEN) {
-                    alert("VJ Engine not connected. Cannot start analysis.");
-                    return;
-                }
-                startLongTermAnalysis();
-            } else {
-                stopLongTermAnalysis();
-            }
-        }
 
-        function startLongTermAnalysis() {
-            window.longTermRecording = true;
-            window.longTermData = [];
-            window.longTermStartTime = Date.now();
-            window.lastLongTermSampleAt = 0;
-            
-            document.getElementById('calInitial').style.display = 'none';
-            document.getElementById('longTermStatus').style.display = 'block';
-            
-            longTermTimerInterval = setInterval(() => {
-                const elapsed = Date.now() - window.longTermStartTime;
-                const h = Math.floor(elapsed / 3600000);
-                const m = Math.floor((elapsed % 3600000) / 60000);
-                const s = Math.floor((elapsed % 60000) / 1000);
-                document.getElementById('longTermTimer').textContent = 
-                    String(h).padStart(2, '0') + ":" + 
-                    String(m).padStart(2, '0') + ":" + 
-                    String(s).padStart(2, '0');
-                
-                document.getElementById('longTermSamples').textContent = window.longTermData.length;
-                const kb = (window.longTermData.length * 80) / 1024; // Approx 80 bytes per sample
-                document.getElementById('longTermMemory').textContent = kb > 1024 ? (kb/1024).toFixed(2) + " MB" : Math.round(kb) + " KB";
-            }, 1000);
-        }
-
-        function stopLongTermAnalysis() {
-            window.longTermRecording = false;
-            if (longTermTimerInterval) clearInterval(longTermTimerInterval);
-            
-            if (window.longTermData.length > 0) {
-                const blob = new Blob([JSON.stringify(window.longTermData)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                const now = new Date();
-                const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                a.href = url;
-                a.download = `vj_analysis_${dateStr}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-            }
-            
-            document.getElementById('calInitial').style.display = 'block';
-            document.getElementById('longTermStatus').style.display = 'none';
-        }
 
         function resetLab() {
             labBuffer = [];
@@ -735,32 +583,3 @@ initEngineTab();
 
     
 
-        function captureSnippet(label) {
-            if (!window.ws || window.ws.readyState !== WebSocket.OPEN) {
-                alert("Engine not connected");
-                return;
-            }
-            
-            // Visual feedback
-            const feedback = document.getElementById('snippet-feedback');
-            const originalText = feedback.innerText;
-            const originalColor = feedback.style.color;
-            
-            feedback.innerText = `Capturing [${label.toUpperCase()}]... (10s)`;
-            feedback.style.color = "#f9ca24";
-            
-            window.ws.send(JSON.stringify({
-                "type": "save_snippet",
-                "label": label
-            }));
-
-            // Reset UI after 10s
-            setTimeout(() => {
-                feedback.innerText = "Snippet Saved to recordings/";
-                feedback.style.color = "#00ff88";
-                setTimeout(() => {
-                    feedback.innerText = originalText;
-                    feedback.style.color = originalColor;
-                }, 3000);
-            }, 10500);
-        }

@@ -14,16 +14,17 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR" || exit
 
 # Check if we are running under systemd
-if [ -n "$INVOCATION_ID" ]; then
+if [ -n "$INVOCATION_ID" ] && grep -q "system.slice" /proc/self/cgroup 2>/dev/null; then
     IS_SERVICE=true
-    echo "⚙️ Running as systemd service (Headless Mode)"
+    echo "Running as systemd service (Headless Mode)"
 else
     IS_SERVICE=false
-    echo "👤 Running manually"
+    echo "Running manually"
     # Stop all background services to avoid port/DMX conflicts
-    sudo -n systemctl stop vj-server.service 2>/dev/null
-    sudo -n systemctl stop vj-launcher.service 2>/dev/null
-    sudo -n systemctl stop vj-engine.service 2>/dev/null
+    sudo -n /usr/bin/systemctl stop vj-server.service 2>/dev/null
+    sudo -n /usr/bin/systemctl stop vj-launcher.service 2>/dev/null
+    sudo -n /usr/bin/systemctl stop vj-engine.service 2>/dev/null
+    sudo -n /usr/bin/systemctl stop vj-camera.service 2>/dev/null
 
     echo "🧹 Cleaning up existing manual instances..."
     pkill -f "backend/main.py" 2>/dev/null
@@ -50,7 +51,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # Wait for ports to actually free up (Mode-Aware)
-echo "⏳ Waiting for ports to clear..."
+echo "Waiting for ports to clear..."
 for i in {1..10}; do
     # 1. Manual Mode: Wait for ALL ports
     if [ "$IS_SERVICE" = false ]; then
@@ -73,26 +74,61 @@ for i in {1..10}; do
 done
 sleep 1
 
-echo "🚀 RaveBox Activate..."
-echo "📂 Brought to you by: $(pwd)"
+PORT_CONFLICT=false
+if [ "$IS_SERVICE" = false ]; then
+    for port in 8000 8001 8765 8004; do
+        if fuser $port/tcp >/dev/null 2>&1; then
+            PORT_CONFLICT=true
+            pid=$(lsof -t -i:$port 2>/dev/null || fuser $port/tcp 2>/dev/null | awk '{print $1}')
+            echo "Port $port is already in use."
+            if [ -n "$pid" ]; then
+                proc_info=$(ps -p $pid -o args= 2>/dev/null)
+                echo "Process PID: $pid ($proc_info)"
+                
+                svc_name=""
+                case $port in
+                    8000) svc_name="vj-server" ;;
+                    8001) svc_name="vj-launcher" ;;
+                    8765) svc_name="vj-engine" ;;
+                    8004) svc_name="vj-camera" ;;
+                esac
+                
+                if [ -n "$svc_name" ] && systemctl is-active --quiet $svc_name.service 2>/dev/null; then
+                    echo "   💡 Running as systemd service: $svc_name.service"
+                    echo "   👉 To stop it, run: sudo systemctl stop $svc_name.service"
+                else
+                    echo "   👉 To kill the process, run: kill -9 $pid"
+                fi
+            fi
+        fi
+    done
+fi
+
+if [ "$PORT_CONFLICT" = true ]; then
+    echo "Cannot start manually because one or more ports are in use. Please free the ports or use systemd services."
+    exit 1
+fi
+
+echo "RaveBox Activate..."
+echo "Brought to you by: $(pwd)"
 
 
 # 1. Start Backend (Unbuffered output for logging)
 if [ "$START_ENGINE" = true ]; then
-    echo "🧠 Starting Engine..."
+    echo "Starting Engine..."
     # Check for virtual environment (prioritize venv_local over venv)
     if [ -f "venv_local/bin/python3" ] && venv_local/bin/python3 -c "import websockets" &>/dev/null; then
         PYTHON_CMD="venv_local/bin/python3"
-        echo "🐍 Using venv_local Python"
+        echo "Using venv_local Python"
     elif [ -f "venv/bin/python3" ] && venv/bin/python3 -c "import websockets" &>/dev/null; then
         PYTHON_CMD="venv/bin/python3"
-        echo "🐍 Using venv Python"
+        echo "Using venv Python"
     elif [ -f ".venv/bin/python3" ] && .venv/bin/python3 -c "import websockets" &>/dev/null; then
         PYTHON_CMD=".venv/bin/python3"
-        echo "🐍 Using .venv Python"
+        echo "Using .venv Python"
     else
         PYTHON_CMD="python3"
-        echo "⚠️ Using system Python"
+        echo "Using system Python"
     fi
     $PYTHON_CMD -u backend/main.py &
     ENGINE_PID=$!
@@ -119,18 +155,34 @@ fi
 
 # 3. Start Launcher (For UI control & Status)
 if [ "$IS_SERVICE" = false ]; then
-    echo "🚀 Starting Launcher..."
+    echo "Starting Launcher..."
     $PYTHON_CMD -u launcher.py &
     LAUNCHER_PID=$!
 
     # 4. Start Camera Service (Port 8004)
-    echo "📸 Starting Camera Service..."
-    $PYTHON_CMD -u scripts/calibration_server.py &
-    CAMERA_PID=$!
+    # echo "Starting Camera Service..."
+    # $PYTHON_CMD -u scripts/calibration_server.py &
+    # CAMERA_PID=$!
+
+    # 5. Start Cloudflare Tunnel
+    echo "Starting Cloudflare Tunnel..."
+    if pgrep -f "cloudflared.*tunnel run" >/dev/null; then
+        echo "Cloudflare Tunnel is already running."
+    else
+        if ! sudo systemctl start cloudflared.service 2>/dev/null; then
+            if [ -f "$HOME/.cloudflared/config.yml" ]; then
+                echo "Starting Cloudflare Tunnel in user-space..."
+                mkdir -p logs
+                nohup cloudflared --config "$HOME/.cloudflared/config.yml" tunnel run > logs/cloudflared.log 2>&1 &
+            else
+                echo "Cloudflare config not found. Tunnel cannot be started."
+            fi
+        fi
+    fi
 fi
 
 
-echo "✅ LFG!"
+echo "LFG!"
 echo -e "   Go to: ${CYAN}https://$(hostname -I | awk '{print $1}'):8000/help.html${NC}"
 echo -e "   ${DIM}(Self-signed cert: Click 'Advanced' -> 'Proceed' in browser)${NC}"
 echo -e "   Follow the guide to register your own Client ID & Secret."

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="setup.css">
     <link rel="stylesheet" href="engine_tab.css">
     <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #0a0a0c;
@@ -22,7 +23,7 @@
 
         * {
             box-sizing: border-box;
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Rajdhani', system-ui, sans-serif;
         }
 
         body {
@@ -195,13 +196,17 @@
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             padding: 1.2rem;
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
             width: 100%;
             max-width: 350px;
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.12);
             transition: all 0.3s ease;
+            
+            /* 3D Trapezoid Tilt */
+            transform: perspective(800px) rotateX(10deg) translateY(-25px);
+            transform-origin: bottom center;
 
             /* ADDED FOR CONSOLE INTEGRATION */
             display: flex;
@@ -223,7 +228,7 @@
             .container {
                 padding: 1rem;
                 max-width: 90%;
-                border-radius: 20px;
+                border-radius: 8px;
             }
 
             h1 {
@@ -289,7 +294,7 @@
             display: inline-block;
             padding: 0.6rem 1.2rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            border-radius: 4px;
             font-size: 0.8rem;
             font-weight: bold;
             cursor: pointer;
@@ -393,7 +398,7 @@
         .dash-panel {
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
+            border-radius: 4px;
             padding: 12px;
         }
 
@@ -487,7 +492,7 @@
 
         .vibe-badge {
             padding: 4px 12px;
-            border-radius: 12px;
+            border-radius: 4px;
             font-weight: bold;
             text-transform: uppercase;
             font-size: 0.75rem;
@@ -568,7 +573,7 @@
             height: 54px;
             background: rgba(0, 0, 0, 0.4);
             padding: 6px;
-            border-radius: 8px;
+            border-radius: 4px;
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
@@ -626,7 +631,7 @@
         .sys-controls-panel {
             background: rgba(22, 22, 26, 0.9) !important;
             border-top: none !important;
-            border-radius: 0 0 16px 16px !important;
+            border-radius: 0 0 4px 4px !important;
             padding: 15px 12px !important;
             text-align: left;
         }
@@ -678,7 +683,7 @@
             background: rgba(255, 255, 255, 0.05);
             color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            border-radius: 4px;
             font-size: 0.85rem;
             cursor: pointer;
             margin-bottom: 5px;
@@ -689,7 +694,7 @@
             background: rgba(255, 255, 255, 0.05);
             color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            border-radius: 4px;
             padding: 8px;
             font-size: 0.8rem;
             margin-top: 5px;
@@ -762,7 +767,7 @@
             width: 54px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            border-radius: 4px;
             color: var(--text-dim);
             font-size: 1.2rem;
             cursor: pointer;
@@ -788,7 +793,7 @@
             aspect-ratio: 1;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
+            border-radius: 4px;
             color: var(--text-dim);
             font-size: 0.7rem;
             display: flex;
@@ -818,7 +823,7 @@
         .pair-modal {
             background: rgba(22, 22, 26, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 24px;
+            border-radius: 4px;
             padding: 1.5rem;
             width: 90%;
             max-width: 320px;
@@ -839,7 +844,7 @@
             width: 100%;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            border-radius: 4px;
             padding: 12px;
             color: #fff;
             font-size: 1rem;
@@ -1039,7 +1044,7 @@
                 min-height: 30px !important;
             }
 
-            .engine-accordion summary div {
+            .engine-accordion summary .accordion-handle {
                 width: 40px !important;
                 height: 4px !important;
                 opacity: 0.3;
@@ -1073,22 +1078,34 @@
     </div>
 
     <div class="container" id="main-container">
-        <!-- New Manager Accordion -->
         <details id="manager-accordion" class="engine-accordion" open
-            style="margin: 0; border:none; border-bottom:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0; overflow: visible;"
-            ontoggle="handleManagerToggle(this)">
+            style="margin: 0; border:none; border-bottom:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0; overflow: visible;">
             <summary
-                style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; justify-content:center; align-items:center; background: rgba(255,255,255,0.02); display: none;"
+                style="height: 24px; min-height: 24px; padding: 0; cursor:pointer; list-style:none; display: none; background: transparent; border: none; margin-bottom: 12px;"
                 id="manager-summary">
-                <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                <div style="display: flex; width: 100%; height: 100%; align-items: center; gap: 15px;">
+                    <!-- Left side: Close Console / Back to Manager -->
+                    <div id="summary-back-btn" style="flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transition: background 0.2s, border-color 0.2s;"
+                         onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                         onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                         <span style="font-size: 9px; font-weight: 900; color: var(--primary); letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 0 5px rgba(0, 242, 255, 0.25);">✕ CLOSE CONSOLE</span>
+                    </div>
+                    <!-- Right side: Edit mode toggle -->
+                    <div id="summary-gear-btn" style="flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transition: background 0.2s, border-color 0.2s;"
+                         onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                         onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'"
+                         onclick="event.preventDefault(); event.stopPropagation(); toggleLiveEditMode();">
+                         <span id="summary-gear-btn-text" style="font-size: 9px; font-weight: 900; color: var(--primary); letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 0 5px rgba(0, 242, 255, 0.25);">⚙ EDIT CONSOLE</span>
+                    </div>
+                </div>
             </summary>
             <div class="accordion-content" style="padding-top: 0; padding-bottom: 10px;">
                 <!-- Top Right Console Tab -->
                 <div id="toggleConsoleBtn"
-                    style="width: 50%; margin-left: auto; height: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.02); border-radius: 0 24px 0 12px; margin-top: -1.2rem; margin-right: calc(-1.2rem - 15px); margin-bottom: 15px; border-left: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;"
+                    style="width: 50%; margin-left: auto; height: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.02); border-radius: 0 24px 0 12px; margin-top: -1.2rem; margin-right: calc(-1.2rem - 15px); margin-bottom: 15px; border-left: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;"
                     onclick="toggleConsoleView(event)" onmouseover="this.style.background='rgba(255,255,255,0.05)'"
                     onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-                    <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                    <div style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;"></div>
                 </div>
                 <h1 style="margin: 0 0 10px 0; display: block; text-align: left;">
                     RaveBox Control <span style="font-size: 9px; opacity: 0.3; margin-left: 5px;">VJ Manager</span>
@@ -1249,8 +1266,8 @@
                 style="margin: 0; border:none; border-bottom:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0;"
                 ontoggle="if(this.open) { if(typeof startConsoleTimelineLoop === 'function') startConsoleTimelineLoop(); }">
                 <summary
-                    style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
-                    <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                    style="height: 20px; min-height: 20px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
+                    <div class="accordion-handle" style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;"></div>
                 </summary>
                 <div id="console-timeline-container"
                     style="display: flex; flex-direction: column; background: rgba(0,0,0,0.3); overflow: hidden;">
@@ -1331,10 +1348,10 @@
             <!-- 3. SLIDER SETUP (Live Override) -->
             <details class="engine-accordion"
                 style="margin: 0; border:none; border-top:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0;"
-                ontoggle="if(this.open) { renderSliderSetup(); this.scrollIntoView({behavior:'smooth'}); } else { window.scrollTo({top:0, behavior:'smooth'}); }">
+                ontoggle="if(this.open) { const grid = document.getElementById('live-console-grid'); if (grid) grid.style.display = 'none'; renderSliderSetup(); this.scrollIntoView({behavior:'smooth'}); } else { const grid = document.getElementById('live-console-grid'); if (grid) grid.style.display = 'grid'; window.scrollTo({top:0, behavior:'smooth'}); }">
                 <summary
-                    style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
-                    <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                    style="height: 20px; min-height: 20px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
+                    <div class="accordion-handle" style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;"></div>
                 </summary>
                 <div class="accordion-content" style="background:rgba(0,0,0,0.2); padding: 8px;">
                     <!-- Fixture Picker -->
@@ -1350,10 +1367,17 @@
                     </div>
 
                     <div
-                        style="display:flex; justify-content:space-between; margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);">
+                        style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05);">
                         <button class="btn btn-sm" onclick="clearSliderSetup()"
                             style="font-size:10px; opacity:0.6; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">CLEAR
                             ALL OVERRIDES</button>
+                        <!-- Range scrollbar container -->
+                        <div id="pres-slider-scroll-container" style="display: none; align-items: center; gap: 8px; flex: 1; max-width: 250px; padding: 4px 10px; background: rgba(0,0,0,0.2); border-radius: 6px; margin: 0 10px;">
+                            <span style="font-size: 8px; color: #666; font-weight: bold; white-space: nowrap;">SCROLL</span>
+                            <input type="range" class="global-side-scroll-bar" min="0" max="100" value="0" 
+                                   oninput="window.handleGlobalSideScroll(this.value)"
+                                   style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; outline: none; -webkit-appearance: none; cursor: pointer;">
+                        </div>
                         <!-- Hide Capture button in Console as there's no active preset editor context -->
                         <button class="btn btn-primary btn-sm" onclick="recordSliderSetup()" id="pres-slider-record-btn"
                             style="display:none; font-size:10px;">CAPTURE</button>
@@ -1371,18 +1395,7 @@
 
             <input type="text" id="pairCode" placeholder="e.g. mybox" spellcheck="false" autocomplete="off">
 
-            <div class="toggle-row">
-                <div class="toggle-label">
-                    <div style="font-weight: bold; color: #fff;">Node Mode</div>
-                    <div style="font-size: 0.7rem; opacity: 0.7;">Listen for Master instructions</div>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="pairNodeMode">
-                    <span class="slider"></span>
-                </label>
-            </div>
-
-            <div class="action-btns" style="margin-top: 1rem;">
+            <div class="action-btns" style="margin-top: 1.5rem;">
                 <button class="btn btn-restart" onclick="closePairModal()" style="flex:1;">Cancel</button>
                 <button class="btn btn-start" onclick="savePairing()" style="flex:1;">Save</button>
             </div>
@@ -1408,9 +1421,6 @@
                 style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px; margin-top:5px;">
                 <option value="none">None</option>
                 <option value="preset">Preset</option>
-                <option value="slider">2 Axis (XY)</option>
-                <option value="dmx_slider">DMX Slider (Console)</option>
-                <option value="knob">Knob (Rotary)</option>
                 <option value="live_feed">Live Feed Toggle</option>
                 <option value="blackout">Blackout</option>
             </select>
@@ -1505,10 +1515,8 @@
 
         function changeHost() {
             const current = localStorage.getItem('vj_backend_host') || '';
-            const isNode = localStorage.getItem('vj_node_mode') === 'true';
 
             document.getElementById('pairCode').value = current;
-            document.getElementById('pairNodeMode').checked = isNode;
             document.getElementById('pairModal').style.display = 'flex';
             document.getElementById('pairCode').focus();
         }
@@ -1519,7 +1527,6 @@
 
         function savePairing() {
             const next = document.getElementById('pairCode').value.trim();
-            const isNode = document.getElementById('pairNodeMode').checked;
 
             if (next === "") {
                 localStorage.removeItem('vj_backend_host');
@@ -1527,7 +1534,6 @@
                 localStorage.setItem('vj_backend_host', next);
             }
 
-            localStorage.setItem('vj_node_mode', isNode);
             location.reload();
         }
 
@@ -1536,10 +1542,8 @@
             document.getElementById('nodeStatusLine').style.display = 'block';
         }
 
-        // Hide the prompt if we are already connected via a direct tunnel mapping
-        if (window.isCustomTunnel || window.isCustomSubdomain || (window.location.hostname.endsWith('ravebox.love') && !window.isOriginalCloud)) {
-            document.getElementById('hostBadge').style.cursor = 'default';
-        }
+        // Direct tunnel checks remain for local storage routing
+        const hasDirectTunnel = window.isCustomTunnel || window.isCustomSubdomain || (window.location.hostname.endsWith('ravebox.love') && !window.isOriginalCloud);
         let engineActive = false;
         let statusPollingRate = 3000;
         let lastKnownActive = false;
@@ -1584,7 +1588,12 @@
                     setTimeout(updateStatus, 5000);
                     return;
                 }
-                const res = await fetch(`${window.LAUNCHER_API}/status`);
+                // Route through same-origin proxy when on a secure tunnel to prevent Mixed Content
+                const isTunnelAccess = window.location.hostname.endsWith('.ravebox.love');
+                const statusUrl = isTunnelAccess
+                    ? `${window.location.origin}/api/status`
+                    : `${window.LAUNCHER_API}/status`;
+                const res = await fetch(statusUrl);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 // Process multi-service status
@@ -1611,7 +1620,7 @@
                 if (hostBadge) {
                     const savedHost = localStorage.getItem('vj_backend_host');
                     const isNodePref = localStorage.getItem('vj_node_mode') === 'true';
-                    const isConnected = !!savedHost || window.isCustomSubdomain || window.isCustomTunnel;
+                    const isConnected = !!savedHost || window.isCustomSubdomain || window.isCustomTunnel || !window.onHostedDomain;
 
                     if (!isConnected && !isActive) {
                         hostBadge.innerHTML = `<span onclick="changeHost()" style="cursor: pointer; color: var(--primary); font-weight: bold; border: 1px solid rgba(0, 242, 255, 0.2); padding: 6px 16px; border-radius: 50px; background: rgba(0, 242, 255, 0.1); font-size: 0.7rem;">Enter code to activate</span>`;
@@ -1621,9 +1630,9 @@
                         const actionText = isActive ? "ACTIVE" : "deactivated";
                         const actionColor = isActive ? "var(--success)" : "var(--error)";
 
-                        // Backend name is clickable only when deactivated
-                        const hostClick = isActive ? "" : 'onclick="changeHost()"';
-                        const hostStyle = isActive ? "cursor: default; opacity: 0.8;" : "cursor: pointer;";
+                        // Backend name is clickable at all times (regardless of active status)
+                        const hostClick = 'onclick="changeHost()"';
+                        const hostStyle = "cursor: pointer;";
 
                         hostBadge.innerHTML = `
                             <span ${hostClick} style="${hostStyle} color: var(--primary); font-weight: bold;">${hostDisplay}</span>: 
@@ -1645,6 +1654,20 @@
                     badge.innerText = "Searching for controller...";
                     if (window.location.protocol === 'https:' && !isCustomTunnel) {
                         badge.innerHTML = `⚠️ <a href="javascript:void(0)" onclick="authorizeLauncher()" style="color:var(--primary); text-decoration:underline;">Authorize SSL Port</a>`;
+                    }
+                }
+                const hostBadge = document.getElementById('hostBadge');
+                if (hostBadge) {
+                    const savedHost = localStorage.getItem('vj_backend_host');
+                    const isConnected = !!savedHost || window.isCustomSubdomain || window.isCustomTunnel || !window.onHostedDomain;
+                    if (!isConnected) {
+                        hostBadge.innerHTML = `<span onclick="changeHost()" style="cursor: pointer; color: var(--primary); font-weight: bold; border: 1px solid rgba(0, 242, 255, 0.2); padding: 6px 16px; border-radius: 50px; background: rgba(0, 242, 255, 0.1); font-size: 0.7rem;">Enter code to activate</span>`;
+                    } else {
+                        let hostDisplay = savedHost || "Local";
+                        hostBadge.innerHTML = `
+                            <span onclick="changeHost()" style="cursor: pointer; color: var(--primary); font-weight: bold;">${hostDisplay}</span>: 
+                            <span onclick="toggleEngine()" style="cursor: pointer; color: var(--error); font-weight: bold; opacity: 0.8;">OFFLINE</span>
+                        `;
                     }
                 }
             }
@@ -1670,7 +1693,11 @@
             try {
                 const isNodePref = localStorage.getItem('vj_node_mode') === 'true';
                 const nodeParam = isNodePref ? "?node=true" : "";
-                const res = await fetch(`${window.LAUNCHER_API}/${action}${nodeParam}`);
+                const isTunnelAccess = window.location.hostname.endsWith('.ravebox.love');
+                const actionUrl = isTunnelAccess
+                    ? `${window.location.origin}/api/${action}${nodeParam}`
+                    : `${window.LAUNCHER_API}/${action}${nodeParam}`;
+                const res = await fetch(actionUrl);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
 
@@ -1795,7 +1822,10 @@
             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
 
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            const wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
+            let wsUrl = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : ((isCustomTunnel) ? `${wsProtocol}://${wsHost}` : `${wsProtocol}://${host}:${savedPort}`);
+            if ((isCustomTunnel || window.isCustomSubdomain) && !wsHost.startsWith('ws-')) {
+                wsUrl = wsUrl.replace(/\/+$/, '') + '/ws';
+            }
             ws = new WebSocket(wsUrl);
             window.ws = ws;
             ws.binaryType = 'arraybuffer';
@@ -1981,6 +2011,17 @@
                 wsErrorCount++;
                 // Throttle error logging
                 if (wsErrorCount <= 3) console.error("WebSocket Error:", err);
+
+                // Fallback to legacy subdomain ws if consolidated path failed
+                if (wsUrl.includes('/ws') && !window.useWsLegacyFallback) {
+                    console.warn("⚠️ Consolidated WS connection failed, falling back to legacy ws-{box} subdomain...");
+                    window.useWsLegacyFallback = true;
+                    if (window.evaluateRouting) {
+                        window.evaluateRouting();
+                    }
+                    wsReconnectDelay = 100; // Instant reconnect for fallback
+                    if (ws) ws.close();
+                }
             };
 
             ws.onclose = () => {
@@ -2117,13 +2158,24 @@
                 }
 
                 if (!window.latestAudioState) window.latestAudioState = {};
+                const beat_phase = view.getFloat32(28, true);
+                if (window.latestAudioState.beat_count === undefined) window.latestAudioState.beat_count = 0;
+                const is_beat = beat === 1;
+                if (is_beat && !window.latestAudioState._lastBeat) {
+                    window.latestAudioState.beat_count++;
+                }
+                window.latestAudioState._lastBeat = is_beat;
+
                 window.latestAudioState.flux = view.getFloat32(4, true);
                 window.latestAudioState.bass = view.getFloat32(8, true);
                 window.latestAudioState.mid = view.getFloat32(12, true);
                 window.latestAudioState.high = view.getFloat32(16, true);
                 window.latestAudioState.vol = vol;
                 window.latestAudioState.bpm = bpm;
-                window.latestAudioState.beat = beat === 1;
+                window.latestAudioState.beat = is_beat;
+                window.latestAudioState.beat_phase = beat_phase;
+                window.latestAudioState.bar_phase = ((window.latestAudioState.beat_count % 4) + beat_phase) / 4.0;
+                window.latestAudioState.four_bar_phase = ((window.latestAudioState.beat_count % 16) + beat_phase) / 16.0;
 
                 if (typeof window.updateLiveConsoleVisuals === "function") window.updateLiveConsoleVisuals();
                 if (typeof window.updateSliderSetupVisuals === "function") window.updateSliderSetupVisuals();
@@ -2190,6 +2242,10 @@
                 container.classList.add('console-mode');
             }
         }
+
+        document.getElementById('manager-accordion').addEventListener('toggle', function () {
+            handleManagerToggle(this);
+        });
 
         function initConsole() {
             if (typeof loadLiveConfig === 'function') loadLiveConfig();

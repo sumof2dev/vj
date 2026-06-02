@@ -39,6 +39,8 @@ npm run deploy
 
 # Check exit status
 if [ $? -eq 0 ]; then
+    echo "🧹 Invalidating GCS/Cloudflare caches for HTML & JS assets..."
+    gsutil -m setmeta -h "Cache-Control:no-store, no-cache, must-revalidate, max-age=0" gs://ravebox/*.js gs://ravebox/*.html gs://ravebox/assets/* 2>/dev/null || true
     echo "✅ Visualizer deployed successfully to GCS!"
 else
     echo "❌ Deployment failed."

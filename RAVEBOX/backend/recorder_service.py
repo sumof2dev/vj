@@ -21,6 +21,7 @@ class Recorder:
         self.is_recording = False
         self.session_dir = None
         self.start_time = 0
+        self.name = None
         
         # Video state
         self.video_writer = None
@@ -41,6 +42,7 @@ class Recorder:
         if self.is_recording:
             return False
             
+        self.name = name
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         folder_name = f"REC_{timestamp}" + (f"_{name}" if name else "")
         self.session_dir = os.path.join(self.root_dir, folder_name)
@@ -60,11 +62,35 @@ class Recorder:
             self.audio_file.setsampwidth(2) # 16-bit
             self.audio_file.setframerate(samplerate)
             
+            # Find the device index for "Ravebox-Bridge"
+            device_idx = None
+            input_channels = 1
+            try:
+                devices = sd.query_devices()
+                for idx, dev in enumerate(devices):
+                    if dev.get('name') and "Ravebox-Bridge" in dev['name'] and dev.get('max_input_channels', 0) > 0:
+                        device_idx = idx
+                        # Query max input channels supported by the device, default to 1
+                        input_channels = int(dev.get('max_input_channels', 1))
+                        break
+            except Exception as e:
+                print(f"⚠️ sd.query_devices() failed in Recorder: {e}")
+            
             def audio_callback(indata, frames, time_info, status):
                 if self.is_recording:
-                    self.audio_q.put(indata.copy())
+                    if indata.shape[1] > 1:
+                        # Downmix multichannel stream to mono
+                        mono_data = np.mean(indata, axis=1, keepdims=True)
+                        self.audio_q.put(mono_data.copy())
+                    else:
+                        self.audio_q.put(indata.copy())
             
-            self.audio_stream = sd.InputStream(samplerate=samplerate, channels=1, callback=audio_callback)
+            self.audio_stream = sd.InputStream(
+                device=device_idx,
+                samplerate=samplerate,
+                channels=input_channels,
+                callback=audio_callback
+            )
             self.audio_stream.start()
             
             def audio_writer():
@@ -196,6 +222,7 @@ class Recorder:
         # Save Metadata
         meta_path = os.path.join(self.session_dir, "meta.json")
         meta = {
+            "name": new_name or self.name or os.path.basename(self.session_dir),
             "timestamp": datetime.now().isoformat(),
             "duration": round(time.time() - self.start_time, 2),
             "addresses": self.monitored_addresses,

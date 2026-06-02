@@ -16,6 +16,10 @@ class VibeEngine:
         self.smooth_flux = 0.0
         self.smooth_vol = 0.0
 
+        # Harmonic-isolated smoothers for vibe + transient detection
+        self.smooth_vol_h = 0.0
+        self.smooth_bass_h = 0.0
+
         # Energy Trend Tracking (Build/Drop Detection)
         # History window (30s @ 60Hz = 1800 frames)
         self.energy_history = collections.deque(maxlen=1800)
@@ -26,9 +30,6 @@ class VibeEngine:
         self.vibe_hysteresis = 5.0 # "Sticky Vibe" (prevent flickering)
         self._history_frame = 0  # Frame counter; transient logic is suppressed until history is warm
 
-        # Feature Collector: 40s Ring Buffer for Training Clips
-        self.metadata_history = collections.deque(maxlen=2400) # 40s @ 60Hz
-        self.pending_snippet = None  # { "label": "drop", "end_time": float }
 
 
     def update(self, audio_state, now=None):
@@ -46,12 +47,15 @@ class VibeEngine:
             self._time_initialized = True
         
         # 1. CALCULATE DENSITY (For Vibe Selection)
-        # Force incoming audio values to standard Python floats to prevent float32 accumulation/serialization issues
+        # Full-signal inputs for smoothed DMX mods
         bass = float(audio_state.get('bass', 0.0))
         vol = float(audio_state.get('vol', 0.0))
         high = float(audio_state.get('high', 0.0))
         flux = float(audio_state.get('flux', 0.0))
-        spectral = float(audio_state.get('spectral_complexity', 0.5))
+        # Harmonic-isolated inputs for vibe bucket + transient detection
+        vol_h = float(audio_state.get('vol_h', 0.0))
+        bass_h = float(audio_state.get('bass_h', 0.0))
+        spectral = float(audio_state.get('spectral_complexity_h', 0.5))
 
         if audio_state.get('beat', False):
             self.beat_history.append(now)
@@ -82,9 +86,9 @@ class VibeEngine:
         chill_vol = chill_threshold * 1.2
         chill_density = chill_threshold * 10.0
         
-        # Vibe Logic
-        is_high = (density >= high_density) or (vol > high_vol and spectral > high_spectral)
-        is_chill = (vol < chill_vol and density < chill_density)
+        # Vibe Logic (harmonic-only: percussive transients excluded)
+        is_high = (density >= high_density) or (vol_h > high_vol and spectral > high_spectral)
+        is_chill = (vol_h < chill_vol and density < chill_density)
         
         if is_high:
             target = "high"
@@ -119,16 +123,21 @@ class VibeEngine:
         self.smooth_flux = float(self.smooth_flux + (flux - self.smooth_flux) * 0.30)
         self.smooth_vol  = float(self.smooth_vol  + (vol  - self.smooth_vol)  * 0.35)
 
+        # Harmonic-isolated smoothers for transient detection
+        self.smooth_vol_h  = float(self.smooth_vol_h  + (vol_h  - self.smooth_vol_h)  * 0.35)
+        self.smooth_bass_h = float(self.smooth_bass_h + (bass_h - self.smooth_bass_h) * 0.35)
+
         # 3.5 ENERGY TREND TRACKING (Build/Drop Detection)
-        # Calculate an instantaneous "impact" score (Bass is weighted heavily)
-        impact = float(bass * 0.6 + vol * 0.4)
+        # Calculate an instantaneous "impact" score using harmonic-only inputs
+        # so percussive transients don't trigger false builds/drops
+        impact = float(self.smooth_bass_h * 0.6 + vol_h * 0.4)
 
         self.impact_history.append(impact)
         self._history_frame += 1
 
-        # Slow-moving energy trend for build/drop detection (volume-only)
-        # We store the smoothed volume to prevent single-beat spikes from triggering trends.
-        energy = float(self.smooth_vol)
+        # Slow-moving energy trend for build/drop detection (harmonic volume)
+        # We store the smoothed harmonic volume to prevent single-beat spikes from triggering trends.
+        energy = float(self.smooth_vol_h)
         self.energy_history.append(energy)
         
         # Suppress transient detection until history is warm (~3s).
@@ -199,29 +208,6 @@ class VibeEngine:
                     self.transient = "steady"
                     self._steady_since = now
 
-        # --- FEATURE COLLECTOR LOGIC ---
-        # Record current state into ring buffer
-        self.metadata_history.append({
-            "t": now,
-            "a": {
-                "b": round(bass, 3),
-                "h": round(high, 3),
-                "f": round(flux, 3),
-                "vl": round(vol, 3),
-                "sc": round(spectral, 3)
-            },
-            "s": self.current_vibe,
-            "tr": self.transient
-        })
-
-        snippet_result = None
-        if (self.pending_snippet and now >= self.pending_snippet['end_time']):
-            # The 10s "After" window is complete. Harvest the full 40s history.
-            snippet_result = {
-                "label": self.pending_snippet['label'],
-                "frames": list(self.metadata_history)
-            }
-            self.pending_snippet = None # Reset
 
 
         # Drop is over, return to steady
@@ -236,5 +222,5 @@ class VibeEngine:
                 "vol":  self.smooth_vol,
                 "beat_phase": audio_state.get('beat_phase', 0.0)  # 0-1 position in beat
             },
-            "snippet": snippet_result
+            "snippet": None
         }

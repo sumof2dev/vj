@@ -67,43 +67,49 @@ var switchTab = window.switchTab || function() { };
                 </div>
             `).join('') || '<div style="padding:15px; color:#444; font-size:12px; text-align:center;">No profiles found. Add one to get started.</div>';
 
-            // --- ADDED: Hardware Output Block ---
-            const hardwareHtml = `
-                <div class="item-row" style="padding:15px 16px; margin-top: 10px; background:rgba(0,0,0,0.4); border-top:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; border-radius: 0 0 12px 12px;">
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-size:10px; font-weight:900; color:var(--accent); letter-spacing:1px; text-transform:uppercase;">Hardware Output</span>
-                        <span style="font-size:11px; color:#fff; font-weight:800; margin-top:2px;">Network Node Routing</span>
-                    </div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <select id="hardware-output-type" onchange="updateHardwareType()" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; font-size:11px; border-radius:4px; height:28px; padding:0 8px;">
-                            <option value="dmx">DMX Node (ArtNet)</option>
-                            <option value="govee">Govee LAN (UDP)</option>
-                        </select>
-                        <input type="text" id="dmx-node-ip-input" placeholder="Enter IP Address" 
-                               style="width:140px; height:28px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:var(--accent); font-family:monospace; font-weight:800; font-size:11px; padding:0 12px; outline:none; text-align:center;" 
-                               onclick="editNodeIp()"
-                               onblur="lockNodeIp()" onkeydown="if(event.key==='Enter') lockNodeIp()">
-                        <label class="modern-switch" title="Toggle Hardware Output" style="margin-left: 5px;">
-                            <input type="checkbox" id="hardware-node-toggle" onchange="toggleNodeMode()">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
-            `;
-            list.innerHTML += hardwareHtml;
-            if (typeof loadNodeIp === 'function') loadNodeIp();
+            // Hardware Output Routing relocated to Help page
         }
+
+        window.getNextAvailableAddress = function(channelsCount) {
+            const occupied = [];
+            db.stage.forEach(inst => {
+                const addr = parseInt(inst.address) || 1;
+                const prof = db.profiles.find(p => p.id === inst.profileId);
+                const chCount = (prof && prof.channels) ? prof.channels.length : 1;
+                occupied.push({ start: addr, end: addr + chCount - 1 });
+            });
+
+            let bestAddr = 1;
+            for (let addr = 1; addr <= 512 - channelsCount + 1; addr++) {
+                let overlap = false;
+                for (let i = 0; i < occupied.length; i++) {
+                    const occ = occupied[i];
+                    if (Math.max(addr, occ.start) <= Math.min(addr + channelsCount - 1, occ.end)) {
+                        overlap = true;
+                        break;
+                    }
+                }
+                if (!overlap) {
+                    bestAddr = addr;
+                    break;
+                }
+            }
+            return bestAddr;
+        };
 
         window.addProfileToStage = function(profileId) {
             const prof = db.profiles.find(p => p.id === profileId);
             if (!prof) return;
 
+            const channelsCount = (prof.channels && prof.channels.length) ? prof.channels.length : 1;
+            const address = window.getNextAvailableAddress(channelsCount);
+            const defaultId = "A" + String(address).padStart(3, '0');
+
             db.stage.unshift({
-                id: window.generateFriendlyId('s', db.stage.map(x => x.id)),
+                id: defaultId,
                 profileId: profileId,
                 profileName: prof.name,
-                address: 1, 
-                offset: 0,  
+                address: address, 
                 zone: ''     
             });
 
@@ -111,7 +117,7 @@ var switchTab = window.switchTab || function() { };
             renderStageList();
             
             // Visual feedback on the button?
-            console.log(`✅ Added ${prof.name} to Stage`);
+            console.log(`✅ Added ${prof.name} to Stage as ${defaultId} at address ${address}`);
         };
 
         window.loadProfiles = function(event) {
@@ -228,14 +234,6 @@ var switchTab = window.switchTab || function() { };
             }
         }
 
-        function updateInstanceOffset(instId, newOffset) {
-            const inst = db.stage.find(s => s.id === instId);
-            if (inst) {
-                const val = parseInt(newOffset);
-                inst.offset = isNaN(val) ? 0 : val;
-                saveDB();
-            }
-        }
 
         function toggleStageJson() {
             const list = document.getElementById('stage-list');
@@ -316,9 +314,9 @@ var switchTab = window.switchTab || function() { };
                         <span style="opacity:0.4; font-size:9px;">${grouped[zone].length} FIXTURES</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <select style="background:none; border:none; color:var(--accent); font-size:12px; outline:none; cursor:pointer; width:20px; padding:0; appearance:auto;" onchange="updateZoneProfile('${zone}', this.value)">
-                            <option value="BULK"></option>
-                            ${uniqueAllProfs.map(p => `<option value="${p.id}">${p.name.toUpperCase()}</option>`).join('')}
+                        <select style="background:none; border:none; color:var(--accent); font-size:12px; outline:none; cursor:pointer; width:20px; padding:0; appearance:auto; color-scheme: dark;" onchange="updateZoneProfile('${zone}', this.value)">
+                            <option value="BULK" style="background:#222; color:#fff;"></option>
+                            ${uniqueAllProfs.map(p => `<option value="${p.id}" style="background:#222; color:#fff;">${p.name.toUpperCase()}</option>`).join('')}
                         </select>
                     </div>
                 </div>`;
@@ -328,26 +326,24 @@ var switchTab = window.switchTab || function() { };
                     const profName = profile ? profile.name : (s.profileName || 'Unknown Profile');
 
                     return `<div class="item-row condensed" style="padding:6px 12px; display:flex; align-items:center; gap:10px; border-top:1px solid rgba(255,255,255,0.02); background:rgba(0,0,0,0.2);">
-                        <div style="display:flex; align-items:center; gap:0; font-family:monospace; font-weight:900; background:rgba(0,0,0,0.3); padding:2px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); min-width:70px; flex-shrink: 0;">
-                            <input type="number" value="${s.address}" min="1" max="512" style="width:30px; min-width:30px; background:none; border:none; color:white; font-size:12px; padding:0; text-align:right; outline:none; font-weight:900;" onchange="updateInstanceAddress('${s.id}', this.value)" title="DMX Address">
-                            <span style="opacity:0.3; margin:0 2px; color:white;">|</span>
-                            <input type="number" value="${s.offset || 0}" min="0" max="512" style="width:25px; min-width:25px; background:none; border:none; color:var(--accent); font-size:12px; padding:0; text-align:left; outline:none; font-weight:900;" onchange="updateInstanceOffset('${s.id}', this.value)" title="Channel Offset">
+                        <div style="display:flex; align-items:center; gap:0; font-family:monospace; font-weight:900; background:rgba(0,0,0,0.3); padding:2px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.05); min-width:35px; flex-shrink: 0;">
+                            <input type="number" value="${s.address}" min="1" max="512" style="width:35px; min-width:35px; background:none; border:none; color:white; font-size:12px; padding:0; text-align:center; outline:none; font-weight:900;" onchange="updateInstanceAddress('${s.id}', this.value)" title="DMX Address">
                         </div>
                         <div style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:4px;">
-                            <select style="background:none; border:none; color:#fff; font-weight:700; font-size:13px; outline:none; cursor:pointer; max-width:180px; padding:0; flex-shrink:1;" onchange="updateInstanceProfile('${s.id}', this.value)">
+                            <select style="background:none; border:none; color:#fff; font-weight:700; font-size:13px; outline:none; cursor:pointer; max-width:180px; padding:0; flex-shrink:1; color-scheme: dark;" onchange="updateInstanceProfile('${s.id}', this.value)">
                                 ${uniqueAllProfs.map(p => `<option value="${p.id}" ${p.id === s.profileId ? 'selected' : ''} style="background:#222; color:#fff;">${p.name}</option>`).join('')}
                             </select>
                             <span style="opacity:0.2; color:#fff; flex-shrink:0;">|</span>
                             <input type="text" value="${s.id}" style="background:none; border:none; color:#555; font-size:10px; font-weight:bold; letter-spacing:0.5px; outline:none; padding:0; width:auto; min-width:30px; flex:1;" onchange="updateInstanceId('${s.id}', this.value)" title="Fixture ID / Name">
                             <span style="opacity:0.2; color:#fff; flex-shrink:0;">|</span>
-                            <select onchange="updateInstanceZone('${s.id}', this.value)" title="Zone Assignment" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); color:var(--accent-alt); font-size:9px; font-weight:900; letter-spacing:0.5px; outline:none; padding:2px; width:120px; border-radius:3px;">
-                                <option value="" ${!s.zone ? 'selected' : ''}>UNZONED</option>
-                                <option value="left harmony" ${s.zone === 'left harmony' ? 'selected' : ''}>LEFT HARMONY</option>
-                                <option value="left percussive" ${s.zone === 'left percussive' ? 'selected' : ''}>LEFT PERCUSSIVE</option>
-                                <option value="center harmony" ${s.zone === 'center harmony' ? 'selected' : ''}>CENTER HARMONY</option>
-                                <option value="center percussive" ${s.zone === 'center percussive' ? 'selected' : ''}>CENTER PERCUSSIVE</option>
-                                <option value="right harmony" ${s.zone === 'right harmony' ? 'selected' : ''}>RIGHT HARMONY</option>
-                                <option value="right percussive" ${s.zone === 'right percussive' ? 'selected' : ''}>RIGHT PERCUSSIVE</option>
+                            <select onchange="updateInstanceZone('${s.id}', this.value)" title="Zone Assignment" style="background:#111; color-scheme: dark; border:1px solid rgba(255,255,255,0.05); color:var(--accent-alt); font-size:9px; font-weight:900; letter-spacing:0.5px; outline:none; padding:2px; width:120px; border-radius:3px;">
+                                <option value="" ${!s.zone ? 'selected' : ''} style="background:#222; color:#fff;">UNZONED</option>
+                                <option value="left harmony" ${s.zone === 'left harmony' ? 'selected' : ''} style="background:#222; color:#fff;">LEFT HARMONY</option>
+                                <option value="left percussive" ${s.zone === 'left percussive' ? 'selected' : ''} style="background:#222; color:#fff;">LEFT PERCUSSIVE</option>
+                                <option value="center harmony" ${s.zone === 'center harmony' ? 'selected' : ''} style="background:#222; color:#fff;">CENTER HARMONY</option>
+                                <option value="center percussive" ${s.zone === 'center percussive' ? 'selected' : ''} style="background:#222; color:#fff;">CENTER PERCUSSIVE</option>
+                                <option value="right harmony" ${s.zone === 'right harmony' ? 'selected' : ''} style="background:#222; color:#fff;">RIGHT HARMONY</option>
+                                <option value="right percussive" ${s.zone === 'right percussive' ? 'selected' : ''} style="background:#222; color:#fff;">RIGHT PERCUSSIVE</option>
                             </select>
                         </div>
                         <div style="display:flex; gap:4px;">
@@ -447,7 +443,7 @@ var switchTab = window.switchTab || function() { };
                         </div>
                         <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                             <div style="display:flex; gap:8px; align-items:center;">
-                                ${isBroken ? `<button class="btn btn-sm" style="background:#555;" onclick="console.log('Broken Preset JSON:', JSON.parse('${JSON.stringify(p).replace(/'/g, "\\'")}'))">Debug</button>` : ''}
+                                ${isBroken ? `<button class="btn btn-sm" style="background:#555;" onclick="console.log('Broken Preset JSON:', db.presets.find(x => x.id === '${p.id}'))">Debug</button>` : ''}
                                 <button class="btn btn-sm" style="${isMuted ? 'background:rgba(255,255,255,0.1);' : ''}" onclick="togglePresetMute('${p.id}')">${isMuted ? 'Unmute' : 'Mute'}</button>
                                 <button class="btn btn-sm btn-danger" onclick="deletePreset('${p.id}')">Delete</button>
                             </div>
@@ -670,7 +666,7 @@ var switchTab = window.switchTab || function() { };
                     stripsContainer.appendChild(strip);
                 }
 
-                const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+                const baseAddr = parseInt(inst.address) || 1;
                 const fixtureHidden = hiddenTestChannels[id] || [];
 
                 strip.innerHTML = `
@@ -766,7 +762,7 @@ var switchTab = window.switchTab || function() { };
                 (db.stage || []).forEach(inst => {
                     const profile = db.profiles.find(p => p.id === inst.profileId);
                     if (!profile) return;
-                    const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+                    const baseAddr = parseInt(inst.address) || 1;
                     (profile.channels || []).forEach((ch, idx) => {
                         const addr = baseAddr + (parseInt(ch.addrOffset) || idx);
                         if (!visibleAddresses.has(addr)) {
@@ -911,7 +907,7 @@ var switchTab = window.switchTab || function() { };
             if (!inst) return;
             const profile = db.profiles.find(p => p.id === inst.profileId);
             if (!profile) return;
-            const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+            const baseAddr = parseInt(inst.address) || 1;
             const ch = (profile.channels || [])[channelIdx] || {};
             const addr = baseAddr + (parseInt(ch.addrOffset) || channelIdx);
 
@@ -974,7 +970,7 @@ var switchTab = window.switchTab || function() { };
             if (!inst) return;
             const profile = db.profiles.find(p => p.id === inst.profileId);
             if (!profile) return;
-            const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+            const baseAddr = parseInt(inst.address) || 1;
             const ch = (profile.channels || [])[idx] || {};
             const addr = baseAddr + (parseInt(ch.addrOffset) || idx);
             const current = latestDmxUniverse[addr] || 0;
@@ -1039,7 +1035,7 @@ var switchTab = window.switchTab || function() { };
                 const profile = (db.profiles || []).find(p => p.id === inst.profileId);
                 if (!profile) return;
                 
-                const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+                const baseAddr = parseInt(inst.address) || 1;
                 const rows = strip.querySelectorAll('.compact-slider-row');
                 
                 rows.forEach(row => {
@@ -1084,7 +1080,16 @@ var switchTab = window.switchTab || function() { };
                        String(now.getHours()).padStart(2, "0") + 
                        String(now.getMinutes()).padStart(2, "0");
             
-            const name = prompt("Recording complete! Save as (optional):", "REC_" + ts);
+            let defaultName = "REC_" + ts;
+            if (latestAudioState && latestAudioState.spotify) {
+                if (latestAudioState.spotify.artist && latestAudioState.spotify.track) {
+                    defaultName = `${latestAudioState.spotify.artist} - ${latestAudioState.spotify.track}`;
+                } else if (latestAudioState.spotify.name) {
+                    defaultName = latestAudioState.spotify.name;
+                }
+            }
+            
+            const name = prompt("Recording complete! Save as (optional):", defaultName);
             
             ws.send(JSON.stringify({ 
                 type: 'stop_recording',
@@ -1150,6 +1155,11 @@ var switchTab = window.switchTab || function() { };
                         (window.isCustomSubdomain ? `${wsProtocol}://${window.location.host}` : 
                         `${wsProtocol}://${window.host}:${savedPort}`));
             
+            // Append /ws path if using single-subdomain consolidated routing (Flow B)
+            if ((window.isCustomTunnel || window.isCustomSubdomain) && !window.wsHost.startsWith('ws-')) {
+                wsUrl = wsUrl.replace(/\/+$/, '') + '/ws';
+            }
+            
             console.log("🔌 Attempting WebSocket connection to:", wsUrl);
             const newWs = new WebSocket(wsUrl);
 
@@ -1174,7 +1184,18 @@ var switchTab = window.switchTab || function() { };
                     // 1. UPDATE AUDIO STATE
                     latestAudioState.vol = view.getFloat32(20, true);
                     latestAudioState.bpm = view.getFloat32(24, true);
-                    latestAudioState.beat = view.getUint8(56) === 1;
+                    latestAudioState.beat_phase = view.getFloat32(28, true);
+
+                    const beat = view.getUint8(56) === 1;
+                    if (latestAudioState.beat_count === undefined) latestAudioState.beat_count = 0;
+                    if (beat && !latestAudioState._lastBeat) {
+                        latestAudioState.beat_count++;
+                    }
+                    latestAudioState._lastBeat = beat;
+                    latestAudioState.beat = beat;
+
+                    latestAudioState.bar_phase = ((latestAudioState.beat_count % 4) + latestAudioState.beat_phase) / 4.0;
+                    latestAudioState.four_bar_phase = ((latestAudioState.beat_count % 16) + latestAudioState.beat_phase) / 16.0;
 
                     const bins = [];
                     for (let i = 0; i < 6; i++) bins.push(view.getFloat32(32 + (i * 4), true));
@@ -1207,6 +1228,11 @@ var switchTab = window.switchTab || function() { };
                         latestAudioState.mid_h = view.getFloat32(615, true);
                         latestAudioState.high_h = view.getFloat32(619, true);
                     }
+                    if (view.byteLength >= 635) {
+                        latestAudioState.kick = view.getFloat32(623, true);
+                        latestAudioState.snare = view.getFloat32(627, true);
+                        latestAudioState.cymbal = view.getFloat32(631, true);
+                    }
 
 
                     // 3. TRIGGER THROTTLED UI UPDATES
@@ -1221,8 +1247,7 @@ var switchTab = window.switchTab || function() { };
 
                 try {
                     const msg = JSON.parse(event.data);
-                    if (msg.type && msg.type.startsWith("calibration_") && typeof handleCalibrationMessage === "function") handleCalibrationMessage(msg);
-                    if (msg.type === "audit_report" && typeof handleAuditMessage === "function") handleAuditMessage(msg);
+
                     if (msg.type === "status") console.log("📣 SYSTEM STATUS:", msg.message);
                     if (msg.type === "state") window.latestProbeValue = msg.lab_dmx_val || 0;
                     if (msg.type === 'state') {
@@ -1230,6 +1255,7 @@ var switchTab = window.switchTab || function() { };
                         const prevVariant = latestAudioState.vibe_variant;
                         const prevTransient = latestAudioState.transient;
 
+                        if (msg.spotify !== undefined) latestAudioState.spotify = msg.spotify;
                         if (msg.vibe) latestAudioState.vibe = msg.vibe;
                         if (msg.vibe_variant !== undefined) latestAudioState.vibe_variant = msg.vibe_variant;
                         if (msg.transient) latestAudioState.transient = msg.transient;
@@ -1281,7 +1307,7 @@ var switchTab = window.switchTab || function() { };
                             if (speedInput && 'speed' in msg.master) speedInput.value = msg.master.speed;
                             if (intensityInput && 'intensity' in msg.master) intensityInput.value = msg.master.intensity;
                             
-                            if ('govee_ips' in msg.master) renderGoveeList(msg.master.govee_ips);
+                            // Govee list render removed
                         }
                     } else if (msg.type === 'recording_started') {
                         if (msg.success) {
@@ -1308,6 +1334,19 @@ var switchTab = window.switchTab || function() { };
                         }
                     }
                 } catch (e) { }
+            };
+
+            newWs.onerror = (err) => {
+                // Fallback to legacy subdomain ws if consolidated path failed
+                if (wsUrl.includes('/ws') && !window.useWsLegacyFallback) {
+                    console.warn("⚠️ Consolidated WS connection failed, falling back to legacy ws-{box} subdomain...");
+                    window.useWsLegacyFallback = true;
+                    if (window.evaluateRouting) {
+                        window.evaluateRouting();
+                    }
+                    ws_reconnect_delay = 100; // Instant reconnect for fallback
+                    newWs.close();
+                }
             };
 
             newWs.onclose = () => {
@@ -1418,6 +1457,26 @@ var switchTab = window.switchTab || function() { };
                 energy = (mods.flux !== undefined) ? (mods.flux * 0.5) : (latestAudioState.flux || 0) * 0.3;
             } else if (source === 'volume' || source === 'vol') {
                 energy = mods.vol !== undefined ? mods.vol : (latestAudioState.vol || 0);
+            } else if (source === 'kick') {
+                energy = latestAudioState.kick || 0;
+            } else if (source === 'snare') {
+                energy = latestAudioState.snare || 0;
+            } else if (source === 'cymbal') {
+                energy = latestAudioState.cymbal || 0;
+            } else if (source === 'beat') {
+                if (!window.beatEnvelopes) window.beatEnvelopes = {};
+                const beatKey = instId ? `beat_env_${instId}_${chIdx}_${ruleIdx}` : `beat_env_${chIdx}_${ruleIdx}`;
+                if (window.beatEnvelopes[beatKey] === undefined) window.beatEnvelopes[beatKey] = 0.0;
+                
+                if (latestAudioState.beat) {
+                    window.beatEnvelopes[beatKey] = 1.0;
+                }
+                
+                // Decay envelope using the rule's speed modifier
+                const speed = rule.modifiers ? parseFloat(rule.modifiers.speed !== undefined ? rule.modifiers.speed : 0.5) : 0.5;
+                const decayRate = 1.0 + (speed * 20.0);
+                window.beatEnvelopes[beatKey] = Math.max(0, window.beatEnvelopes[beatKey] - dt * decayRate * window.beatEnvelopes[beatKey]);
+                energy = window.beatEnvelopes[beatKey];
             }
 
             if (behavior === 'lfo') {
@@ -1585,8 +1644,7 @@ var switchTab = window.switchTab || function() { };
                 if (!profile) return;
 
                 const instBaseAddr = parseInt(inst.address) || 0;
-                const instOffset = parseInt(inst.offset || 0);
-                const baseAddr = (instBaseAddr > 0) ? instBaseAddr + instOffset : -1;
+                const baseAddr = (instBaseAddr > 0) ? instBaseAddr : -1;
 
                 let xNorm = 0.5, yNorm = 0.5, patVal = 0, intensity = 255, scale = 0.5, rotation = 0;
                 let isDimOn = true;
@@ -1876,66 +1934,4 @@ window.togglePreset = togglePreset;
 window.everActivatedPresets = everActivatedPresets;
 window.activePresets = activePresets;
 
-// --- GOVEE LAN MANAGEMENT ---
-function renderGoveeList(ips) {
-    const list = document.getElementById('govee-nodes-list');
-    if (!list) return;
-    if (!ips || ips.length === 0) {
-        list.innerHTML = '<div style="padding:10px 15px; font-size:10px; color:#555;">No Govee nodes active.</div>';
-        return;
-    }
-    list.innerHTML = ips.map((ip, i) => `
-        <div class="item-row condensed" style="padding:4px 15px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.02);">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div style="width:6px; height:6px; border-radius:50%; background:orange; box-shadow: 0 0 5px orange;"></div>
-                <div style="font-family:monospace; font-size:11px; color:#fff;">${ip}</div>
-                <div style="font-size:9px; color:#666;">DMX CH ${400 + (i*4)}</div>
-            </div>
-            <button class="btn btn-danger btn-sm" style="width:20px; height:20px; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.4;" onclick="removeGoveeNode(${i})">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        </div>
-    `).join('');
-}
-
-window.addGoveeNode = async function() {
-    const input = document.getElementById('govee-ip-input');
-    if (!input || !input.value) return;
-    const ip = input.value.trim();
-    
-    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-        window.ws.send(JSON.stringify({ type: 'add_govee', ip: ip }));
-        
-        // AUTO-PATCH: Check if we need to add a fixture to the stage for this Govee node
-        const currentGoveeNodes = document.querySelectorAll('#govee-nodes-list .item-row').length;
-        const targetAddr = 400 + (currentGoveeNodes * 4);
-        
-        const existing = db.stage.find(s => s.address === targetAddr);
-        if (!existing) {
-            console.log(`🛠️ Auto-patching Govee fixture at address ${targetAddr}...`);
-            const newInst = {
-                id: `Govee_${targetAddr}`,
-                profileId: "govee.p.lan",
-                profileName: "Govee LAN (RGBD)",
-                address: targetAddr,
-                offset: 0,
-                zone: "Center"
-            };
-            db.stage.push(newInst);
-            await saveDB();
-            if (typeof renderStageList === 'function') renderStageList();
-        }
-
-        input.value = '';
-        // Request updated params to refresh list
-        setTimeout(() => window.ws.send(JSON.stringify({ type: 'get_params' })), 100);
-    }
-};
-
-window.removeGoveeNode = function(index) {
-    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
-        window.ws.send(JSON.stringify({ type: 'remove_govee', index: index }));
-        // Request updated params to refresh list
-        setTimeout(() => window.ws.send(JSON.stringify({ type: 'get_params' })), 100);
-    }
-};
+// Govee LAN Management removed

@@ -801,6 +801,7 @@
             box-sizing: border-box;
             font-size: 14px;
             transition: border-color 0.2s, box-shadow 0.2s;
+            color-scheme: dark;
         }
 
         input[type="checkbox"] {

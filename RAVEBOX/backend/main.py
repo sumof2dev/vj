@@ -190,7 +190,6 @@ active_clients = set()
 last_callback_time = time.time()
 dmx_port = None
 network_dmx_node = None
-govee_nodes = []
 audio_state = { "bass": 0.0, "mid": 0.0, "high": 0.0, "vol": 0.0, "flux": 0.0, "beat": False, "device_name": "None", "bpm": 120.0 }
 gamepad_state = {
     "ls_x": 0.5, "ls_y": 0.5, "rs_x": 0.5, "rs_y": 0.5,
@@ -252,52 +251,7 @@ class DMXNetworkNode:
                 print(f"⚠️ Network DMX Send Error to {self.ip}: {e}")
                 self._last_err_log = now
 
-class GoveeLANNode:
-    def __init__(self, ip, port=4001, start_addr=1):
-        import socket
-        self.ip = ip
-        self.port = port
-        self.start_addr = start_addr 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.setblocking(False)
-        self.last_r, self.last_g, self.last_b, self.last_bri = -1, -1, -1, -1
-        self.last_tx = 0
-
-    def send(self, universe):
-        import time, json
-        now = time.time()
-        # Cap at 20Hz (0.05s) to prevent overwhelming the device's MCU
-        if now - self.last_tx < 0.05: 
-            return
-            
-        if len(universe) <= self.start_addr + 3: return
-
-        r, g, b = universe[self.start_addr], universe[self.start_addr + 1], universe[self.start_addr + 2]
-        dimmer = universe[self.start_addr + 3]
-        bri_100 = int((dimmer / 255.0) * 100)
-
-        changed = False
-        try:
-            if r != self.last_r or g != self.last_g or b != self.last_b:
-                cmd = {"msg": {"cmd": "colorwc", "data": {"color": {"r": r, "g": g, "b": b}, "colorTemInKelvin": 0}}}
-                self.sock.sendto(json.dumps(cmd).encode('utf-8'), (self.ip, self.port))
-                self.last_r, self.last_g, self.last_b = r, g, b
-                changed = True
-
-            if bri_100 != self.last_bri:
-                if dimmer == 0:
-                    self.sock.sendto(json.dumps({"msg": {"cmd": "turn", "data": {"value": 0}}}).encode('utf-8'), (self.ip, self.port))
-                else:
-                    if self.last_bri <= 0:
-                        self.sock.sendto(json.dumps({"msg": {"cmd": "turn", "data": {"value": 1}}}).encode('utf-8'), (self.ip, self.port))
-                    self.sock.sendto(json.dumps({"msg": {"cmd": "brightness", "data": {"value": max(1, bri_100)}}}).encode('utf-8'), (self.ip, self.port))
-                self.last_bri = bri_100
-                changed = True
-                
-            if changed:
-                self.last_tx = now
-        except Exception:
-            pass
+# GoveeLANNode removed
 
 def save_training_snippet(snippet):
     """Save a captured training snippet as a 'playable' session in the recordings folder"""
@@ -348,7 +302,7 @@ def save_live_defaults():
     try:
         data = {
             "master": {
-                "sensitivity": analyzer.gain,
+                "sensitivity": float(analyzer.gain),
                 "audio_source": current_audio_mode,
                 "vibe_splits": vibe_engine.vibe_splits if vibe_engine else {"chillMid": 33, "midHigh": 66},
                 "speed": dmx_engine.base_speed if dmx_engine else 1.0,
@@ -356,7 +310,6 @@ def save_live_defaults():
                 "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
                 "node_ip": network_dmx_node.ip if network_dmx_node else getattr(main, 'node_ip_cache', ""),
                 "node_active": network_dmx_node is not None,
-                "govee_ips": [node.ip for node in govee_nodes] if 'govee_nodes' in globals() else [],
                 "dmx_interface": dmx_interface
             },
             "laser": {
@@ -410,19 +363,7 @@ def load_live_defaults():
                 if node_ip and node_type == "dmx":
                     print(f"🌐 Network DMX Target: {node_ip} (DISABLED)")
 
-            global govee_nodes
-            govee_nodes = []
-            govee_ips = m_data.get("govee_ips", [])
-            
-            if node_type == "govee" and not node_active:
-                print("💡 Govee LAN Nodes: DISABLED by global toggle")
-                govee_ips = []
-            
-            start_addr = 400 
-            for ip in govee_ips:
-                govee_nodes.append(GoveeLANNode(ip=ip, start_addr=start_addr))
-                print(f"💡 Loaded Govee LAN Node: {ip} mapped to DMX ch {start_addr}")
-                start_addr += 4
+            # Govee loading removed
 
             # 2. Laser Section
             l_data = data.get("laser", {})
@@ -453,6 +394,181 @@ from audio_analyzer import AudioAnalyzer
 
 analyzer = AudioAnalyzer()
 
+class CachedTrackManager:
+    def __init__(self, database_dir="song_database"):
+        self.database_dir = database_dir
+        self.current_track_id = None
+        self.track_data = None
+        self.timeline = np.array([])
+        self.stft_timeline = np.array([])
+        self.vibes = []
+        self.transients = []
+        
+    def load_track(self, track_id):
+        if track_id == self.current_track_id:
+            return
+        
+        self.current_track_id = track_id
+        if not track_id:
+            self.track_data = None
+            self.timeline = np.array([])
+            self.stft_timeline = np.array([])
+            self.vibes = []
+            self.transients = []
+            return
+            
+        json_path = os.path.join(self.database_dir, f"{track_id}.json")
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, 'r') as f:
+                    self.track_data = json.load(f)
+                print(f"🎵 [HYBRID] Loaded ground truth for track {track_id}")
+                self._precompute_states()
+            except Exception as e:
+                print(f"⚠️ [HYBRID] Failed to load cached track data for {track_id}: {e}")
+                self.track_data = None
+                self.timeline = np.array([])
+                self.stft_timeline = np.array([])
+                self.vibes = []
+                self.transients = []
+        else:
+            self.track_data = None
+            self.timeline = np.array([])
+            self.stft_timeline = np.array([])
+            self.vibes = []
+            self.transients = []
+            
+    def _precompute_states(self):
+        if not self.track_data:
+            return
+        
+        print("🧠 [HYBRID] Precomputing vibe and transient states sequentially...")
+        self.timeline = np.array(self.track_data.get("timeline", []))
+        self.stft_timeline = np.array(self.track_data.get("stft_timeline", []))
+        
+        if len(self.stft_timeline) == 0:
+            return
+            
+        temp_vibe_engine = VibeEngine()
+        self.vibes = []
+        self.transients = []
+        
+        beat_times = np.array(self.track_data.get("beat_times", []))
+        flux_truth = np.array(self.track_data.get("flux_truth", []))
+        
+        perc_bass = np.array(self.track_data.get("perc_bass", []))
+        perc_mid = np.array(self.track_data.get("perc_mid", []))
+        perc_high = np.array(self.track_data.get("perc_high", []))
+        harm_bass = np.array(self.track_data.get("harm_bass", []))
+        harm_mid = np.array(self.track_data.get("harm_mid", []))
+        harm_high = np.array(self.track_data.get("harm_high", []))
+        bass_truth = np.array(self.track_data.get("bass_truth", []))
+        mid_truth = np.array(self.track_data.get("mid_truth", []))
+        high_truth = np.array(self.track_data.get("high_truth", []))
+        vol_truth = np.array(self.track_data.get("vol_truth", []))
+        vol_h_truth = np.array(self.track_data.get("vol_h_truth", []))
+        spectral_complexity_h = np.array(self.track_data.get("spectral_complexity_h", []))
+        
+        prev_t = 0.0
+        for i, t in enumerate(self.stft_timeline):
+            has_beat = np.any((beat_times > prev_t) & (beat_times <= t))
+            flux_val = float(np.interp(t, self.timeline, flux_truth)) if self.timeline.size > 0 else 0.0
+            
+            frame_state = {
+                "bass": float(bass_truth[i]) if i < len(bass_truth) else 0.0,
+                "mid": float(mid_truth[i]) if i < len(mid_truth) else 0.0,
+                "high": float(high_truth[i]) if i < len(high_truth) else 0.0,
+                "bass_p": float(perc_bass[i]) if i < len(perc_bass) else 0.0,
+                "mid_p": float(perc_mid[i]) if i < len(perc_mid) else 0.0,
+                "high_p": float(perc_high[i]) if i < len(perc_high) else 0.0,
+                "bass_h": float(harm_bass[i]) if i < len(harm_bass) else 0.0,
+                "mid_h": float(harm_mid[i]) if i < len(harm_mid) else 0.0,
+                "high_h": float(harm_high[i]) if i < len(harm_high) else 0.0,
+                "vol": float(vol_truth[i]) if i < len(vol_truth) else 0.0,
+                "flux": flux_val,
+                "beat": has_beat,
+                "vol_h": float(vol_h_truth[i]) if i < len(vol_h_truth) else 0.0,
+                "spectral_complexity_h": float(spectral_complexity_h[i]) if i < len(spectral_complexity_h) else 0.5,
+            }
+            
+            res = temp_vibe_engine.update(frame_state, now=t)
+            self.vibes.append(res["vibe"])
+            self.transients.append(res["transient"])
+            prev_t = t
+            
+        print(f"🧠 [HYBRID] Precomputation complete. Generated {len(self.vibes)} states.")
+        
+    def get_lookup_state(self, progress_sec, lookahead_sec=2.0):
+        if not self.track_data or len(self.stft_timeline) == 0:
+            return None
+            
+        t = max(0.0, min(self.stft_timeline[-1], progress_sec))
+        t_lookahead = max(0.0, min(self.stft_timeline[-1], progress_sec + lookahead_sec))
+        
+        def interp(vals):
+            return float(np.interp(t, self.stft_timeline, vals))
+            
+        idx = np.searchsorted(self.stft_timeline, t)
+        idx = max(0, min(len(self.stft_timeline) - 1, idx))
+        
+        idx_lookahead = np.searchsorted(self.stft_timeline, t_lookahead)
+        idx_lookahead = max(0, min(len(self.stft_timeline) - 1, idx_lookahead))
+        
+        vibe = self.vibes[idx]
+        transient = self.transients[idx]
+        vibe_lookahead = self.vibes[idx_lookahead]
+        transient_lookahead = self.transients[idx_lookahead]
+        
+        beat_times = np.array(self.track_data.get("beat_times", []))
+        bpm = float(self.track_data.get("global_bpm", 120.0))
+        
+        if len(beat_times) > 0:
+            idx_beat = np.searchsorted(beat_times, t)
+            if idx_beat == 0:
+                beat_phase = (t / beat_times[0]) % 1.0 if beat_times[0] > 0 else 0.0
+            elif idx_beat >= len(beat_times):
+                last_b = beat_times[-1]
+                beat_period = 60.0 / bpm
+                beat_phase = ((t - last_b) / beat_period) % 1.0
+            else:
+                prev_b = beat_times[idx_beat - 1]
+                next_b = beat_times[idx_beat]
+                beat_phase = (t - prev_b) / (next_b - prev_b)
+        else:
+            beat_phase = (t * bpm / 60.0) % 1.0
+            
+        return {
+            "vibe": vibe,
+            "transient": transient,
+            "lookahead_vibe": vibe_lookahead,
+            "lookahead_transient": transient_lookahead,
+            "beat_phase": beat_phase,
+            "bpm": bpm,
+            "bass": interp(self.track_data["bass_truth"]),
+            "mid": interp(self.track_data["mid_truth"]),
+            "high": interp(self.track_data["high_truth"]),
+            "bass_p": interp(self.track_data["perc_bass"]),
+            "mid_p": interp(self.track_data["perc_mid"]),
+            "high_p": interp(self.track_data["perc_high"]),
+            "bass_h": interp(self.track_data["harm_bass"]),
+            "mid_h": interp(self.track_data["harm_mid"]),
+            "high_h": interp(self.track_data["harm_high"]),
+            "vol": interp(self.track_data["vol_truth"]),
+            "vol_h": interp(self.track_data["vol_h_truth"]),
+            "flux": float(np.interp(t, self.timeline, self.track_data["flux_truth"])) if self.timeline.size > 0 else 0.0,
+            
+            # Lookahead values
+            "lookahead_vol_500ms": float(np.interp(t + 0.5, self.stft_timeline, self.track_data["vol_truth"])),
+            "lookahead_vol_1s": float(np.interp(t + 1.0, self.stft_timeline, self.track_data["vol_truth"])),
+            "lookahead_vol_2s": float(np.interp(t + 2.0, self.stft_timeline, self.track_data["vol_truth"])),
+            "lookahead_flux_500ms": float(np.interp(t + 0.5, self.timeline, self.track_data["flux_truth"])) if self.timeline.size > 0 else 0.0,
+            "lookahead_flux_1s": float(np.interp(t + 1.0, self.timeline, self.track_data["flux_truth"])) if self.timeline.size > 0 else 0.0,
+            "lookahead_flux_2s": float(np.interp(t + 2.0, self.timeline, self.track_data["flux_truth"])) if self.timeline.size > 0 else 0.0,
+        }
+
+cached_manager = CachedTrackManager()
+last_lookup_t = None
+
 def audio_callback(indata, frames, time_info, status):
     global audio_state, last_callback_time
     last_callback_time = time.time()
@@ -476,6 +592,11 @@ def get_monitor_source(mode="auto"):
     try:
         with pulsectl.Pulse('audio-grabber') as p:
             sinks = p.sink_list()
+            
+            # Prioritize the Ravebox Virtual Audio Bridge if present
+            bridge = next((s for s in sinks if "Ravebox-Bridge" in s.name), None)
+            if bridge:
+                return bridge.monitor_source_name
             
             if mode == "spotify":
                 # Look specifically for Raspotify/Librespot
@@ -684,7 +805,7 @@ async def audio_watchdog():
 
 def audio_worker_thread():
     """Consume audio frames from queue and run heavy analysis in a pure native thread."""
-    global audio_state
+    global audio_state, last_lookup_t
     print("🧠 Audio Worker Thread Started")
     
     while True:
@@ -694,30 +815,141 @@ def audio_worker_thread():
             # Heavy Analysis
             new_audio_state = analyzer.process(indata)
             
+            # 2. Check if Spotify is active and track is cached
+            spotify_info = audio_state.get('spotify', {})
+            track_id = spotify_info.get('id')
+            
+            if track_id:
+                cached_manager.load_track(track_id)
+            else:
+                cached_manager.load_track(None)
+                
+            if cached_manager.track_data:
+                # [HYBRID PATH] Ground Truth Lookups
+                progress_ms = spotify_info.get('progress_ms', 0)
+                poll_time = spotify_info.get('poll_time', time.time())
+                elapsed = time.time() - poll_time
+                progress_sec = (progress_ms / 1000.0) + elapsed
+                
+                # Latency offset to match physical audio playback
+                latency_offset = -0.150 
+                t = progress_sec + latency_offset
+                
+                lookup = cached_manager.get_lookup_state(t)
+                if lookup:
+                    new_audio_state.update({
+                        "bass": lookup["bass"],
+                        "mid": lookup["mid"],
+                        "high": lookup["high"],
+                        "bass_p": lookup["bass_p"],
+                        "mid_p": lookup["mid_p"],
+                        "high_p": lookup["high_p"],
+                        "bass_h": lookup["bass_h"],
+                        "mid_h": lookup["mid_h"],
+                        "high_h": lookup["high_h"],
+                        "vol": lookup["vol"],
+                        "vol_h": lookup["vol_h"],
+                        "flux": lookup["flux"],
+                        "bpm": lookup["bpm"],
+                        "beat_phase": lookup["beat_phase"],
+                        
+                        # Vibe/transient states
+                        "vibe": lookup["vibe"],
+                        "transient": lookup["transient"],
+                        
+                        # Look-ahead features
+                        "lookahead_vibe": lookup["lookahead_vibe"],
+                        "lookahead_transient": lookup["lookahead_transient"],
+                        "lookahead_vol_500ms": lookup["lookahead_vol_500ms"],
+                        "lookahead_vol_1s": lookup["lookahead_vol_1s"],
+                        "lookahead_vol_2s": lookup["lookahead_vol_2s"],
+                        "lookahead_flux_500ms": lookup["lookahead_flux_500ms"],
+                        "lookahead_flux_1s": lookup["lookahead_flux_1s"],
+                        "lookahead_flux_2s": lookup["lookahead_flux_2s"],
+                    })
+                    
+                    # Beat detection matching
+                    beat_times = np.array(cached_manager.track_data.get("beat_times", []))
+                    is_beat = False
+                    if last_lookup_t is not None and len(beat_times) > 0:
+                        if t >= last_lookup_t and t - last_lookup_t < 2.0:
+                            beats_in_range = beat_times[(beat_times > last_lookup_t) & (beat_times <= t)]
+                            if len(beats_in_range) > 0:
+                                is_beat = True
+                                
+                    new_audio_state["beat"] = is_beat
+                    new_audio_state["bar"] = is_beat and (analyzer.beat_count % 4 == 0)
+                    if is_beat:
+                        analyzer.beat_count += 1
+                        new_audio_state["beat_count"] = analyzer.beat_count
+                        
+                    # Build vibe mods structure matching vibe engine results
+                    mods = {
+                        "bass": lookup["bass"],
+                        "high": lookup["high"],
+                        "flux": lookup["flux"],
+                        "vol": lookup["vol"],
+                        "beat_phase": lookup["beat_phase"]
+                    }
+                    new_audio_state["mods"] = mods
+                    
+                    # Propagate to left/right sub-dicts
+                    beat_cnt = new_audio_state.get("beat_count", analyzer.beat_count)
+                    for side in ['left', 'right']:
+                        if side in new_audio_state and isinstance(new_audio_state[side], dict):
+                            new_audio_state[side].update({
+                                "vibe": lookup["vibe"],
+                                "transient": lookup["transient"],
+                                "beat": is_beat,
+                                "beat_count": beat_cnt,
+                                "bar": is_beat and (beat_cnt % 4 == 0),
+                                "beat_phase": lookup["beat_phase"],
+                                "bpm": lookup["bpm"],
+                                "bass": lookup["bass"],
+                                "mid": lookup["mid"],
+                                "high": lookup["high"],
+                                "bass_p": lookup["bass_p"],
+                                "mid_p": lookup["mid_p"],
+                                "high_p": lookup["high_p"],
+                                "bass_h": lookup["bass_h"],
+                                "mid_h": lookup["mid_h"],
+                                "high_h": lookup["high_h"],
+                                "vol": lookup["vol"],
+                                "vol_h": lookup["vol_h"],
+                                "flux": lookup["flux"],
+                                "mods": mods
+                            })
+                            
+                    last_lookup_t = t
+                else:
+                    last_lookup_t = None
+            else:
+                # [UNINDEXED PATH] Fall back to live Vibe Engine state estimation
+                last_lookup_t = None
+                if vibe_engine:
+                    vibe_results = vibe_engine.update(new_audio_state)
+                    new_audio_state.update(vibe_results)
+                    # Propagate vibe and mods to left/right sub-dicts
+                    for key in ['vibe', 'mods']:
+                        if key in vibe_results:
+                            if 'left' in new_audio_state and isinstance(new_audio_state['left'], dict):
+                                new_audio_state['left'][key] = vibe_results[key]
+                            if 'right' in new_audio_state and isinstance(new_audio_state['right'], dict):
+                                new_audio_state['right'][key] = vibe_results[key]
+
+            # Latch transient beats and onsets so they aren't missed by ws tick rates
+            if new_audio_state.get('beat', False):
+                audio_state['beat_pending'] = True
+            if new_audio_state.get('bass_onset', False):
+                audio_state['bass_onset_pending'] = True
+            if new_audio_state.get('high_onset', False):
+                audio_state['high_onset_pending'] = True
+
             # Preserve Spotify metadata injected by the async poller
             if 'spotify' in audio_state:
                 new_audio_state['spotify'] = audio_state['spotify']
                 
             audio_state.update(new_audio_state)
-            
-            # Vibe Engine Determination
-            if vibe_engine:
-                vibe_results = vibe_engine.update(audio_state)
-                audio_state.update(vibe_results) # 'vibe', 'mods', etc.
-                # Propagate vibe and mods to left/right sub-dicts
-                for key in ['vibe', 'mods']:
-                    if key in vibe_results:
-                        if 'left' in audio_state and isinstance(audio_state['left'], dict):
-                            audio_state['left'][key] = vibe_results[key]
-                        if 'right' in audio_state and isinstance(audio_state['right'], dict):
-                            audio_state['right'][key] = vibe_results[key]
-                
-                # Check for completed snippet
-                snippet = vibe_results.get('snippet')
-                if snippet:
-                    thread = threading.Thread(target=save_training_snippet, args=(snippet,), daemon=True)
-                    thread.start()
-                
             audio_queue.task_done()
 
         except Exception as e:
@@ -797,9 +1029,9 @@ def pack_binary_state(current_time):
         bins = audio_state.get('bins', [0]*6)
         while len(bins) < 6: bins.append(0)
         
-        beat = 1 if audio_state.get('beat', False) else 0
-        b_onset = 1 if audio_state.get('bass_onset', False) else 0
-        h_onset = 1 if audio_state.get('high_onset', False) else 0
+        beat = 1 if (audio_state.get('beat', False) or audio_state.pop('beat_pending', False)) else 0
+        b_onset = 1 if (audio_state.get('bass_onset', False) or audio_state.pop('bass_onset_pending', False)) else 0
+        h_onset = 1 if (audio_state.get('high_onset', False) or audio_state.pop('high_onset_pending', False)) else 0
     
     ax_a = ax_b = ax_c = ax_d = ax_e = 0.0
     if dmx_engine and dmx_engine.logic:
@@ -826,17 +1058,20 @@ def pack_binary_state(current_time):
         int(base_l), int(fx_l), int(fg_l)
     )
     
-    # Pack HPSS bands (24 bytes)
-    hpss_payload = struct.pack('<ffffff',
+    # Pack HPSS bands and percussive behaviors (36 bytes)
+    hpss_payload = struct.pack('<fffffffff',
         float(audio_state.get('bass_p', 0.0)),
         float(audio_state.get('mid_p', 0.0)),
         float(audio_state.get('high_p', 0.0)),
         float(audio_state.get('bass_h', 0.0)),
         float(audio_state.get('mid_h', 0.0)),
-        float(audio_state.get('high_h', 0.0))
+        float(audio_state.get('high_h', 0.0)),
+        float(audio_state.get('kick_behavior', 0.0)),
+        float(audio_state.get('snare_behavior', 0.0)),
+        float(audio_state.get('cymbal_behavior', 0.0))
     )
     
-    # Return 86 + 513 + 24 = 623 bytes
+    # Return 86 + 513 + 36 = 635 bytes
     return header + bytes(univ)[:513].ljust(513, b'\x00') + hpss_payload
 
 
@@ -873,16 +1108,12 @@ async def fast_broadcast_loop():
                             print(f"DMX_OUT: Healthy | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Signal: {health['status']} ({health['peak']:.1f})")
                             last_log = current_time
 
-                    if dmx_port or network_dmx_node or govee_nodes:
+                    if dmx_port or network_dmx_node:
                         full_u = dmx_engine.get_universe()
                         
                         # NETWORK DMX STREAM
                         if network_dmx_node:
                             network_dmx_node.send(bytearray(full_u))
-                            
-                        # GOVEE UDP STREAM
-                        for g_node in govee_nodes:
-                            g_node.send(bytearray(full_u))
                             
                         # LOG DATA TO RECORDER IF ACTIVE
                         if recorder.is_recording:
@@ -904,8 +1135,7 @@ async def fast_broadcast_loop():
                             if ch_count > 0:
                                 try:
                                     addr = int(inst.get('address', 1)) if inst.get('address') != "" else 1
-                                    off = int(inst.get('offset', 0)) if inst.get('offset') != "" else 0
-                                    dev_max = addr + off + (ch_count - 1)
+                                    dev_max = addr + (ch_count - 1)
                                     if dev_max > max_addr: max_addr = dev_max
                                 except (ValueError, TypeError):
                                     continue
@@ -973,7 +1203,7 @@ async def fast_broadcast_loop():
                         "eff_intensity": dmx_engine.eff_intensity if dmx_engine else 1.0,
                         "lab_dmx_val": dmx_engine.lab_dmx_val if dmx_engine else 0,
                         "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
-                        "sensitivity": analyzer.gain,
+                        "sensitivity": float(analyzer.gain),
                         "spotify": audio_state.get('spotify')
                     }
                     if 'error' in audio_state:
@@ -1065,11 +1295,15 @@ async def spotify_poller():
                 duration_ms = track.get('duration_ms', 1)
                 
                 audio_state['spotify'] = {
+                    'id': track_id,
                     'name': f"{track_name} - {artist_name}",
+                    'artist': artist_name,
+                    'track': track_name,
                     'progress_ms': progress_ms,
                     'duration_ms': duration_ms,
                     'image_high': spotify_images.get('high'),
-                    'image_low': spotify_images.get('low')
+                    'image_low': spotify_images.get('low'),
+                    'poll_time': time.time()
                 }
                 
         except spotipy.SpotifyException as se:
@@ -1091,7 +1325,7 @@ async def spotify_poller():
 
 # --- 4. SERVER LOOP ---
 async def ws_handler(websocket):
-    global connected_clients, visual_params_cache, synth
+    global connected_clients, visual_params_cache, synth, last_injection_time
     print("Client Connected")
     connected_clients.add(websocket)
     last_sent_version = 0 # Track which version of broadcast this client last received
@@ -1133,9 +1367,42 @@ async def ws_handler(websocket):
                             inject = data.get("data", {})
                             if inject:
                                 for k, v in inject.items():
-                                    if k in audio_state:
-                                        audio_state[k] = v
+                                    audio_state[k] = v
                                 last_injection_time = time.time()
+                                
+                                # Ensure left/right channels have the updated audio parameters
+                                for side in ['left', 'right']:
+                                    if side not in audio_state or not isinstance(audio_state[side], dict):
+                                        audio_state[side] = {}
+                                    for k, v in inject.items():
+                                        audio_state[side][k] = v
+                                
+                                if vibe_engine:
+                                    if "vibe" not in inject and "transient" not in inject:
+                                        vibe_results = vibe_engine.update(audio_state, now=last_injection_time)
+                                        audio_state.update(vibe_results)
+                                        for key in ['vibe', 'mods']:
+                                            if key in vibe_results:
+                                                if 'left' in audio_state and isinstance(audio_state['left'], dict):
+                                                    audio_state['left'][key] = vibe_results[key]
+                                                if 'right' in audio_state and isinstance(audio_state['right'], dict):
+                                                    audio_state['right'][key] = vibe_results[key]
+                                    else:
+                                        v_val = inject.get("vibe", "mid")
+                                        t_val = inject.get("transient", "steady")
+                                        mods = {
+                                            "bass": audio_state.get("bass", 0.0),
+                                            "high": audio_state.get("high", 0.0),
+                                            "flux": audio_state.get("flux", 0.0),
+                                            "vol": audio_state.get("vol", 0.0),
+                                            "beat_phase": audio_state.get("beat_phase", 0.0)
+                                        }
+                                        audio_state["mods"] = mods
+                                        for side in ['left', 'right']:
+                                            if side in audio_state and isinstance(audio_state[side], dict):
+                                                audio_state[side]['vibe'] = v_val
+                                                audio_state[side]['transient'] = t_val
+                                                audio_state[side]['mods'] = mods
                                 
                         elif msg_type == "synth":
                             if synth:
@@ -1339,56 +1606,13 @@ async def ws_handler(websocket):
                             except Exception as e:
                                 print(f"⚠️ System Volume Error: {e}")
                         
-                        elif msg_type == "add_govee":
-                            # Dynamically add a Govee light to the rig
-                            ip = data.get("ip")
-                            if ip:
-                                # Prevent duplicate IPs
-                                if any(n.ip == ip for n in govee_nodes):
-                                    print(f"⚠️ Govee node {ip} already exists.")
-                                else:
-                                    start_addr = 400 + (len(govee_nodes) * 4)
-                                    node = GoveeLANNode(ip=ip, start_addr=start_addr)
-                                    govee_nodes.append(node)
-                                    save_live_defaults()
-                                    print(f"✅ Added Govee LAN node: {ip} at DMX {start_addr}")
-                                    await websocket.send(json.dumps({"type": "status", "message": f"Added Govee at {ip} on CH{start_addr}"}))
-
-                        elif msg_type == "remove_govee":
-                            # Remove a Govee light by index or IP
-                            idx = data.get("index")
-                            ip = data.get("ip")
-                            removed = False
-                            if idx is not None and 0 <= idx < len(govee_nodes):
-                                removed_ip = govee_nodes.pop(idx).ip
-                                removed = True
-                            elif ip:
-                                for i, node in enumerate(govee_nodes):
-                                    if node.ip == ip:
-                                        govee_nodes.pop(i)
-                                        removed = True
-                                        removed_ip = ip
-                                        break
-                            
-                            if removed:
-                                save_live_defaults()
-                                await websocket.send(json.dumps({"type": "status", "message": f"Removed Govee node {removed_ip}"}))
-                            else:
-                                await websocket.send(json.dumps({"type": "status", "message": "Govee node not found"}))
+                        # add_govee and remove_govee handlers removed
 
                         elif msg_type == "save_defaults":
                             # Persist current state as power-on default
                             save_live_defaults()
                             await websocket.send(json.dumps({"type": "status", "message": "Defaults saved to disk"}))
 
-                        elif msg_type == "save_snippet":
-                            label = data.get("label", "unlabeled")
-                            if vibe_engine:
-                                print(f"📍 Snippet Capture Started: {label} (Will harvest in 10s)")
-                                vibe_engine.pending_snippet = {
-                                    "label": label,
-                                    "end_time": time.time() + 10.0
-                                }
 
                         elif msg_type == "get_params":
                             # Send current system state to new clients
@@ -1396,12 +1620,11 @@ async def ws_handler(websocket):
                                 "type": "current_params",
                                 "master": {
                                     "speed": dmx_engine.base_speed if dmx_engine else 1.0,
-                                    "sensitivity": analyzer.gain,
+                                    "sensitivity": float(analyzer.gain),
                                     "audio_source": current_audio_mode,
                                     "vibe_splits": vibe_engine.vibe_splits if vibe_engine else {"chillMid": 33, "midHigh": 66},
                                     "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
-                                    "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
-                                    "govee_ips": [node.ip for node in govee_nodes]
+                                    "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
                                 },
                                 "laser": {
                                     "speed": dmx_engine.base_speed if dmx_engine else 1.0,
@@ -1410,9 +1633,6 @@ async def ws_handler(websocket):
                                 "visual": visual_params_cache
                             }
                             await websocket.send(json.dumps(params))
-
-                        elif msg_type == "run_calibration":
-                            asyncio.create_task(run_calibration_task(websocket))
 
                         elif msg_type == "label_transient":
                             # Handle manual transient state labeling for ML training
@@ -1428,32 +1648,56 @@ async def ws_handler(websocket):
                                 "message": "Training sample saved" if success else "Failed to save sample"
                             }))
 
-                        elif msg_type == "run_audit":
-                            asyncio.create_task(run_audit_task(websocket))
-
                         elif msg_type == "start_recording":
                             name = data.get("name")
                             addresses = data.get("addresses", [])
                             roles = data.get("roles", {})
                             video_enabled = data.get("video_enabled", True)
                             
+                            # Default name from Spotify if available
+                            if not name:
+                                spot_info = audio_state.get('spotify')
+                                if spot_info and spot_info.get('artist') and spot_info.get('track'):
+                                    name = f"{spot_info['artist']} - {spot_info['track']}"
+                                elif spot_info and spot_info.get('name'):
+                                    name = spot_info['name']
+                            
+                            if name:
+                                # Sanitize name to prevent directory traversal or file creation issues
+                                name = "".join([c for c in name if c.isalnum() or c in (' ', '.', '_', '-')]).strip()
+                            
                             # BACKEND FALLBACK: If roles are empty (e.g. browser cache), auto-resolve from engine state
                             if not roles and dmx_engine:
                                 for inst in dmx_engine.stage_instances:
-                                    base_addr = (int(inst.get('address', 1)) + int(inst.get('offset', 0)))
+                                    addr_val = inst.get('address')
+                                    if addr_val is None or addr_val == "": addr_val = 1
+                                    base_addr = int(addr_val)
+                                    
                                     profile = dmx_engine.profiles.get(inst.get('profileId'))
                                     if profile:
                                         for idx, ch in enumerate(profile.get('channels', [])):
-                                            addr = base_addr + int(ch.get('addrOffset', idx))
+                                            addr_offset = ch.get('addrOffset')
+                                            if addr_offset is None or addr_offset == "":
+                                                addr_offset = idx
+                                            addr = base_addr + int(addr_offset)
                                             # We use string keys to match JSON expectations
                                             roles[str(addr)] = (ch.get('role') or ch.get('name') or "unknown").lower()
                             
                             print(f"🎬 REC START: {len(addresses)} addresses, Roles: {len(roles)} keys captured", flush=True)
                             success = recorder.start(name=name, addresses=addresses, roles=roles, video_enabled=video_enabled)
                             await websocket.send(json.dumps({"type": "recording_started", "success": success}))
-
+ 
                         elif msg_type == "stop_recording":
                             new_name = data.get("name")
+                            
+                            # If no new_name or user canceled prompt, try to fall back to spotify track info
+                            if not new_name:
+                                spot_info = audio_state.get('spotify')
+                                if spot_info and spot_info.get('artist') and spot_info.get('track'):
+                                    new_name = f"{spot_info['artist']} - {spot_info['track']}"
+                                elif spot_info and spot_info.get('name'):
+                                    new_name = spot_info['name']
+                                    
                             path = recorder.stop(new_name=new_name)
                             await websocket.send(json.dumps({"type": "recording_stopped", "path": path}))
 
@@ -1491,184 +1735,6 @@ async def ws_handler(websocket):
         if websocket in connected_clients:
             connected_clients.remove(websocket)
 
-async def run_audit_task(websocket):
-    """Checks the live analyzer against Gold Standard parameters"""
-    print("🔬 [Audit] Starting Gold Standard Audit...")
-    try:
-        checks = []
-        
-        # 1. Check Window Size
-        window_pass = analyzer.rolling_window_size == 300
-        checks.append({
-            "name": "Normalization Window (300)",
-            "pass": window_pass,
-            "actual": f"{analyzer.rolling_window_size} frames",
-            "expected": "300 frames"
-        })
-        
-        # 2. Check Smoothing Factors
-        gold_smoothing = [0.70, 0.70, 0.70, 0.85, 0.85, 0.90]
-        actual_smoothing = getattr(analyzer, 'smoothing_configs', [])
-        
-        smoothing_pass = actual_smoothing == gold_smoothing
-        checks.append({
-            "name": "Snappy Smoothing Factors",
-            "pass": smoothing_pass,
-            "actual": str(actual_smoothing),
-            "expected": str(gold_smoothing)
-        })
-        
-        # 3. Check Data Exposure
-        # We check the most recent audio_state
-        has_ratios = "ratios" in audio_state
-        has_attacks = "attacks" in audio_state
-        checks.append({
-            "name": "Extended Timbre/Impact Data",
-            "pass": has_ratios and has_attacks,
-            "actual": f"Ratios: {'✅' if has_ratios else '❌'}, Attacks: {'✅' if has_attacks else '❌'}",
-            "expected": "Both Present"
-        })
-
-        await websocket.send(json.dumps({
-            "type": "audit_report",
-            "checks": checks,
-            "overall_pass": window_pass and smoothing_pass and has_ratios and has_attacks
-        }))
-        print("🔬 [Audit] Audit Report sent successfully")
-    except Exception as e:
-        print(f"❌ Audit Task Error: {e}")
-        try:
-            await websocket.send(json.dumps({"type": "calibration_error", "message": f"Audit Error: {e}"}))
-        except: pass
-
-async def run_calibration_task(websocket):
-    """Background task to run audio engine sanity check and stream results"""
-    try:
-        wav_path = os.path.join(os.path.dirname(__file__), "..", "tests", "calibration", "calibration_audio.wav")
-        truth_path = os.path.join(os.path.dirname(__file__), "..", "tests", "calibration", "calibration_truth.json")
-
-        if not os.path.exists(wav_path) or not os.path.exists(truth_path):
-            await websocket.send(json.dumps({"type": "calibration_error", "message": "Calibration files missing. Run generator first."}))
-            return
-
-        await websocket.send(json.dumps({"type": "calibration_start"}))
-        
-        with open(truth_path, 'r') as f:
-            truth = json.load(f)
-
-        wf = wave.open(wav_path, 'rb')
-        num_frames = wf.getnframes()
-        
-        # Sync with LIVE settings to test the current environment
-        cal_analyzer = AudioAnalyzer()
-        cal_analyzer.set_gain(analyzer.gain)
-        
-        cal_vibe = VibeEngine()
-        cal_vibe.vibe_splits = vibe_engine.vibe_splits
-        
-        results = {"beats": [], "vibe_states": [], "transients": [], "bpm": []}
-        processed_frames = 0
-        
-        # To avoid blocking the WS loop for too long, we process in chunks and yield
-        chunk_count = 0
-        while processed_frames < num_frames:
-            data = wf.readframes(BLOCK_SIZE)
-            if not data: break
-            
-            samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32767.0
-            samples = samples.reshape(-1, 1)
-            
-            t = processed_frames / SAMPLE_RATE
-            audio_state = cal_analyzer.process(samples, now=t)
-            vibe_state = cal_vibe.update(audio_state, now=t)
-            
-            if audio_state['beat']: results["beats"].append(t)
-            results["vibe_states"].append((t, vibe_state['vibe']))
-            results["transients"].append((t, vibe_state['transient']))
-            results["bpm"].append((t, audio_state['bpm']))
-            
-            processed_frames += len(samples)
-            chunk_count += 1
-            
-            # Update UI every 0.5s of virtual audio
-            if chunk_count % 10 == 0:
-                await websocket.send(json.dumps({
-                    "type": "calibration_progress", 
-                    "progress": processed_frames / num_frames,
-                    "bpm": audio_state['bpm']
-                }))
-                await asyncio.sleep(0.01) # Yield to event loop
-
-        wf.close()
-
-        # Evaluate (Same logic as run_calibration.py)
-        # 1. Beats (Recall & Precision)
-        all_truth_beats = []
-        for s in truth["sections"]:
-            if "beats" in s: all_truth_beats.extend(s["beats"])
-        
-        matches = 0
-        for tb in all_truth_beats:
-            closest = min(results["beats"], key=lambda db: abs(db - tb)) if results["beats"] else 999
-            if abs(closest - tb) < 0.15: matches += 1
-        
-        # Ghost Beats: Beats detected in sections that should be silent (Sweep / Sparks)
-        ghost_beats = 0
-        for rb in results["beats"]:
-            in_beat_section = False
-            for s in truth["sections"]:
-                if "beats" in s and s["start"] <= rb <= s["end"]:
-                    in_beat_section = True
-                    break
-            if not in_beat_section: ghost_beats += 1
-            
-        recall = matches / len(all_truth_beats) if all_truth_beats else 0
-        precision = matches / (len(results["beats"])) if results["beats"] else 0
-        
-        # 2. Vibe/Transient Score
-        vibe_checks = []
-        transient_checks = []
-        for s in truth["sections"]:
-            mid_t = (s["start"] + s["end"]) / 2.0
-            if "expected_vibe" in s:
-                _, actual = min(results["vibe_states"], key=lambda x: abs(x[0] - mid_t))
-                vibe_checks.append({"name": s["name"], "pass": actual == s["expected_vibe"], "actual": actual, "expected": s["expected_vibe"]})
-            if "expected_transient" in s:
-                _, actual = min(results["transients"], key=lambda x: abs(x[0] - mid_t))
-                transient_checks.append({"name": s["name"], "pass": actual == s["expected_transient"], "actual": actual, "expected": s["expected_transient"]})
-
-        # 3. Final BPM (Section 1)
-        mid_s1 = (truth["sections"][0]["start"] + truth["sections"][0]["end"]) / 2.0
-        _, actual_bpm = min(results["bpm"], key=lambda x: abs(x[0] - mid_s1))
-
-        # 4. SIGNAL HEALTH AUDIT - uses the calibration analyzer (synthetic WAV),
-        # NOT the live mic. This tells us if the gain setting is configured well
-        # enough for the engine to process audio, independent of what's playing live.
-        health = cal_analyzer.get_signal_health()
-
-        await websocket.send(json.dumps({
-            "type": "calibration_report",
-            "recall": recall,
-            "precision": precision,
-            "ghost_beats": ghost_beats,
-            "vibe_checks": vibe_checks,
-            "transient_checks": transient_checks,
-            "bpm_accuracy": {
-                "expected": truth["bpm"],
-                "actual": actual_bpm,
-                "error": abs(actual_bpm - truth["bpm"])
-            },
-            "signal_health": health, # Tell the user if their Spotify/Main vol is the issue
-            "settings": {
-                "gain": analyzer.gain
-            }
-        }))
-
-    except Exception as e:
-        print(f"❌ Calibration Task Error: {e}")
-        try:
-            await websocket.send(json.dumps({"type": "calibration_error", "message": str(e)}))
-        except: pass
 
 async def main():
     # Load persisted defaults early (for hardware preference, audio mode, etc)

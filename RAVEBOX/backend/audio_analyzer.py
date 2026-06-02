@@ -31,6 +31,13 @@ class AudioAnalyzer:
         self.pll_correction   = 0.35   # Phase error proportional correction factor
         self.pll_period       = 0.50   # Initial period estimate (120 BPM)
         
+        # Parallel shadow tracker state (old strategy)
+        self.history_flux_old = collections.deque(maxlen=300)
+        self.prev_beat_timestamp_old = time.time()
+        self.bpm_list_old = []
+        self.bpm_old = 120.0
+        self.beat_count_old = 0
+        
         # Silence Detection State
         self.last_sound_time = time.time()
         self.smooth_raw_vol = 0.0
@@ -72,6 +79,8 @@ class AudioAnalyzer:
         self.cumulative_bins_p_max = [2.0] * 6
         self.current_hit_type = "NONE"
         self.hit_lockouts = {"KICK": 0, "SNARE": 0, "CYMBAL": 0}
+        self.smooth_crest_factor = 3.5
+        self.smooth_centroid = 1000.0
 
     def get_signal_health(self):
         """Analyze raw peak history to detect environment-level issues (Spotify vol, ALSA)."""
@@ -95,7 +104,16 @@ class AudioAnalyzer:
 
     def set_gain(self, val: float):
         """Set normalization gain (Sensitivity)"""
-        self.gain = max(0.01, min(5.0, float(val)))
+        new_gain = max(0.01, min(5.0, float(val)))
+        if new_gain != self.gain:
+            self.gain = new_gain
+            # Reset peak tracking and clear histories to immediately adapt to the new gain/volume levels
+            self.history_flux.clear()
+            self.history_raw_max.clear()
+            self.cumulative_max = 3.0  # Reset to low baseline for quick auto-warmup
+            for bi in range(6):
+                self.history_bins_p_max[bi].clear()
+                self.cumulative_bins_p_max[bi] = 2.0
 
     def _normalize(self, val, history):
         """Perform rolling normalization (val - history_min) / (history_max - history_min)"""
@@ -174,6 +192,20 @@ class AudioAnalyzer:
         mono = mono - np.mean(mono)
         fft_raw = np.abs(np.fft.rfft(mono))
         freqs = np.fft.rfftfreq(len(mono), 1/44100) 
+        
+        # 1.1 Calculate Crest Factor (Peak-to-RMS ratio of raw PCM block)
+        raw_peak = np.max(np.abs(mono))
+        raw_rms = np.sqrt(np.mean(mono ** 2)) + 1e-6
+        crest_factor = float(raw_peak / raw_rms)
+        self.smooth_crest_factor = self.smooth_crest_factor * 0.95 + crest_factor * 0.05
+
+        # 1.2 Calculate Spectral Centroid (Center of mass of frequency spectrum)
+        fft_sum = np.sum(fft_raw)
+        if fft_sum > 1e-5:
+            spectral_centroid = float(np.sum(freqs * fft_raw) / fft_sum)
+        else:
+            spectral_centroid = 0.0
+        self.smooth_centroid = self.smooth_centroid * 0.90 + spectral_centroid * 0.10 
         
         # 1.5 Real-time HPSS Median Filtering Block
         self.fft_history.append(fft_raw)
@@ -263,12 +295,19 @@ class AudioAnalyzer:
         self.smooth_spectral = self.smooth_spectral * 0.92 + spectral_raw * 0.08
         spectral_complexity = float(self.smooth_spectral)
         
+        # Harmonic-only spectral complexity for vibe determination
+        # Excludes percussive transients so kick-heavy sections don't inflate the vibe state
+        spectral_raw_h = (raw_mid_h + raw_high_h) / (raw_bass_h + raw_mid_h + raw_high_h + 1e-6)
+        if not hasattr(self, 'smooth_spectral_h'): self.smooth_spectral_h = 0.5
+        self.smooth_spectral_h = self.smooth_spectral_h * 0.92 + spectral_raw_h * 0.08
+        spectral_complexity_h = float(self.smooth_spectral_h)
+        
         current_raw_max = max(raw_bass, raw_mid, raw_high)
         
         # STABLE PEAK TRACKING (Intro-Aware):
         # We maintain a cumulative max that NEVER drops fast.
         # Sane Minimum 100.0 assumes a club-level signal is coming.
-        self.cumulative_max = max(25.0, self.cumulative_max * 0.999995, current_raw_max) 
+        self.cumulative_max = max(25.0, self.cumulative_max * 0.9995, current_raw_max) 
         
         # Reference peak is the maximum of recent history or the cumulative ceiling
         global_peak = max(self.cumulative_max, max(self.history_raw_max) if self.history_raw_max else self.cumulative_max)
@@ -330,6 +369,14 @@ class AudioAnalyzer:
         self._smooth_out_vol = self._smooth_out_vol * 0.5 + out_vol * 0.5
         out_vol = self._smooth_out_vol
 
+        # Harmonic-only volume for vibe determination
+        # Uses same global_peak reference so harmonic vol is proportional to overall signal
+        current_raw_max_h = max(raw_bass_h, raw_mid_h, raw_high_h)
+        out_vol_h = min(1.0, (current_raw_max_h / global_peak) * self.gain)
+        if not hasattr(self, '_smooth_out_vol_h'): self._smooth_out_vol_h = out_vol_h
+        self._smooth_out_vol_h = self._smooth_out_vol_h * 0.5 + out_vol_h * 0.5
+        out_vol_h = self._smooth_out_vol_h
+
         out_bass = min(1.0, out_bass * self.gain)
         out_mid  = min(1.0, out_mid * self.gain)
         out_high = min(1.0, out_high * self.gain)
@@ -385,6 +432,12 @@ class AudioAnalyzer:
         bass_onset = bass_delta > 0.15  # Gating threshold constraint inferred from original transient responsiveness profiles
         high_onset = high_delta > 0.12  # Gating threshold constraint inferred from original transient responsiveness profiles
 
+        # Compute old-style flux for the shadow tracker (unseparated bands)
+        bass_delta_old = max(0, out_bass - self.prev_bands[0])
+        mid_delta_old  = max(0, out_mid - self.prev_bands[1])
+        high_delta_old = max(0, out_high - self.prev_bands[2])
+        flux_old = (bass_delta_old * 1.0) + (mid_delta_old * 0.4) + (high_delta_old * 0.1)
+
         self.prev_bands_p = [out_bass_p, out_mid_p, out_high_p]
         self.prev_bands = [out_bass, out_mid, out_high]
         
@@ -403,6 +456,24 @@ class AudioAnalyzer:
             
             out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * s_factor + normalized * (1.0 - s_factor)))
         self.prev_bins = out_bins
+
+        # Run shadow beat tracker (old strategy with fixed 350ms lockout)
+        is_beat_old = False
+        if len(self.history_flux_old) > 0:
+            avg_flux_old = sum(self.history_flux_old) / len(self.history_flux_old)
+            if flux_old > avg_flux_old * self.flux_threshold_mult and flux_old > self.flux_threshold_abs:
+                if now - self.prev_beat_timestamp_old > 0.35:
+                    is_beat_old = True
+                    self.beat_count_old += 1
+                    delta_old = now - self.prev_beat_timestamp_old
+                    self.prev_beat_timestamp_old = now
+                    self.bpm_list_old.append(60.0 / delta_old)
+                    if len(self.bpm_list_old) > 12:
+                        self.bpm_list_old.pop(0)
+                    self.bpm_old = sum(self.bpm_list_old) / len(self.bpm_list_old)
+
+        self.history_flux_old.append(flux_old)
+
         # 7. ADAPTIVE BEAT DETECTION (PLL)
         is_beat = False
         if len(self.history_flux) > 0:
@@ -412,6 +483,8 @@ class AudioAnalyzer:
                 if len(self.beat_intervals) >= 2:
                     sorted_ibi = sorted(self.beat_intervals)
                     self.pll_period = float(sorted_ibi[len(sorted_ibi) // 2])
+                    # Clamp pll_period to sane tempos [45 BPM, 185 BPM] -> [1.333s, 0.324s]
+                    self.pll_period = max(0.324, min(1.333, self.pll_period))
                     lockout = max(self.lockout_floor, self.pll_period * self.lockout_ratio)
                 else:
                     lockout = 0.35  # Cold-start fallback
@@ -441,7 +514,26 @@ class AudioAnalyzer:
                     if len(self.bpm_list) > 12:
                         self.bpm_list.pop(0)
                     self.bpm = sum(self.bpm_list) / len(self.bpm_list)
-                    self.beat_intervals.append(delta)
+                    
+                    # Clamp the stored interval delta to maintain safe boundaries
+                    clamped_delta = max(0.324, min(1.333, delta))
+                    self.beat_intervals.append(clamped_delta)
+
+                    # Rhythmic Validation Guard / Safety Check (Corrective)
+                    outside_expected = (self.bpm > 185 or self.bpm < 45)
+                    if outside_expected:
+                        ratio = self.bpm / (self.bpm_old + 1e-6)
+                        is_harmonic = (abs(ratio - 2.0) < 0.15) or (abs(ratio - 0.5) < 0.15) or (abs(ratio - 1.0) < 0.15)
+                        if not is_harmonic:
+                            # Reset PLL state to the shadow tracker's stable tempo
+                            self.beat_intervals.clear()
+                            sane_delta = 60.0 / self.bpm_old
+                            self.beat_intervals.append(sane_delta)
+                            self.beat_intervals.append(sane_delta)
+                            self.pll_period = sane_delta
+                            self.prev_beat_timestamp = now
+                            self.bpm = self.bpm_old
+                            self.bpm_list = [self.bpm_old]
         
         # Store weighted flux for adaptive thresholding
         # (CRITICAL: History must match current flux for the multiplier to be valid)
@@ -549,10 +641,20 @@ class AudioAnalyzer:
             "suggested_animation": suggested_shape,
             "bins": [float(b) for b in out_bins],
             "spectral_complexity": spectral_complexity,
+            "vol_h": float(out_vol_h),
+            "spectral_complexity_h": spectral_complexity_h,
             "hit_type": self.current_hit_type,  # Structural hit category exported directly to main state courier
             "kick_score": float(kick_score),
             "snare_score": float(snare_score),
-            "cymbal_score": float(cymbal_score)
+            "cymbal_score": float(cymbal_score),
+            "kick": float(1.0 if is_kick else 0.0),
+            "snare": float(1.0 if is_snare else 0.0),
+            "cymbal": float(1.0 if is_cymbal else 0.0),
+            "kick_behavior": float(min(1.0, raw_bins_p[0] / max(self.cumulative_bins_p_max[0], 1e-6))),
+            "snare_behavior": float(min(1.0, max(raw_bins_p[2], raw_bins_p[3]) / max(self.cumulative_bins_p_max[2], 1e-6))),
+            "cymbal_behavior": float(min(1.0, raw_bins_p[5] / max(self.cumulative_bins_p_max[5], 1e-6))),
+            "crest_factor": float(self.smooth_crest_factor),
+            "spectral_centroid": float(self.smooth_centroid)
         }
 
         # Process stereo channels if available
@@ -639,7 +741,9 @@ class AudioAnalyzer:
             metadata_keys = [
                 'vibe', 'transient', 'beat', 'bar', 'beat_phase', 'beat_count', 
                 'bpm', 'suggested_animation', 'hit_type', 'kick_score', 
-                'snare_score', 'cymbal_score', 'flux', 'bass_onset', 'high_onset'
+                'snare_score', 'cymbal_score', 'flux', 'bass_onset', 'high_onset',
+                'kick', 'snare', 'cymbal', 'kick_behavior', 'snare_behavior', 'cymbal_behavior',
+                'crest_factor', 'spectral_centroid'
             ]
 
             left_dict = {
@@ -695,7 +799,14 @@ class AudioAnalyzer:
              "attacks": [0.0] * 6,
              "ratios": [0.0] * 6,
              "spectral_complexity": 0.5,
-             "hit_type": "NONE"
+             "vol_h": 0.0,
+             "spectral_complexity_h": 0.5,
+             "hit_type": "NONE",
+             "kick_score": 0.0, "snare_score": 0.0, "cymbal_score": 0.0,
+             "kick": 0.0, "snare": 0.0, "cymbal": 0.0,
+             "kick_behavior": 0.0, "snare_behavior": 0.0, "cymbal_behavior": 0.0,
+             "crest_factor": 3.5,
+             "spectral_centroid": 1000.0
          }
          state["left"] = state.copy()
          state["right"] = state.copy()

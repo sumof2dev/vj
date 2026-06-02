@@ -112,7 +112,7 @@
                 height: 30px !important;
                 min-height: 30px !important;
             }
-            .engine-accordion summary div {
+            .engine-accordion summary .accordion-handle {
                 width: 40px !important;
                 height: 4px !important;
                 opacity: 0.3;
@@ -200,7 +200,7 @@
         <!-- CONDENSED TIMELINE AT THE TOP (COLLAPSIBLE) -->
         <details id="console-timeline-details" open class="engine-accordion" style="margin: 0; border:none; border-bottom:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0;" ontoggle="if(this.open) { if(typeof startConsoleTimelineLoop === 'function') startConsoleTimelineLoop(); }">
             <summary style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
-                <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                <div class="accordion-handle" style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
             </summary>
             <div id="console-timeline-container" style="display: flex; flex-direction: column; background: rgba(0,0,0,0.3); overflow: hidden;">
                 <div style="height: 80px; display: flex;">
@@ -257,7 +257,7 @@
         <!-- 3. SLIDER SETUP (Live Override) -->
         <details class="engine-accordion" style="margin: 0; border:none; border-top:1px solid rgba(255,255,255,0.1); border-radius:0; flex-shrink: 0;" ontoggle="if(this.open) { renderSliderSetup(); this.scrollIntoView({behavior:'smooth'}); } else { window.scrollTo({top:0, behavior:'smooth'}); }">
             <summary style="height: 10px; min-height: 10px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
-                <div style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
+                <div class="accordion-handle" style="width: 30px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 1px;"></div>
             </summary>
             <div class="accordion-content" style="background:rgba(0,0,0,0.2); padding: 8px;">
                 <!-- Fixture Picker -->
@@ -288,9 +288,6 @@
             <select id="assign-type" onchange="updateAssignmentOptions()" style="width:100%; background:rgba(0,0,0,0.3); color:#fff; border:1px solid #333; padding:8px; border-radius:8px; margin-top:5px;">
                 <option value="none">None</option>
                 <option value="preset">Preset</option>
-                <option value="slider">2 Axis (XY)</option>
-                <option value="dmx_slider">DMX Slider (Console)</option>
-                <option value="knob">Knob (Rotary)</option>
                 <option value="live_feed">Live Feed Toggle</option>
                 <option value="blackout">Blackout</option>
             </select>
@@ -357,9 +354,12 @@
 
             const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const savedPort = localStorage.getItem('vj_ws_port') || '8765';
-            const wsUrl = window.isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : 
+            let wsUrl = window.isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : 
                           ((window.isCustomTunnel) ? `${wsProtocol}://${window.wsHost}` : 
                           `${wsProtocol}://${window.host || location.hostname}:${savedPort}`);
+            if ((window.isCustomTunnel || window.isCustomSubdomain) && !window.wsHost.startsWith('ws-')) {
+                wsUrl = wsUrl.replace(/\/+$/, '') + '/ws';
+            }
             
             const ws = new WebSocket(wsUrl);
             ws.binaryType = 'arraybuffer';
@@ -444,20 +444,6 @@
             const container = document.getElementById('console-main-container');
             if (!container) return;
 
-            const grid = document.getElementById('live-console-grid');
-            const btns = grid.querySelectorAll('.live-btn');
-            
-            let maxIdx = -1;
-            btns.forEach((btn, i) => {
-                const cfg = liveConfig[i];
-                if (cfg && cfg.type !== 'none') maxIdx = i;
-            });
-
-            if (window.liveEditMode) maxIdx = Math.max(maxIdx, 15);
-
-            const rowCount = Math.ceil((maxIdx + 1) / 4);
-            const colCount = Math.min(4, maxIdx + 1);
-
             // Mobile: Skip dynamic sizing, let CSS handle it
             if (window.innerWidth <= 600) {
                 container.style.maxWidth = '';
@@ -466,24 +452,9 @@
                 return;
             }
 
-            // Adjust width based on columns used (though we usually have 4 cols)
-            // But let's adjust max-width based on how "full" it is
-            if (maxIdx < 4) {
-                container.style.maxWidth = '350px';
-            } else if (maxIdx < 8) {
-                container.style.maxWidth = '500px';
-            } else {
-                container.style.maxWidth = '800px';
-            }
-
-            // Adjust height implicitly via content, but we can add a class if it's "full screen"
-            if (maxIdx >= 11) {
-                container.style.borderRadius = '24px';
-                container.style.width = '95%';
-            } else {
-                container.style.width = 'auto';
-                container.style.minWidth = '320px';
-            }
+            container.style.maxWidth = '800px';
+            container.style.borderRadius = '24px';
+            container.style.width = '95%';
         };
     </script>
 </body>

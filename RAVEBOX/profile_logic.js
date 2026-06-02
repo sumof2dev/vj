@@ -10,12 +10,7 @@ var refreshUI = window.refreshUI || function() { };
 var saveDB = window.saveDB || function() { };
 var switchTab = window.switchTab || function() { };
 
-const MOD_TYPES = [
-    { id: 'none', label: 'NONE' },
-    { id: 'dampen_amp', label: 'DAMPEN AMP' },
-    { id: 'clamp', label: 'CLAMP' },
-    { id: 'gate', label: 'GATE' }
-];
+
 
 function normalizeProfileData(profile) {
     if (!profile) return;
@@ -37,7 +32,7 @@ function normalizeProfileData(profile) {
             'low': 'bass', 'mid': 'mids', 'high': 'highs',
             'vol': 'volume', 'raw': 'volume', 
             'flux': 'impact', 'ratio': 'impact', 'spectral flux': 'impact',
-            'beat': 'beat phase', 'bar': 'bar phase', '2 bar phase': 'bar phase',
+            'bar': 'bar phase', '2 bar phase': 'bar phase',
             'bin_0': 'bin 0', 'bin_1': 'bin 0', 'bin_2': 'bin 0', 
             'bin_3': 'bin 4', 'bin_4': 'bin 4', 'bin_5': 'bin 4'
         },
@@ -66,16 +61,12 @@ function normalizeProfileData(profile) {
                         speed: rule.speed !== undefined ? rule.speed : 0.1,
                         react: rule.react !== undefined ? rule.react : 0.5,
                         gain: rule.gain !== undefined ? rule.gain : 1.0,
-                        hold_type: rule.hold_type !== undefined ? rule.hold_type : 'none',
-                        mod_type: rule.mod_type || 'none',
-                        mod_target: rule.mod_target !== undefined ? rule.mod_target : null
+                        hold_type: rule.hold_type !== undefined ? rule.hold_type : 'none'
                     };
                 }
                 
                 // Ensure mod keys exist
                 if (rule.modifiers.gain === undefined) rule.modifiers.gain = 1.0;
-                if (rule.modifiers.mod_type === undefined) rule.modifiers.mod_type = 'none';
-                if (rule.modifiers.mod_target === undefined) rule.modifiers.mod_target = null;
                 
                 // 3. Remap Hold Types
                 if (MAP.holds[rule.modifiers.hold_type]) rule.modifiers.hold_type = MAP.holds[rule.modifiers.hold_type];
@@ -86,6 +77,12 @@ function normalizeProfileData(profile) {
                 delete rule.hold_type;
                 delete rule.lfo; 
                 delete rule.audio;
+                delete rule.mod_type;
+                delete rule.mod_target;
+                if (rule.modifiers) {
+                    delete rule.modifiers.mod_type;
+                    delete rule.modifiers.mod_target;
+                }
                 
                 return rule;
             });
@@ -99,6 +96,8 @@ function loadProfileChannels() {
         window.pendingAiInstructions = {};
         window.aiConversationHistory = [];
         window.lastLoadedProfileId = activeProfileId;
+        window.currentProfileChannels = [];
+        window.channelConfig = {};
     }
 
     const activeProfile = activeProfileId ? db.profiles.find(p => p.id === activeProfileId) : null;
@@ -123,9 +122,7 @@ function loadProfileChannels() {
                 modifiers: { 
                     speed: 0.5, 
                     react: 0.5, 
-                    hold_type: 'none',
-                    mod_type: 'none',
-                    mod_target: null
+                    hold_type: 'none'
                 },
                 value: 0
             }]];
@@ -150,9 +147,7 @@ function loadProfileChannels() {
                 modifiers: { 
                     speed: 0.5, 
                     react: 0.5, 
-                    hold_type: 'none',
-                    mod_type: 'none',
-                    mod_target: null
+                    hold_type: 'none'
                 },
                 value: 0
             }];
@@ -247,7 +242,11 @@ async function saveCurrentRuleAsPremade(chIdx, ruleIdx) {
         react: rule.modifiers ? rule.modifiers.react : 0.5,
         hold_type: rule.modifiers ? rule.modifiers.hold_type : 'none',
         value: rule.value,
-        rel_center: rule.cal ? parseFloat(((rule.cal.center - rule.cal.min) / Math.max(1, (rule.cal.max - rule.cal.min))).toFixed(3)) : 0.5
+        rel_center: rule.cal ? (() => {
+            const span = rule.cal.max - rule.cal.min;
+            const divisor = Math.abs(span) >= 1 ? span : (span < 0 ? -1 : 1);
+            return parseFloat(((rule.cal.center - rule.cal.min) / divisor).toFixed(3));
+        })() : 0.5
     };
 
     try {
@@ -1345,11 +1344,20 @@ function getFixtureRoles(fixtureId) {
             const newMappings = [];
             
             conf.ranges.forEach((r, rIdx) => {
-                const rMin = parseFloat(r.min);
-                const rMax = parseFloat(r.max);
-                const rCtr = parseFloat(r.center !== undefined ? r.center : Math.floor((rMin + rMax) / 2));
+                let rMin = parseFloat(r.min);
+                let rMax = parseFloat(r.max);
+                if (isNaN(rMin)) rMin = 0;
+                if (isNaN(rMax)) rMax = 255;
+                rMin = Math.max(0, Math.min(255, Math.round(rMin)));
+                rMax = Math.max(0, Math.min(255, Math.round(rMax)));
+                let rCtr = parseFloat(r.center !== undefined ? r.center : Math.floor((rMin + rMax) / 2));
+                if (isNaN(rCtr)) rCtr = Math.floor((rMin + rMax) / 2);
+                const boundsMin = Math.min(rMin, rMax);
+                const boundsMax = Math.max(rMin, rMax);
+                rCtr = Math.max(boundsMin, Math.min(boundsMax, Math.round(rCtr)));
                 
                 newMappings.push({
+                    easy_id: conf.easy_id || undefined,
                     behavior: conf.behavior,
                     vibe: 'any',
                     description: 'Partitioned Range',
@@ -1361,9 +1369,9 @@ function getFixtureRoles(fixtureId) {
                         gain: r.gain !== undefined ? r.gain : 1.0,
                         threshold: conf.threshold || 0,
                         hold_type: conf.hold_type || 'none',
-                        mod_type: conf.mod_type || 'none',
-                        mod_target: conf.mod_target !== undefined ? conf.mod_target : null
-                    }
+                        muted: r.muted ? true : false
+                    },
+                    muted: r.muted ? true : false
                 });
             });
             
@@ -1400,9 +1408,10 @@ function getFixtureRoles(fixtureId) {
                     const rMax = (m.cal?.max !== undefined) ? m.cal.max : 255;
                     const rCtr = (m.cal?.center !== undefined) ? m.cal.center : Math.floor((rMin + rMax) / 2);
                     const rGain = (m.modifiers && m.modifiers.gain !== undefined) ? m.modifiers.gain : 1.0;
-                    return { min: rMin, center: rCtr, max: rMax, gain: rGain };
+                    const rMuted = (m.muted !== undefined) ? !!m.muted : (m.modifiers?.muted !== undefined ? !!m.modifiers.muted : false);
+                    return { min: rMin, center: rCtr, max: rMax, gain: rGain, muted: rMuted };
                 });
-                if(ranges.length === 0) ranges = [{min:0, center:127, max:255}];
+                if(ranges.length === 0) ranges = [{min:0, center:127, max:255, gain:1.0, muted:false}];
                 
                 if (!window.vibeSplits) window.vibeSplits = {};
                 if (!window.vibeSplits[chIdx]) {
@@ -1412,14 +1421,13 @@ function getFixtureRoles(fixtureId) {
                 const splits = window.vibeSplits[chIdx];
                 
                 window.channelConfig[chIdx] = { 
+                    easy_id: first.easy_id || '',
                     behavior: defaultBehavior, 
                     source: defaultSource, 
                     speed: defaultSpeed, 
                     react: defaultReact, 
                     threshold: first.modifiers ? (first.modifiers.threshold !== undefined ? first.modifiers.threshold : 0) : 0,
                     hold_type: defaultHold,
-                    mod_type: first.modifiers?.mod_type || 'none',
-                    mod_target: first.modifiers?.mod_target !== undefined ? first.modifiers.mod_target : null,
                     ranges: ranges 
                 };
             }
@@ -1451,18 +1459,32 @@ function getFixtureRoles(fixtureId) {
 
             let rangesHtml = '';
             conf.ranges.forEach((r, rIdx) => {
+                const isMuted = !!r.muted;
+                const dimStyle = isMuted ? 'opacity:0.35; pointer-events:none; filter:grayscale(0.5);' : '';
+                
+                let muteBtn = '<button onclick="updateRange(' + chIdx + ', ' + rIdx + ', \'muted\', ' + (!isMuted) + ', this); setTimeout(() => window.renderProfileMappings(), 10);" ' +
+                    'class="btn btn-sm" ' +
+                    'style="width:22px; height:22px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:4px; font-size:10px; border:1px solid ' + (isMuted ? 'rgba(255, 71, 87, 0.4)' : 'rgba(45, 212, 191, 0.4)') + '; ' +
+                    'background:' + (isMuted ? 'rgba(255, 71, 87, 0.15)' : 'rgba(45, 212, 191, 0.15)') + '; ' +
+                    'color:' + (isMuted ? '#ff4757' : '#2dd4bf') + '; cursor:pointer;" ' +
+                    'title="' + (isMuted ? 'Unmute range (activate)' : 'Mute range (deactivate)') + '">' +
+                    (isMuted ? '🔇' : '🔊') +
+                    '</button>';
+
                 rangesHtml += '<div class="range-item" style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">' +
-                    '<div style="display:flex; align-items:center; width:20px; font-size:9px; font-weight:900; color:var(--text-dim);">' + (rIdx + 1) + '</div>' +
-                    '<div style="display:flex; gap:4px; flex:1; justify-content:center; align-items:center;">' +
-                        '<input type="number" value="' + r.min + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'min\', this.value)" style="width:34px; background:rgba(45,212,191,0.05); color:#2dd4bf; border:1px solid #2dd4bf; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
-                        '<input type="number" value="' + (r.center !== undefined ? r.center : Math.floor((r.min + r.max) / 2)) + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'center\', this.value)" style="width:34px; background:rgba(14,165,233,0.05); color:#0ea5e9; border:1px solid #0ea5e9; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
-                        '<input type="number" value="' + r.max + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'max\', this.value)" style="width:34px; background:rgba(139,92,246,0.05); color:#8b5cf6; border:1px solid #8b5cf6; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
+                    '<div style="display:flex; align-items:center; width:22px; justify-content:center;">' + muteBtn + '</div>' +
+                    '<div style="display:flex; gap:8px; flex:1; align-items:center; transition:opacity 0.2s; ' + dimStyle + '">' +
+                        '<div style="display:flex; gap:4px; flex:1; justify-content:center; align-items:center;">' +
+                            '<input type="number" min="0" max="255" value="' + r.min + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'min\', this.value, this)" style="width:34px; background:rgba(45,212,191,0.05); color:#2dd4bf; border:1px solid #2dd4bf; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
+                            '<input type="number" min="0" max="255" value="' + (r.center !== undefined ? r.center : Math.floor((r.min + r.max) / 2)) + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'center\', this.value, this)" style="width:34px; background:rgba(14,165,233,0.05); color:#0ea5e9; border:1px solid #0ea5e9; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
+                            '<input type="number" min="0" max="255" value="' + r.max + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'max\', this.value, this)" style="width:34px; background:rgba(139,92,246,0.05); color:#8b5cf6; border:1px solid #8b5cf6; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
+                        '</div>' +
+                        '<div style="display:flex; align-items:center; gap:4px; flex:1;">' +
+                            '<span style="font-size:7px; color:var(--accent); font-weight:bold;">GAIN</span>' +
+                            '<input type="range" min="0" max="1" step="0.05" value="' + (r.gain !== undefined ? r.gain : 1.0) + '" oninput="updateRange(' + chIdx + ', ' + rIdx + ', \'gain\', this.value, this)" style="flex:1; height:4px; accent-color:var(--accent);">' +
+                        '</div>' +
+                        '<button class="btn btn-sm btn-danger" onclick="removeRange(' + chIdx + ', ' + rIdx + ')" style="padding:2px 6px; font-size:10px; height:22px;">X</button>' +
                     '</div>' +
-                    '<div style="display:flex; align-items:center; gap:4px; flex:1;">' +
-                        '<span style="font-size:7px; color:var(--accent); font-weight:bold;">GAIN</span>' +
-                        '<input type="range" min="0" max="1" step="0.05" value="' + (r.gain !== undefined ? r.gain : 1.0) + '" oninput="updateRange(' + chIdx + ', ' + rIdx + ', \'gain\', this.value)" style="flex:1; height:4px; accent-color:var(--accent);">' +
-                    '</div>' +
-                    '<button class="btn btn-sm btn-danger" onclick="removeRange(' + chIdx + ', ' + rIdx + ')" style="padding:2px 6px; font-size:10px; height:22px;">X</button>' +
                 '</div>';
             });
             
@@ -1484,15 +1506,6 @@ function getFixtureRoles(fixtureId) {
                     '<canvas id="wave-' + chIdx + '" class="behavior-wave" style="width:100%; height:100%; display:block;"></canvas>' +
                     '<div style="position:absolute; top:4px; left:6px; font-size:8px; color:#444; pointer-events:none; font-weight:bold; letter-spacing:1px;">LIVE BEHAVIOR PREVIEW</div>' +
                 '</div>' +
-                '<div class="section-title">Vibe Mapping Spectrum</div>' +
-                '<div class="proportion-container" id="prop-cont-' + chIdx + '" style="touch-action:none;">' +
-                    '<div class="vibe-segment chill-seg" style="width: ' + splits.chillMid + '%">CHILL</div>' +
-                    '<div class="handle" id="handle1-' + chIdx + '" style="left: calc(' + splits.chillMid + '% - 6px); touch-action:none;"></div>' +
-                    '<div class="vibe-segment mid-seg" style="width: ' + (splits.midHigh - splits.chillMid) + '%">MID</div>' +
-                    '<div class="handle" id="handle2-' + chIdx + '" style="left: calc(' + splits.midHigh + '% - 6px); touch-action:none;"></div>' +
-                    '<div class="vibe-segment high-seg" style="width: ' + (100 - splits.midHigh) + '%">HIGH</div>' +
-                '</div>' +
-                '<div style="font-size:10px; color:#666; text-align:center; margin-bottom:20px;">Drag handles to adjust the distribution of ranges across vibes.</div>' +
                 '<div class="section-title">Valid Value Ranges' +
                     '<button class="btn btn-sm" onclick="addRange(' + chIdx + ')" style="padding:2px 8px; font-size:9px;">+ ADD</button>' +
                 '</div>' +
@@ -1501,26 +1514,11 @@ function getFixtureRoles(fixtureId) {
                     '<div class="control-group"><label>Base Speed</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.speed + '" onchange="updateChannelConfig(' + chIdx + ', \'speed\', this.value)"></div>' +
                     '<div class="control-group"><label>Reactivity</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.react + '" onchange="updateChannelConfig(' + chIdx + ', \'react\', this.value)"></div>' +
                     '<div class="control-group"><label>Threshold</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + (conf.threshold || 0) + '" onchange="updateChannelConfig(' + chIdx + ', \'threshold\', this.value)"></div>' +
-                    '<div><div class="section-title">Modulation Type</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'mod_type\', this.value)">' + 
-                        MOD_TYPES.map(m => `<option value="${m.id}" ${m.id === conf.mod_type ? 'selected' : ''}>${m.label}</option>`).join('') + 
-                    '</select></div>' +
-                    '<div><div class="section-title">Mod Target</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'mod_target\', this.value)">' + 
-                        '<option value="">-- NONE --</option>' + 
-                        (window.currentProfileChannels || []).map((otherCh, otherIdx) => {
-                            if (otherIdx === chIdx) return '';
-                            return `<option value="${otherIdx}" ${conf.mod_target == otherIdx ? 'selected' : ''}>CH ${otherIdx + 1}: ${(otherCh.name || otherCh.role || 'Unassigned').toUpperCase()}</option>`;
-                        }).join('') + 
-                    '</select></div>' +
                 '</div>' +
             '</div></div>';
         });
         
         container.innerHTML = html;
-        
-        (window.currentProfileChannels || []).forEach((ch, chIdx) => {
-            attachHandleDrag(chIdx, 1);
-            attachHandleDrag(chIdx, 2);
-        });
         
         compileProfileMappings();
         startWaveformLoop();
@@ -1528,18 +1526,32 @@ function getFixtureRoles(fixtureId) {
     
     // --- 3. EVENT HANDLERS & SIMULATION ---
     window.applyEasyBehaviorToChannel = function(chIdx, easyId) {
-        if (!easyId) return;
+        const conf = window.channelConfig[chIdx];
+        if (!conf) return;
+
+        if (!easyId || easyId === 'custom') {
+            conf.easy_id = '';
+            window.renderProfileMappings();
+            return;
+        }
+
         const desc = (window.EASY_DESCRIPTORS || []).find(d => d.id === easyId);
         if (!desc) return;
         
-        const conf = window.channelConfig[chIdx];
+        conf.easy_id = easyId;
         conf.behavior = desc.behavior || 'static';
         conf.source = desc.source || 'volume';
         conf.speed = desc.speed !== undefined ? desc.speed : 0.5;
         conf.react = desc.react !== undefined ? desc.react : 0.5;
         conf.threshold = desc.threshold !== undefined ? desc.threshold : 0.0;
         conf.hold_type = desc.hold_type || 'none';
-        
+
+        // Apply Relative Center Tuning (Gold Standard)
+        if (desc.rel_center !== undefined && conf.ranges && conf.ranges[0]) {
+            const r = conf.ranges[0];
+            r.center = Math.round(r.min + (desc.rel_center * (r.max - r.min)));
+        }
+
         window.renderProfileMappings();
     };
 
@@ -1583,16 +1595,20 @@ function getFixtureRoles(fixtureId) {
             const st = window.simStates[chIdx];
             
             const hold_type = (conf.hold_type || 'none').toLowerCase();
-            const is_beat = audio.beat || false;
-            const is_bar = audio.bar || false;
+            const curr_beat_count = audio.beat_count || 0;
+            if (st.last_beat_count === undefined) st.last_beat_count = curr_beat_count;
+            const has_new_beat = (curr_beat_count > st.last_beat_count);
+            const has_new_bar = has_new_beat && (curr_beat_count % 4 === 0);
+            st.last_beat_count = curr_beat_count;
             
-            if (hold_type === 'beat') {
-                if (is_beat) st.hold_active = false;
-                else st.hold_active = true;
-            } else if (hold_type === 'bar') {
-                if (is_bar) st.hold_active = false;
-                else st.hold_active = true;
-            } else {
+            let trigger_hold = false;
+            if (hold_type === 'beat' && has_new_beat) trigger_hold = true;
+            else if (hold_type === 'bar' && has_new_bar) trigger_hold = true;
+            
+            if (trigger_hold) {
+                st.hold_active = true;
+                st.held_dmx = null;
+            } else if (hold_type === 'none') {
                 st.hold_active = false;
             }
             
@@ -1603,9 +1619,28 @@ function getFixtureRoles(fixtureId) {
             else if (src === 'bass') E = audio.bass || 0;
             else if (src === 'mids' || src === 'mid') E = audio.mid || 0;
             else if (src === 'highs' || src === 'high') E = audio.high || 0;
-            else if (src === 'impact') E = audio.impact || audio.flux || 0;
+            else if (src === 'bass_p') E = audio.bass_p || 0;
+            else if (src === 'mids_p') E = audio.mid_p || 0;
+            else if (src === 'highs_p') E = audio.high_p || 0;
+            else if (src === 'bass_h') E = audio.bass_h || 0;
+            else if (src === 'mids_h') E = audio.mid_h || 0;
+            else if (src === 'highs_h') E = audio.high_h || 0;
+            else if (src === 'spectral flux' || src === 'impact') E = audio.flux || 0;
             else if (src === 'beat phase') E = audio.beat_phase || 0;
             else if (src === 'bar phase') E = audio.bar_phase || 0;
+            else if (src === 'kick') E = audio.kick || 0;
+            else if (src === 'snare') E = audio.snare || 0;
+            else if (src === 'cymbal') E = audio.cymbal || 0;
+            else if (src === 'beat') {
+                if (st.beat_env === undefined) st.beat_env = 0.0;
+                if (audio.beat) {
+                    st.beat_env = 1.0;
+                }
+                const speed = conf.speed !== undefined ? parseFloat(conf.speed) : 0.5;
+                const decayRate = 1.0 + (speed * 20.0);
+                st.beat_env = Math.max(0, st.beat_env - dt * decayRate * st.beat_env);
+                E = st.beat_env;
+            }
             else if (src && src.indexOf('bin ') === 0) {
                 const bIdx = parseInt(src.split(' ')[1]);
                 // Only bin 0 and 4 are valid now
@@ -1640,22 +1675,11 @@ function getFixtureRoles(fixtureId) {
             const react = (conf.react !== undefined ? conf.react : 0.5) * scale_factor;
             const behavior = conf.behavior || 'static';
             
-            // --- DYNAMIC VIBE PARTITIONING (Matches Engine) ---
-            const vibe = audio.vibe || 'mid';
-            const splits = (window.vibeSplits && window.vibeSplits[chIdx]) ? window.vibeSplits[chIdx] : { chillMid: 33, midHigh: 66 };
-            let l_bound = 0.0;
-            let r_bound = 1.0;
-            const s1 = splits.chillMid / 100.0;
-            const s2 = splits.midHigh / 100.0;
-
-            if (vibe === 'chill') r_bound = s1;
-            else if (vibe === 'mid') { l_bound = s1; r_bound = s2; }
-            else if (vibe === 'high') l_bound = s2;
-
-            const span = c_max - c_min;
-            const eff_min = c_min + span * l_bound;
-            const eff_max = c_min + span * r_bound;
-            const eff_center = (eff_min + eff_max) / 2.0;
+            // --- DYNAMIC VIBE PARTITIONING (Removed) ---
+            // Vibe partitioning completely removed per user request
+            const eff_min = c_min;
+            const eff_max = c_max;
+            const eff_center = c_center;
 
             // --- BEHAVIOR MATH (mirrors engine _apply_rule_math exactly) ---
             let y = 0.0;
@@ -1665,7 +1689,7 @@ function getFixtureRoles(fixtureId) {
                 if (window.simBuffers[chIdx].length > 100) window.simBuffers[chIdx].shift();
             } else {
                 if (behavior === 'direct') {
-                    y = (E * 2.0) - 1.0;
+                    y = (E * react * 2.0) - 1.0;
                     
                 } else if (behavior === 'sine' || behavior === 'square' || behavior === 'saw' || behavior === 'triangle') {
                     const freq = (speed * 0.1) + (E * 5.0 * react);
@@ -1710,30 +1734,7 @@ function getFixtureRoles(fixtureId) {
                 if (is_gated) y = -1.0;
                 
                 
-                // --- CHANNEL MODULATION (Simulation) ---
-                if (conf.mod_type && conf.mod_type !== 'none' && conf.mod_target !== null) {
-                    const targetIdx = parseInt(conf.mod_target);
-                    const targetBuffer = window.simBuffers[targetIdx];
-                    if (targetBuffer && targetBuffer.length > 0) {
-                        const targetVal = targetBuffer[targetBuffer.length - 1];
-                        const targetNorm = targetVal / 255.0;
-                        
-                        if (conf.mod_type === 'dampen_amp') {
-                            y = y * (1.0 - targetNorm);
-                        } else if (conf.mod_type === 'dampen_speed') {
-                            // Speed modification in simulation is tricky as phase is already updated,
-                            // but we can scale the amplitude as a proxy or accept the limitation.
-                            // However, the user specifically asked for dampen_speed.
-                            // We'll scale y for now as the 'output' of the logic.
-                            y = y * (1.0 - targetNorm);
-                        } else if (conf.mod_type === 'clamp') {
-                            y = Math.min(y, (targetNorm * 2.0) - 1.0);
-                        } else if (conf.mod_type === 'gate') {
-                            if (targetNorm < 0.1) y = -1.0;
-                        }
-                    }
-                }
-                
+
                 // --- Y → DMX MAPPING (mirrors engine exactly) ---
                 const gain = r0.gain !== undefined ? parseFloat(r0.gain) : 1.0;
                 y = Math.max(-1.0, Math.min(1.0, y * gain));
@@ -1857,27 +1858,99 @@ function getFixtureRoles(fixtureId) {
     };
     
     window.addRange = function(chIdx) {
-        window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255});
+        window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255, muted: false});
         window.renderProfileMappings();
     };
     
     window.removeRange = function(chIdx, rIdx) {
         window.channelConfig[chIdx].ranges.splice(rIdx, 1);
         if(window.channelConfig[chIdx].ranges.length === 0) {
-            window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255});
+            window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255, muted: false});
         }
         window.renderProfileMappings();
     };
     
-    window.updateRange = function(chIdx, rIdx, field, val) {
-        if (field === 'min' || field === 'max' || field === 'center') val = parseInt(val);
-        if (field === 'gain') val = parseFloat(val);
-        window.channelConfig[chIdx].ranges[rIdx][field] = val;
+    window.updateRange = function(chIdx, rIdx, field, val, inputEl) {
+        let currentRange = window.channelConfig[chIdx].ranges[rIdx];
+        if (!currentRange) return;
+
+        // Resolve center to concrete number if it's undefined
+        if (currentRange.center === undefined) {
+            currentRange.center = Math.floor((currentRange.min + currentRange.max) / 2);
+        }
+
+        if (field === 'min' || field === 'max' || field === 'center') {
+            val = parseInt(val);
+            if (isNaN(val)) {
+                if (inputEl) inputEl.value = currentRange[field];
+                return;
+            }
+            val = Math.max(0, Math.min(255, val));
+        } else if (field === 'gain') {
+            val = parseFloat(val);
+            if (isNaN(val)) {
+                if (inputEl) inputEl.value = (currentRange.gain !== undefined ? currentRange.gain : 1.0);
+                return;
+            }
+            val = Math.max(0.0, Math.min(1.0, val));
+        } else if (field === 'muted') {
+            val = !!val;
+        }
+
+        if (field === 'min') {
+            currentRange.min = val;
+            const boundsMin = Math.min(currentRange.min, currentRange.max);
+            const boundsMax = Math.max(currentRange.min, currentRange.max);
+            if (currentRange.center < boundsMin) {
+                currentRange.center = boundsMin;
+            } else if (currentRange.center > boundsMax) {
+                currentRange.center = boundsMax;
+            }
+        } else if (field === 'max') {
+            currentRange.max = val;
+            const boundsMin = Math.min(currentRange.min, currentRange.max);
+            const boundsMax = Math.max(currentRange.min, currentRange.max);
+            if (currentRange.center < boundsMin) {
+                currentRange.center = boundsMin;
+            } else if (currentRange.center > boundsMax) {
+                currentRange.center = boundsMax;
+            }
+        } else if (field === 'center') {
+            const boundsMin = Math.min(currentRange.min, currentRange.max);
+            const boundsMax = Math.max(currentRange.min, currentRange.max);
+            if (val < boundsMin) {
+                val = boundsMin;
+            } else if (val > boundsMax) {
+                val = boundsMax;
+            }
+            currentRange.center = val;
+        } else if (field === 'gain') {
+            currentRange.gain = val;
+        } else if (field === 'muted') {
+            currentRange.muted = val;
+        }
+
+        // Update DOM elements if inputEl is provided
+        if (inputEl && (field === 'min' || field === 'max' || field === 'center')) {
+            const parent = inputEl.parentElement;
+            if (parent && parent.children.length === 3) {
+                parent.children[0].value = currentRange.min;
+                parent.children[1].value = currentRange.center;
+                parent.children[2].value = currentRange.max;
+            }
+        } else if (inputEl && field === 'gain') {
+            inputEl.value = currentRange.gain;
+        }
+
         window.compileProfileMappings();
     };
     
     window.getActivePreset = function(conf) {
         if (!window.EASY_DESCRIPTORS || !conf) return "";
+        if (conf.easy_id) {
+            const exists = window.EASY_DESCRIPTORS.some(d => d.id === conf.easy_id);
+            if (exists) return conf.easy_id;
+        }
         for (let d of window.EASY_DESCRIPTORS) {
             let match = true;
             let behaviorTarget = d.behavior || 'static';
@@ -1896,8 +1969,8 @@ function getFixtureRoles(fixtureId) {
 
     window.updateChannelConfig = function(chIdx, field, val) {
         if(field === 'speed' || field === 'react' || field === 'threshold') val = parseFloat(val);
-        if(field === 'mod_target') val = val === "" ? null : parseInt(val);
         window.channelConfig[chIdx][field] = val;
+        window.channelConfig[chIdx].easy_id = ''; // Clear easy_id on manual parameter adjustments
         window.compileProfileMappings();
         
         const presetSelect = document.getElementById('preset-select-' + chIdx);
@@ -1965,6 +2038,76 @@ function getFixtureRoles(fixtureId) {
 // --- 8. PRESET SLIDER SETUP (Tactile Recording) ---
 window.activeSliderSetupFixtures = [];
 window.sliderSetupValues = {}; // { fixtureId: { channelIdx: value } }
+window.sliderSetupChannels = {}; // { fixtureId: [channelIdx1, channelIdx2, ...] }
+
+window.handleGlobalSideScroll = function(value) {
+    const strips = document.getElementById('pres-slider-setup-strips');
+    if (strips) {
+        const maxScroll = strips.scrollWidth - strips.clientWidth;
+        strips.scrollLeft = (value / 100) * maxScroll;
+    }
+};
+
+window.handleChannelLabelClick = function(fixtureId, channelIdx, addr) {
+    const isBusy = window.latestOverrides.has(addr);
+    if (isBusy) {
+        // Release that channel but keep the slider in display
+        if (window.clearOverride) {
+            window.clearOverride(addr);
+        } else if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+            window.ws.send(JSON.stringify({type: 'clear_channel_overrides', addresses: [addr]}));
+            window.latestOverrides.delete(addr);
+        }
+        // Force update of DMX universe value locally for responsive UI
+        window.latestDmxUniverse[addr] = 0;
+        window.renderSliderSetup();
+    } else {
+        // Selecting a second time: remove the channel just as if deselected from dropdown
+        window.toggleChannelInSliderSetup(fixtureId, channelIdx);
+    }
+};
+
+window.toggleChannelInSliderSetup = function(fixtureId, channelIdx) {
+    if (!window.sliderSetupChannels[fixtureId]) {
+        window.sliderSetupChannels[fixtureId] = [];
+    }
+    const idx = window.sliderSetupChannels[fixtureId].indexOf(channelIdx);
+    if (idx !== -1) {
+        // Deselecting: remove from list
+        window.sliderSetupChannels[fixtureId].splice(idx, 1);
+        
+        // Also clear its override!
+        const inst = window.db.stage.find(s => s.id === fixtureId);
+        if (inst) {
+            const prof = window.db.profiles.find(p => p.id === inst.profileId);
+            if (prof && prof.channels) {
+                const ch = prof.channels[channelIdx];
+                if (ch) {
+                    const addr = (parseInt(inst.address) || 1) + (parseInt(ch.addrOffset) || channelIdx);
+                    if (window.clearOverride) {
+                        window.clearOverride(addr);
+                    } else if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+                        window.ws.send(JSON.stringify({type: 'clear_channel_overrides', addresses: [addr]}));
+                        window.latestOverrides.delete(addr);
+                    }
+                }
+            }
+        }
+    } else {
+        // Selecting: add to list
+        window.sliderSetupChannels[fixtureId].push(channelIdx);
+    }
+    
+    // Clean up if no channels selected
+    if (window.sliderSetupChannels[fixtureId].length === 0) {
+        delete window.sliderSetupChannels[fixtureId];
+    }
+    
+    // Sync with activeSliderSetupFixtures
+    window.activeSliderSetupFixtures = Object.keys(window.sliderSetupChannels);
+    
+    window.renderSliderSetup();
+};
 
 window.renderSliderSetup = function() {
     // 0. Ensure DB is populated
@@ -1996,101 +2139,144 @@ window.renderSliderSetup = function() {
     const strips = document.getElementById('pres-slider-setup-strips');
     if (!picker || !strips) return;
 
-    // 1. Fixture Picker
+    // 1. Fixture Picker (Dropdown multi-select)
     picker.innerHTML = stage.map(inst => {
-        const isActive = window.activeSliderSetupFixtures.includes(inst.id);
-        return `<div class="fixture-picker-pill ${isActive ? 'active' : ''}" onclick="toggleFixtureInSliderSetup('${inst.id}')" style="cursor:pointer; padding:4px 10px; border-radius:15px; background:${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; color:${isActive ? '#000' : '#fff'}; font-size:10px; font-weight:800; border:1px solid ${isActive ? 'transparent' : 'rgba(255,255,255,0.1)'}; transition:all 0.2s;">
-            ${inst.id}
-        </div>`;
+        const selectedChs = window.sliderSetupChannels[inst.id] || [];
+        const hasSelected = selectedChs.length > 0;
+        const prof = window.db.profiles.find(p => p.id === inst.profileId);
+        const channels = prof ? (prof.channels || []) : [];
+        
+        return `
+            <div class="fixture-picker-select-wrapper" style="position:relative; display:inline-block;">
+                <select class="fixture-picker-select ${hasSelected ? 'active' : ''}" 
+                        onchange="window.toggleChannelInSliderSetup('${inst.id}', parseInt(this.value)); this.value='';" 
+                        style="cursor:pointer; padding:4px 20px 4px 10px; border-radius:15px; background:${hasSelected ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; color:${hasSelected ? '#000' : '#fff'}; font-size:10px; font-weight:800; border:1px solid ${hasSelected ? 'transparent' : 'rgba(255,255,255,0.1)'}; outline:none; -webkit-appearance:none; -moz-appearance:none; appearance:none; transition:all 0.2s;">
+                    <option value="" disabled selected>${inst.id}${hasSelected ? ` (${selectedChs.length})` : ''} ▾</option>
+                    ${channels.map((ch, chIdx) => {
+                        const isSel = selectedChs.includes(chIdx);
+                        return `<option value="${chIdx}" style="background:#16161a; color:#fff;">${isSel ? '✓ ' : ''}${ch.role || ch.name}</option>`;
+                    }).join('')}
+                </select>
+            </div>
+        `;
     }).join('') || '<div style="color:#666; font-size:12px; padding:10px;">No fixtures found. Check Stage Tab.</div>';
 
-    // 2. Slider Strips
-    if (window.activeSliderSetupFixtures.length === 0) {
-        strips.innerHTML = '<div style="padding:40px; text-align:center; color:#444; width:100%; border:2px dashed #222; border-radius:12px; font-size:12px; background:rgba(0,0,0,0.2);">Select fixtures above to live-adjust sliders for snapshotting.</div>';
-        return;
-    }
-
-    let html = '';
+    // Collect all active faders across all fixtures
+    const allFaders = [];
     window.activeSliderSetupFixtures.forEach(id => {
         const inst = window.db.stage.find(s => s.id === id);
         if (!inst) return;
         const prof = window.db.profiles.find(p => p.id === inst.profileId);
         if (!prof) return;
 
-        const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
-        const channels = prof.channels || [];
+        const baseAddr = parseInt(inst.address) || 1;
+        const selectedChs = window.sliderSetupChannels[id] || [];
         if (!window.sliderSetupValues[id]) window.sliderSetupValues[id] = {};
 
-        html += `
-            <div class="test-strip-card" data-fixture-id="${id}" style="min-width: unset; flex-shrink: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 1px;">${id}</div>
-                    <div style="font-size: 9px; color: #555; font-family: monospace;">ADDR: ${baseAddr}</div>
+        selectedChs.forEach(chIdx => {
+            const ch = prof.channels[chIdx];
+            if (!ch) return;
+            const addr = baseAddr + (parseInt(ch.addrOffset) || chIdx);
+            const isBusy = window.latestOverrides.has(addr);
+            const val = (window.sliderSetupValues[id] && window.sliderSetupValues[id][chIdx] !== undefined)
+                ? window.sliderSetupValues[id][chIdx] 
+                : (window.latestDmxUniverse[addr] || 0);
+
+            allFaders.push({
+                id: id,
+                chIdx: chIdx,
+                ch: ch,
+                addr: addr,
+                isBusy: isBusy,
+                val: val
+            });
+        });
+    });
+
+    // 2. Slider Strips (Grid wrap to maximum of 2 rows)
+    if (allFaders.length === 0) {
+        strips.innerHTML = '<div style="padding:40px; text-align:center; color:#444; width:100%; border:2px dashed #222; border-radius:12px; font-size:12px; background:rgba(0,0,0,0.2);">Select fixtures above to live-adjust sliders for snapshotting.</div>';
+        const scrollContainer = document.getElementById('pres-slider-scroll-container');
+        if (scrollContainer) scrollContainer.style.display = 'none';
+        return;
+    }
+
+    // Distribute faders across 2 rows. If under limit, put them all in Row 1.
+    const limit = 8;
+    let row1 = [];
+    let row2 = [];
+    if (allFaders.length <= limit) {
+        row1 = allFaders;
+    } else {
+        const cols = Math.ceil(allFaders.length / 2);
+        row1 = allFaders.slice(0, cols);
+        row2 = allFaders.slice(cols);
+    }
+
+    const renderFaderCol = (f) => {
+        return `
+            <div class="preset-slider-col ${f.isBusy ? 'busy' : ''}" data-addr="${f.addr}" data-fixture-id="${f.id}" data-idx="${f.chIdx}" style="display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                <div class="preset-slider-role" style="font-size: 8px; font-weight: 800; color: ${f.isBusy ? 'var(--danger)' : '#777'}; height: 22px; overflow: visible; text-transform: uppercase; width: 38px; text-align: center; cursor: pointer; white-space: nowrap; transition: color 0.2s; display: flex; flex-direction: column; justify-content: center; line-height: 1.1;" 
+                     onclick="window.handleChannelLabelClick('${f.id}', ${f.chIdx}, ${f.addr})">
+                     <span style="font-size: 6.5px; color: var(--accent); font-weight: 900; opacity: 0.8; margin-bottom: 2px;">${f.id}</span>
+                     <span>${f.ch.role || f.ch.name}</span>
                 </div>
-                <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none;">
-                    ${channels.map((ch, chIdx) => {
-                        const addr = baseAddr + (parseInt(ch.addrOffset) || chIdx);
-                        const isBusy = window.latestOverrides.has(addr);
-                        const val = (window.sliderSetupValues[id] && window.sliderSetupValues[id][chIdx] !== undefined)
-                            ? window.sliderSetupValues[id][chIdx] 
-                            : (window.latestDmxUniverse[addr] || 0);
-                        
-                        return `
-                            <div class="preset-slider-col ${isBusy ? 'busy' : ''}" data-addr="${addr}" data-fixture-id="${id}" data-idx="${chIdx}" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                                <div class="preset-slider-role" style="font-size: 8px; font-weight: 800; color: ${isBusy ? 'var(--danger)' : '#777'}; height: 12px; overflow: visible; text-transform: uppercase; width: 36px; text-align: center; cursor: pointer; white-space: nowrap; transition: color 0.2s;" 
-                                     onclick="if(window.clearOverride) window.clearOverride(${addr}); else { window.ws.send(JSON.stringify({type: 'clear_overrides', addresses: [${addr}]})); window.latestOverrides.delete(${addr}); window.renderSliderSetup(); }">
-                                     ${ch.role || ch.name}
-                                </div>
-                                <div class="vertical-slider-container" style="${isBusy ? 'border-color: var(--danger); box-shadow: 0 0 10px rgba(255, 71, 87, 0.2);' : ''}">
-                                    <div class="dmx-fader-track" style="background: rgba(255,255,255,0.05);"></div>
-                                    <input type="range" class="preset-slider-input" min="0" max="255" step="1" value="${val}" 
-                                        id="slider-setup-${id}-${chIdx}"
-                                        oninput="adjustSliderSetupValue('${id}', ${chIdx}, parseInt(this.value), ${addr})"
-                                        onchange="adjustSliderSetupValue('${id}', ${chIdx}, parseInt(this.value), ${addr})"
-                                        onkeydown="window.handleSliderKeyNav(event)">
-                                    <div class="dmx-fader-cap" id="cap-setup-${id}-${chIdx}" style="bottom: ${Math.round((val / 255) * (120 - 18))}px; ${isBusy ? 'background: linear-gradient(180deg, var(--danger) 0%, #900 100%); border-color: #f00; box-shadow: 0 0 8px var(--danger);' : ''}"></div>
-                                </div>
-                                <div class="preset-val-display" id="val-setup-${id}-${chIdx}" style="font-size: 10px; font-weight: 900; color: ${isBusy ? 'var(--danger)' : '#fff'}; font-family: 'JetBrains Mono', monospace; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); min-width: 24px; text-align: center;">${val}</div>
-                            </div>
-                        `;
-                    }).join('')}
+                <div class="vertical-slider-container" style="${f.isBusy ? 'border-color: var(--danger); box-shadow: 0 0 10px rgba(255, 71, 87, 0.2);' : ''}">
+                    <div class="dmx-fader-track" style="background: rgba(255,255,255,0.05);"></div>
+                    <input type="range" class="preset-slider-input" min="0" max="255" step="1" value="${f.val}" 
+                        id="slider-setup-${f.id}-${f.chIdx}"
+                        oninput="adjustSliderSetupValue('${f.id}', ${f.chIdx}, parseInt(this.value), ${f.addr})"
+                        onchange="adjustSliderSetupValue('${f.id}', ${f.chIdx}, parseInt(this.value), ${f.addr})"
+                        onkeydown="window.handleSliderKeyNav(event)">
+                    <div class="dmx-fader-cap" id="cap-setup-${f.id}-${f.chIdx}" style="bottom: ${Math.round((f.val / 255) * (120 - 18))}px; ${f.isBusy ? 'background: linear-gradient(180deg, var(--danger) 0%, #900 100%); border-color: #f00; box-shadow: 0 0 8px var(--danger);' : ''}"></div>
                 </div>
-                <div style="display:flex; justify-content:center;">
-                     <button class="btn btn-sm" style="font-size:8px; opacity:0.5; padding:2px 10px; background:transparent;" onclick="clearFixtureOverrides('${id}')">Release Fix</button>
-                </div>
+                <div class="preset-val-display" id="val-setup-${f.id}-${f.chIdx}" style="font-size: 10px; font-weight: 900; color: ${f.isBusy ? 'var(--danger)' : '#fff'}; font-family: 'JetBrains Mono', monospace; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); min-width: 24px; text-align: center;">${f.val}</div>
             </div>
         `;
-    });
+    };
+
+    let html = `<div class="faders-row" style="display: flex; gap: 10px;">
+        ${row1.map(renderFaderCol).join('')}
+    </div>`;
+
+    if (row2.length > 0) {
+        html += `<div class="faders-row" style="display: flex; gap: 10px; margin-top: 10px;">
+            ${row2.map(renderFaderCol).join('')}
+        </div>`;
+    }
+
     strips.innerHTML = html;
 
-    // --- Dynamic Slider Expansion Logic ---
-    // If 1-2 fixtures are active, stack them vertically (2 rows).
-    // If 3+ are active, side-scroll them as originally designed.
-    if (window.activeSliderSetupFixtures.length <= 2) {
-        strips.style.display = 'flex';
-        strips.style.flexDirection = 'column';
-        strips.style.overflowX = 'hidden';
-        strips.style.overflowY = 'auto';
-        strips.style.gap = '15px';
-        strips.style.padding = '5px';
-    } else {
-        strips.style.display = 'flex';
-        strips.style.flexDirection = 'row';
-        strips.style.overflowX = 'auto';
-        strips.style.overflowY = 'hidden';
-        strips.style.gap = '12px';
-        strips.style.padding = '0';
+    // Toggle global scroll range slider visibility
+    const scrollContainer = document.getElementById('pres-slider-scroll-container');
+    if (scrollContainer) {
+        scrollContainer.style.display = allFaders.length > 6 ? 'flex' : 'none';
     }
+
+    // Attach scroll event listener to strips to update the global range slider
+    if (!strips.dataset.scrollListenerAttached) {
+        strips.addEventListener('scroll', () => {
+            const maxScroll = strips.scrollWidth - strips.clientWidth;
+            const pct = maxScroll > 0 ? Math.round((strips.scrollLeft / maxScroll) * 100) : 0;
+            const bar = document.querySelector('.global-side-scroll-bar');
+            if (bar && document.activeElement !== bar) {
+                bar.value = pct;
+            }
+        });
+        strips.dataset.scrollListenerAttached = "true";
+    }
+
+    // --- Horizontal Strips Layout Styles ---
+    strips.style.display = 'flex';
+    strips.style.flexDirection = 'column';
+    strips.style.overflowX = 'auto';
+    strips.style.overflowY = 'hidden';
+    strips.style.gap = '0';
+    strips.style.padding = '10px 0';
 }
 
 window.toggleFixtureInSliderSetup = function(id) {
-    if (window.activeSliderSetupFixtures.includes(id)) {
-        window.activeSliderSetupFixtures = window.activeSliderSetupFixtures.filter(f => f !== id);
-        delete window.sliderSetupValues[id];
-    } else {
-        window.activeSliderSetupFixtures.push(id);
-    }
-    window.renderSliderSetup();
+    // Deprecated: now handled by window.toggleChannelInSliderSetup
 }
 
 window.adjustSliderSetupValue = function(id, chIdx, val, addr) {
@@ -2123,7 +2309,7 @@ window.sendSliderSetupOverride = function(id, chIdx, val) {
     const prof = window.db.profiles.find(p => p.id === inst.profileId);
     if (!prof) return;
     const ch = (prof.channels || [])[chIdx] || {};
-    const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+    const baseAddr = parseInt(inst.address) || 1;
     const addr = baseAddr + (parseInt(ch.addrOffset) || chIdx);
 
     if (window.ws && window.ws.readyState === WebSocket.OPEN) {
@@ -2136,14 +2322,18 @@ window.sendSliderSetupOverride = function(id, chIdx, val) {
 
 window.clearSliderSetup = function() {
     const addresses = [];
-    window.activeSliderSetupFixtures.forEach(id => {
+    Object.keys(window.sliderSetupChannels).forEach(id => {
         const inst = window.db.stage.find(s => s.id === id);
         if (!inst) return;
-        const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+        const baseAddr = parseInt(inst.address) || 1;
         const prof = window.db.profiles.find(p => p.id === inst.profileId);
         if (!prof) return;
-        (prof.channels || []).forEach((ch, chIdx) => {
-            addresses.push(baseAddr + (parseInt(ch.addrOffset) || chIdx));
+        const selectedChs = window.sliderSetupChannels[id] || [];
+        selectedChs.forEach(chIdx => {
+            const ch = prof.channels[chIdx];
+            if (ch) {
+                addresses.push(baseAddr + (parseInt(ch.addrOffset) || chIdx));
+            }
         });
     });
 
@@ -2152,9 +2342,11 @@ window.clearSliderSetup = function() {
             type: 'clear_channel_overrides',
             addresses: addresses
         }));
+        addresses.forEach(addr => window.latestOverrides.delete(addr));
     }
 
     window.activeSliderSetupFixtures = [];
+    window.sliderSetupChannels = {};
     window.sliderSetupValues = {};
     window.renderSliderSetup();
 }
@@ -2172,10 +2364,11 @@ window.recordSliderSetup = function() {
             if (!prof) return;
             
             const ch = prof.channels[chIdx];
-            const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
+            const baseAddr = parseInt(inst.address) || 1;
             const addr = baseAddr + (parseInt(ch.addrOffset) || parseInt(chIdx));
             
-            // Only capture if this specific channel is currently overridden (locked)
+            // Only capture if this specific channel is currently active in sliderSetupChannels and overridden (locked)
+            if (!window.sliderSetupChannels[fixId] || !window.sliderSetupChannels[fixId].includes(parseInt(chIdx))) return;
             if (!window.latestOverrides.has(addr)) return;
 
             const role = ch.role || ch.name;
@@ -2217,18 +2410,20 @@ window.updateSliderSetupVisuals = function() {
     const strips = document.getElementById('pres-slider-setup-strips');
     if (!strips || strips.innerHTML.includes('Select fixtures above')) return;
 
-    window.activeSliderSetupFixtures.forEach(id => {
+    Object.keys(window.sliderSetupChannels).forEach(id => {
         const inst = window.db.stage.find(s => s.id === id);
         if (!inst) return;
         const prof = window.db.profiles.find(p => p.id === inst.profileId);
         if (!prof) return;
 
-        const baseAddr = (parseInt(inst.address) || 1) + (parseInt(inst.offset) || 0);
-        const channels = prof.channels || [];
+        const baseAddr = parseInt(inst.address) || 1;
+        const selectedChs = window.sliderSetupChannels[id] || [];
 
-        channels.forEach((ch, chIdx) => {
+        selectedChs.forEach(chIdx => {
+            const ch = prof.channels[chIdx];
+            if (!ch) return;
             const addr = baseAddr + (parseInt(ch.addrOffset) || chIdx);
-            const val = window.latestDmxUniverse[addr];
+            const val = window.latestDmxUniverse[addr] || 0;
             
             const slider = document.getElementById(`slider-setup-${id}-${chIdx}`);
             const cap = document.getElementById(`cap-setup-${id}-${chIdx}`);

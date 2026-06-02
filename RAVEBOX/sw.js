@@ -1,8 +1,8 @@
-const isDev = self.location.hostname === 'localhost' || 
-              self.location.hostname.includes('vj-') || 
-              self.location.hostname.includes('.ravebox.love') || 
-              self.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
-const CACHE_NAME = 'ravebox-vj-1779480893'; // Bumping version
+const isDev = self.location.hostname === 'localhost' ||
+    self.location.hostname.includes('vj-') ||
+    self.location.hostname.includes('.ravebox.love') ||
+    self.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
+const CACHE_NAME = 'ravebox-vj-1780329516'; // Bumping version
 
 self.addEventListener('install', (event) => {
     // Cache each asset individually — skip any that fail (e.g. missing on GCS)
@@ -17,6 +17,7 @@ self.addEventListener('install', (event) => {
                 'fixture_ai.html',
                 'robot_sim.html',
                 'manifest.json',
+                'shared_setup.js',
                 '/public/icon.png',
                 '/public/background.png'
             ];
@@ -45,7 +46,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     // If we are on the dev server, bypass the service worker cache entirely
     if (isDev) {
-        event.respondWith(fetch(event.request));
         return;
     }
 
