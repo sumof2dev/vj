@@ -43,11 +43,15 @@ sshpass -p "$PI_PASS" rsync -avz --progress \
     --exclude='cert.pem' \
     --exclude='key.pem' \
     --exclude='*.pem' \
+    --exclude='.antigravity' \
     --exclude='*creds*.json' \
     --exclude='*credentials*.json' \
+    --exclude='crawled_audio' \
+    --exclude='crawled_scratch' \
     --exclude='.env' \
     --exclude='*.env' \
     --exclude='*.log' \
+    --exclude='logs' \
     --exclude='__pycache__' \
     --exclude='.wrangler' \
     --exclude='.spotify_cache' \
@@ -61,6 +65,8 @@ sshpass -p "$PI_PASS" rsync -avz --progress \
     --exclude='venv_local' \
     --exclude='training_data' \
     --exclude='backup-unused' \
+    --exclude='tmp' \
+    --exclude='tuning_config' \
     --exclude='.lgd-nfy0' \
     --exclude='crawler.py' \
     --exclude='offline_audit_engine.py' \
@@ -84,6 +90,6 @@ sshpass -p "$PI_PASS" ssh -tt -o StrictHostKeyChecking=no "$REMOTE_USER@$TARGET"
 echo "Update complete on $TARGET!"
 
 # Reboot the Pi (remote machine, NOT local)
-echo "Rebooting $TARGET..."
-sshpass -p "$PI_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$TARGET" "echo $PI_PASS | sudo -S reboot" || true
-echo "Reboot command sent. Pi will be back in ~30s."
+# echo "Rebooting $TARGET..."
+# sshpass -p "$PI_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$TARGET" "echo $PI_PASS | sudo -S reboot" || true
+# echo "Reboot command sent. Pi will be back in ~30s."

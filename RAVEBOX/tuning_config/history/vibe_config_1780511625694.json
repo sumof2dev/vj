@@ -1,0 +1,53 @@
+{
+    "timestamp": 1780511625694,
+    "session": "Yoko - Sike",
+    "params": {
+        "building_trend": 0.25,
+        "building_energy": 0.35,
+        "tension_drop": 0.5,
+        "drop_impact": 0.4,
+        "drop_spike": 0.15,
+        "vibe_hysteresis": 5,
+        "steady_lockout": 5,
+        "building_hold": 0.5,
+        "tension_hold": 1.5,
+        "dropping_hold": 6,
+        "hpss_window": 5,
+        "hpss_freq_kernel": 11,
+        "flux_threshold_mult": 2.05,
+        "flux_threshold_abs": 0.35,
+        "eq_bass_offset": 0.0,
+        "eq_bass_mult": 0.5,
+        "eq_lowmid_offset": 0.03,
+        "eq_lowmid_mult": 0.7,
+        "chillMid_ratio": 33,
+        "midHigh_ratio": 66
+    },
+    "diff": {
+        "building_trend": {
+            "old": 0.2,
+            "new": 0.25
+        },
+        "tension_drop": {
+            "old": 0.8,
+            "new": 0.5
+        },
+        "drop_spike": {
+            "old": 0.3,
+            "new": 0.15
+        },
+        "hpss_window": {
+            "old": 3,
+            "new": 5
+        },
+        "hpss_freq_kernel": {
+            "old": 15,
+            "new": 11
+        },
+        "eq_bass_offset": {
+            "old": 0.08,
+            "new": 0.0
+        }
+    },
+    "score": 0.0
+}

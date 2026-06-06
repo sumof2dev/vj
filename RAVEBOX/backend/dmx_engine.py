@@ -3,6 +3,10 @@ import math
 import random
 import os
 import json
+import re
+
+SPEED_MULT_PATTERN = re.compile(r'x\s*([0-9]+(?:\.[0-9]+)?)')
+SPEED_MULT_END_PATTERN = re.compile(r'x\s*([0-9]+(?:\.[0-9]+)?)$')
 import collections
 from typing import Dict
 import threading
@@ -180,9 +184,12 @@ class DMXEngine:
         self.logic_r = LogicMatrix()
         
         self.base_speed = 0.6 
+        # previously intensity 1.0
         self.base_intensity = 1.0
+        # previously eff_speed 0.6
         self.eff_speed = 0.6
         self.eff_intensity = 1.0
+        self.vibe_reactivity = {"chill": 1.0, "mid": 1.5, "high": 2.0}
         self._eff_dt = 0.016
         self.scene_freq = 1
         self.audio_sensitivity = 1.0
@@ -217,7 +224,7 @@ class DMXEngine:
         self._descriptors_mtime = 0
         
         self.sync_indices = {
-            'chill': 0, 'mid': 0, 'high': 0, 'any': 0, 'build': 0, 'drop': 0
+            'chill': 1, 'mid': 1, 'high': 1, 'any': 1, 'build': 1, 'drop': 1
         }
         
         self.lab_probe_rule = None
@@ -442,7 +449,7 @@ class DMXEngine:
             spatial_audio = audio
             
         # 2. HPSS filtering
-        if 'harmony' in zone_str:
+        if 'harmony' in zone_str or 'harmonic' in zone_str:
             active_audio = {
                 **spatial_audio,
                 'bass': spatial_audio.get('bass_h', 0.0),
@@ -468,10 +475,16 @@ class DMXEngine:
         
         # PAUSE LOGIC
         if self.is_paused:
-            self.eff_speed = 0.0
-        else:
-            self.eff_speed = self.base_speed
+            # Shift all holds forward by dt so they don't expire while paused
+            for p_id in self._preset_holds:
+                self._preset_holds[p_id] += dt
+            # Reapply hardware overrides even when paused
+            for addr, val in self.overrides.items():
+                if 0 < addr < len(self.universe):
+                    self.universe[addr] = max(0, min(255, int(val)))
+            return
         
+        self.eff_speed = self.base_speed
         self.eff_intensity = self.base_intensity
         self._eff_dt = dt * self.eff_speed
 
@@ -479,7 +492,7 @@ class DMXEngine:
         self.gamepad = gamepad or {}
         self.transient = audio.get('transient', 'steady')
         current_vibe = audio.get('vibe', 'mid')
-        variant = self.sync_indices.get(current_vibe, 0) + 1
+        variant = self.sync_indices.get(current_vibe, 1) + 1
         tagged_vibe = f"{current_vibe} {variant}"
         
         # --- AUTOMATIC PRESETS (Triggers) ---
@@ -536,35 +549,21 @@ class DMXEngine:
 
                 elif t_cat == 'bin':
                     bins = audio.get('bins', [0.0]*6)
-                    target = trig.get('target', 'BASS')
-                    bin_map = {
-                        'SUB': 0, 'BASS': 1, 'KICK': 2, 'LOW_MID': 3, 'MID': 4, 'HIGH_MID': 5, 
-                        'PRESENCE': 4, 'BRILLIANCE': 5,
-                        'BIN 0': 0, 'BIN 1': 1, 'BIN 2': 2, 'BIN 3': 3, 'BIN 4': 4, 'BIN 5': 5,
-                        'bin 0': 0, 'bin 1': 1, 'bin 2': 2, 'bin 3': 3, 'bin 4': 4, 'bin 5': 5
-                    }
-                    b_idx = bin_map.get(target, -1)
-                    if b_idx == -1:
-                        try: b_idx = int(trig.get('bin', 1))
-                        except: b_idx = 1
-                    
-                    if 0 <= b_idx < len(bins):
-                        val = bins[b_idx] * 100.0
-                        if check_range(val, trig): 
-                            trig_matched = True
-
-                elif t_cat == 'channel':
-                    fixture_id = trig.get('fixture')
-                    role = trig.get('role')
-                    
-                    if fixture_id and role:
-                        addr = self._find_fixture_role_address(fixture_id, role)
-                    else:
-                        addr = int(trig.get('target', 0)) # Fallback to legacy raw addr
-
-                    if 0 < addr < len(self.universe):
-                        val = self.universe[addr]
-                        if check_range(val, trig): trig_matched = True
+                    if len(bins) >= 6:
+                        # Extract energies
+                        bass_energy = float(bins[0]) + float(bins[1])
+                        mid_energy = float(bins[2]) + float(bins[3])
+                        treble_energy = float(bins[4]) + float(bins[5])
+                        
+                        max_energy = max(bass_energy, mid_energy, treble_energy)
+                        if max_energy > 0.01:
+                            target = str(trig.get('target', 'bass')).lower()
+                            if target == 'bass' and bass_energy == max_energy:
+                                trig_matched = True
+                            elif target == 'mid' and mid_energy == max_energy:
+                                trig_matched = True
+                            elif target == 'treble' and treble_energy == max_energy:
+                                trig_matched = True
 
                 elif t_cat == 'function':
                     # Search logic matrix state for matching keys
@@ -685,7 +684,6 @@ class DMXEngine:
         self.active_visual_commands = []
         force_next_visual = False
         force_next_fx = False
-        system_pause_requested = False
         for p_data in self.active_presets:
             p_id = p_data.get('id', p_data.get('name'))
             for ov in p_data.get('overrides', []):
@@ -701,22 +699,6 @@ class DMXEngine:
                         })
                         if fn == 'next_visual': force_next_visual = True
                         if fn == 'next_fx': force_next_fx = True
-                elif ov.get('target') == 'system':
-                    for ch in ov.get('channels', []):
-                        fn = ch.get('name', 'none').lower()
-                        ov_key = f"system_{p_id}_{fn}"
-                        resolved_val = self._resolve_preset_value(ov_key, ch.get('value', 100), dt)
-                        
-                        if fn == 'pause':
-                            if resolved_val >= 128:
-                                system_pause_requested = True
-
-        # Apply system pause state (auto-unpauses when no active preset requests it)
-        if system_pause_requested and not self.is_paused:
-            print(f"DEBUG: System Pause Requested by active presets")
-            
-        if self.is_paused != system_pause_requested:
-            self.set_pause(system_pause_requested)
 
         if not self.is_paused:
             self.logic.update(dt, audio, self.transient, self.eff_speed, self.eff_intensity)
@@ -925,7 +907,8 @@ class DMXEngine:
         except: return
 
         # Resolve spatial and HPSS routing for the assigned zone
-        active_logic, active_audio = self._get_zone_context(inst.get('zone'), audio)
+        zone_str = str(inst.get('zone') or '').lower()
+        active_logic, active_audio = self._get_zone_context(zone_str, audio)
 
         # Pre-resolve dt to use for this batch of presets
         dt_to_use = self._dt if use_raw_dt else self._eff_dt
@@ -1053,7 +1036,7 @@ class DMXEngine:
         c_center = int(cal.get('center', fixture_cal.get('center', (c_min + c_max) // 2)))
 
         # Scale speed and react by the range span relative to 255
-        range_span = abs(float(c_max - c_min))
+        range_span = float(c_max - c_min)
         scale_factor = range_span / 255.0 if range_span > 0 else 1.0
 
         speed = float(mods.get('speed', 0.5)) * scale_factor
@@ -1108,15 +1091,46 @@ class DMXEngine:
             E = st['beat_env']
             audio_key = None
         elif source in ['spectral flux', 'impact']: audio_key = 'flux'
+        elif source.startswith('bin ') or source.startswith('bin_'):
+            try:
+                b_idx = int(source.replace('bin ', '').replace('bin_', ''))
+                bins = audio.get('bins', [0.0]*6) if audio else [0.0]*6
+                E = min(1.0, float(bins[b_idx]) * 2.0) if b_idx < len(bins) else 0.0
+                audio_key = None
+            except (ValueError, IndexError):
+                E = 0.0
+                audio_key = None
         
         if audio_key is not None:
             if audio and audio_key in audio:
                 E = float(audio[audio_key])
             else:
                 E = logic_matrix.state.get(source, 0.0)
+
+        # --- VIBE-DEPENDENT DRIVER REACTIVITY TUNING ---
+        current_vibe = audio.get('vibe', 'mid') if audio else 'mid'
+        reactivity = getattr(self, 'vibe_reactivity', {}).get(current_vibe, 1.0)
+        
+        if current_vibe == 'chill':
+            # Exponentially compress moderate signals, scaled by chill reactivity
+            E = math.pow(E, 1.75) * reactivity
+        elif current_vibe == 'high':
+            # Boost the incoming signal gain, scaled by high reactivity
+            E = min(1.0, E * reactivity)
+        else:
+            # Mid Vibe: scaled by mid reactivity
+            E = min(1.0, E * reactivity)
         
         # Apply Threshold Gate
         threshold = float(mods.get('threshold', 0.0))
+        threshold_hold_active = bool(mods.get('threshold_hold_active', False))
+        threshold_hold_val = mods.get('threshold_hold_value')
+        threshold_hold_value = None
+        if threshold_hold_val is not None and threshold_hold_val != '':
+            try:
+                threshold_hold_value = int(threshold_hold_val)
+            except ValueError:
+                pass
         is_gated = False
         if E < threshold:
             E = 0.0
@@ -1184,15 +1198,17 @@ class DMXEngine:
             if source in ['beat phase', 'bar phase', '4 bar phase', 'bar']:
                 p = E # Rhythmic phase lock
             else:
-                freq = (speed * 0.1) + (E * 5.0 * react)
+                # Frequency is now locked directly to a smooth, non-jittery rhythmic timeline
+                track_bpm = audio.get('bpm', 120.0) if audio else 120.0
+                freq = (track_bpm / 60.0) * speed
                 st['phase'] = (st['phase'] + dt * freq) % 1.0
                 p = st['phase']
             
-            amp = react
+            # The audio driver (E) now scales the wave amplitude instead of speed
+            amp = E * react
             if behavior == 'sine': y = amp * math.sin(p * 2.0 * math.pi)
             elif behavior == 'saw': y = amp * ((p * 2.0) - 1.0)
             elif behavior == 'square': y = amp if p < 0.5 else -amp
-
         elif behavior == 'noise':
             st['t'] += dt * (speed * 0.5 + E * react * 2.0)
             y = (logic_matrix._noise1d(st['t']) * 2.0) - 1.0
@@ -1218,6 +1234,15 @@ class DMXEngine:
             noise = (self.logic._noise1d(st['t']) * 2.0 - 1.0) * react * 0.25
             y = ((E + noise) * 2.0) - 1.0
 
+        elif behavior == 'fuzzy_pulsed':
+            # Couples micro-flutter frequency directly to real-time transient energy (impact/flux)
+            flux_val = audio.get('flux', 0.0) if audio else logic_matrix.state.get('impact', 0.0)
+            st['t'] += dt * speed * (5.0 + flux_val * 15.0)
+            
+            # Deterministic high-frequency vibration modulated by current driver magnitude
+            pulsed_deviation = math.sin(st['t'] * math.pi * 2.0) * react * 0.15 * E
+            y = (E * 2.0) - 1.0 + pulsed_deviation
+
         elif behavior == 'bar phase':
             p = logic_matrix.state.get('bar phase', 0.0)
             y = (p * 2.0 * E) - 1.0
@@ -1225,18 +1250,20 @@ class DMXEngine:
         elif behavior == 'direct_stepped':
             y = (math.floor(E * 8) / 8 * 2.0) - 1.0
             
-        if is_gated:
-            y = -1.0
+        if is_gated and threshold_hold_active and threshold_hold_value is not None:
+            final_dmx = threshold_hold_value
+        else:
+            if is_gated:
+                y = -1.0
             
-
-        # --- Y → DMX MAPPING ---
-        # Mapping normalized y to DMX
-        y = max(-1.0, min(1.0, y * gain))
-        if use_intensity:
-            y *= self.eff_intensity  # Scale amplitude within range, not absolute DMX
-        
-        if y >= 0: final_dmx = eff_center + (y * (eff_max - eff_center))
-        else: final_dmx = eff_center + (y * (eff_center - eff_min))
+            # --- Y → DMX MAPPING ---
+            # Mapping normalized y to DMX
+            y = max(-1.0, min(1.0, y * gain))
+            if use_intensity:
+                y *= self.eff_intensity  # Scale amplitude within range, not absolute DMX
+            
+            if y >= 0: final_dmx = eff_center + (y * (eff_max - eff_center))
+            else: final_dmx = eff_center + (y * (eff_center - eff_min))
         
         # Hold persistence
         if hold_type != 'none':
@@ -1265,7 +1292,18 @@ class DMXEngine:
             return 0
 
 
-        # 1. Parse Offset (at the very end of the string)
+        # 1. Parse Global Speed Multiplier (wherever it is in the string, e.g. x50)
+        global_speed_mult = 1.0
+        speed_match = SPEED_MULT_PATTERN.search(val.lower())
+        if speed_match:
+            try:
+                global_speed_mult = float(speed_match.group(1))
+                # Strip it from val so it doesn't break offset or part parsing
+                val = val[:speed_match.start()] + val[speed_match.end():]
+            except:
+                pass
+
+        # 2. Parse Offset (at the very end of the string)
         offset = 0.0
         main_val = val
         if '+' in val:
@@ -1276,18 +1314,17 @@ class DMXEngine:
             except:
                 pass
 
-        # 2. Parse Sequence (split by comma)
+        # 3. Parse Sequence (split by comma)
         seq_parts = [p.strip() for p in main_val.split(',')]
         num_parts = len(seq_parts)
         if num_parts == 0: return 0
 
-        # Pre-parse each part for speed multipliers (e.g. "32-96-32x2" -> ("32-96-32", 2.0))
-        import re
+        # Pre-parse each part for speed multipliers, falling back to global_speed_mult
         parsed_parts = []
         for p in seq_parts:
             p_clean = p.strip()
-            speed_mult = 1.0
-            match = re.search(r'x\s*([0-9]+(?:\.[0-9]+)?)$', p_clean.lower())
+            speed_mult = global_speed_mult
+            match = SPEED_MULT_END_PATTERN.search(p_clean.lower())
             if match:
                 try:
                     speed_mult = float(match.group(1))

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id="container" style="width: 500px; overflow-x: scroll; border: 1px solid red;">
+    <div id="box" style="width: 2000px; height: 100px; background: linear-gradient(to right, red, blue);"></div>
+</div>
+<script>
+    const box = document.getElementById('box');
+    box.addEventListener('mousedown', (e) => {
+        const rect = box.getBoundingClientRect();
+        console.log("clientX:", e.clientX, "rect.left:", rect.left);
+        console.log("x (clientX - rect.left):", e.clientX - rect.left);
+    });
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@
         * {
             box-sizing: border-box;
             font-family: 'Rajdhani', system-ui, sans-serif;
+            cursor: none !important;
         }
 
         body {
@@ -35,8 +36,9 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            padding: 10px;
+            padding: 0;
             overflow: hidden;
+            cursor: none !important;
             /* Prevent scrolling */
             overscroll-behavior: none;
         }
@@ -195,30 +197,133 @@
             background: rgba(22, 22, 26, 0.7);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            padding: 1.2rem;
-            border-radius: 8px;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
-            width: 100%;
-            max-width: 350px;
+            padding: 8px;
+            border-radius: 0px;
+            box-shadow: none;
+            width: 100vw;
+            max-width: 100%;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: none;
             transition: all 0.3s ease;
-            
-            /* 3D Trapezoid Tilt */
-            transform: perspective(800px) rotateX(10deg) translateY(-25px);
-            transform-origin: bottom center;
+
+            /* Removed 3D Trapezoid Tilt for 3.5" small screen */
+            transform: none;
 
             /* ADDED FOR CONSOLE INTEGRATION */
             display: flex;
             flex-direction: column;
-            max-height: 90vh;
+            height: auto;
+            max-height: 100vh;
             overflow-y: auto;
             overflow-x: hidden;
+        }
+
+        /* Lite-specific styling overrides for compact 240x320 portrait layout */
+        h1 {
+            font-size: 0.95rem !important;
+            margin: 2px 0 4px 0 !important;
+            text-align: center !important;
+        }
+        
+        #hostBadge {
+            margin: 0 0 6px 0 !important;
+            font-size: 0.7rem !important;
+            text-align: center !important;
+        }
+
+        .dashboard-grid {
+            margin-top: 0.2rem !important;
+            gap: 6px !important;
+        }
+
+        .dash-panel {
+            padding: 6px 8px !important;
+        }
+
+        .dash-header {
+            margin-bottom: 6px !important;
+            font-size: 0.65rem !important;
+        }
+
+        .vol-btn {
+            width: 24px !important;
+            height: 24px !important;
+            font-size: 0.9rem !important;
+        }
+
+        .vol-meter {
+            height: 8px !important;
+            margin: 0 4px !important;
+        }
+
+        .spot-art {
+            width: 32px !important;
+            height: 32px !important;
+            margin-right: 8px !important;
+        }
+
+        .spot-track {
+            font-size: 0.75rem !important;
+        }
+
+        .spot-prog-bg {
+            margin-top: 4px !important;
+            height: 3px !important;
+        }
+
+        .bin-viz {
+            height: 24px !important;
+            margin-left: 8px !important;
+            gap: 1px !important;
+        }
+
+        .logic-state {
+            font-size: 0.75rem !important;
+            padding: 2px 6px !important;
+        }
+
+        .sys-stats {
+            margin-top: 6px !important;
+            font-size: 0.75rem !important;
+        }
+
+        .links {
+            margin-top: 6px !important;
+            font-size: 0.7rem !important;
+            padding-bottom: 4px;
+        }
+
+        .links a {
+            margin: 0 6px !important;
+        }
+
+        /* Compact vibe splits */
+        .proportion-container {
+            height: 28px !important;
+            margin-bottom: 2px !important;
+        }
+
+        .slider-group {
+            margin-bottom: 6px !important;
+        }
+
+        .slider-label {
+            font-size: 0.65rem !important;
+            margin-bottom: 2px !important;
+        }
+
+        #saveDefaultsBtn {
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
+            height: 26px !important;
+            font-size: 0.75rem !important;
+            padding: 0 !important;
         }
 
         .container.console-mode {
             max-width: 800px;
             width: 95%;
+            height: 100vh;
             padding: 0 !important;
             overflow: hidden;
             /* Console mode handles its own internal scrolling */
@@ -226,22 +331,23 @@
 
         @media (max-width: 480px) {
             .container {
-                padding: 1rem;
-                max-width: 90%;
-                border-radius: 8px;
+                padding: 6px;
+                width: 100vw;
+                max-width: 100%;
+                border-radius: 0px;
             }
 
             h1 {
-                font-size: 1.3rem;
+                font-size: 0.95rem;
             }
 
             .dash-panel {
-                padding: 10px;
+                padding: 6px 8px;
             }
 
             .btn {
-                padding: 0.75rem 0.5rem;
-                font-size: 0.85rem;
+                padding: 0.5rem 0.25rem;
+                font-size: 0.75rem;
             }
         }
 
@@ -1055,13 +1161,12 @@
 </head>
 
 <body>
+
+
     <!-- Ken Burns Background -->
     <div class="bg-container" id="bgContainer">
         <div id="tunnelLayer">
             <img src="/public/background.png" class="bg-image">
-            <img src="/public/background2.png" class="bg-image">
-            <img src="/public/background3.png" class="bg-image">
-            <img src="/public/background4.png" class="bg-image">
         </div>
         <img id="spotifyBg" class="spotify-bg-image" src="">
         <div class="bg-overlay"></div>
@@ -1085,27 +1190,34 @@
                 id="manager-summary">
                 <div style="display: flex; width: 100%; height: 100%; align-items: center; gap: 15px;">
                     <!-- Left side: Close Console / Back to Manager -->
-                    <div id="summary-back-btn" style="flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transition: background 0.2s, border-color 0.2s;"
-                         onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
-                         onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
-                         <span style="font-size: 9px; font-weight: 900; color: var(--primary); letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 0 5px rgba(0, 242, 255, 0.25);">✕ CLOSE CONSOLE</span>
+                    <div id="summary-back-btn"
+                        style="flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transition: background 0.2s, border-color 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <span
+                            style="font-size: 9px; font-weight: 900; color: var(--primary); letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 0 5px rgba(0, 242, 255, 0.25);">✕
+                            CLOSE CONSOLE</span>
                     </div>
                     <!-- Right side: Edit mode toggle -->
-                    <div id="summary-gear-btn" style="flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transition: background 0.2s, border-color 0.2s;"
-                         onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
-                         onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'"
-                         onclick="event.preventDefault(); event.stopPropagation(); toggleLiveEditMode();">
-                         <span id="summary-gear-btn-text" style="font-size: 9px; font-weight: 900; color: var(--primary); letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 0 5px rgba(0, 242, 255, 0.25);">⚙ EDIT CONSOLE</span>
+                    <div id="summary-gear-btn"
+                        style="flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transition: background 0.2s, border-color 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'"
+                        onclick="event.preventDefault(); event.stopPropagation(); toggleLiveEditMode();">
+                        <span id="summary-gear-btn-text"
+                            style="font-size: 9px; font-weight: 900; color: var(--primary); letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 0 5px rgba(0, 242, 255, 0.25);">⚙
+                            EDIT CONSOLE</span>
                     </div>
                 </div>
             </summary>
             <div class="accordion-content" style="padding-top: 0; padding-bottom: 10px;">
-                <!-- Top Right Console Tab -->
+                <!-- Top Right Console Tab (Hidden on Lite) -->
                 <div id="toggleConsoleBtn"
-                    style="width: 50%; margin-left: auto; height: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.02); border-radius: 0 24px 0 12px; margin-top: -1.2rem; margin-right: calc(-1.2rem - 15px); margin-bottom: 15px; border-left: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;"
+                    style="display: none; width: 50%; margin-left: auto; height: 24px; cursor: pointer; justify-content: center; align-items: center; background: rgba(255,255,255,0.02); border-radius: 0 24px 0 12px; margin-top: -1.2rem; margin-right: calc(-1.2rem - 15px); margin-bottom: 15px; border-left: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;"
                     onclick="toggleConsoleView(event)" onmouseover="this.style.background='rgba(255,255,255,0.05)'"
                     onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-                    <div style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;"></div>
+                    <div style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;">
+                    </div>
                 </div>
                 <h1 style="margin: 0 0 10px 0; display: block; text-align: left;">
                     RaveBox Control <span style="font-size: 9px; opacity: 0.3; margin-left: 5px;">VJ Manager</span>
@@ -1129,7 +1241,7 @@
                 <div id="loader" class="loading-spinner"></div>
 
                 <div class="dashboard-grid" id="liveDashboard"
-                    style="display:flex; opacity:1; transition: opacity 0.5s;">
+                    style="display:none; opacity:0; transition: opacity 0.5s;">
 
                     <!-- Audio State Overview -->
                     <div class="dash-panel" style="display: flex; align-items: center; justify-content: space-between;">
@@ -1141,7 +1253,8 @@
                     </div>
 
                     <!-- Spotify Overlay -->
-                    <div class="dash-panel spotify-wrap" id="hubSpotify">
+                    <div class="dash-panel spotify-wrap" id="hubSpotify" onclick="toggleEqDisplay()"
+                        style="cursor: pointer;">
                         <div class="dash-header"><span style="color:#1db954;">🎵 Now Playing</span></div>
                         <div style="display: flex; align-items: center;">
                             <img id="hubSpotArt" class="spot-art" src="">
@@ -1168,14 +1281,14 @@
                         </div>
                         <div class="sys-stats">
                             <div>
-                                <span class="stat-val" id="hubBpm" ondblclick="promptManualBpm()" title="Double-click to set manual BPM" style="cursor: pointer;">--</span>
+                                <span class="stat-val" id="hubBpm">--</span>
                                 <span style="font-size: 0.6rem; opacity: 0.5; margin-right: 5px;">BPM</span>
                             </div>
                             <div>
                                 <span class="stat-val" id="hubVibe">MID</span>
                                 <span style="font-size: 0.6rem; opacity: 0.5;">VIBE</span>
                             </div>
-                            <span class="stat-val" id="hubGrid" ondblclick="toggleTrainingMode()" title="Double-click to toggle Training Mode" style="transition: color 0.1s; cursor: pointer;">LIVE</span>
+                            <span class="stat-val" id="hubGrid" style="transition: color 0.1s;">PULSE</span>
                         </div>
                         <!-- Bottom Left SysControls Tab -->
                         <div id="eqSysToggleBtn"
@@ -1235,6 +1348,11 @@
                             </div>
                         </div>
 
+                        <button id="saveDefaultsBtn" class="btn"
+                            style="width:100%; height: 36px; padding: 0; font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); margin-top: 10px; margin-bottom: 15px; color: var(--text-dim);">
+                            💾 Save Defaults
+                        </button>
+
                         <!-- Bottom Left SysControls Tab (Shown when expanded) -->
                         <div id="sysSysToggleBtn"
                             style="width: 50%; height: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.02); border-radius: 0 12px 0 16px; margin-left: -12px; margin-bottom: -12px; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;"
@@ -1261,7 +1379,9 @@
                 ontoggle="if(this.open) { if(typeof startConsoleTimelineLoop === 'function') startConsoleTimelineLoop(); }">
                 <summary
                     style="height: 20px; min-height: 20px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
-                    <div class="accordion-handle" style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;"></div>
+                    <div class="accordion-handle"
+                        style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;">
+                    </div>
                 </summary>
                 <div id="console-timeline-container"
                     style="display: flex; flex-direction: column; background: rgba(0,0,0,0.3); overflow: hidden;">
@@ -1345,7 +1465,9 @@
                 ontoggle="if(this.open) { const grid = document.getElementById('live-console-grid'); if (grid) grid.style.display = 'none'; renderSliderSetup(); this.scrollIntoView({behavior:'smooth'}); } else { const grid = document.getElementById('live-console-grid'); if (grid) grid.style.display = 'grid'; window.scrollTo({top:0, behavior:'smooth'}); }">
                 <summary
                     style="height: 20px; min-height: 20px; padding: 0; cursor:pointer; list-style:none; display:flex; justify-content:center; align-items:center; background: rgba(255,255,255,0.02);">
-                    <div class="accordion-handle" style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;"></div>
+                    <div class="accordion-handle"
+                        style="width: 30px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 1.5px;">
+                    </div>
                 </summary>
                 <div class="accordion-content" style="background:rgba(0,0,0,0.2); padding: 8px;">
                     <!-- Fixture Picker -->
@@ -1366,11 +1488,13 @@
                             style="font-size:10px; opacity:0.6; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">CLEAR
                             ALL OVERRIDES</button>
                         <!-- Range scrollbar container -->
-                        <div id="pres-slider-scroll-container" style="display: none; align-items: center; gap: 8px; flex: 1; max-width: 250px; padding: 4px 10px; background: rgba(0,0,0,0.2); border-radius: 6px; margin: 0 10px;">
-                            <span style="font-size: 8px; color: #666; font-weight: bold; white-space: nowrap;">SCROLL</span>
-                            <input type="range" class="global-side-scroll-bar" min="0" max="100" value="0" 
-                                   oninput="window.handleGlobalSideScroll(this.value)"
-                                   style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; outline: none; -webkit-appearance: none; cursor: pointer;">
+                        <div id="pres-slider-scroll-container"
+                            style="display: none; align-items: center; gap: 8px; flex: 1; max-width: 250px; padding: 4px 10px; background: rgba(0,0,0,0.2); border-radius: 6px; margin: 0 10px;">
+                            <span
+                                style="font-size: 8px; color: #666; font-weight: bold; white-space: nowrap;">SCROLL</span>
+                            <input type="range" class="global-side-scroll-bar" min="0" max="100" value="0"
+                                oninput="window.handleGlobalSideScroll(this.value)"
+                                style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; outline: none; -webkit-appearance: none; cursor: pointer;">
                         </div>
                         <!-- Hide Capture button in Console as there's no active preset editor context -->
                         <button class="btn btn-primary btn-sm" onclick="recordSliderSetup()" id="pres-slider-record-btn"
@@ -1379,6 +1503,12 @@
                 </div>
             </details>
         </div> <!-- End console-view -->
+        <div class="links">
+            <a id="link-visual" href="#" style="display: none;">Visualizer</a>
+            <a id="link-setup" href="#" style="display: none;">Setup</a>
+            <a id="link-shutdown" href="#" onclick="systemShutdown(); return false;" style="color: var(--error); font-weight: bold;">Shutdown</a>
+            <a id="link-restart" href="#" onclick="systemReboot(); return false;" style="color: #ffaa00; font-weight: bold;">Restart</a>
+        </div>
     </div> <!-- End main-container -->
 
     <!-- PAIRING MODAL -->
@@ -1394,13 +1524,6 @@
                 <button class="btn btn-start" onclick="savePairing()" style="flex:1;">Save</button>
             </div>
         </div>
-    </div>
-
-    <div class="links">
-        <a id="link-visual" href="#">Visualizer</a>
-        <a id="link-setup" href="#">Setup</a>
-
-        <a id="link-help" href="#">Help</a>
     </div>
 
     <!-- ASSIGNMENT MODAL (Mirrored from setup.html) -->
@@ -1543,11 +1666,6 @@
         let lastKnownActive = false;
         let wsReconnectDelay = 2000;
         let wsErrorCount = 0;
-        let ws = null;
-        let lastSpotifyData = null;
-        let lastBinaryData = null;
-        let lastStateUpdate = null;
-        let bgPreference = 'spotify'; // Alternates every minute
 
         function getVisualizerUrl() {
             const savedHost = localStorage.getItem('vj_backend_host');
@@ -1636,7 +1754,6 @@
                         hostBadge.innerHTML = `
                             <span ${hostClick} style="${hostStyle} color: var(--primary); font-weight: bold;">${hostDisplay}</span>: 
                             <span onclick="toggleEngine()" style="cursor: pointer; color: ${actionColor}; font-weight: bold;">${actionText}</span>
-                            ${isActive ? `<span style="color: #00ff66; margin-left: 8px;">●</span>` : ''}
                         `;
                     }
                 }
@@ -1679,40 +1796,6 @@
             await doAction(action);
         }
 
-        function promptManualBpm() {
-            const el = document.getElementById('hubBpm');
-            const currentBpm = el.innerText;
-            const promptVal = currentBpm === '--' ? '' : currentBpm;
-            const newBpm = prompt("Enter known BPM for this track (or leave blank to clear):", promptVal);
-            
-            if (newBpm !== null) { // null if user clicks Cancel
-                const parsedBpm = parseFloat(newBpm);
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: "bpm_override",
-                        bpm: isNaN(parsedBpm) ? null : parsedBpm
-                    }));
-                }
-            }
-        }
-
-        function toggleTrainingMode() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: "toggle_training" }));
-                
-                const el = document.getElementById('hubGrid');
-                const origText = el.innerText;
-                
-                if (origText === "LIVE") {
-                    el.innerText = "SYNC";
-                    el.style.color = "#ff3366";
-                } else {
-                    el.innerText = "LIVE";
-                    el.style.color = "";
-                }
-            }
-        }
-
         async function doAction(action) {
             if (!window.LAUNCHER_API) {
                 alert("Enter the code!");
@@ -1721,9 +1804,7 @@
 
             const badge = document.getElementById('status');
             if (badge) {
-                if (action === 'start') badge.innerText = "INITIALIZING...";
-                else if (action === 'restart') badge.innerText = "RESTARTING...";
-                else badge.innerText = "SHUTDOWN SEQUENCE...";
+                badge.innerText = action === 'start' ? "INITIALIZING..." : "SHUTDOWN SEQUENCE...";
             }
 
             try {
@@ -1749,9 +1830,11 @@
         }
 
         updateStatus();
-        resetLiveDashboardUI();
 
         // --- DASHBOARD WEBSOCKET ---
+        let ws = null;
+        let lastSpotifyData = null;
+        let bgPreference = 'spotify'; // Alternates every minute
 
         function updateBackgroundUI() {
             const tunnelLayer = document.getElementById('tunnelLayer');
@@ -1818,43 +1901,16 @@
 
         function toggleEqDisplay() {
             const eq = document.getElementById('eqToggle');
-            if (eq) {
+            const panel = document.getElementById('sysControls');
+            if (eq.style.display === 'none') {
                 eq.style.display = 'block';
+            } else {
+                eq.style.display = 'none';
+                panel.style.display = 'none';
+                // Reset eqToggle styling to minimized state
+                eq.style.background = 'rgba(0, 0, 0, 0.4)';
+                eq.style.borderRadius = '16px';
             }
-        }
-
-        function resetLiveDashboardUI() {
-            lastBinaryData = null;
-            lastSpotifyData = null;
-            lastStateUpdate = null;
-
-            const hubVol = document.getElementById('hubVol');
-            if (hubVol) hubVol.style.width = '0%';
-            
-            const hubBpm = document.getElementById('hubBpm');
-            if (hubBpm) hubBpm.textContent = '--';
-            
-            const hubVibe = document.getElementById('hubVibe');
-            if (hubVibe) hubVibe.textContent = 'MID';
-            
-            const hubTransient = document.getElementById('hubTransient');
-            if (hubTransient) hubTransient.textContent = 'STEADY';
-
-            const spotEl = document.getElementById('hubSpotify');
-            if (spotEl) spotEl.style.display = 'none';
-
-            const hubBins = document.getElementById('hubBins');
-            if (hubBins) {
-                for (let i = 0; i < 6; i++) {
-                    const bar = hubBins.children[i];
-                    if (bar) {
-                        bar.style.height = '2px';
-                        bar.style.background = '#444';
-                        bar.style.opacity = '0.4';
-                    }
-                }
-            }
-            updateBackgroundUI();
         }
 
         async function runShell() {
@@ -1918,11 +1974,6 @@
                         document.getElementById(def.id + 'Val').textContent = val.toFixed(1) + def.suffix;
                         sendParams();
                     };
-                    el.onchange = (e) => {
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'save_defaults' }));
-                        }
-                    };
                 });
 
                 // Vibe Splits Drag Logic
@@ -1961,9 +2012,6 @@
                         };
 
                         const stopDrag = () => {
-                            if (ws && ws.readyState === WebSocket.OPEN) {
-                                ws.send(JSON.stringify({ type: 'save_defaults' }));
-                            }
                             document.removeEventListener('mousemove', onMove);
                             document.removeEventListener('touchmove', onMove);
                             document.removeEventListener('mouseup', stopDrag);
@@ -1985,18 +2033,23 @@
                 document.getElementById('masterSceneFreq').onchange = (e) => {
                     state.sceneFreq = parseInt(e.target.value);
                     sendParams();
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'save_defaults' }));
-                    }
                 };
 
                 document.getElementById('masterAudioSource').onchange = (e) => {
                     state.audio_source = e.target.value;
                     sendParams();
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: 'save_defaults' }));
-                    }
                 };
+
+                // Save Defaults Button
+                const saveBtn = document.getElementById('saveDefaultsBtn');
+                if (saveBtn) {
+                    saveBtn.onclick = () => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'save_defaults' }));
+                            alert("Defaults Saved!");
+                        }
+                    };
+                }
             }
 
             function sendParams() {
@@ -2089,7 +2142,8 @@
             };
 
             ws.onclose = () => {
-                resetLiveDashboardUI();
+                document.getElementById('liveDashboard').style.opacity = '0';
+                setTimeout(() => document.getElementById('liveDashboard').style.display = 'none', 500);
 
                 if (!engineActive) return;
 
@@ -2102,8 +2156,8 @@
                 }, backoff);
             };
 
-            lastBinaryData = null;
-            lastStateUpdate = null;
+            let lastBinaryData = null;
+            let lastStateUpdate = null;
 
             ws.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
@@ -2141,9 +2195,11 @@
                             lastSpotifyData = sp; // Store for rotation
                             const spotEl = document.getElementById('hubSpotify');
 
-                            // Ensure Spotify overlay is shown, but do not hide the EQ/status display
+                            // Hide EQ display by default if Spotify just became active
                             if (spotEl.style.display !== 'block') {
                                 spotEl.style.display = 'block';
+                                document.getElementById('eqToggle').style.display = 'none';
+                                document.getElementById('sysControls').style.display = 'none';
                             }
 
                             document.getElementById('hubSpotName').textContent = sp.name;
@@ -2162,6 +2218,8 @@
                             const spotEl = document.getElementById('hubSpotify');
                             if (spotEl.style.display === 'block') {
                                 spotEl.style.display = 'none';
+                                // Restore EQ display when Spotify becomes inactive
+                                document.getElementById('eqToggle').style.display = 'block';
                             }
                             updateBackgroundUI();
                         }
@@ -2323,6 +2381,43 @@
             if (typeof originalRender === 'function') originalRender();
             else if (typeof window.renderLiveTabActual === 'function') window.renderLiveTabActual();
         };
+
+        // System shutdown and reboot handlers for small 3.5" portrait manager
+        async function systemShutdown() {
+            if (!confirm("Are you sure you want to shut down the RaveBox?")) return;
+            try {
+                const isTunnelAccess = window.location.hostname.endsWith('.ravebox.love');
+                const url = isTunnelAccess
+                    ? `${window.location.origin}/shell?cmd=sudo%20poweroff`
+                    : `${window.LAUNCHER_API}/shell?cmd=sudo%20poweroff`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    alert("Shutdown signal sent. The RaveBox is shutting down...");
+                } else {
+                    alert("Failed to send shutdown signal.");
+                }
+            } catch(e) {
+                alert("Error sending shutdown command: " + e.message);
+            }
+        }
+
+        async function systemReboot() {
+            if (!confirm("Are you sure you want to restart the RaveBox?")) return;
+            try {
+                const isTunnelAccess = window.location.hostname.endsWith('.ravebox.love');
+                const url = isTunnelAccess
+                    ? `${window.location.origin}/shell?cmd=sudo%20reboot`
+                    : `${window.LAUNCHER_API}/shell?cmd=sudo%20reboot`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    alert("Reboot signal sent. The RaveBox is restarting...");
+                } else {
+                    alert("Failed to send reboot signal.");
+                }
+            } catch(e) {
+                alert("Error sending reboot command: " + e.message);
+            }
+        }
     </script>
 </body>
 

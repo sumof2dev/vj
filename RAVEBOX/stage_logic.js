@@ -1018,6 +1018,16 @@ var switchTab = window.switchTab || function() { };
             else startRecording();
         }
 
+        window.isEnginePaused = false;
+        function toggleEnginePause() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            const nextState = !window.isEnginePaused;
+            ws.send(JSON.stringify({
+                type: 'set_pause',
+                state: nextState
+            }));
+        }
+
         function startRecording() {
             if (!ws || ws.readyState !== WebSocket.OPEN) return alert("System disconnected.");
             
@@ -1259,7 +1269,31 @@ var switchTab = window.switchTab || function() { };
                         if (msg.vibe) latestAudioState.vibe = msg.vibe;
                         if (msg.vibe_variant !== undefined) latestAudioState.vibe_variant = msg.vibe_variant;
                         if (msg.transient) latestAudioState.transient = msg.transient;
+                        if (msg.contrast_boost !== undefined) {
+                            latestAudioState.contrast_boost = msg.contrast_boost;
+                            const liveVal = document.getElementById('charContrastBoostLive');
+                            if (liveVal) {
+                                liveVal.textContent = "Boost: " + (msg.contrast_boost >= 0 ? "+" : "") + parseFloat(msg.contrast_boost).toFixed(2);
+                            }
+                        }
                         if (msg.blackout !== undefined) latestAudioState.blackout = msg.blackout;
+                        if (msg.paused !== undefined) {
+                            window.isEnginePaused = msg.paused;
+                            const btn = document.getElementById('btn-pause-engine');
+                            if (btn) {
+                                if (window.isEnginePaused) {
+                                    btn.textContent = "Resume";
+                                    btn.style.background = "var(--accent)";
+                                    btn.style.borderColor = "var(--accent)";
+                                    btn.style.color = "#000";
+                                } else {
+                                    btn.textContent = "Pause";
+                                    btn.style.background = "#222";
+                                    btn.style.borderColor = "#444";
+                                    btn.style.color = "";
+                                }
+                            }
+                        }
                         if (msg.overrides) latestOverrides = new Set(msg.overrides.map(a => parseInt(a)));
                         if (msg.active_presets) {
                             window.activePresets = msg.active_presets;
@@ -1307,7 +1341,43 @@ var switchTab = window.switchTab || function() { };
                             if (speedInput && 'speed' in msg.master) speedInput.value = msg.master.speed;
                             if (intensityInput && 'intensity' in msg.master) intensityInput.value = msg.master.intensity;
                             
-                            // Govee list render removed
+                            if (msg.master.vibe_reactivity) {
+                                const chillInput = document.getElementById('charReactChill');
+                                const midInput = document.getElementById('charReactMid');
+                                const highInput = document.getElementById('charReactHigh');
+                                
+                                if (chillInput) {
+                                    chillInput.value = msg.master.vibe_reactivity.chill || 0.85;
+                                    const chillVal = document.getElementById('charReactChillVal');
+                                    if (chillVal) chillVal.textContent = parseFloat(chillInput.value).toFixed(2) + 'x';
+                                }
+                                if (midInput) {
+                                    midInput.value = msg.master.vibe_reactivity.mid || 1.0;
+                                    const midVal = document.getElementById('charReactMidVal');
+                                    if (midVal) midVal.textContent = parseFloat(midInput.value).toFixed(2) + 'x';
+                                }
+                                if (highInput) {
+                                    highInput.value = msg.master.vibe_reactivity.high || 2.0;
+                                    const highVal = document.getElementById('charReactHighVal');
+                                    if (highVal) highVal.textContent = parseFloat(highInput.value).toFixed(2) + 'x';
+                                }
+                            }
+                            if ('contrast_scale' in msg.master) {
+                                const contrastInput = document.getElementById('charContrastScale');
+                                if (contrastInput) {
+                                    contrastInput.value = msg.master.contrast_scale;
+                                    const contrastVal = document.getElementById('charContrastScaleVal');
+                                    if (contrastVal) contrastVal.textContent = parseFloat(contrastInput.value).toFixed(2);
+                                }
+                            }
+                            if ('latency_offset' in msg.master) {
+                                const latInput = document.getElementById('charLatencyOffset');
+                                if (latInput) {
+                                    latInput.value = msg.master.latency_offset;
+                                    const latVal = document.getElementById('charLatencyOffsetVal');
+                                    if (latVal) latVal.textContent = parseFloat(latInput.value).toFixed(3) + 's';
+                                }
+                            }
                         }
                     } else if (msg.type === 'recording_started') {
                         if (msg.success) {
@@ -1935,3 +2005,26 @@ window.everActivatedPresets = everActivatedPresets;
 window.activePresets = activePresets;
 
 // Govee LAN Management removed
+
+window.saveCharacteristics = function(saveToDisk = false) {
+    const chill = parseFloat(document.getElementById('charReactChill')?.value || 0.85);
+    const mid = parseFloat(document.getElementById('charReactMid')?.value || 1.0);
+    const high = parseFloat(document.getElementById('charReactHigh')?.value || 2.0);
+    const contrast_scale = parseFloat(document.getElementById('charContrastScale')?.value || 0.18);
+    const latency_offset = parseFloat(document.getElementById('charLatencyOffset')?.value || -0.150);
+    
+    if (window.ws && window.ws.readyState === WebSocket.OPEN) {
+        window.ws.send(JSON.stringify({
+            type: 'master_params',
+            vibe_reactivity: { chill, mid, high },
+            contrast_scale: contrast_scale,
+            latency_offset: latency_offset
+        }));
+        
+        if (saveToDisk) {
+            window.ws.send(JSON.stringify({
+                type: 'save_defaults'
+            }));
+        }
+    }
+};

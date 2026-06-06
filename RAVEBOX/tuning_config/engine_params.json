@@ -1,0 +1,29 @@
+{
+    "building_trend": 0.25,
+    "building_energy": 0.2,
+    "tension_drop": 0.8,
+    "drop_impact": 0.3,
+    "drop_spike": 0.4,
+    "vibe_hysteresis": 5,
+    "steady_lockout": 5,
+    "building_hold": 0.5,
+    "tension_hold": 1.5,
+    "dropping_hold": 6,
+    "hpss_window": 5,
+    "hpss_freq_kernel": 11,
+    "flux_threshold_mult": 2.05,
+    "flux_threshold_abs": 0.35,
+    "eq_bass_offset": 0.05,
+    "eq_bass_mult": 0.5,
+    "eq_lowmid_offset": 0.03,
+    "eq_lowmid_mult": 0.7,
+    "chillMid_ratio": 33,
+    "midHigh_ratio": 66,
+    "contrast_scale": 0.21,
+    "latency_offset": -0.07,
+    "vibe_reactivity": {
+        "chill": 0.5,
+        "mid": 1,
+        "high": 1.5
+    }
+}

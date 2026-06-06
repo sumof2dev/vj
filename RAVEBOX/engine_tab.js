@@ -138,12 +138,14 @@ initEngineTab();
             } else if (behavior === 'direct') {
                 y = (E * react * 2.0) - 1.0;
             } else if (['sine', 'saw', 'square'].includes(behavior)) {
-                const freq = (speed * 0.1) + (E * 5.0 * react);
+                const track_bpm = (audio && audio.bpm) || 120.0;
+                const freq = (track_bpm / 60.0) * speed;
                 st.phase = (st.phase + dt * freq) % 1.0;
                 const p = st.phase;
-                if (behavior === 'sine') y = react * Math.sin(p * 2 * Math.PI);
-                else if (behavior === 'saw') y = react * ((p * 2.0) - 1.0);
-                else if (behavior === 'square') y = p < 0.5 ? react : -react;
+                const amp = E * react;
+                if (behavior === 'sine') y = amp * Math.sin(p * 2 * Math.PI);
+                else if (behavior === 'saw') y = amp * ((p * 2.0) - 1.0);
+                else if (behavior === 'square') y = p < 0.5 ? amp : -amp;
             } else if (behavior === 'noise') {
                 st.t += dt * (speed * 0.5 + E * react * 2.0);
                 y = (_labNoise(st.t) * 2.0) - 1.0;
@@ -373,22 +375,8 @@ initEngineTab();
             // 1. Calculate Local Probe Value (The Logic Simulation)
             let val = 0;
             try {
-                const id = document.getElementById('labBehaviorSelect').value;
-                const rule = {
-                    behavior: document.getElementById('labBehaviorSelectSpecific').value,
-                    source: document.getElementById('labSourceSelect').value,
-                    modifiers: {
-                        speed: parseFloat(document.getElementById('labSpeed').value),
-                        react: parseFloat(document.getElementById('labReact').value),
-                        hold_type: document.getElementById('labHoldSelect').value
-                    },
-                    cal: {
-                        min: parseInt(document.getElementById('labMin').value) || 0,
-                        center: parseInt(document.getElementById('labCenter').value) || 127,
-                        max: parseInt(document.getElementById('labMax').value) || 255
-                    }
-                };
-                val = calculateRuleSimulation(dt, labState, rule, labAudioState);
+                // Derive behavior directly from the live engine's simulated probe value
+                val = window.latestProbeValue || 0;
                 
                 // Update Energy Indicator
                 const energyStatus = document.getElementById('labEnergyStatus');
@@ -436,7 +424,7 @@ initEngineTab();
             const premade = window.EASY_DESCRIPTORS.find(x => x.id === id) || { modifiers: {} };
             
             const rule = {
-                easy_id: id,
+                easy_id: null,
                 behavior: document.getElementById('labBehaviorSelectSpecific').value,
                 source: document.getElementById('labSourceSelect').value,
                 modifiers: {
@@ -445,9 +433,9 @@ initEngineTab();
                     hold_type: document.getElementById('labHoldSelect').value
                 },
                 cal: {
-                    min: parseInt(document.getElementById('labMin').value) || 0,
-                    center: parseInt(document.getElementById('labCenter').value) || 127,
-                    max: parseInt(document.getElementById('labMax').value) || 255
+                    min: isNaN(parseInt(document.getElementById('labMin').value)) ? 0 : parseInt(document.getElementById('labMin').value),
+                    center: isNaN(parseInt(document.getElementById('labCenter').value)) ? 127 : parseInt(document.getElementById('labCenter').value),
+                    max: isNaN(parseInt(document.getElementById('labMax').value)) ? 255 : parseInt(document.getElementById('labMax').value)
                 }
             };
 
@@ -464,7 +452,9 @@ initEngineTab();
             const c_min_now = parseInt(document.getElementById('labMin').value) || 0;
             const c_max_now = parseInt(document.getElementById('labMax').value) || 255;
             const c_center_now = parseInt(document.getElementById('labCenter').value) || 127;
-            const rel_center = (c_center_now - c_min_now) / Math.max(1, (c_max_now - c_min_now));
+            const span = c_max_now - c_min_now;
+            const divisor = Math.abs(span) >= 1 ? span : (span < 0 ? -1 : 1);
+            const rel_center = (c_center_now - c_min_now) / divisor;
 
             const payload = {
                 label: label,
@@ -508,7 +498,9 @@ initEngineTab();
             const c_min_now = parseInt(document.getElementById('labMin').value) || 0;
             const c_max_now = parseInt(document.getElementById('labMax').value) || 255;
             const c_center_now = parseInt(document.getElementById('labCenter').value) || 127;
-            const rel_center = (c_center_now - c_min_now) / Math.max(1, (c_max_now - c_min_now));
+            const span = c_max_now - c_min_now;
+            const divisor = Math.abs(span) >= 1 ? span : (span < 0 ? -1 : 1);
+            const rel_center = (c_center_now - c_min_now) / divisor;
 
             const updatedData = {
                 id: id,

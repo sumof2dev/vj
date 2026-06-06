@@ -605,7 +605,7 @@ function addVibeRule(chIdx) {
     if (!window.currentProfileMappings[chIdx]) window.currentProfileMappings[chIdx] = [];
     window.currentProfileMappings[chIdx].push({
         vibe: 'any',
-        description: 'New Trigger State',
+        description: 'Partitioned Range',
         behavior: 'static',
         source: 'volume',
         cal: { min: 0, center: 127, max: 255 },
@@ -727,8 +727,7 @@ function changeTriggerType(idx, type) {
     if (type === 'vibe') trigger = { ...trigger, value: 'chill' };
     else if (type === 'state') trigger = { ...trigger, value: 'building' };
     else if (type === 'volume') trigger = { ...trigger, less_than: 100, greater_than: 0 };
-    else if (type === 'bin') trigger = { ...trigger, target: 'BASS', less_than: '', greater_than: '' };
-    else if (type === 'channel') trigger = { type: "channel", fixture: (db.stage[0]?.id || ""), role: "dimmer", greater_than: 0, less_than: 255 };
+    else if (type === 'bin') trigger = { ...trigger, target: 'bass' };
 
     currentPresetTriggers[idx] = trigger;
     renderPresetTriggers();
@@ -761,14 +760,8 @@ function renderPresetTriggers() {
             inputs = `
                 <select onchange="updateTriggerVal(${idx}, 'value', this.value)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); color:var(--accent-alt); font-weight:bold;">
                     <option value="chill" ${val === 'chill' ? 'selected' : ''}>Chill</option>
-                    <option value="chill bass" ${val === 'chill bass' ? 'selected' : ''}>Chill Bass</option>
-                    <option value="chill treble" ${val === 'chill treble' ? 'selected' : ''}>Chill Treble</option>
                     <option value="mid" ${val === 'mid' ? 'selected' : ''}>Mid</option>
-                    <option value="mid bass" ${val === 'mid bass' ? 'selected' : ''}>Mid Bass</option>
-                    <option value="mid treble" ${val === 'mid treble' ? 'selected' : ''}>Mid Treble</option>
                     <option value="high" ${val === 'high' ? 'selected' : ''}>High</option>
-                    <option value="high bass" ${val === 'high bass' ? 'selected' : ''}>High Bass</option>
-                    <option value="high treble" ${val === 'high treble' ? 'selected' : ''}>High Treble</option>
                 </select>
             `;
         } else if (type === 'state') {
@@ -788,33 +781,13 @@ function renderPresetTriggers() {
                 <input type="number" value="${lt}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
             `;
         } else if (type === 'bin') {
+            const currentTarget = target || 'bass';
             inputs = `
-                <input type="number" value="${gt}" style="width:85px;" placeholder="Min" onchange="updateTriggerVal(${idx}, 'greater_than', parseFloat(this.value))">
-                <span>&le;</span>
                 <select onchange="updateTriggerVal(${idx}, 'target', this.value)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); color:var(--accent); font-weight:bold;">
-                    ${['BIN 0', 'BIN 1', 'BIN 2', 'BIN 3', 'BIN 4', 'BIN 5'].map(b => `<option value="${b}" ${target === b ? 'selected' : ''}>${b}</option>`).join('')}
+                    <option value="bass" ${currentTarget === 'bass' ? 'selected' : ''}>Bass</option>
+                    <option value="mid" ${currentTarget === 'mid' ? 'selected' : ''}>Mid</option>
+                    <option value="treble" ${currentTarget === 'treble' ? 'selected' : ''}>Treble</option>
                 </select>
-                <span>&le;</span>
-                <input type="number" value="${lt}" style="width:85px;" placeholder="Max" onchange="updateTriggerVal(${idx}, 'less_than', parseFloat(this.value))">
-            `;
-        } else if (type === 'channel') {
-            const stage = db.stage || [];
-            const roles = getFixtureRoles(t.fixture);
-            inputs = `
-                <input type="text" value="${gt}" style="width:60px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; text-align:center;" placeholder="Min" 
-                       oninput="enforceDmxLimit(this); updateTriggerVal(${idx}, 'greater_than', parseInt(this.value), true)">
-                <span style="font-size:10px; opacity:0.5;">&le;</span>
-                <select onchange="updateTriggerVal(${idx}, 'fixture', this.value); renderPresetTriggers()" style="width:90px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent); font-weight:bold; font-size:10px;">
-                    <option value="">-- FIX --</option>
-                    ${stage.map(s => `<option value="${s.id}" ${t.fixture === s.id ? 'selected' : ''}>${s.id}</option>`).join('')}
-                </select>
-                <select onchange="updateTriggerVal(${idx}, 'role', this.value)" style="width:100px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:var(--accent-alt); font-weight:bold; font-size:10px;">
-                    <option value="">-- FUNC --</option>
-                    ${roles.map(r => `<option value="${r}" ${t.role === r ? 'selected' : ''}>${r.toUpperCase()}</option>`).join('')}
-                </select>
-                <span style="font-size:10px; opacity:0.5;">&le;</span>
-                <input type="text" value="${lt}" style="width:60px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#fff; text-align:center;" placeholder="Max" 
-                       oninput="enforceDmxLimit(this); updateTriggerVal(${idx}, 'less_than', parseInt(this.value), true)">
             `;
         } else if (type === 'manual') {
             inputs = 'Manual Activation Only';
@@ -828,11 +801,10 @@ function renderPresetTriggers() {
                     <select style="flex:1; margin-left:10px; margin-right:10px; color:var(--accent); font-weight:bold;" onchange="changeTriggerType(${idx}, this.value)">
                         <option value="" ${t.type === '' ? 'selected' : ''}>-- Select Trigger --</option>
                         <option value="manual" ${t.type === 'manual' ? 'selected' : ''}>Manual Activation</option>
-                        <option value="vibe" ${t.type === 'vibe' ? 'selected' : ''}>Vibe Change</option>
+                        <option value="vibe" ${t.type === 'vibe' ? 'selected' : ''}>Vibe</option>
                         <option value="state" ${t.type === 'state' ? 'selected' : ''}>Performance State</option>
                         <option value="volume" ${t.type === 'volume' ? 'selected' : ''}>Overall Volume</option>
-                        <option value="bin" ${t.type === 'bin' ? 'selected' : ''}>Frequency Bin</option>
-                        <option value="channel" ${t.type === 'channel' ? 'selected' : ''}>Fixture Function</option>
+                        <option value="bin" ${t.type === 'bin' ? 'selected' : ''}>Dominant EQ</option>
                     </select>
                     <button class="btn btn-danger btn-sm" onclick="removePresetTrigger(${idx})">X</button>
                 </div>
@@ -850,20 +822,14 @@ function addOverrideToCurrentPreset() {
     
     // Smart defaults per target type
     const VDMX_DEFAULTS = { strobe: 255, blackout: 1, spin: 1, invert: 1, next_visual: 1, next_fx: 1, zoom: 1, hue: 0, reset: 1 };
-    const SYS_DEFAULTS = { pause: 255 };
     let val = 255;
     if (fixId === 'visualdmx' && funcId in VDMX_DEFAULTS) val = VDMX_DEFAULTS[funcId];
-    else if (fixId === 'system' && funcId in SYS_DEFAULTS) val = SYS_DEFAULTS[funcId];
 
     let id, target, type;
     if (fixId === 'global') {
         id = `global_${funcId}`;
         target = `Global: ${funcId}`;
         type = 'global';
-    } else if (fixId === 'system') {
-        id = `system_${funcId}`;
-        target = 'system';
-        type = 'system';
     } else if (fixId === 'visualdmx') {
         id = 'visualdmx';
         target = 'visualdmx';
@@ -906,12 +872,11 @@ function renderPresetOverrides() {
         reset:        [{label:'Reset', val:1}],
     };
 
-    const SYSTEM_OPTIONS = {
-        pause: [{label:'Play', val:0}, {label:'Pause', val:255}],
-    };
-
     container.innerHTML = currentPresetOverrides.map((ov, ovIdx) => {
-        const targetLabel = (ov.type === 'global') ? 'GLOBAL' : (ov.type === 'system') ? 'SYSTEM' : (ov.target === 'visualdmx') ? 'VISUALIZER' : `FIX: ${ov.target}`;
+        const targetLabel = (ov.type === 'global') ? 'GLOBAL' : 
+                            (ov.target === 'visualdmx') ? 'VISUALIZER' : 
+                            (['left_harmonic', 'right_harmonic', 'left_percussive', 'right_percussive'].includes(ov.target)) ? `ZONE: ${ov.target.toUpperCase().replace('_', ' ')}` : 
+                            `FIX: ${ov.target}`;
         const fn = (ov.role || ov.name || '').toLowerCase();
 
         let valueHtml = '';
@@ -919,8 +884,6 @@ function renderPresetOverrides() {
 
         if (ov.target === 'visualdmx' && fn in VDMX_OPTIONS) {
             optionSet = VDMX_OPTIONS[fn];
-        } else if (ov.type === 'system' && fn in SYSTEM_OPTIONS) {
-            optionSet = SYSTEM_OPTIONS[fn];
         }
 
         if (optionSet) {
@@ -932,12 +895,25 @@ function renderPresetOverrides() {
                 </select>
             `;
         } else {
-            // Standard text input for fixtures and free-form values
-            valueHtml = `<input type="text" class="glass-input" value="${ov.value || 0}" onchange="updateOverrideVal(${ovIdx}, this.value)" style="width:120px;" placeholder="e.g. 128 or 0-255">`;
+            // Split inputs: Value/Range, Offset, Speed
+            const parts = parsePresetValueParts(ov.value);
+            valueHtml = `
+                <div style="display:flex; gap:8px; align-items:center; width:100%; flex-wrap: wrap;">
+                    <input type="text" class="glass-input" id="ov-base-${ovIdx}" value="${parts.base}" onchange="updateOverrideParts(${ovIdx})" style="flex:2; min-width:100px; height:32px;" placeholder="e.g. 128 or 0-255">
+                    <div style="display:flex; align-items:center; gap:4px; flex:1; min-width:70px;">
+                        <span style="font-size:11px; opacity:0.5; font-weight:bold; color:var(--text);">+</span>
+                        <input type="number" class="glass-input" id="ov-offset-${ovIdx}" value="${parts.offset}" onchange="updateOverrideParts(${ovIdx})" style="width:100%; height:32px; padding:0 6px; text-align:center;" placeholder="offset">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:4px; flex:1; min-width:70px;">
+                        <span style="font-size:11px; opacity:0.5; font-weight:bold; color:var(--text);">x</span>
+                        <input type="number" class="glass-input" id="ov-speed-${ovIdx}" value="${parts.speed}" onchange="updateOverrideParts(${ovIdx})" style="width:100%; height:32px; padding:0 6px; text-align:center;" placeholder="speed" step="0.1" min="0.1">
+                    </div>
+                </div>
+            `;
         }
 
         return `
-            <div class="card" style="margin-bottom:10px; border-left: 3px solid ${ov.target === 'visualdmx' ? 'var(--secondary)' : ov.type === 'system' ? 'var(--success)' : 'var(--accent)'};">
+            <div class="card" style="margin-bottom:10px; border-left: 3px solid ${ov.target === 'visualdmx' ? 'var(--secondary)' : 'var(--accent)'};">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div style="font-weight:bold;">${targetLabel} - ${ov.role.toUpperCase()}</div>
                     <button class="btn btn-danger btn-sm" onclick="removePresetOverride(${ovIdx})">Remove Action</button>
@@ -956,12 +932,67 @@ function renderPresetOverrides() {
 
 function updateOverrideVal(idx, val) {
     const sVal = val.toString();
-    const v = (sVal.includes('-') || sVal.includes(',') || sVal.includes('+')) ? val : (parseInt(val) || 0);
+    const v = (sVal.includes('-') || sVal.includes(',') || sVal.includes('+') || sVal.toLowerCase().includes('x')) ? val : (parseInt(val) || 0);
     currentPresetOverrides[idx].value = v;
     if (currentPresetOverrides[idx].channels && currentPresetOverrides[idx].channels[0]) {
         currentPresetOverrides[idx].channels[0].value = v;
     }
 }
+
+window.parsePresetValueParts = function(val) {
+    if (typeof val === 'number') {
+        return { base: val, offset: '', speed: '' };
+    }
+    const valStr = String(val || '').trim();
+    if (!valStr) {
+        return { base: '', offset: '', speed: '' };
+    }
+
+    let base = valStr;
+    let offset = '';
+    let speed = '';
+
+    // 1. Extract speed multiplier (x[number])
+    const speedMatch = base.match(/x\s*([0-9]+(?:\.[0-9]+)?)/i);
+    if (speedMatch) {
+        speed = speedMatch[1];
+        base = base.replace(speedMatch[0], '').trim();
+    }
+
+    // 2. Extract offset (+ [number])
+    const offsetMatch = base.match(/\+\s*([0-9]+(?:\.[0-9]+)?)/);
+    if (offsetMatch) {
+        offset = offsetMatch[1];
+        base = base.replace(offsetMatch[0], '').trim();
+    }
+
+    return {
+        base: base.trim(),
+        offset: offset,
+        speed: speed
+    };
+};
+
+window.updateOverrideParts = function(ovIdx) {
+    const baseInput = document.getElementById(`ov-base-${ovIdx}`);
+    const offsetInput = document.getElementById(`ov-offset-${ovIdx}`);
+    const speedInput = document.getElementById(`ov-speed-${ovIdx}`);
+    if (!baseInput) return;
+
+    const baseVal = baseInput.value.trim();
+    const offsetVal = offsetInput ? offsetInput.value.trim() : '';
+    const speedVal = speedInput ? speedInput.value.trim() : '';
+
+    let combined = baseVal;
+    if (offsetVal !== '' && !isNaN(offsetVal)) {
+        combined += " + " + offsetVal;
+    }
+    if (speedVal !== '' && !isNaN(speedVal)) {
+        combined += " x" + speedVal;
+    }
+
+    updateOverrideVal(ovIdx, combined);
+};
 
 
 function removePresetOverride(idx) {
@@ -1243,10 +1274,6 @@ function updatePresetFunctionDropdown() {
         funcSel.innerHTML = '<option value="">-- Select Visual Function --</option>' +
             ['strobe', 'blackout', 'spin', 'zoom', 'hue', 'invert', 'next_visual', 'next_fx', 'base_idx', 'fx_idx', 'reset'].map(f => `<option value="${f}">${f.toUpperCase()}</option>`).join('');
         funcSel.onchange = null;
-    } else if (stageId === 'system') {
-        funcSel.innerHTML = '<option value="">-- Select System Function --</option>' +
-            ['pause'].map(f => `<option value="${f}">${f.toUpperCase()}</option>`).join('');
-        funcSel.onchange = null;
     } else {
         funcSel.onchange = null;
         funcSel.innerHTML = '<option value="">-- Select Function --</option>' +
@@ -1368,6 +1395,8 @@ function getFixtureRoles(fixtureId) {
                         react: conf.react, 
                         gain: r.gain !== undefined ? r.gain : 1.0,
                         threshold: conf.threshold || 0,
+                        threshold_hold_active: conf.threshold_hold_active ? true : false,
+                        threshold_hold_value: (conf.threshold_hold_value !== '' && conf.threshold_hold_value !== undefined) ? parseInt(conf.threshold_hold_value) : '',
                         hold_type: conf.hold_type || 'none',
                         muted: r.muted ? true : false
                     },
@@ -1427,6 +1456,8 @@ function getFixtureRoles(fixtureId) {
                     speed: defaultSpeed, 
                     react: defaultReact, 
                     threshold: first.modifiers ? (first.modifiers.threshold !== undefined ? first.modifiers.threshold : 0) : 0,
+                    threshold_hold_active: first.modifiers ? (first.modifiers.threshold_hold_active !== undefined ? !!first.modifiers.threshold_hold_active : false) : false,
+                    threshold_hold_value: first.modifiers ? (first.modifiers.threshold_hold_value !== undefined ? first.modifiers.threshold_hold_value : '') : '',
                     hold_type: defaultHold,
                     ranges: ranges 
                 };
@@ -1510,10 +1541,19 @@ function getFixtureRoles(fixtureId) {
                     '<button class="btn btn-sm" onclick="addRange(' + chIdx + ')" style="padding:2px 8px; font-size:9px;">+ ADD</button>' +
                 '</div>' +
                 '<div id="ranges-' + chIdx + '">' + rangesHtml + '</div>' +
-                '<div class="controls-grid">' +
-                    '<div class="control-group"><label>Base Speed</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.speed + '" onchange="updateChannelConfig(' + chIdx + ', \'speed\', this.value)"></div>' +
-                    '<div class="control-group"><label>Reactivity</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + conf.react + '" onchange="updateChannelConfig(' + chIdx + ', \'react\', this.value)"></div>' +
-                    '<div class="control-group"><label>Threshold</label><input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + (conf.threshold || 0) + '" onchange="updateChannelConfig(' + chIdx + ', \'threshold\', this.value)"></div>' +
+                '<div class="controls-grid" style="display:flex; flex-direction:column; gap:8px;">' +
+                    '<div class="control-group" style="display:flex; flex-direction:column; gap:4px;">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
+                            '<label style="margin-bottom:0; font-size:10px; font-weight:800; color:var(--text-dim);">Threshold</label>' +
+                            '<div style="display:flex; align-items:center; gap:6px;">' +
+                                '<label style="margin-bottom:0; display:flex; align-items:center; gap:4px; font-size:10px; cursor:pointer; font-weight:normal; text-transform:none; color:var(--text-dim);">' +
+                                    '<input type="checkbox" style="margin:0; width:12px; height:12px; vertical-align:middle; cursor:pointer;" ' + (conf.threshold_hold_active ? 'checked' : '') + ' onchange="updateChannelConfig(' + chIdx + ', \'threshold_hold_active\', this.checked)"> Hold gated DMX:' +
+                                '</label>' +
+                                '<input type="number" class="glass-input" style="width:50px; height:20px; font-size:10px; padding:2px 4px; margin:0; text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff;" min="0" max="255" value="' + (conf.threshold_hold_value !== undefined ? conf.threshold_hold_value : '') + '" placeholder="e.g. 0" onchange="updateChannelConfig(' + chIdx + ', \'threshold_hold_value\', this.value)">' +
+                            '</div>' +
+                        '</div>' +
+                        '<input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + (conf.threshold || 0) + '" onchange="updateChannelConfig(' + chIdx + ', \'threshold\', this.value)">' +
+                    '</div>' +
                 '</div>' +
             '</div></div>';
         });
@@ -1692,10 +1732,11 @@ function getFixtureRoles(fixtureId) {
                     y = (E * react * 2.0) - 1.0;
                     
                 } else if (behavior === 'sine' || behavior === 'square' || behavior === 'saw' || behavior === 'triangle') {
-                    const freq = (speed * 0.1) + (E * 5.0 * react);
+                    const track_bpm = (audio && audio.bpm) || 120.0;
+                    const freq = (track_bpm / 60.0) * speed;
                     st.phase = (st.phase + dt * freq) % 1.0;
                     const p = st.phase;
-                    const amp = react;
+                    const amp = E * react;
                     if (behavior === 'sine') y = amp * Math.sin(p * 2.0 * Math.PI);
                     else if (behavior === 'saw') y = amp * ((p * 2.0) - 1.0);
                     else if (behavior === 'square') y = p < 0.5 ? amp : -amp;
@@ -1731,16 +1772,18 @@ function getFixtureRoles(fixtureId) {
                     y = (Math.floor(E * 8) / 8 * 2.0) - 1.0;
                 }
                 
-                if (is_gated) y = -1.0;
-                
-                
-
-                // --- Y → DMX MAPPING (mirrors engine exactly) ---
-                const gain = r0.gain !== undefined ? parseFloat(r0.gain) : 1.0;
-                y = Math.max(-1.0, Math.min(1.0, y * gain));
                 let final_dmx;
-                if (y >= 0) final_dmx = eff_center + (y * (eff_max - eff_center));
-                else final_dmx = eff_center + (y * (eff_center - eff_min));
+                if (is_gated && conf.threshold_hold_active && conf.threshold_hold_value !== '' && conf.threshold_hold_value !== undefined) {
+                    final_dmx = parseInt(conf.threshold_hold_value);
+                } else {
+                    if (is_gated) y = -1.0;
+                    
+                    // --- Y → DMX MAPPING (mirrors engine exactly) ---
+                    const gain = r0.gain !== undefined ? parseFloat(r0.gain) : 1.0;
+                    y = Math.max(-1.0, Math.min(1.0, y * gain));
+                    if (y >= 0) final_dmx = eff_center + (y * (eff_max - eff_center));
+                    else final_dmx = eff_center + (y * (eff_center - eff_min));
+                }
                 
                 // Hold Logic
                 if (hold_type !== 'none') {
@@ -1969,6 +2012,7 @@ function getFixtureRoles(fixtureId) {
 
     window.updateChannelConfig = function(chIdx, field, val) {
         if(field === 'speed' || field === 'react' || field === 'threshold') val = parseFloat(val);
+        if(field === 'threshold_hold_value') val = val === '' ? '' : parseInt(val);
         window.channelConfig[chIdx][field] = val;
         window.channelConfig[chIdx].easy_id = ''; // Clear easy_id on manual parameter adjustments
         window.compileProfileMappings();

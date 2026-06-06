@@ -1,0 +1,57 @@
+{
+    "timestamp": 1780511851905,
+    "session": "Ozztin - FLOORED",
+    "params": {
+        "building_trend": 0.1,
+        "building_energy": 0.3,
+        "tension_drop": 0.6,
+        "drop_impact": 0.3,
+        "drop_spike": 0.3,
+        "vibe_hysteresis": 5,
+        "steady_lockout": 5,
+        "building_hold": 0.5,
+        "tension_hold": 1.5,
+        "dropping_hold": 6,
+        "hpss_window": 5,
+        "hpss_freq_kernel": 19,
+        "flux_threshold_mult": 2.05,
+        "flux_threshold_abs": 0.35,
+        "eq_bass_offset": 0.08,
+        "eq_bass_mult": 0.5,
+        "eq_lowmid_offset": 0.03,
+        "eq_lowmid_mult": 0.7,
+        "chillMid_ratio": 33,
+        "midHigh_ratio": 66
+    },
+    "diff": {
+        "building_trend": {
+            "old": 0.25,
+            "new": 0.1
+        },
+        "building_energy": {
+            "old": 0.35,
+            "new": 0.3
+        },
+        "tension_drop": {
+            "old": 0.5,
+            "new": 0.6
+        },
+        "drop_impact": {
+            "old": 0.4,
+            "new": 0.3
+        },
+        "drop_spike": {
+            "old": 0.15,
+            "new": 0.3
+        },
+        "hpss_freq_kernel": {
+            "old": 11,
+            "new": 19
+        },
+        "eq_bass_offset": {
+            "old": 0,
+            "new": 0.08
+        }
+    },
+    "score": 0.0
+}

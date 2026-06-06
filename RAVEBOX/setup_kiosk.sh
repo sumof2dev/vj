@@ -50,9 +50,16 @@ for group in video render input audio dialout tty seat; do
   fi
 done
 
-# 3.5. Create udev rule to tag card0 for systemd tracking
+# 3.5. Create udev rule to tag card0 and card1 for systemd tracking
 echo "🏷️ Creating udev rule for graphics device tracking..."
-echo 'ACTION=="add", SUBSYSTEM=="drm", KERNEL=="card0", TAG+="systemd"' > /etc/udev/rules.d/99-dev-dri-card0.rules
+echo 'ACTION=="add", SUBSYSTEM=="drm", KERNEL=="card*", TAG+="systemd"' > /etc/udev/rules.d/99-dev-dri-card.rules
+udevadm control --reload-rules
+udevadm trigger
+
+# 3.6. Create udev rule for touchscreen calibration & output mapping (rotate=90 portrait layout)
+echo "🏷️ Creating udev rule for touchscreen calibration & mapping..."
+# Uses 90 degree clockwise rotation matrix to align touch with rotate=90 display orientation.
+echo 'ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="ADS7846 Touchscreen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 -1 1 1 0 0 0 0 1", ENV{WL_OUTPUT}="SPI-1"' > /etc/udev/rules.d/98-touchscreen-cal.rules
 udevadm control --reload-rules
 udevadm trigger
 
@@ -89,25 +96,30 @@ Environment=XDG_RUNTIME_DIR=/run/vj-kiosk
 Environment=HOME=$USER_HOME
 
 Environment=MOZ_ENABLE_WAYLAND=1
-# Route output to the GPIO display (card1) instead of standard HDMI (card0)
-Environment=WLR_DRM_DEVICES=/dev/dri/card0
-# Allow compositor to start even if no physical keyboard/mouse is connected
-Environment=WLR_LIBINPUT_NO_DEVICES=1
+# Route output to the GPIO display (card2) or fallback to card1/card0
+Environment=WLR_DRM_DEVICES=/dev/dri/card2:/dev/dri/card1:/dev/dri/card0
+# Force Pixman software renderer (SPI displays do not support GLES/EGL page flips)
+Environment=WLR_RENDERER=pixman
+# Disable DRM modifiers to allow simple buffer allocations
+Environment=WLR_DRM_NO_MODIFIERS=1
 # Run cage pointing directly to the local RaveBox visualizer
+# Note: WLR_LIBINPUT_NO_DEVICES is omitted to allow auto-hiding the cursor on touch-only seats.
 ExecStart=/usr/bin/cage -- $CHROMIUM_CMD \\
   --user-data-dir=$USER_HOME/.config/chromium-kiosk \\
-  --kiosk \\
+  --app=http://localhost:8000/managerlite.html \\
   --noerrdialogs \\
   --disable-infobars \\
   --no-first-run \\
   --autoplay-policy=no-user-gesture-required \\
   --enable-features=UseOzonePlatform \\
   --ozone-platform=wayland \\
-  --ignore-gpu-blocklist \\
-  --enable-gpu-rasterization \\
-  --enable-zero-copy \\
-  --use-gl=egl \\
-  http://localhost:8000/visualizer_src/index.html
+  --force-device-scale-factor=1.0 \\
+  --window-size=320,480 \\
+  --touch-events=enabled \\
+  --enable-logging=stderr \\
+  --v=1
+
+
 
 Restart=always
 RestartSec=5
@@ -134,3 +146,13 @@ echo "🖥️ Setting default systemd boot target to graphical.target..."
 systemctl set-default graphical.target
 
 echo "✅ Kiosk setup completed! To start immediately, run: sudo systemctl start vj-kiosk"
+echo ""
+echo "⚠️ IMPORTANT: For 3.5-inch SPI LCD screens, please ensure you have"
+echo "configured /boot/firmware/config.txt with the following overlay and rebooted:"
+echo "--------------------------------------------------------"
+echo "dtparam=spi=on"
+echo "dtoverlay=piscreen,drm,rotate=90"
+echo "--------------------------------------------------------"
+echo "Note: If the display is upside down, change 'rotate=90' to 'rotate=270' and update the"
+echo "udev rule matrix in /etc/udev/rules.d/98-touchscreen-cal.rules to:"
+echo "ENV{LIBINPUT_CALIBRATION_MATRIX}=\"0 -1 1 1 0 0 0 0 1\""

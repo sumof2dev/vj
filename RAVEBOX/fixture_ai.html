@@ -983,6 +983,8 @@
         const WORKFLOW_ROLES = {
             "pos_x": { name: "Pan / X-Position", keywords: ["pan", "x pos", "x move", "horizontal", "x position"], behavior: "direct", source: "spectral flux" },
             "pos_y": { name: "Tilt / Y-Position", keywords: ["tilt", "y pos", "y move", "vertical", "y position"], behavior: "direct", source: "spectral flux" },
+            "pos_x fine": { name: "Pan Fine / X Fine", keywords: ["pan fine", "x fine", "x position fine", "pan 16bit"], behavior: "direct", source: "spectral flux" },
+            "pos_y fine": { name: "Tilt Fine / Y Fine", keywords: ["tilt fine", "y fine", "y position fine", "tilt 16bit"], behavior: "direct", source: "spectral flux" },
             "zoom": { name: "Zoom / Size", keywords: ["zoom", "zooming", "scale", "size"], behavior: "sine", source: "volume", speed: 0.05 },
             "rot_z": { name: "Z-Rotation / Roll", keywords: ["rotation", "spin", "z-rot", "roll", "z rot", "z rotation", "z-rotation", "barrel roll"], behavior: "sine", source: "volume", speed: 0.04 },
             "rot_x": { name: "X-Rotation (Tilt)", keywords: ["rot x", "tilt roll", "x rotation", "x-rotation", "x rot", "x-rot", "rotate x"], behavior: "sine", source: "volume", speed: 0.04 },
@@ -999,6 +1001,9 @@
             "mode": { name: "Functional Mode", keywords: ["mode", "function", "control"], behavior: "static" },
             "clip": { name: "Clip / Boundary", keywords: ["clip", "boundry", "out of bounds", "blanking"], behavior: "static" },
             "group": { name: "Pattern Group", keywords: ["group", "category", "library"], behavior: "static" },
+            "speed": { name: "Speed / Rate", keywords: ["speed", "rate", "velocity", "duration", "time"], behavior: "static" },
+            "gobo": { name: "Gobo Wheel Select", keywords: ["gobo selection", "gobo wheel", "gobos"], behavior: "static" },
+            "effect": { name: "Fixture Effect", keywords: ["effect", "special effect", "macro", "built-in"], behavior: "static" },
             "generic": { name: "Generic Offset", keywords: ["custom", "effect", "reset", "unknown"], behavior: "static" }
         };
 
@@ -1194,10 +1199,10 @@
 
         const REFERENCE_GUIDELINE = `
         RaveBox DMX ROLE STANDARD (Must match THESE exact strings in the 'role' property):
-        - Directional: 'pos_x' (Pan/X-Position), 'pos_y' (Tilt/Y-Position), 'zoom'
+        - Directional: 'pos_x' (Pan/X-Position), 'pos_y' (Tilt/Y-Position), 'pos_x fine' (Pan Fine), 'pos_y fine' (Tilt Fine), 'zoom'
         - Rotation: 'rot_x' (X-Rotation/Tilt-Roll), 'rot_y' (Y-Rotation/Pan-Roll), 'rot_z' (Z-Rotation/Roll/Spin)
         - Visuals: 'color_solid', 'color_multi', 'pattern', 'beam_fx', 'grating', 'drawing', 'drawing_delay'
-        - Utility: 'strobe', 'generic', 'unassigned', 'dimmer', 'mode', 'clip', 'group'
+        - Utility: 'strobe', 'generic', 'unassigned', 'dimmer', 'mode', 'clip', 'group', 'speed', 'gobo', 'effect'
 
         # ROTATION AXIS DECODER (Critical for correct role assignment):
         - "X Rotation" / "Rotate X" / "Tilt Roll" → role: 'rot_x'
@@ -1258,7 +1263,7 @@ ${limitText}
    - VIBE: Default to "any". If a fixture has multiple heads or segments, spread "any 1", "any 2", and "any 3" across them to provide coordination variety.
 
 7. ROLE DICTIONARY:
-   pos_x, pos_y, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, dimmer, mode, clip, group, generic.
+   pos_x, pos_y, pos_x fine, pos_y fine, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, dimmer, mode, clip, group, generic, speed, gobo, effect.
 
 8. OUTPUT JSON SCHEMA:
 {
@@ -1304,10 +1309,72 @@ ${limitText}
 
                 let contents = [{ role: 'user', parts: contextParts }];
 
+                const responseSchema = {
+                    type: "OBJECT",
+                    properties: {
+                        id: { type: "STRING" },
+                        name: { type: "STRING" },
+                        question: { type: "STRING", description: "Optional clarifying question if more info is needed" },
+                        channels: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    name: { type: "STRING" },
+                                    role: {
+                                        type: "STRING",
+                                        enum: ["pos_x", "pos_y", "pos_x fine", "pos_y fine", "zoom", "rot_z", "rot_x", "rot_y", "color_solid", "color_multi", "pattern", "beam_fx", "grating", "drawing", "drawing_delay", "strobe", "dimmer", "mode", "clip", "group", "generic", "speed", "gobo", "effect"]
+                                    },
+                                    default: { type: "INTEGER" }
+                                },
+                                required: ["name", "role", "default"]
+                            }
+                        },
+                        mappings: {
+                            type: "ARRAY",
+                            items: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        vibe: { type: "STRING" },
+                                        description: { type: "STRING" },
+                                        source: { type: "STRING" },
+                                        behavior: { type: "STRING" },
+                                        cal: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                min: { type: "INTEGER" },
+                                                center: { type: "INTEGER" },
+                                                max: { type: "INTEGER" }
+                                            },
+                                            required: ["min", "center", "max"]
+                                        },
+                                        modifiers: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                speed: { type: "NUMBER" },
+                                                react: { type: "NUMBER" },
+                                                hold_type: { type: "STRING" }
+                                            },
+                                            required: ["speed", "react", "hold_type"]
+                                        }
+                                    },
+                                    required: ["vibe", "description", "source", "behavior", "cal", "modifiers"]
+                                }
+                            }
+                        }
+                    },
+                    required: ["id", "name", "channels", "mappings"]
+                };
+
                 console.log("📡 Calling Gemini API...");
                 const result = await model.generateContent({ 
                     contents, 
-                    generationConfig: { responseMimeType: "application/json" } 
+                    generationConfig: { 
+                        responseMimeType: "application/json",
+                        responseSchema: responseSchema
+                    } 
                 });
                 const responseText = result.response.text();
                 console.log("🤖 AI RAW RESPONSE RECEIVED.");
@@ -1663,8 +1730,8 @@ ${limitText}
             if (range < 1) return { behavior: 'static', source: 'volume', speed: 0 };
 
             // 2. CATEGORIZATION
-            const STANDARD = ['pos_x', 'pos_y', 'zoom', 'rot_x', 'rot_y', 'rot_z'];
-            const BASE = ['dimmer', 'speed', 'mode'];
+            const STANDARD = ['pos_x', 'pos_y', 'pos_x fine', 'pos_y fine', 'zoom', 'rot_x', 'rot_y', 'rot_z'];
+            const BASE = ['dimmer', 'speed', 'mode', 'gobo', 'effect'];
             // Everything else is EFFECT (color, pattern, strobe, beam_fx, grating, etc)
 
             // 3. ORDINAL SLOT DETERMINATION

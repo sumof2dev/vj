@@ -1,9 +1,17 @@
 import numpy as np
 import collections
 import time
+from scipy.signal import medfilt
+import os
+import json
 
 class AudioAnalyzer:
     def __init__(self):
+        # Parameters Configuration
+        self.config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tuning_config', 'engine_params.json')
+        self.p = self._load_params()
+        self.last_param_load = time.time()
+        
         # WLED Frequency Ranges (Hz)
         self.wled_freqs = [
             86, 129, 216, 301, 430, 560, 818, 1120, 
@@ -20,16 +28,18 @@ class AudioAnalyzer:
 
         # Beat Detection State
         self.last_beat_time = 0.0
-        self.bpm_list = []
         self.bpm = 120.0
+        self.manual_bpm_override = None
         self.prev_beat_timestamp = time.time()
-        self.beat_intervals = collections.deque(maxlen=8)
+        self.prev_beat_timestamp_actual = time.time()
+        self.beat_intervals = collections.deque(maxlen=32)
 
-        # PLL Tracking Constants
+        # PLL Tracking Constants (Tuned for high-inertia flywheel visual stability)
         self.lockout_ratio    = 0.55   # Dynamic lockout as fraction of beat period
         self.lockout_floor    = 0.135  # Hard floor (~220 BPM ceiling support)
-        self.pll_correction   = 0.35   # Phase error proportional correction factor
+        self.pll_correction   = 0.05   # Lowered to 5% to eliminate hunting and maintain strict grid inertia
         self.pll_period       = 0.50   # Initial period estimate (120 BPM)
+        self.smooth_build_up  = 0.0    # Asymmetric one-pole build-up filter state
         
         # Parallel shadow tracker state (old strategy)
         self.history_flux_old = collections.deque(maxlen=300)
@@ -43,11 +53,11 @@ class AudioAnalyzer:
         self.smooth_raw_vol = 0.0
 
         # Gain (Sensitivity)
-        self.gain = 0.5 # Default gain (1.0 = Normal)
+        self.gain = 1.0 # Default gain (1.0 = Normal)
         
         # Flux Threshold Tuning
-        self.flux_threshold_mult = 2.05 # Flux Sens 0.5
-        self.flux_threshold_abs = 0.35  # Flux Sens 0.5
+        self.flux_threshold_mult = self.p.get("flux_threshold_mult", 2.05)
+        self.flux_threshold_abs = self.p.get("flux_threshold_abs", 0.35)
         
         # Simple Timer for pattern switching
         self.frames_since_switch = 0
@@ -58,12 +68,12 @@ class AudioAnalyzer:
         self.beat_count = 0
         self.cumulative_max = 3.0 # LOW Initial Baseline (allows quick adaptation to quiet starts)
         
-        # FIXED GOLD STANDARDS (Smoothing)
         # Low bins (0-2): 0.70, Mid bins (3-4): 0.85, High bin (5): 0.90
         self.smoothing_configs = [0.70, 0.70, 0.70, 0.85, 0.85, 0.90]
         
         # Real-time HPSS sliding window components
-        self.hpss_window = 7  # Frame count window size inferred from real-time phase delay tolerance thresholds
+        self.hpss_window = self.p.get("hpss_window", 7)
+        self.hpss_freq_kernel = self.p.get("hpss_freq_kernel", 15)
         self.fft_history = collections.deque(maxlen=self.hpss_window)
         self.history_bass_p = collections.deque(maxlen=self.rolling_window_size)
         self.history_mid_p  = collections.deque(maxlen=self.rolling_window_size)
@@ -81,6 +91,38 @@ class AudioAnalyzer:
         self.hit_lockouts = {"KICK": 0, "SNARE": 0, "CYMBAL": 0}
         self.smooth_crest_factor = 3.5
         self.smooth_centroid = 1000.0
+
+    def _load_params(self):
+        try:
+            with open(self.config_path, 'r') as f:
+                return json.load(f)
+        except Exception:
+            return {
+                "flux_threshold_mult": 2.05,
+                "flux_threshold_abs": 0.35,
+                "hpss_window": 7,
+                "hpss_freq_kernel": 15,
+                "eq_bass_offset": 0.08,
+                "eq_bass_mult": 0.5,
+                "eq_lowmid_offset": 0.03,
+                "eq_lowmid_mult": 0.7
+            }
+            
+    def hot_reload(self):
+        self.p = self._load_params()
+        self.flux_threshold_mult = self.p.get("flux_threshold_mult", 2.05)
+        self.flux_threshold_abs = self.p.get("flux_threshold_abs", 0.35)
+        
+        new_hpss_window = self.p.get("hpss_window", 7)
+        if new_hpss_window != self.hpss_window:
+            self.hpss_window = new_hpss_window
+            # Recreate history with new maxlen and preserve old items if possible
+            old_items = list(self.fft_history)
+            self.fft_history = collections.deque(maxlen=self.hpss_window)
+            for item in old_items[-self.hpss_window:]:
+                self.fft_history.append(item)
+                
+        self.hpss_freq_kernel = self.p.get("hpss_freq_kernel", 15)
 
     def get_signal_health(self):
         """Analyze raw peak history to detect environment-level issues (Spotify vol, ALSA)."""
@@ -111,6 +153,19 @@ class AudioAnalyzer:
             self.history_flux.clear()
             self.history_raw_max.clear()
             self.cumulative_max = 3.0  # Reset to low baseline for quick auto-warmup
+            
+            # Clear all auxiliary history queues to prevent scale mismatches
+            self.history_bass.clear()
+            self.history_mid.clear()
+            self.history_high.clear()
+            self.history_bass_p.clear()
+            self.history_mid_p.clear()
+            self.history_high_p.clear()
+            self.history_bass_h.clear()
+            self.history_mid_h.clear()
+            self.history_high_h.clear()
+            self.history_flux_old.clear()
+            
             for bi in range(6):
                 self.history_bins_p_max[bi].clear()
                 self.cumulative_bins_p_max[bi] = 2.0
@@ -181,10 +236,16 @@ class AudioAnalyzer:
         if indata.size == 0: return self.get_empty_state()
         if now is None: now = time.time()
         
+        # Hot-reload check (every 5 seconds)
+        if now - self.last_param_load > 5.0:
+            self.hot_reload()
+            self.last_param_load = now
+            
         # Initialize timestamps on first frame to support virtual time / reset
         if not hasattr(self, '_time_initialized') or now < self.last_sound_time - 10.0:
             self.last_sound_time = now
             self.prev_beat_timestamp = now - 1.0
+            self.prev_beat_timestamp_actual = now - 1.0
             self._time_initialized = True
 
         # 1. Clean & FFT
@@ -219,13 +280,10 @@ class AudioAnalyzer:
             harmonic_fft = np.median(self.fft_history, axis=0)
             
             # Vertical (frequency-axis) median filter tracking to isolate sharp percussive lines
-            pad_size = 2  # Local padding size mathematically required to center a 5-bin evaluation window
+            pad_size = self.hpss_freq_kernel // 2  # 7 for a 15-bin kernel
             padded = np.pad(fft_raw, pad_size, mode='edge')
-            L = len(fft_raw)
-            stacked = np.stack([
-                padded[0:L], padded[1:L+1], padded[2:L+2], padded[3:L+3], padded[4:L+4]
-            ], axis=0)
-            percussive_fft = np.median(stacked, axis=0)
+            filtered = medfilt(padded, self.hpss_freq_kernel)
+            percussive_fft = filtered[pad_size:-pad_size]
             
             # Soft masking calculation to resolve structural energy assignment profiles
             h_sq = harmonic_fft ** 2
@@ -286,6 +344,15 @@ class AudioAnalyzer:
         self.smooth_raw_vol = self.smooth_raw_vol * 0.7 + current_raw_vol * 0.3
         raw_vol = self.smooth_raw_vol
         
+        # Check silence early, before committing values to histories or decaying cumulative peak reference
+        if raw_vol < 0.00001:
+            if now - self.last_sound_time > 5.0:
+                self.bpm = 120.0
+                self.bpm_list = []
+            return self.get_empty_state()
+        
+        self.last_sound_time = now
+        
         # 3.8 SPECTRAL complexity (Shimmer)
         # Ratio of Mid+High energy to Bass energy.
         # High complexity = Busy Peak (High Vibe)
@@ -312,16 +379,6 @@ class AudioAnalyzer:
         # Reference peak is the maximum of recent history or the cumulative ceiling
         global_peak = max(self.cumulative_max, max(self.history_raw_max) if self.history_raw_max else self.cumulative_max)
         self.history_raw_max.append(current_raw_max)
-
-        if raw_vol > 0.00001:  # Lowered from 0.0002 for sensitvity
-            self.last_sound_time = now
-        elif now - self.last_sound_time > 5.0:
-            self.bpm = 120.0
-            self.bpm_list = []
-            return self.get_empty_state()
-        
-        if raw_vol < 0.00001:  # Lowered from 0.0002 for sensitivity
-            return self.get_empty_state()
 
         # --- Timbre (Spectral Ratios) ---
         total_energy = sum(raw_bins) + 1e-6
@@ -388,26 +445,32 @@ class AudioAnalyzer:
         self.history_high_p.append(raw_high_p)
         
         # Find rolling max of the bass percussive band to use as a baseline reference
-        max_bass_ref = max(self.history_bass_p) if len(self.history_bass_p) >= 10 else 1.0
-        max_bass_ref = max(5.0, max_bass_ref) # Sane floor for quiet starts
-        
-        # Normalize bass_p
-        min_bass = min(self.history_bass_p)
-        max_bass = max(self.history_bass_p)
-        sane_peak_bass = max(5.0, max_bass)
-        out_bass_p = (raw_bass_p - min_bass) / (sane_peak_bass - min_bass + 1e-6)
-        
-        # Normalize mid_p, enforcing that its peak reference is at least 25% of the bass peak reference
-        min_mid = min(self.history_mid_p)
-        max_mid = max(self.history_mid_p)
-        sane_peak_mid = max(max_bass_ref * 0.25, max_mid)
-        out_mid_p = (raw_mid_p - min_mid) / (sane_peak_mid - min_mid + 1e-6)
-        
-        # Normalize high_p, enforcing that its peak reference is at least 12% of the bass peak reference
-        min_high = min(self.history_high_p)
-        max_high = max(self.history_high_p)
-        sane_peak_high = max(max_bass_ref * 0.12, max_high)
-        out_high_p = (raw_high_p - min_high) / (sane_peak_high - min_high + 1e-6)
+        if len(self.history_bass_p) < 10 or len(self.history_mid_p) < 10 or len(self.history_high_p) < 10:
+            out_bass_p = 0.5
+            out_mid_p = 0.5
+            out_high_p = 0.5
+            max_bass_ref = 1.0
+        else:
+            max_bass_ref = max(self.history_bass_p)
+            max_bass_ref = max(5.0, max_bass_ref) # Sane floor for quiet starts
+            
+            # Normalize bass_p
+            min_bass = min(self.history_bass_p)
+            max_bass = max(self.history_bass_p)
+            sane_peak_bass = max(5.0, max_bass)
+            out_bass_p = (raw_bass_p - min_bass) / (sane_peak_bass - min_bass + 1e-6)
+            
+            # Normalize mid_p, enforcing that its peak reference is at least 25% of the bass peak reference
+            min_mid = min(self.history_mid_p)
+            max_mid = max(self.history_mid_p)
+            sane_peak_mid = max(max_bass_ref * 0.25, max_mid)
+            out_mid_p = (raw_mid_p - min_mid) / (sane_peak_mid - min_mid + 1e-6)
+            
+            # Normalize high_p, enforcing that its peak reference is at least 12% of the bass peak reference
+            min_high = min(self.history_high_p)
+            max_high = max(self.history_high_p)
+            sane_peak_high = max(max_bass_ref * 0.12, max_high)
+            out_high_p = (raw_high_p - min_high) / (sane_peak_high - min_high + 1e-6)
 
         # Scale outputs by gain
         out_bass_p = min(1.0, max(0.0, out_bass_p) * self.gain * 2.0)
@@ -446,12 +509,11 @@ class AudioAnalyzer:
             val = float(raw_bins[bi])
             # Bass Optimization: gate sub-bass noise floor and downscale to prevent
             # low-end energy from dominating the bin array and inflating impact scores.
-            if bi == 0: val = max(0.0, val - 0.08) * 0.5
-            if bi == 1: val = max(0.0, val - 0.03) * 0.7
+            if bi == 0: val = max(0.0, val - self.p.get("eq_bass_offset", 0.08)) * self.p.get("eq_bass_mult", 0.5)
+            if bi == 1: val = max(0.0, val - self.p.get("eq_lowmid_offset", 0.03)) * self.p.get("eq_lowmid_mult", 0.7)
             normalized = min(1.0, (val / global_peak) * self.gain)
             
             # --- SNAPPY FREQUENCY-AWARE SMOOTHING ---
-            # Using Gold Standard Coefficients from self.smoothing_configs
             s_factor = self.smoothing_configs[bi]
             
             out_bins[bi] = min(1.0, max(0.0, self.prev_bins[bi] * s_factor + normalized * (1.0 - s_factor)))
@@ -463,77 +525,129 @@ class AudioAnalyzer:
             avg_flux_old = sum(self.history_flux_old) / len(self.history_flux_old)
             if flux_old > avg_flux_old * self.flux_threshold_mult and flux_old > self.flux_threshold_abs:
                 if now - self.prev_beat_timestamp_old > 0.35:
-                    is_beat_old = True
-                    self.beat_count_old += 1
-                    delta_old = now - self.prev_beat_timestamp_old
-                    self.prev_beat_timestamp_old = now
-                    self.bpm_list_old.append(60.0 / delta_old)
-                    if len(self.bpm_list_old) > 12:
-                        self.bpm_list_old.pop(0)
-                    self.bpm_old = sum(self.bpm_list_old) / len(self.bpm_list_old)
+                    if self.beat_count_old == 0:
+                        self.beat_count_old = 1
+                        self.prev_beat_timestamp_old = now
+                    else:
+                        is_beat_old = True
+                        self.beat_count_old += 1
+                        delta_old = now - self.prev_beat_timestamp_old
+                        self.prev_beat_timestamp_old = now
+                        self.bpm_list_old.append(60.0 / delta_old)
+                        if len(self.bpm_list_old) > 12:
+                            self.bpm_list_old.pop(0)
+                        sorted_list = sorted(self.bpm_list_old)
+                        self.bpm_old = sorted_list[len(sorted_list) // 2]
 
         self.history_flux_old.append(flux_old)
 
-        # 7. ADAPTIVE BEAT DETECTION (PLL)
+        # 7. ADAPTIVE BEAT DETECTION WITH BUILD-UP SCALING (PLL)
+        # Dynamically modulates effective lockout constraints purely inside the local frame match pass.
         is_beat = False
         if len(self.history_flux) > 0:
             avg_flux = sum(self.history_flux) / len(self.history_flux)
             if flux > avg_flux * self.flux_threshold_mult and flux > self.flux_threshold_abs:
-                # Dynamic lockout: 55% of tracked beat period
+                # Resolve ratio using raw, unnormalized percussive bands to prevent quiet-intro scaling inflation
+                transient_ratio = raw_high_p / (raw_bass_p + 1e-6)
+                
+                # Baseline gate on raw high percussive energy to eliminate background noise floor triggering
+                # Note: 1.0 energy threshold is an inference based on the 25.0 cumulative_max engine constraint
+                raw_build = min(1.0, max(0.0, (transient_ratio - 0.2) / 0.8)) if raw_high_p > 1.0 else 0.0
+
+                # Asymmetric one-pole smoothing filter: Rapid attack to catch fast rolls, heavy dampening decay
+                alpha = 0.3 if raw_build > self.smooth_build_up else 0.95
+                self.smooth_build_up = self.smooth_build_up * alpha + raw_build * (1.0 - alpha)
+                build_up_intensity = self.smooth_build_up
+
                 if len(self.beat_intervals) >= 2:
-                    sorted_ibi = sorted(self.beat_intervals)
-                    self.pll_period = float(sorted_ibi[len(sorted_ibi) // 2])
-                    # Clamp pll_period to sane tempos [45 BPM, 185 BPM] -> [1.333s, 0.324s]
+                    # Using mean instead of median to eliminate quantization snap-to-grid wobble
+                    self.pll_period = sum(self.beat_intervals) / len(self.beat_intervals)
                     self.pll_period = max(0.324, min(1.333, self.pll_period))
-                    lockout = max(self.lockout_floor, self.pll_period * self.lockout_ratio)
-                else:
-                    lockout = 0.35  # Cold-start fallback
-
-                if now - self.prev_beat_timestamp > lockout:
-                    is_beat = True
-                    self.beat_count += 1
-                    delta = now - self.prev_beat_timestamp
-
-                    # Integer multiplier matching for syncopation resilience
-                    time_elapsed = now - self.prev_beat_timestamp
-                    elapsed_cycles = max(1, round(time_elapsed / self.pll_period))
-
-                    # Phase-locked grid correction relative to closest rhythmic step
-                    expected_beat = self.prev_beat_timestamp + (elapsed_cycles * self.pll_period)
-                    phase_error = now - expected_beat
-                    tolerance = self.pll_period * 0.25
-
-                    if abs(phase_error) < tolerance and len(self.beat_intervals) >= 2:
-                        # Soft PLL pull: absorb 35% of timing deviation
-                        self.prev_beat_timestamp = expected_beat + phase_error * self.pll_correction
-                    else:
-                        # Hard reset: tempo transition or cold start
-                        self.prev_beat_timestamp = now
-
-                    self.bpm_list.append(60.0 / delta)
-                    if len(self.bpm_list) > 12:
-                        self.bpm_list.pop(0)
-                    self.bpm = sum(self.bpm_list) / len(self.bpm_list)
                     
-                    # Clamp the stored interval delta to maintain safe boundaries
-                    clamped_delta = max(0.324, min(1.333, delta))
-                    self.beat_intervals.append(clamped_delta)
+                    # Compress the lockout envelope during high-velocity high-frequency build-ups
+                    dynamic_ratio = self.lockout_ratio * (1.0 - build_up_intensity * 0.65)
+                    
+                    # Raise the collapse floor slightly to protect against sub-50ms shell resonance double-triggers
+                    # Note: 0.060s (60ms) hard clamp floor is an inference optimized for musical 32nd-note transparency
+                    dynamic_floor = max(0.060, self.lockout_floor * (1.0 - build_up_intensity * 0.55))
+                    lockout = max(dynamic_floor, self.pll_period * dynamic_ratio)
+                else:
+                    lockout = 0.35 * (1.0 - build_up_intensity * 0.65)
 
-                    # Rhythmic Validation Guard / Safety Check (Corrective)
-                    outside_expected = (self.bpm > 185 or self.bpm < 45)
-                    if outside_expected:
-                        ratio = self.bpm / (self.bpm_old + 1e-6)
-                        is_harmonic = (abs(ratio - 2.0) < 0.15) or (abs(ratio - 0.5) < 0.15) or (abs(ratio - 1.0) < 0.15)
-                        if not is_harmonic:
-                            # Reset PLL state to the shadow tracker's stable tempo
-                            self.beat_intervals.clear()
-                            sane_delta = 60.0 / self.bpm_old
-                            self.beat_intervals.append(sane_delta)
-                            self.beat_intervals.append(sane_delta)
-                            self.pll_period = sane_delta
+                if now - self.prev_beat_timestamp_actual > lockout:
+                    if self.beat_count == 0:
+                        self.beat_count = 1
+                        self.prev_beat_timestamp = now
+                        self.prev_beat_timestamp_actual = now
+                        is_beat = True
+                    else:
+                        delta = now - self.prev_beat_timestamp_actual
+
+                        # Harmonic interval classification against current PLL period
+                        # Prevents outlier intervals from corrupting beat_intervals and bpm_list
+                        grid_ratio = delta / self.pll_period if len(self.beat_intervals) >= 2 else 1.0
+
+                        if grid_ratio < 0.6:
+                            # Sub-beat double-trigger: reject but do NOT update timestamps so we measure next beat from last accepted
+                            pass
+                        elif grid_ratio > 4.5:
+                            # Extended gap: reject and update timestamps to reset grid
+                            self.prev_beat_timestamp_actual = now
                             self.prev_beat_timestamp = now
-                            self.bpm = self.bpm_old
-                            self.bpm_list = [self.bpm_old]
+                        else:
+                            # Accepted: on-grid (0.6-1.5) or missed-beat requiring fold (1.5-4.5)
+                            is_beat = True
+                            self.beat_count += 1
+
+                            store_delta = delta
+                            if grid_ratio > 1.5:
+                                # Missed beat(s): fold down to per-beat interval
+                                fold_div = max(1, round(delta / self.pll_period))
+                                store_delta = delta / fold_div
+
+                            # Integer multiplier matching for syncopation resilience
+                            elapsed_cycles = max(1, round(delta / self.pll_period))
+
+                            # Phase-locked grid correction relative to closest rhythmic step
+                            expected_beat = self.prev_beat_timestamp + (elapsed_cycles * self.pll_period)
+                            phase_error = now - expected_beat
+                            tolerance = self.pll_period * 0.25
+
+                            if abs(phase_error) < tolerance and len(self.beat_intervals) >= 2:
+                                # Soft PLL pull: absorb 35% of timing deviation
+                                self.prev_beat_timestamp = expected_beat + phase_error * self.pll_correction
+                            else:
+                                # Hard reset: tempo transition or cold start
+                                self.prev_beat_timestamp = now
+
+                            self.prev_beat_timestamp_actual = now
+
+                            # Clamp the folded interval to maintain safe boundaries
+                            clamped_delta = max(0.324, min(1.333, store_delta))
+                            self.beat_intervals.append(clamped_delta)
+                            
+                            # Derive BPM directly from the heavily filtered median PLL period for maximum stability
+                            if self.manual_bpm_override:
+                                self.bpm = float(self.manual_bpm_override)
+                                self.pll_period = 60.0 / self.bpm
+                            else:
+                                self.bpm = (60.0 / self.pll_period)
+
+                            # Rhythmic Validation Guard / Safety Check (Corrective)
+                            outside_expected = (self.bpm > 185 or self.bpm < 45)
+                            if outside_expected:
+                                guard_ratio = self.bpm / (self.bpm_old + 1e-6)
+                                is_harmonic = (abs(guard_ratio - 2.0) < 0.15) or (abs(guard_ratio - 0.5) < 0.15) or (abs(guard_ratio - 1.0) < 0.15)
+                                if not is_harmonic:
+                                    # Reset PLL state to the shadow tracker's stable tempo
+                                    self.beat_intervals.clear()
+                                    sane_delta = 60.0 / self.bpm_old
+                                    self.beat_intervals.append(sane_delta)
+                                    self.beat_intervals.append(sane_delta)
+                                    self.pll_period = sane_delta
+                                    self.prev_beat_timestamp = now
+                                    self.prev_beat_timestamp_actual = now
+                                    self.bpm = self.bpm_old
         
         # Store weighted flux for adaptive thresholding
         # (CRITICAL: History must match current flux for the multiplier to be valid)
@@ -695,20 +809,32 @@ class AudioAnalyzer:
             out_mid_l  = min(1.0, normalize_value(bands_l['mid'], self.history_mid) * self.gain)
             out_high_l = min(1.0, normalize_value(bands_l['high'], self.history_high) * self.gain)
 
-            min_bass_p = min(self.history_bass_p) if self.history_bass_p else 0.0
-            max_bass_p = max(self.history_bass_p) if self.history_bass_p else 5.0
-            sane_peak_bass_p = max(5.0, max_bass_p)
-            out_bass_p_l = min(1.0, max(0.0, (bands_l['bass_p'] - min_bass_p) / (sane_peak_bass_p - min_bass_p + 1e-6)) * self.gain * 2.0)
+            if len(self.history_bass_p) < 10 or len(self.history_mid_p) < 10 or len(self.history_high_p) < 10:
+                out_bass_p_l = 0.5
+                out_mid_p_l = 0.5
+                out_high_p_l = 0.5
+                
+                out_bass_p_r = 0.5
+                out_mid_p_r = 0.5
+                out_high_p_r = 0.5
+            else:
+                min_bass_p = min(self.history_bass_p)
+                max_bass_p = max(self.history_bass_p)
+                sane_peak_bass_p = max(5.0, max_bass_p)
+                out_bass_p_l = min(1.0, max(0.0, (bands_l['bass_p'] - min_bass_p) / (sane_peak_bass_p - min_bass_p + 1e-6)) * self.gain * 2.0)
+                out_bass_p_r = min(1.0, max(0.0, (bands_r['bass_p'] - min_bass_p) / (sane_peak_bass_p - min_bass_p + 1e-6)) * self.gain * 2.0)
 
-            min_mid_p = min(self.history_mid_p) if self.history_mid_p else 0.0
-            max_mid_p = max(self.history_mid_p) if self.history_mid_p else 1.25
-            sane_peak_mid_p = max(max_bass_ref * 0.25, max_mid_p)
-            out_mid_p_l = min(1.0, max(0.0, (bands_l['mid_p'] - min_mid_p) / (sane_peak_mid_p - min_mid_p + 1e-6)) * self.gain * 2.0)
+                min_mid_p = min(self.history_mid_p)
+                max_mid_p = max(self.history_mid_p)
+                sane_peak_mid_p = max(max_bass_ref * 0.25, max_mid_p)
+                out_mid_p_l = min(1.0, max(0.0, (bands_l['mid_p'] - min_mid_p) / (sane_peak_mid_p - min_mid_p + 1e-6)) * self.gain * 2.0)
+                out_mid_p_r = min(1.0, max(0.0, (bands_r['mid_p'] - min_mid_p) / (sane_peak_mid_p - min_mid_p + 1e-6)) * self.gain * 2.0)
 
-            min_high_p = min(self.history_high_p) if self.history_high_p else 0.0
-            max_high_p = max(self.history_high_p) if self.history_high_p else 0.6
-            sane_peak_high_p = max(max_bass_ref * 0.12, max_high_p)
-            out_high_p_l = min(1.0, max(0.0, (bands_l['high_p'] - min_high_p) / (sane_peak_high_p - min_high_p + 1e-6)) * self.gain * 2.0)
+                min_high_p = min(self.history_high_p)
+                max_high_p = max(self.history_high_p)
+                sane_peak_high_p = max(max_bass_ref * 0.12, max_high_p)
+                out_high_p_l = min(1.0, max(0.0, (bands_l['high_p'] - min_high_p) / (sane_peak_high_p - min_high_p + 1e-6)) * self.gain * 2.0)
+                out_high_p_r = min(1.0, max(0.0, (bands_r['high_p'] - min_high_p) / (sane_peak_high_p - min_high_p + 1e-6)) * self.gain * 2.0)
 
             out_bass_h_l = min(1.0, normalize_value(bands_l['bass_h'], self.history_bass_h) * self.gain)
             out_mid_h_l  = min(1.0, normalize_value(bands_l['mid_h'], self.history_mid_h) * self.gain)
@@ -723,10 +849,6 @@ class AudioAnalyzer:
             out_bass_r = min(1.0, normalize_value(bands_r['bass'], self.history_bass) * self.gain)
             out_mid_r  = min(1.0, normalize_value(bands_r['mid'], self.history_mid) * self.gain)
             out_high_r = min(1.0, normalize_value(bands_r['high'], self.history_high) * self.gain)
-
-            out_bass_p_r = min(1.0, max(0.0, (bands_r['bass_p'] - min_bass_p) / (sane_peak_bass_p - min_bass_p + 1e-6)) * self.gain * 2.0)
-            out_mid_p_r = min(1.0, max(0.0, (bands_r['mid_p'] - min_mid_p) / (sane_peak_mid_p - min_mid_p + 1e-6)) * self.gain * 2.0)
-            out_high_p_r = min(1.0, max(0.0, (bands_r['high_p'] - min_high_p) / (sane_peak_high_p - min_high_p + 1e-6)) * self.gain * 2.0)
 
             out_bass_h_r = min(1.0, normalize_value(bands_r['bass_h'], self.history_bass_h) * self.gain)
             out_mid_h_r  = min(1.0, normalize_value(bands_r['mid_h'], self.history_mid_h) * self.gain)

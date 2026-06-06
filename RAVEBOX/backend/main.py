@@ -191,6 +191,7 @@ last_callback_time = time.time()
 dmx_port = None
 network_dmx_node = None
 audio_state = { "bass": 0.0, "mid": 0.0, "high": 0.0, "vol": 0.0, "flux": 0.0, "beat": False, "device_name": "None", "bpm": 120.0 }
+audio_state_lock = threading.Lock()
 gamepad_state = {
     "ls_x": 0.5, "ls_y": 0.5, "rs_x": 0.5, "rs_y": 0.5,
     "lt": 0.0, "rt": 0.0,
@@ -216,6 +217,13 @@ last_state_payload = "{}"
 last_broadcast_time = 0.0 # Signal all handlers to send when updated
 broadcast_version = 0 # Monotonic version for WS sync
 state_broadcast_version = 0 # Track JSON state version
+training_mode_active = True # Default to Live shadow analysis
+training_log_done = False
+track_start_time = None
+current_saved_bpm = None
+
+# True background shadow node for continuous ML logging regardless of sync mode
+shadow_analyzer = AudioAnalyzer()
 
 # Cache for visualizer params to persist them even if frontend isn't active
 visual_params_cache = {
@@ -808,16 +816,47 @@ def audio_worker_thread():
     global audio_state, last_lookup_t
     print("🧠 Audio Worker Thread Started")
     
+    last_param_load = 0.0
+    latency_offset = -0.150
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tuning_config', 'engine_params.json')
+    
     while True:
         try:
-            # Block until we get a frame
-            indata = audio_queue.get(block=True)
-            # Heavy Analysis
+            # Block until we get a frame, with timeout so we don't hang if injected/paused
+            try:
+                indata = audio_queue.get(block=True, timeout=0.1)
+            except queue.Empty:
+                continue
+
+            if time.time() - last_injection_time < 2.0:
+                audio_queue.task_done()
+                continue
+            
+            # 1. Process Raw Audio (Or use ground-truth override)
             new_audio_state = analyzer.process(indata)
             
+            # Feed the shadow tracker so it continuously learns organically
+            shadow_analyzer.process(indata)
+            
+            # Hot-reload latency_offset every 5 seconds
+            now = time.time()
+            if now - last_param_load > 5.0:
+                try:
+                    if os.path.exists(config_path):
+                        with open(config_path, 'r') as f:
+                            p = json.load(f)
+                            latency_offset = p.get("latency_offset", -0.150)
+                except Exception as e:
+                    print(f"⚠️ Failed to load latency_offset from params: {e}")
+                last_param_load = now
+            
             # 2. Check if Spotify is active and track is cached
-            spotify_info = audio_state.get('spotify', {})
+            with audio_state_lock:
+                spotify_info = audio_state.get('spotify', {}).copy()
             track_id = spotify_info.get('id')
+            
+            # [TESTING] Temporarily override track_id to disable offline audit telemetry
+            track_id = None
             
             if track_id:
                 cached_manager.load_track(track_id)
@@ -832,7 +871,6 @@ def audio_worker_thread():
                 progress_sec = (progress_ms / 1000.0) + elapsed
                 
                 # Latency offset to match physical audio playback
-                latency_offset = -0.150 
                 t = progress_sec + latency_offset
                 
                 lookup = cached_manager.get_lookup_state(t)
@@ -936,20 +974,23 @@ def audio_worker_thread():
                                 new_audio_state['left'][key] = vibe_results[key]
                             if 'right' in new_audio_state and isinstance(new_audio_state['right'], dict):
                                 new_audio_state['right'][key] = vibe_results[key]
-
-            # Latch transient beats and onsets so they aren't missed by ws tick rates
-            if new_audio_state.get('beat', False):
-                audio_state['beat_pending'] = True
-            if new_audio_state.get('bass_onset', False):
-                audio_state['bass_onset_pending'] = True
-            if new_audio_state.get('high_onset', False):
-                audio_state['high_onset_pending'] = True
-
-            # Preserve Spotify metadata injected by the async poller
-            if 'spotify' in audio_state:
-                new_audio_state['spotify'] = audio_state['spotify']
+ 
+            # Write/mutate audio_state with lock:
+            with audio_state_lock:
+                # Latch transient beats and onsets so they aren't missed by ws tick rates
+                if new_audio_state.get('beat', False):
+                    audio_state['beat_pending'] = True
+                if new_audio_state.get('bass_onset', False):
+                    audio_state['bass_onset_pending'] = True
+                if new_audio_state.get('high_onset', False):
+                    audio_state['high_onset_pending'] = True
+ 
+                # Preserve Spotify metadata injected by the async poller
+                if 'spotify' in audio_state:
+                    new_audio_state['spotify'] = audio_state['spotify']
+                    
+                audio_state.update(new_audio_state)
                 
-            audio_state.update(new_audio_state)
             audio_queue.task_done()
 
         except Exception as e:
@@ -986,18 +1027,29 @@ def pack_binary_state(current_time):
     speed_factor = dmx_engine.eff_speed if dmx_engine else 0.6
     GLOBAL_CLOCK += dt_val * speed_factor
     m_time = GLOBAL_CLOCK
+
+    # Thread-safe copy of audio_state and popping of pending flags
+    with audio_state_lock:
+        state_copy = audio_state.copy()
+        if not (dmx_engine and dmx_engine.is_paused):
+            beat_pending = audio_state.pop('beat_pending', False)
+            bass_pending = audio_state.pop('bass_onset_pending', False)
+            high_pending = audio_state.pop('high_onset_pending', False)
+        else:
+            beat_pending = bass_pending = high_pending = False
+
     if dmx_engine and dmx_engine.is_paused:
         # Use frozen values to stop visualizer jitter while paused
         if not hasattr(pack_binary_state, 'frozen_audio'):
             pack_binary_state.frozen_audio = {
-                'flux': audio_state.get('flux', 0.0),
-                'bass': audio_state.get('bass', 0.0),
-                'mid': audio_state.get('mid', 0.0),
-                'high': audio_state.get('high', 0.0),
-                'vol': audio_state.get('vol', 0.0),
-                'bpm': audio_state.get('bpm', 120.0),
-                'beat_phase': audio_state.get('beat_phase', 0.0),
-                'bins': audio_state.get('bins', [0.0]*6)[:]
+                'flux': state_copy.get('flux', 0.0),
+                'bass': state_copy.get('bass', 0.0),
+                'mid': state_copy.get('mid', 0.0),
+                'high': state_copy.get('high', 0.0),
+                'vol': state_copy.get('vol', 0.0),
+                'bpm': state_copy.get('bpm', 120.0),
+                'beat_phase': state_copy.get('beat_phase', 0.0),
+                'bins': state_copy.get('bins', [0.0]*6)[:]
             }
         
         frozen = pack_binary_state.frozen_audio
@@ -1018,20 +1070,20 @@ def pack_binary_state(current_time):
         if hasattr(pack_binary_state, 'frozen_audio'):
             delattr(pack_binary_state, 'frozen_audio')
             
-        flux = audio_state.get('flux', 0.0)
-        bass = audio_state.get('bass', 0.0)
-        mid = audio_state.get('mid', 0.0)
-        high = audio_state.get('high', 0.0)
-        vol = audio_state.get('vol', 0.0)
-        bpm = audio_state.get('bpm', 120.0)
-        beat_phase = audio_state.get('beat_phase', 0.0)
+        flux = state_copy.get('flux', 0.0)
+        bass = state_copy.get('bass', 0.0)
+        mid = state_copy.get('mid', 0.0)
+        high = state_copy.get('high', 0.0)
+        vol = state_copy.get('vol', 0.0)
+        bpm = state_copy.get('bpm', 120.0)
+        beat_phase = state_copy.get('beat_phase', 0.0)
         
-        bins = audio_state.get('bins', [0]*6)
+        bins = state_copy.get('bins', [0]*6)
         while len(bins) < 6: bins.append(0)
         
-        beat = 1 if (audio_state.get('beat', False) or audio_state.pop('beat_pending', False)) else 0
-        b_onset = 1 if (audio_state.get('bass_onset', False) or audio_state.pop('bass_onset_pending', False)) else 0
-        h_onset = 1 if (audio_state.get('high_onset', False) or audio_state.pop('high_onset_pending', False)) else 0
+        beat = 1 if (state_copy.get('beat', False) or beat_pending) else 0
+        b_onset = 1 if (state_copy.get('bass_onset', False) or bass_pending) else 0
+        h_onset = 1 if (state_copy.get('high_onset', False) or high_pending) else 0
     
     ax_a = ax_b = ax_c = ax_d = ax_e = 0.0
     if dmx_engine and dmx_engine.logic:
@@ -1060,15 +1112,15 @@ def pack_binary_state(current_time):
     
     # Pack HPSS bands and percussive behaviors (36 bytes)
     hpss_payload = struct.pack('<fffffffff',
-        float(audio_state.get('bass_p', 0.0)),
-        float(audio_state.get('mid_p', 0.0)),
-        float(audio_state.get('high_p', 0.0)),
-        float(audio_state.get('bass_h', 0.0)),
-        float(audio_state.get('mid_h', 0.0)),
-        float(audio_state.get('high_h', 0.0)),
-        float(audio_state.get('kick_behavior', 0.0)),
-        float(audio_state.get('snare_behavior', 0.0)),
-        float(audio_state.get('cymbal_behavior', 0.0))
+        float(state_copy.get('bass_p', 0.0)),
+        float(state_copy.get('mid_p', 0.0)),
+        float(state_copy.get('high_p', 0.0)),
+        float(state_copy.get('bass_h', 0.0)),
+        float(state_copy.get('mid_h', 0.0)),
+        float(state_copy.get('high_h', 0.0)),
+        float(state_copy.get('kick_behavior', 0.0)),
+        float(state_copy.get('snare_behavior', 0.0)),
+        float(state_copy.get('cymbal_behavior', 0.0))
     )
     
     # Return 86 + 513 + 36 = 635 bytes
@@ -1094,18 +1146,21 @@ async def fast_broadcast_loop():
             await asyncio.sleep(0.005) # ~200Hz base tick
             current_time = time.time()
             
+            with audio_state_lock:
+                audio_state_copy = audio_state.copy()
+            
             # --- 1. DMX RATE-LIMITED UPDATE ---
             if dmx_engine and (current_time - last_dmx_update) >= dmx_update_interval:
                 try:
                     dt = current_time - last_dmx_update if last_dmx_update > 0 else 0.016
-                    dmx_engine.update(dt, audio_state, visual_states, gamepad_state)
+                    dmx_engine.update(dt, audio_state_copy, visual_states, gamepad_state)
                     last_dmx_update = current_time
                     
                     if current_time - last_log > 0.5:
                         if dmx_port or network_dmx_node or dmx_engine:
                             health = analyzer.get_signal_health()
-                            vibe_name = audio_state.get('vibe', 'mid')
-                            print(f"DMX_OUT: Healthy | Vol: {audio_state['vol']:.2f} | Vibe: {vibe_name} | Signal: {health['status']} ({health['peak']:.1f})")
+                            vibe_name = audio_state_copy.get('vibe', 'mid')
+                            print(f"DMX_OUT: Healthy | Vol: {audio_state_copy['vol']:.2f} | Vibe: {vibe_name} | Signal: {health['status']} ({health['peak']:.1f})")
                             last_log = current_time
 
                     if dmx_port or network_dmx_node:
@@ -1119,7 +1174,7 @@ async def fast_broadcast_loop():
                         if recorder.is_recording:
                             # Capture names of active presets for timeline visualization
                             active_preset_names = dmx_engine.get_active_preset_names() if dmx_engine else []
-                            recorder.log_dmx(full_u, audio_state=audio_state, active_presets=active_preset_names)
+                            recorder.log_dmx(full_u, audio_state=audio_state_copy, active_presets=active_preset_names)
 
                         max_addr = 0
                         for inst in dmx_engine.stage_instances:
@@ -1160,7 +1215,8 @@ async def fast_broadcast_loop():
                 except ValueError as ve:
                     if not critical_error_sent:
                         print(f"🛑 CRITICAL RUNTIME ERROR: {ve}")
-                        audio_state['error'] = str(ve) 
+                        with audio_state_lock:
+                            audio_state['error'] = str(ve) 
                         critical_error_sent = True
                         dmx_engine = None
                 except Exception as e:
@@ -1171,7 +1227,7 @@ async def fast_broadcast_loop():
                 continue
                 
             # LOWER ACTION THRESHOLD and add grace period to prevent UI flickering on borderline signal
-            raw_act = audio_state.get('vol', 0.0) > 0.002 or audio_state.get('beat', False)
+            raw_act = audio_state_copy.get('vol', 0.0) > 0.002 or audio_state_copy.get('beat', False)
             if raw_act: 
                 broadcast_state["active_grace"] = 180 # ~3 seconds @ 60fps
             else:
@@ -1188,13 +1244,13 @@ async def fast_broadcast_loop():
                     broadcast_version += 1
                     
                     # Also prepare a lighter-weight JSON update for UI elements (Vibe changes, etc)
-                    current_vibe = audio_state.get('vibe', 'mid')
+                    current_vibe = audio_state_copy.get('vibe', 'mid')
                     state_dict = {
                         "type": "state",
                         "session_id": SESSION_ID,
                         "vibe": current_vibe,
                         "vibe_variant": dmx_engine.sync_indices.get(current_vibe, 0) + 1 if dmx_engine else 1,
-                        "transient": audio_state.get('transient', 'steady'),
+                        "transient": audio_state_copy.get('transient', 'steady'),
                         "active_presets": [p.get('id', p['name']) for p in dmx_engine.active_presets] if dmx_engine else [],
                         "manual_active_presets": list(dmx_engine.manual_active_presets) if dmx_engine else [],
                         "visual_commands": dmx_engine.active_visual_commands if dmx_engine else [],
@@ -1204,10 +1260,10 @@ async def fast_broadcast_loop():
                         "lab_dmx_val": dmx_engine.lab_dmx_val if dmx_engine else 0,
                         "overrides": list(dmx_engine.overrides.keys()) if dmx_engine else [],
                         "sensitivity": float(analyzer.gain),
-                        "spotify": audio_state.get('spotify')
+                        "spotify": audio_state_copy.get('spotify')
                     }
-                    if 'error' in audio_state:
-                         state_dict['error'] = audio_state['error']
+                    if 'error' in audio_state_copy:
+                         state_dict['error'] = audio_state_copy['error']
                     
                     new_state_str = json.dumps(state_dict)
                     if new_state_str != last_sent_state:
@@ -1265,8 +1321,9 @@ async def spotify_poller():
                     poll_interval = 60.0 # Check once per minute
                 
                 # Update frontend if it was just paused
-                if 'spotify' in audio_state:
-                    del audio_state['spotify']
+                with audio_state_lock:
+                    if 'spotify' in audio_state:
+                        del audio_state['spotify']
             else:
                 inactive_since = None
                 poll_interval = 5.0 # Standard active polling
@@ -1281,6 +1338,27 @@ async def spotify_poller():
                     # Extract Album Art (Spotify provides [High, Medium, Low] resolution)
                     images = track.get('album', {}).get('images', [])
                     
+                    # Load Manual BPM Override if available
+                    global current_saved_bpm, track_start_time, training_log_done
+                    bpm_file = os.path.join(os.path.dirname(__file__), '..', 'tuning_config', 'manual_bpm.json')
+                    current_saved_bpm = None
+                    try:
+                        if os.path.exists(bpm_file):
+                            with open(bpm_file, 'r') as f:
+                                overrides = json.load(f)
+                            if track_id in overrides and 'bpm' in overrides[track_id]:
+                                current_saved_bpm = overrides[track_id]['bpm']
+                                print(f"⏱️ Loaded Ground-Truth BPM for {track_name}: {current_saved_bpm}")
+                    except Exception as e:
+                        print(f"⚠️ Failed to load manual BPM override: {e}")
+                    
+                    if not training_mode_active:
+                        analyzer.manual_bpm_override = current_saved_bpm
+                    else:
+                        analyzer.manual_bpm_override = None
+                    
+                    track_start_time = time.time()
+                    training_log_done = False
                     # Store these in the outer scope / global so they persist across polls 
                     # for the same track
                     spotify_images = {
@@ -1294,17 +1372,34 @@ async def spotify_poller():
                 progress_ms = current_playing.get('progress_ms', 0)
                 duration_ms = track.get('duration_ms', 1)
                 
-                audio_state['spotify'] = {
-                    'id': track_id,
-                    'name': f"{track_name} - {artist_name}",
-                    'artist': artist_name,
-                    'track': track_name,
-                    'progress_ms': progress_ms,
-                    'duration_ms': duration_ms,
-                    'image_high': spotify_images.get('high'),
-                    'image_low': spotify_images.get('low'),
-                    'poll_time': time.time()
-                }
+                with audio_state_lock:
+                    audio_state['spotify'] = {
+                        'id': track_id,
+                        'name': f"{track_name} - {artist_name}",
+                        'artist': artist_name,
+                        'track': track_name,
+                        'progress_ms': progress_ms,
+                        'duration_ms': duration_ms,
+                        'image_high': spotify_images.get('high'),
+                        'image_low': spotify_images.get('low'),
+                        'poll_time': time.time()
+                    }
+                
+                # Training Telemetry check (Execute 20 seconds into a new track)
+                if not training_log_done and current_saved_bpm and track_start_time:
+                    if (time.time() - track_start_time) > 20:
+                        try:
+                            telemetry_path = os.path.join(os.path.dirname(__file__), '..', 'tuning_config', 'training_telemetry.csv')
+                            write_header = not os.path.exists(telemetry_path)
+                            with open(telemetry_path, 'a') as f:
+                                if write_header:
+                                    f.write("timestamp,track_id,track_name,saved_bpm,guessed_bpm,delta\n")
+                                delta = round(shadow_analyzer.bpm - current_saved_bpm, 2)
+                                f.write(f"{int(time.time())},{track_id},{track_name},{current_saved_bpm},{round(shadow_analyzer.bpm, 2)},{delta}\n")
+                            print(f"📊 Training Logged -> Truth: {current_saved_bpm} | Shadow Guess: {round(shadow_analyzer.bpm, 2)} | Delta: {delta}")
+                        except Exception as e:
+                            print(f"⚠️ Failed to write training telemetry: {e}")
+                        training_log_done = True
                 
         except spotipy.SpotifyException as se:
             err_str = str(se).lower()
@@ -1366,43 +1461,44 @@ async def ws_handler(websocket):
                             # Remote audio injection fallback
                             inject = data.get("data", {})
                             if inject:
-                                for k, v in inject.items():
-                                    audio_state[k] = v
-                                last_injection_time = time.time()
-                                
-                                # Ensure left/right channels have the updated audio parameters
-                                for side in ['left', 'right']:
-                                    if side not in audio_state or not isinstance(audio_state[side], dict):
-                                        audio_state[side] = {}
+                                with audio_state_lock:
                                     for k, v in inject.items():
-                                        audio_state[side][k] = v
-                                
-                                if vibe_engine:
-                                    if "vibe" not in inject and "transient" not in inject:
-                                        vibe_results = vibe_engine.update(audio_state, now=last_injection_time)
-                                        audio_state.update(vibe_results)
-                                        for key in ['vibe', 'mods']:
-                                            if key in vibe_results:
-                                                if 'left' in audio_state and isinstance(audio_state['left'], dict):
-                                                    audio_state['left'][key] = vibe_results[key]
-                                                if 'right' in audio_state and isinstance(audio_state['right'], dict):
-                                                    audio_state['right'][key] = vibe_results[key]
-                                    else:
-                                        v_val = inject.get("vibe", "mid")
-                                        t_val = inject.get("transient", "steady")
-                                        mods = {
-                                            "bass": audio_state.get("bass", 0.0),
-                                            "high": audio_state.get("high", 0.0),
-                                            "flux": audio_state.get("flux", 0.0),
-                                            "vol": audio_state.get("vol", 0.0),
-                                            "beat_phase": audio_state.get("beat_phase", 0.0)
-                                        }
-                                        audio_state["mods"] = mods
-                                        for side in ['left', 'right']:
-                                            if side in audio_state and isinstance(audio_state[side], dict):
-                                                audio_state[side]['vibe'] = v_val
-                                                audio_state[side]['transient'] = t_val
-                                                audio_state[side]['mods'] = mods
+                                        audio_state[k] = v
+                                    last_injection_time = time.time()
+                                    
+                                    # Ensure left/right channels have the updated audio parameters
+                                    for side in ['left', 'right']:
+                                        if side not in audio_state or not isinstance(audio_state[side], dict):
+                                            audio_state[side] = {}
+                                        for k, v in inject.items():
+                                            audio_state[side][k] = v
+                                    
+                                    if vibe_engine:
+                                        if "vibe" not in inject and "transient" not in inject:
+                                            vibe_results = vibe_engine.update(audio_state, now=last_injection_time)
+                                            audio_state.update(vibe_results)
+                                            for key in ['vibe', 'mods']:
+                                                if key in vibe_results:
+                                                    if 'left' in audio_state and isinstance(audio_state['left'], dict):
+                                                        audio_state['left'][key] = vibe_results[key]
+                                                    if 'right' in audio_state and isinstance(audio_state['right'], dict):
+                                                        audio_state['right'][key] = vibe_results[key]
+                                        else:
+                                            v_val = inject.get("vibe", "mid")
+                                            t_val = inject.get("transient", "steady")
+                                            mods = {
+                                                "bass": audio_state.get("bass", 0.0),
+                                                "high": audio_state.get("high", 0.0),
+                                                "flux": audio_state.get("flux", 0.0),
+                                                "vol": audio_state.get("vol", 0.0),
+                                                "beat_phase": audio_state.get("beat_phase", 0.0)
+                                            }
+                                            audio_state["mods"] = mods
+                                            for side in ['left', 'right']:
+                                                if side in audio_state and isinstance(audio_state[side], dict):
+                                                    audio_state[side]['vibe'] = v_val
+                                                    audio_state[side]['transient'] = t_val
+                                                    audio_state[side]['mods'] = mods
                                 
                         elif msg_type == "synth":
                             if synth:
@@ -1414,9 +1510,10 @@ async def ws_handler(websocket):
                                 # Remote audio injection fallback
                                 inject = data.get("data", {})
                                 if inject:
-                                    for k, v in inject.items():
-                                        if k in audio_state:
-                                            audio_state[k] = v
+                                    with audio_state_lock:
+                                        for k, v in inject.items():
+                                            if k in audio_state:
+                                                audio_state[k] = v
                                     last_injection_time = time.time()
                         
                         elif msg_type == "gamepad_axis":
@@ -1458,6 +1555,54 @@ async def ws_handler(websocket):
                             dev_name = data.get("device") or "all"
                             if dmx_engine:
                                 dmx_engine.clear_device_overrides(dev_name)
+
+                        elif msg_type == "toggle_training":
+                            global training_mode_active
+                            training_mode_active = not training_mode_active
+                            print(f"🔄 Training Mode: {'LIVE (Logging)' if training_mode_active else 'SYNC (Locked)'}")
+                            if not training_mode_active:
+                                analyzer.manual_bpm_override = current_saved_bpm
+                            else:
+                                analyzer.manual_bpm_override = None
+
+                        elif msg_type == "bpm_override":
+                            bpm_val = data.get("bpm")
+                            # 1. Update live analyzer
+                            if bpm_val and float(bpm_val) > 0:
+                                analyzer.manual_bpm_override = float(bpm_val)
+                                print(f"⏱️ Manual BPM Override: {bpm_val}")
+                            else:
+                                analyzer.manual_bpm_override = None
+                                print(f"⏱️ Manual BPM Override: Cleared")
+                            
+                            # 2. Save to tuning_config/manual_bpm.json keyed by track_id
+                            track_id = None
+                            with audio_state_lock:
+                                spotify_info = audio_state.get('spotify', {})
+                                if isinstance(spotify_info, dict):
+                                    track_id = spotify_info.get('id')
+                            
+                            if track_id:
+                                try:
+                                    bpm_file = os.path.join(os.path.dirname(__file__), '..', 'tuning_config', 'manual_bpm.json')
+                                    overrides = {}
+                                    if os.path.exists(bpm_file):
+                                        with open(bpm_file, 'r') as f:
+                                            overrides = json.load(f)
+                                    
+                                    if bpm_val and float(bpm_val) > 0:
+                                        if track_id not in overrides:
+                                            overrides[track_id] = {}
+                                        overrides[track_id]['bpm'] = float(bpm_val)
+                                    else:
+                                        if track_id in overrides and 'bpm' in overrides[track_id]:
+                                            del overrides[track_id]['bpm']
+                                    
+                                    with open(bpm_file, 'w') as f:
+                                        json.dump(overrides, f, indent=4)
+                                    print(f"💾 Saved manual BPM to {bpm_file} for track {track_id}")
+                                except Exception as e:
+                                    print(f"⚠️ Failed to save manual BPM: {e}")
                         
                         elif msg_type == "clear_channel_overrides":
                             # Clear specific channel overrides
@@ -1583,6 +1728,31 @@ async def ws_handler(websocket):
                                 global dmx_interface
                                 dmx_interface = str(data["dmx_interface"])
                                 print(f"🔌 DMX Interface Preference Updated: {dmx_interface}")
+                            
+                            # Save parameters to engine_params.json
+                            if "latency_offset" in data or "contrast_scale" in data or "vibe_reactivity" in data:
+                                ep_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tuning_config', 'engine_params.json')
+                                try:
+                                    ep = {}
+                                    if os.path.exists(ep_path):
+                                        with open(ep_path, 'r') as f:
+                                            ep = json.load(f)
+                                    
+                                    if "latency_offset" in data:
+                                        ep["latency_offset"] = float(data["latency_offset"])
+                                    if "contrast_scale" in data:
+                                        ep["contrast_scale"] = float(data["contrast_scale"])
+                                        if vibe_engine:
+                                            vibe_engine.contrast_scale = float(data["contrast_scale"])
+                                    if "vibe_reactivity" in data:
+                                        ep["vibe_reactivity"] = data["vibe_reactivity"]
+                                        if dmx_engine:
+                                            dmx_engine.vibe_reactivity = data["vibe_reactivity"]
+                                            
+                                    with open(ep_path, 'w') as f:
+                                        json.dump(ep, f, indent=4)
+                                except Exception as e:
+                                    print(f"⚠️ Failed to update engine_params.json: {e}")
                         
                         elif msg_type == "force_refresh":
                             # Broadcast refresh signal to all clients
@@ -1616,6 +1786,19 @@ async def ws_handler(websocket):
 
                         elif msg_type == "get_params":
                             # Send current system state to new clients
+                            lo_val = -0.150
+                            cs_val = 0.18
+                            vr_val = {"chill": 0.85, "mid": 1.0, "high": 2.0}
+                            try:
+                                ep_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tuning_config', 'engine_params.json')
+                                if os.path.exists(ep_path):
+                                    with open(ep_path, 'r') as f:
+                                        ep = json.load(f)
+                                        lo_val = ep.get("latency_offset", -0.150)
+                                        cs_val = ep.get("contrast_scale", 0.18)
+                                        vr_val = ep.get("vibe_reactivity", vr_val)
+                            except: pass
+
                             params = {
                                 "type": "current_params",
                                 "master": {
@@ -1624,7 +1807,10 @@ async def ws_handler(websocket):
                                     "audio_source": current_audio_mode,
                                     "vibe_splits": vibe_engine.vibe_splits if vibe_engine else {"chillMid": 33, "midHigh": 66},
                                     "intensity": dmx_engine.base_intensity if dmx_engine else 1.0,
-                                    "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1
+                                    "sceneFreq": dmx_engine.scene_freq if dmx_engine else 1,
+                                    "latency_offset": lo_val,
+                                    "contrast_scale": cs_val,
+                                    "vibe_reactivity": vr_val
                                 },
                                 "laser": {
                                     "speed": dmx_engine.base_speed if dmx_engine else 1.0,

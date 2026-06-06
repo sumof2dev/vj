@@ -33,10 +33,12 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             pass  # Client disconnected mid-transfer (normal for video streaming)
 
     def end_headers(self):
-        # Disable caching for all responses to ensure real-time updates
-        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-        self.send_header('Pragma', 'no-cache')
-        self.send_header('Expires', '0')
+        # Disable caching for all responses to ensure real-time updates, EXCEPT media files
+        # Browsers (Chrome) break HTML5 media seeking if Cache-Control: no-store is sent.
+        if not self.path.endswith(('.mp4', '.wav', '.mp3', '.webm', '.ogg')):
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
         self.send_header('Access-Control-Allow-Origin', '*')
         super().end_headers()
 
@@ -96,6 +98,14 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             session = qs.get('session', [None])[0]
             self._handle_audit(session)
+            return
+
+        # API: Load Training Data
+        if path == '/api/training/load':
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            session = qs.get('session', [None])[0]
+            self._handle_load_training(session)
             return
 
         # API: List Images
@@ -163,6 +173,10 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
 
         if path == '/api/descriptors.json':
             self._handle_get_descriptors()
+            return
+
+        if path == '/api/tuning/history':
+            self._handle_tuning_history()
             return
 
         if path == '/api/client_info':
@@ -239,6 +253,19 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             session = qs.get('session', [None])[0]
             self._handle_save_audit(session)
+            return
+
+        # API: Auto-Tune Engine
+        if path == '/api/tuning/start':
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            session = qs.get('session', [None])[0]
+            self._handle_tuning_start(session)
+            return
+            
+        # API: Apply Tuning
+        if path == '/api/tuning/apply':
+            self._handle_tuning_apply()
             return
 
         # NEW: Add Premade Descriptor
@@ -1082,6 +1109,101 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._send_json({"status": "ok", "file": fname})
         except Exception as e:
             print(f"❌ Error saving training data: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_load_training(self, session):
+        """Find the most recent training data file for a specific session"""
+        if not session or '..' in session:
+            self.send_error(400, "Invalid session")
+            return
+
+        train_dir = os.path.join(BASE_DIR, 'training_data')
+        if not os.path.exists(train_dir):
+            self._send_json({"status": "not_found"})
+            return
+
+        latest_file = None
+        latest_time = 0
+        try:
+            for f in os.listdir(train_dir):
+                if f.endswith('.json'):
+                    fpath = os.path.join(train_dir, f)
+                    try:
+                        with open(fpath, 'r') as fp:
+                            data = json.load(fp)
+                            if data.get('session') == session:
+                                mtime = os.path.getmtime(fpath)
+                                if mtime > latest_time:
+                                    latest_time = mtime
+                                    latest_file = fpath
+                    except Exception:
+                        pass
+                        
+            if latest_file:
+                with open(latest_file, 'r') as fp:
+                    data = json.load(fp)
+                self._send_json(data)
+            else:
+                self._send_json({"status": "not_found"})
+        except Exception as e:
+            print(f"❌ Error loading training data: {e}")
+            self.send_error(500, str(e))
+
+    def _handle_tuning_start(self, session):
+        """Triggers the auto_tune_engine script for a specific session."""
+        if not session or '..' in session:
+            self.send_error(400, "Invalid session")
+            return
+        try:
+            import subprocess
+            tune_script = os.path.join(BASE_DIR, 'backend', 'auto_tune_engine.py')
+            result = subprocess.run([sys.executable, tune_script, session], capture_output=True, text=True, timeout=120)
+            if result.returncode == 0:
+                self._send_json(json.loads(result.stdout))
+            else:
+                self.send_error(500, f"Tuning failed: {result.stderr}")
+        except Exception as e:
+            self.send_error(500, str(e))
+
+    def _handle_tuning_history(self):
+        """Returns the list of all historical tuning configurations."""
+        hist_dir = os.path.join(BASE_DIR, 'tuning_config', 'history')
+        if not os.path.exists(hist_dir):
+            self._send_json([])
+            return
+        
+        history = []
+        try:
+            for f in os.listdir(hist_dir):
+                if f.endswith('.json'):
+                    fpath = os.path.join(hist_dir, f)
+                    with open(fpath, 'r') as fp:
+                        history.append(json.load(fp))
+            # Sort descending by timestamp
+            history.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+            self._send_json(history)
+        except Exception as e:
+            self.send_error(500, str(e))
+
+    def _handle_tuning_apply(self):
+        """Applies a specific tuning configuration."""
+        length = int(self.headers.get('Content-Length', 0))
+        if length == 0:
+            self.send_error(400, "Missing payload")
+            return
+            
+        try:
+            data = json.loads(self.rfile.read(length))
+            if 'params' not in data:
+                self.send_error(400, "Missing params object")
+                return
+                
+            config_path = os.path.join(BASE_DIR, 'tuning_config', 'engine_params.json')
+            with open(config_path, 'w') as f:
+                json.dump(data['params'], f, indent=4)
+                
+            self._send_json({"status": "ok"})
+        except Exception as e:
             self.send_error(500, str(e))
 
     def _proxy_to_camera(self, subpath):

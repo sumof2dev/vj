@@ -11,10 +11,10 @@
         .sticky-viewer { padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #0f0f13; z-index: 10; border-bottom: 2px solid #222; position: relative; }
         .scrollable-content { padding: 20px; }
 
-        .controls { display: flex; gap: 10px; background: #1a1a24; padding: 15px; border-radius: 8px; border: 1px solid #333; justify-content: space-between; align-items: center; }
-        .session-info { flex-grow: 1; font-family: monospace; font-size: 14px; color: #aaa; }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; background: #1a1a24; padding: 15px; border-radius: 8px; border: 1px solid #333; justify-content: space-between; align-items: center; }
+        .session-info { flex-grow: 1; font-family: monospace; font-size: 14px; color: #aaa; min-width: 250px; }
         
-        .playback-controls { display: flex; gap: 8px; align-items: center; }
+        .playback-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         button { background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
         button:hover { background: #ff7979; }
         button.secondary { background: #34495e; }
@@ -93,7 +93,7 @@
                         Source: <span id="hostDisplay" style="color:#00f2ff; font-weight:bold;">Local</span>
                     </div>
                 </div>
-                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v61260858</span>
+                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v65261202</span>
             </div>
             <div class="playback-controls">
                 <select id="audio-source-select" style="background:#1a1a24; color:#fff; border:1px solid #444; border-radius:6px; padding:8px 12px; font-size:12px; font-weight:bold; cursor:pointer;" onchange="changeAudioSource(this.value)">
@@ -102,12 +102,16 @@
                     <option value="playback">Playback (WAV Live)</option>
                     <option value="librosa" id="opt-librosa" disabled>Librosa (Audited Only)</option>
                 </select>
-                <button class="step-btn" title="Step Back (0.05s) - Arrow Left" onclick="stepFrame(-1)">❮</button>
-                <button class="step-btn" title="Step Forward (0.05s) - Arrow Right" onclick="stepFrame(1)">❯</button>
+                <button class="step-btn" title="Step Back (1 Beat)" onclick="stepBeat(-1)">⏮</button>
+                <button class="step-btn" title="Step Back (0.05s)" onclick="stepFrame(-1)">❮</button>
+                <button class="step-btn" title="Step Forward (0.05s)" onclick="stepFrame(1)">❯</button>
+                <button class="step-btn" title="Step Forward (1 Beat)" onclick="stepBeat(1)">⏭</button>
                 <button class="secondary" id="btn-undo-train" style="display:none;" onclick="undoCorrection()">↩️ Undo</button>
                 <button class="secondary" id="btn-save-train" style="background:#27ae60; display:none;" onclick="saveTraining()">💾 Save Training</button>
+                <button class="secondary" id="btn-auto-tune" style="background:#f39c12; color:#000;" onclick="openTuningModal()">⚙️ Auto-Tune</button>
                 <button class="secondary" id="btn-deep-audit" style="background:#8e44ad;" onclick="triggerDeepAudit()">🔍 Deep Audit</button>
                 <button class="secondary" onclick="openSessionBrowser()">📂 Browse</button>
+                <button class="secondary" onclick="window.location.href='/'">🏠 Home</button>
             </div>
         </div>
 
@@ -216,6 +220,25 @@
     </div>
 </div>
 
+<!-- Auto-Tune Modal -->
+<div id="tuning-modal" class="modal-overlay" onclick="closeTuningModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 style="margin:0;">Auto-Tune Engine</h3>
+            <button onclick="closeTuningModal()" style="padding: 5px 10px; background:#333;">&times;</button>
+        </div>
+        <div class="modal-body" id="tuning-body">
+            <div id="tuning-status" style="margin-bottom:15px; color:#aaa; font-size:13px;">Click start to simulate parameters against the current training data.</div>
+            <button class="secondary" id="btn-run-tuning" style="background:#27ae60; width:100%; margin-bottom:15px;" onclick="startTuning()">▶ Start Parameter Sweep</button>
+            <div id="tuning-diff" style="font-family:monospace; font-size:12px; background:#111; padding:10px; border-radius:5px; margin-bottom:15px; display:none; max-height:200px; overflow-y:auto;"></div>
+            <button class="secondary" id="btn-apply-tuning" style="background:#00f2ff; color:#000; width:100%; display:none;" onclick="applyTuning()">Apply Optimal Settings</button>
+            <hr style="border-color:#333; margin: 15px 0;">
+            <h4 style="margin: 0 0 10px 0; color:#888;">Version History</h4>
+            <div id="tuning-history-list" style="max-height:150px; overflow-y:auto; border:1px solid #333; border-radius:5px; font-size:12px;"></div>
+        </div>
+    </div>
+</div>
+
 <script src="shared_setup.js"></script>
 
 <script>
@@ -273,7 +296,17 @@
     const performanceHeight = 22;
 
     let selectedAddrs = new Set();
-    let selectedAudio = new Set(['b', 'h', 'f', 'vl']);
+    let savedAudio = localStorage.getItem('vj_selected_audio');
+    let selectedAudio = savedAudio ? new Set(JSON.parse(savedAudio)) : new Set(['b', 'h', 'f', 'vl']);
+    
+    // Sync UI with saved selectedAudio shortly after load
+    setTimeout(() => {
+        ['b','m','h','f','vl','tf','tb'].forEach(key => {
+            const el = document.getElementById(`leg-${key}`);
+            if (el) el.classList.toggle('off', !selectedAudio.has(key));
+        });
+    }, 100);
+    
     let perfSegments = [];
     let currentSessionId = null;
     let ws = null;
@@ -291,6 +324,9 @@
     let pendingEndT = 0;
     let pendingLabel = '';
     let pendingType = ''; // 'vibe' or 'transient'
+    let isDragging = false;
+    let dragMode = ''; // 'new' or 'adjust'
+    let editIndex = -1;
     
     // Zoom & Scroll State
     let zoomLevel = 1.0;
@@ -320,6 +356,8 @@
     function toggleAudio(key) {
         if (selectedAudio.has(key)) selectedAudio.delete(key);
         else selectedAudio.add(key);
+        
+        localStorage.setItem('vj_selected_audio', JSON.stringify(Array.from(selectedAudio)));
         
         // Update Legend UI
         const el = document.getElementById(`leg-${key}`);
@@ -382,11 +420,77 @@
     });
 
     function stepFrame(dir) {
-        if (!activeMedia.src) return;
+        if (!activeMedia || !activeMedia.src) return;
         activeMedia.pause();
-        const target = Math.max(0, Math.min(maxTime, activeMedia.currentTime + (dir * FRAME_STEP)));
+        const target = Math.max(0, Math.min(maxTime, activeMedia.currentTime + (dir * 0.05)));
         activeMedia.currentTime = target;
         updateStatusDisplay();
+    }
+
+    function stepBeat(dir) {
+        if (!activeMedia) return;
+        let cT = activeMedia.currentTime;
+        
+        if (truthData && truthData.beat_times && truthData.beat_times.length > 0) {
+            const beats = truthData.beat_times;
+            if (dir > 0) {
+                for (let i = 0; i < beats.length; i++) {
+                    if (beats[i] > cT + 0.05) {
+                        cT = beats[i];
+                        break;
+                    }
+                }
+            } else {
+                for (let i = beats.length - 1; i >= 0; i--) {
+                    if (beats[i] < cT - 0.05) {
+                        cT = beats[i];
+                        break;
+                    }
+                }
+            }
+        } else {
+            cT += dir * 0.5; // Fallback half-second
+        }
+        
+        cT = Math.max(0, Math.min(cT, maxTime));
+        activeMedia.currentTime = cT;
+        updateStatusDisplay();
+    }
+
+    function updateStatusDisplay() {
+        if (!activeMedia) return;
+        const cT = activeMedia.currentTime;
+        const dur = maxTime || activeMedia.duration || 0;
+        
+        // Update detailed status text
+        if (typeof updateStatusDetail === 'function') {
+            updateStatusDetail();
+        } else {
+            statusEl.innerText = `${cT.toFixed(2)}s / ${dur.toFixed(2)}s`;
+        }
+        
+        // Auto-scroll timeline to follow playhead if zoomed in
+        const container = canvas.parentElement;
+        if (container && canvas.width > container.clientWidth && dur > 0) {
+            const currentX = (cT / dur) * canvas.width;
+            
+            if (!activeMedia.paused && !isDragging) {
+                // Smooth continuous tracking while playing
+                container.scrollLeft = currentX - container.clientWidth / 2;
+            } else {
+                // Margin paging while scrubbing/stepping (so you don't fight the auto-center)
+                const viewStart = container.scrollLeft;
+                const viewEnd = viewStart + container.clientWidth;
+                const margin = container.clientWidth * 0.15;
+                if (currentX > viewEnd - margin && currentX <= canvas.width) {
+                    container.scrollLeft = currentX - container.clientWidth / 2;
+                } else if (currentX < viewStart + margin) {
+                    container.scrollLeft = Math.max(0, currentX - container.clientWidth / 2);
+                }
+            }
+        }
+        
+        drawTimeline();
     }
 
     async function openSessionBrowser() {
@@ -441,6 +545,7 @@
         trackedAddrs = [];
         channelRoles = {};
         truthData = null;
+        trainingCorrections = [];
 
         const selectEl = document.getElementById('audio-source-select');
         if (selectEl) {
@@ -496,6 +601,7 @@
             }
             resizeCanvas();
             checkAndLoadAudit(folder);
+            checkAndLoadTraining(folder);
         } catch (e) {
             statusEl.innerText = `Error: ${e.message}`;
             logData = [];
@@ -826,7 +932,9 @@
         ctx.shadowBlur = 0;
     }
 
-    function updateStatusDisplay() {
+    // NOTE: Primary updateStatusDisplay with auto-scroll is defined earlier.
+    // This section adds the detail overlay on top of it.
+    function updateStatusDetail() {
         if (maxTime > 0) {
             const frame = logData.find(f => f.t >= activeMedia.currentTime);
             if (frame) {
@@ -847,7 +955,6 @@
                     if (vEl) vEl.innerText = frame.v[addr] !== undefined ? frame.v[addr] : '-';
                 });
             }
-            drawTimeline();
         }
     }
 
@@ -898,39 +1005,180 @@
     aud.ontimeupdate = () => { if(activeMedia === aud) updateStatusDisplay(); };
     aud.onseeked = () => { if(activeMedia === aud) updateStatusDisplay(); };
 
-    canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) + canvas.parentElement.scrollLeft;
+    function getPointerPos(e) {
+        if (e.touches && e.touches.length > 0) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: e.changedTouches[0].clientX - rect.left, y: e.changedTouches[0].clientY - rect.top };
+        }
+        return { x: e.offsetX, y: e.offsetY };
+    }
+
+    function handleDown(e) {
+        if (!activeMedia || logData.length === 0) return;
+        const pos = getPointerPos(e);
+        const x = pos.x;
+        const y = pos.y;
         const t = (x / canvas.width) * maxTime;
 
-        if (!isAwaitingEndClick) {
-            // Click 1: Start
-            pendingStartT = t;
-            pendingEndT = t; // initialize
-            isAwaitingEndClick = true;
-            statusEl.innerHTML = `<span style="color:#f1c40f;">Drag or click for END point...</span>`;
+        // Only allow highlighting/resizing dragging in the very top track (performance height = 35px)
+        // Seeking below 35px is handled by the click event instead
+        if (y > 35) return;
+
+        // Check if clicked on an existing training correction
+        const tolerance = (8 / canvas.width) * maxTime; // 8 pixels tolerance
+        
+        let foundEdge = -1;
+        let foundBody = -1;
+        
+        for (let i = trainingCorrections.length - 1; i >= 0; i--) {
+            const c = trainingCorrections[i];
+            if (Math.abs(c.e - t) <= tolerance) {
+                foundEdge = i;
+                break;
+            } else if (t >= c.s && t <= c.e) {
+                foundBody = i; // continue search for edges, but save body hit
+            }
+        }
+
+        if (foundEdge !== -1) {
+            isDragging = true;
+            dragMode = 'adjust';
+            editIndex = foundEdge;
+            statusEl.innerHTML = `<span style="color:#f1c40f;">Adjusting end point...</span>`;
+        } else if (foundBody !== -1) {
+            editIndex = foundBody;
+            pendingStartT = trainingCorrections[foundBody].s;
+            pendingEndT = trainingCorrections[foundBody].e;
+            document.getElementById('segment-info').innerText = `Range: ${pendingStartT.toFixed(2)}s - ${pendingEndT.toFixed(2)}s. select type:`;
+            document.getElementById('correction-modal').style.display = 'flex';
         } else {
-            // Click 2: End
+            isDragging = true;
+            dragMode = 'new';
+            pendingStartT = t;
             pendingEndT = t;
+            isAwaitingEndClick = true;
+            statusEl.innerHTML = `<span style="color:#f1c40f;">Dragging new selection...</span>`;
+        }
+        drawTimeline();
+    }
+
+    function handleUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        if (dragMode === 'new') {
             const s = Math.min(pendingStartT, pendingEndT);
             const eT = Math.max(pendingStartT, pendingEndT);
             
             pendingStartT = s;
             pendingEndT = eT;
             
-            document.getElementById('segment-info').innerText = `Range: ${s.toFixed(2)}s - ${eT.toFixed(2)}s. select type:`;
-            document.getElementById('correction-modal').style.display = 'flex';
+            if (eT - s < 0.1) {
+                // Smart snapping: Fill the gap from the previous segment's end to this click
+                let closestPrev = -1;
+                let closestDist = Infinity;
+                for (let i = 0; i < trainingCorrections.length; i++) {
+                    const c = trainingCorrections[i];
+                    if (c.e <= s) {
+                        const dist = s - c.e;
+                        if (dist < closestDist) {
+                            closestDist = dist;
+                            closestPrev = i;
+                        }
+                    }
+                }
+                
+                pendingStartT = (closestPrev !== -1) ? trainingCorrections[closestPrev].e : 0;
+                pendingEndT = s;
+                editIndex = -1;
+                document.getElementById('segment-info').innerText = `Range: ${pendingStartT.toFixed(2)}s - ${pendingEndT.toFixed(2)}s. select type:`;
+                document.getElementById('correction-modal').style.display = 'flex';
+            } else {
+                editIndex = -1;
+                document.getElementById('segment-info').innerText = `Range: ${s.toFixed(2)}s - ${eT.toFixed(2)}s. select type:`;
+                document.getElementById('correction-modal').style.display = 'flex';
+            }
+        } else if (dragMode === 'adjust') {
+            statusEl.innerHTML = `Endpoint adjusted.`;
+            editIndex = -1;
+            // Show save buttons just in case
+            document.getElementById('btn-undo-train').style.display = 'inline-block';
+            document.getElementById('btn-save-train').style.display = 'inline-block';
         }
+        
+        dragMode = '';
         drawTimeline();
+    }
+
+    function handleMove(e) {
+        const pos = getPointerPos(e);
+        const x = pos.x;
+        const t = (x / canvas.width) * maxTime;
+
+        if (isDragging) {
+            if (dragMode === 'new') {
+                pendingEndT = t;
+            } else if (dragMode === 'adjust') {
+                trainingCorrections[editIndex].e = Math.max(trainingCorrections[editIndex].s + 0.1, t);
+            }
+            drawTimeline();
+        } else {
+            const tolerance = (8 / canvas.width) * maxTime;
+            let cursor = 'crosshair';
+            for (let i = trainingCorrections.length - 1; i >= 0; i--) {
+                const c = trainingCorrections[i];
+                if (Math.abs(c.e - t) <= tolerance) {
+                    cursor = 'ew-resize';
+                    break;
+                } else if (t >= c.s && t <= c.e) {
+                    cursor = 'pointer';
+                    break;
+                }
+            }
+            canvas.style.cursor = cursor;
+        }
+    }
+
+    // Attach mouse events
+    canvas.addEventListener('mousedown', handleDown);
+    window.addEventListener('mouseup', handleUp);
+    canvas.addEventListener('mousemove', handleMove);
+
+    // Seek via click (works on both desktop and mobile)
+    // The browser only fires 'click' on a clean tap/click, NOT on swipes/drags
+    canvas.addEventListener('click', (e) => {
+        if (!activeMedia || logData.length === 0) return;
+        const rect = canvas.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        if (y > 35) {
+            const x = e.clientX - rect.left;
+            const t = (x / canvas.width) * maxTime;
+            activeMedia.currentTime = t;
+            updateStatusDisplay();
+        }
     });
 
-    canvas.addEventListener('mousemove', (e) => {
-        if (!isAwaitingEndClick) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) + canvas.parentElement.scrollLeft;
-        pendingEndT = (x / canvas.width) * maxTime;
-        drawTimeline();
-    });
+    // Attach touch events
+    let touchStartY = 0;
+    canvas.addEventListener('touchstart', (e) => { 
+        if (e.touches.length === 1) {
+            const rect = canvas.getBoundingClientRect();
+            touchStartY = e.touches[0].clientY - rect.top;
+            // Only prevent default in highlight zone (top 35px)
+            if (touchStartY <= 35) e.preventDefault(); 
+        }
+        handleDown(e); 
+    }, {passive: false});
+    window.addEventListener('touchend', handleUp);
+    canvas.addEventListener('touchmove', (e) => { 
+        if (e.touches.length === 1 && touchStartY <= 35) {
+            e.preventDefault(); 
+        }
+        if (touchStartY <= 35) handleMove(e); 
+    }, {passive: false});
 
     // Also allow seek by right click or if clicking outside performance row
     canvas.addEventListener('contextmenu', (e) => {
@@ -950,12 +1198,19 @@
     function closeLabeler() {
         document.getElementById('correction-modal').style.display = 'none';
         isAwaitingEndClick = false;
+        editIndex = -1;
         activeLabelReq = null;
         drawTimeline();
     }
 
     function submitLabel(type, newLabel) {
-        trainingCorrections.push({ type: type, label: newLabel, s: pendingStartT, e: pendingEndT });
+        if (editIndex !== -1) {
+            trainingCorrections[editIndex].type = type;
+            trainingCorrections[editIndex].label = newLabel;
+        } else {
+            trainingCorrections.push({ type: type, label: newLabel, s: pendingStartT, e: pendingEndT });
+        }
+        editIndex = -1;
         isAwaitingEndClick = false;
         closeLabeler();
         drawTimeline();
@@ -1045,11 +1300,39 @@
                         statusMsg += `<br><span style="font-size:10px; opacity:0.7;">Vibe Dist: ${vibeEntries}</span>`;
                     }
                     statusEl.innerHTML = statusMsg;
+                    
+                    // Toggle visibility layers ON automatically for immediate review
+                    selectedAudio.add('tf');
+                    selectedAudio.add('tb');
+                    document.getElementById('leg-tf').classList.remove('off');
+                    document.getElementById('leg-tb').classList.remove('off');
+                    
                     drawTimeline();
                 }
             }
         } catch (e) {
             console.warn("Could not check/load audit data automatically:", e);
+        }
+    }
+
+    async function checkAndLoadTraining(folder) {
+        if (!folder) return;
+        try {
+            const res = await fetch(`${P_API_BASE}/api/training/load?session=${folder}`);
+            if (res.ok) {
+                const responseData = await res.json();
+                if (responseData.status !== 'not_found' && responseData.corrections) {
+                    trainingCorrections = responseData.corrections;
+                    const panel = document.getElementById('training-actions-panel');
+                    if (panel) panel.classList.remove('hidden');
+                    drawTimeline();
+                    
+                    document.getElementById('btn-undo-train').style.display = 'inline-block';
+                    document.getElementById('btn-save-train').style.display = 'none'; // Saved state
+                }
+            }
+        } catch (e) {
+            console.warn("Could not load training data.", e);
         }
     }
 
@@ -1107,6 +1390,7 @@
             document.getElementById('leg-tf').classList.remove('off');
             document.getElementById('leg-tb').classList.remove('off');
             
+            await checkAndLoadTraining(currentSessionId);
             drawTimeline();
         } catch (e) {
             alert("Audit failed: " + e.message);
@@ -1412,6 +1696,7 @@
 
     // Auto-load if 'session' param is in URL, else find latest
     window.onload = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
         const folder = urlParams.get('session');
         if (folder) {
             loadRecording(folder);
@@ -1431,6 +1716,154 @@
         }
         resizeCanvas();
     };
+
+    // --- Auto Tune Logic ---
+    let pendingTuningParams = null;
+    
+    function openTuningModal() {
+        document.getElementById('tuning-modal').style.display = 'flex';
+        loadTuningHistory();
+        document.getElementById('tuning-status').textContent = "Ready to tune session: " + currentSessionId;
+        document.getElementById('tuning-diff').style.display = 'none';
+        document.getElementById('btn-apply-tuning').style.display = 'none';
+        document.getElementById('btn-run-tuning').disabled = false;
+        document.getElementById('btn-run-tuning').textContent = "▶ Start Parameter Sweep";
+    }
+    
+    function closeTuningModal() {
+        document.getElementById('tuning-modal').style.display = 'none';
+    }
+    
+    async function startTuning() {
+        if (!currentSessionId) return;
+        
+        const btn = document.getElementById('btn-run-tuning');
+        const status = document.getElementById('tuning-status');
+        const diffBox = document.getElementById('tuning-diff');
+        
+        btn.disabled = true;
+        btn.textContent = "⏳ Tuning (Please wait ~5-30s)...";
+        status.textContent = "Running offline simulation sweep...";
+        diffBox.style.display = 'none';
+        document.getElementById('btn-apply-tuning').style.display = 'none';
+        pendingTuningParams = null;
+        
+        try {
+            const res = await fetch(`${P_API_BASE}/api/tuning/start?session=${currentSessionId}`, { method: 'POST' });
+            const data = await res.json();
+            
+            if (data.error) {
+                status.textContent = "Error: " + data.error;
+                btn.disabled = false;
+                btn.textContent = "▶ Start Parameter Sweep";
+                return;
+            }
+            
+            status.textContent = `Sweep Complete! Best F-Measure Score: ${(data.score * 100).toFixed(1)}%`;
+            
+            if (Object.keys(data.diff).length === 0) {
+                diffBox.innerHTML = "<div style='color:#888;'>No changes needed. Current parameters are optimal!</div>";
+                diffBox.style.display = 'block';
+            } else {
+                let html = "<div style='color:#00f2ff; margin-bottom:5px;'>Proposed Diff:</div>";
+                for (const [k, v] of Object.entries(data.diff)) {
+                    html += `<div style="margin-bottom:2px;"><span style="color:#aaa;">${k}:</span> <span style="color:#ff4757;">${v.old}</span> ➔ <span style="color:#2ed573;">${v.new}</span></div>`;
+                }
+                diffBox.innerHTML = html;
+                diffBox.style.display = 'block';
+                
+                // Fetch the full params from history to apply
+                loadTuningHistory();
+            }
+            
+        } catch (e) {
+            status.textContent = "Tuning failed: " + e;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "▶ Run Again";
+        }
+    }
+    
+    async function loadTuningHistory() {
+        try {
+            const res = await fetch(`${P_API_BASE}/api/tuning/history`);
+            const history = await res.json();
+            
+            const list = document.getElementById('tuning-history-list');
+            list.innerHTML = "";
+            
+            if (history.length === 0) {
+                list.innerHTML = "<div style='padding:10px; color:#888;'>No history available.</div>";
+                return;
+            }
+            
+            history.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.style.padding = "8px 10px";
+                div.style.borderBottom = "1px solid #333";
+                div.style.display = "flex";
+                div.style.justifyContent = "space-between";
+                div.style.alignItems = "center";
+                
+                const date = new Date(item.timestamp).toLocaleString();
+                const score = item.score ? `(Score: ${(item.score*100).toFixed(1)}%)` : '';
+                
+                div.innerHTML = `
+                    <div>
+                        <div style="color:#ddd;">${date} <span style="color:#aaa; font-size:10px;">${score}</span></div>
+                        <div style="color:#888; font-size:10px;">Session: ${item.session || 'Unknown'} | Changes: ${Object.keys(item.diff || {}).length}</div>
+                    </div>
+                    <button class="secondary" style="font-size:10px; padding:4px 8px; background:#333;" onclick='applyHistoryParams(${JSON.stringify(item.params)})'>Load</button>
+                `;
+                list.appendChild(div);
+                
+                if (index === 0 && document.getElementById('btn-run-tuning').textContent === "▶ Run Again") {
+                    pendingTuningParams = item.params;
+                    document.getElementById('btn-apply-tuning').style.display = 'block';
+                }
+            });
+            
+        } catch (e) {
+            console.error("Failed to load tuning history", e);
+        }
+    }
+    
+    function applyHistoryParams(params) {
+        pendingTuningParams = params;
+        document.getElementById('btn-apply-tuning').style.display = 'block';
+        document.getElementById('tuning-status').textContent = "Ready to apply historical parameters.";
+        let html = "<div style='color:#00f2ff; margin-bottom:5px;'>Selected Configuration:</div>";
+        for (const [k, v] of Object.entries(params)) {
+            html += `<div style="margin-bottom:2px;"><span style="color:#aaa;">${k}:</span> <span style="color:#2ed573;">${v}</span></div>`;
+        }
+        document.getElementById('tuning-diff').innerHTML = html;
+        document.getElementById('tuning-diff').style.display = 'block';
+    }
+    
+    async function applyTuning() {
+        if (!pendingTuningParams) return;
+        const btn = document.getElementById('btn-apply-tuning');
+        btn.textContent = "Applying...";
+        btn.disabled = true;
+        
+        try {
+            await fetch(`${P_API_BASE}/api/tuning/apply`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ params: pendingTuningParams })
+            });
+            
+            document.getElementById('tuning-status').textContent = "Configuration Applied Successfully!";
+            document.getElementById('tuning-status').style.color = "#2ed573";
+            setTimeout(() => closeTuningModal(), 1500);
+            
+        } catch (e) {
+            alert("Failed to apply configuration.");
+        } finally {
+            btn.textContent = "Apply Optimal Settings";
+            btn.disabled = false;
+        }
+    }
 </script>
 </body>
 </html>

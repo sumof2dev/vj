@@ -57,13 +57,30 @@ class OfflineAuditEngine:
         high_mask = freqs >= 4000
 
         def band_envelope(mag, mask):
-            """RMS energy per frame for a frequency band."""
+            """RMS energy per frame for a frequency band with causal rolling window normalization."""
             band = mag[mask, :]
             if band.size == 0:
                 return np.zeros(mag.shape[1])
-            env = np.sqrt(np.mean(band ** 2, axis=0))
-            peak = np.max(env) + 1e-6
-            return env / peak
+            raw_rms = np.sqrt(np.mean(band ** 2, axis=0))
+            out = np.zeros_like(raw_rms)
+            
+            import collections
+            hist = collections.deque(maxlen=300)
+            
+            for i in range(len(raw_rms)):
+                val = raw_rms[i]
+                hist.append(val)
+                if len(hist) < 10:
+                    out[i] = 0.5
+                else:
+                    min_val = min(hist)
+                    max_val = max(hist)
+                    sane_peak = max(0.1, max_val)
+                    if sane_peak - min_val < 1e-4:
+                        out[i] = 0.0
+                    else:
+                        out[i] = min(1.0, max(0.0, (val - min_val) / (sane_peak - min_val)))
+            return out
 
         perc_bass = band_envelope(percussive_mag, bass_mask)
         perc_mid = band_envelope(percussive_mag, mid_mask)
@@ -126,6 +143,53 @@ class OfflineAuditEngine:
             "spectral_complexity_h": spectral_complexity_h
         }
 
+    def extract_latency_offset(self, live_times, live_flux, truth_times, truth_flux):
+        """
+        Derives the latency offset (in seconds) between the live telemetry envelope
+        and the Librosa ground truth using cross-correlation.
+        """
+        if len(live_times) < 10 or len(truth_times) < 10:
+            return 0.0
+
+        min_time = max(live_times[0], truth_times[0])
+        max_time = min(live_times[-1], truth_times[-1])
+        if max_time <= min_time:
+            return 0.0
+
+        uniform_times = np.arange(min_time, max_time, 0.01)
+        if len(uniform_times) < 10:
+            return 0.0
+
+        y_live = np.interp(uniform_times, live_times, live_flux)
+        y_truth = np.interp(uniform_times, truth_times, truth_flux)
+
+        y_live_std = y_live - np.mean(y_live)
+        live_norm = np.linalg.norm(y_live_std)
+        if live_norm > 0:
+            y_live_std /= live_norm
+
+        y_truth_std = y_truth - np.mean(y_truth)
+        truth_norm = np.linalg.norm(y_truth_std)
+        if truth_norm > 0:
+            y_truth_std /= truth_norm
+
+        correlation = scipy.signal.correlate(y_live_std, y_truth_std, mode='full')
+        lags = scipy.signal.correlation_lags(len(y_live_std), len(y_truth_std), mode='full')
+
+        max_lag_steps = int(2.0 / 0.01)
+        valid_indices = np.where((lags >= -max_lag_steps) & (lags <= max_lag_steps))[0]
+        if len(valid_indices) == 0:
+            return 0.0
+
+        valid_corr = correlation[valid_indices]
+        valid_lags = lags[valid_indices]
+
+        peak_idx = np.argmax(valid_corr)
+        best_lag_steps = valid_lags[peak_idx]
+
+        best_lag_sec = best_lag_steps * 0.01
+        return float(best_lag_sec)
+
     def _match_beats(self, live_beats, truth_beats, tolerance=0.070):
         """Evaluate beat alignment using sorted binary search (O(n log m))."""
         if len(live_beats) == 0 or len(truth_beats) == 0:
@@ -166,14 +230,22 @@ class OfflineAuditEngine:
         live_flux = np.array([frame['a'].get('f', 0.0) for frame in telemetry])
         live_beats = np.array([frame['t'] for frame in telemetry if frame['a'].get('bt', False)])
 
-        # Interpolate truth timelines directly onto our variable live sample ticks
-        interp_flux_truth = np.interp(live_times, truth['timeline'], truth['flux_truth'])
+        # Calculate recommended latency offset from envelope lag FIRST
+        detected_lag = self.extract_latency_offset(live_times, live_flux, truth['timeline'], truth['flux_truth'])
+        recommended_offset = -detected_lag
+
+        # Apply offset to align live telemetry with non-causal ground truth
+        aligned_live_times = live_times + recommended_offset
+        aligned_live_beats = live_beats + recommended_offset
+
+        # Interpolate truth timelines directly onto our ALIGNED variable live sample ticks
+        interp_flux_truth = np.interp(aligned_live_times, truth['timeline'], truth['flux_truth'])
         
         # Calculate Root-Mean-Square Deviation for continuous envelope parameters
         flux_rmse = float(np.sqrt(np.mean((live_flux - interp_flux_truth) ** 2)))
 
         # Evaluate Beat Accuracy (Precision & Recall)
-        _, precision, recall, f_measure = self._match_beats(live_beats, truth['beat_times'])
+        _, precision, recall, f_measure = self._match_beats(aligned_live_beats, truth['beat_times'])
 
         sample_frame = telemetry[0]['a'] if telemetry else {}
 
@@ -188,7 +260,7 @@ class OfflineAuditEngine:
         for live_key, (truth_key, time_key) in standard_fields.items():
             if live_key in sample_frame:
                 live_band = np.array([frame['a'].get(live_key, 0.0) for frame in telemetry])
-                rmse = self._band_rmse(live_times, live_band, truth[time_key], truth[truth_key])
+                rmse = self._band_rmse(aligned_live_times, live_band, truth[time_key], truth[truth_key])
                 standard_audit[f"{live_key}_rmse"] = rmse
 
         # HPSS per-band comparison (if live data contains HPSS fields)
@@ -204,11 +276,11 @@ class OfflineAuditEngine:
         for live_key, (truth_key, time_key) in hpss_fields.items():
             if live_key in sample_frame:
                 live_band = np.array([frame['a'].get(live_key, 0.0) for frame in telemetry])
-                rmse = self._band_rmse(live_times, live_band, truth[time_key], truth[truth_key])
+                rmse = self._band_rmse(aligned_live_times, live_band, truth[time_key], truth[truth_key])
                 hpss_audit[f"{live_key}_rmse"] = rmse
 
         # Percussive flux comparison
-        interp_perc_truth = np.interp(live_times, truth['timeline'], truth['percussive_flux_truth'])
+        interp_perc_truth = np.interp(aligned_live_times, truth['timeline'], truth['percussive_flux_truth'])
         perc_flux_rmse = float(np.sqrt(np.mean((live_flux - interp_perc_truth) ** 2)))
 
         # Vibe and transient distributions
@@ -235,6 +307,7 @@ class OfflineAuditEngine:
                 "beat_alignment_f_measure": f_measure, # Higher is better (1.0 = perfect)
                 "precision": precision,
                 "recall": recall,
+                "recommended_latency_offset": recommended_offset,
                 "standard": standard_audit,
                 "hpss": hpss_audit,
                 "vibe_distribution": vibe_distribution,
@@ -346,6 +419,8 @@ if __name__ == "__main__":
         print(f"  Beat F-Measure:         {s['beat_alignment_f_measure']*100:.1f}%  (P: {s['precision']*100:.1f}%  R: {s['recall']*100:.1f}%)")
         print(f"  Flux Envelope RMSE:     {s['envelope_tracking_rmse']:.4f}")
         print(f"  Percussive Flux RMSE:   {s['percussive_flux_rmse']:.4f}")
+        if 'recommended_latency_offset' in s:
+            print(f"  Recommended Latency Offset: {s['recommended_latency_offset']*1000:+.0f}ms")
         
         if s.get('standard'):
             print(f"  Standard Band RMSE:")

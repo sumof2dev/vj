@@ -126,7 +126,7 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             if not is_active:
                 # Fallback check
                 if 'engine' in service:
-                    pattern = 'backend/main.py'
+                    pattern = 'main.py'
                 elif 'camera' in service:
                     pattern = 'scripts/calibration_server.py'
                 else:
@@ -149,7 +149,7 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             is_svc_configured = os.path.exists(f'/etc/systemd/system/{service}')
 
             if 'engine' in service:
-                pattern = 'backend/main.py'
+                pattern = 'main.py'
             elif 'camera' in service:
                 pattern = 'scripts/calibration_server.py'
             else:

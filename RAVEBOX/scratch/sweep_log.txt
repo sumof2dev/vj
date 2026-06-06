@@ -1,0 +1,40 @@
+
+  Loading GiantSteps annotations from /home/sumof2/projects/RAVEBOX/scratch/giantsteps-tempo-dataset ...
+  Found 664 annotated tracks
+  Tracks with audio: 661 (skipped 3 missing/invalid)
+  Limited to first 50 tracks
+
+  Parameter Sweep: 6 configurations x 50 tracks
+  Estimated total runs: 300
+
+  [1/6] flux_threshold_mult=1.9 | lockout_ratio=0.5
+    Acc1: 22.0%  Acc2: 26.0%  MedErr: 23.3  Wobble: 9.07
+
+  [2/6] flux_threshold_mult=1.9 | lockout_ratio=0.55
+    Acc1: 22.0%  Acc2: 26.0%  MedErr: 23.3  Wobble: 9.07
+
+  [3/6] flux_threshold_mult=2.05 | lockout_ratio=0.5
+    Acc1: 22.0%  Acc2: 26.0%  MedErr: 22.8  Wobble: 8.45
+
+  [4/6] flux_threshold_mult=2.05 | lockout_ratio=0.55
+    Acc1: 22.0%  Acc2: 26.0%  MedErr: 22.8  Wobble: 8.45
+
+  [5/6] flux_threshold_mult=2.2 | lockout_ratio=0.5
+    Acc1: 20.0%  Acc2: 24.0%  MedErr: 24.0  Wobble: 8.93
+
+  [6/6] flux_threshold_mult=2.2 | lockout_ratio=0.55
+    Acc1: 20.0%  Acc2: 24.0%  MedErr: 24.0  Wobble: 8.93
+
+================================================================================
+  TOP 10 PARAMETER CONFIGURATIONS (by Acc2, then low Wobble)
+================================================================================
+  Rank    Acc1    Acc2  Wobble  Config
+  ------------------------------------------------------------------------
+     1   22.0%   26.0%    8.45  flux_threshold_mult=2.05 | lockout_ratio=0.5
+     2   22.0%   26.0%    8.45  flux_threshold_mult=2.05 | lockout_ratio=0.55
+     3   22.0%   26.0%    9.07  flux_threshold_mult=1.9 | lockout_ratio=0.5
+     4   22.0%   26.0%    9.07  flux_threshold_mult=1.9 | lockout_ratio=0.55
+     5   20.0%   24.0%    8.93  flux_threshold_mult=2.2 | lockout_ratio=0.5
+     6   20.0%   24.0%    8.93  flux_threshold_mult=2.2 | lockout_ratio=0.55
+================================================================================
+

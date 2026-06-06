@@ -1,0 +1,15 @@
+[Unit]
+Description=RaveBox Bluetooth Auto-Pairing Agent
+After=bluetooth.service
+Requires=bluetooth.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/sumof2/vj
+ExecStart=/home/sumof2/vj/scripts/vj_bluetooth_helper.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

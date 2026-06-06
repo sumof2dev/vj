@@ -110,11 +110,11 @@ var API_BASE_ROOT = "";
 var API_BASE = "";
 
 window.KNOWN_ROLES = [
-    'pos_x', 'pos_y', 'zoom', 'rot_z', 'rot_x', 'rot_y',
+    'pos_x', 'pos_y', 'pos_x fine', 'pos_y fine', 'zoom', 'rot_z', 'rot_x', 'rot_y',
     'color_solid', 'color_multi', 'pattern',
     'beam_fx', 'grating', 'drawing', 'drawing_delay',
     'strobe', 'generic', 'unassigned', 'dimmer',
-    'mode', 'clip', 'group'
+    'mode', 'clip', 'group', 'speed', 'gobo', 'effect'
 ];
 
 window.BEHAVIORS = [
@@ -128,34 +128,40 @@ window.BEHAVIORS = [
     { id: 'stochastic', label: 'Stochastic' },
     { id: 'spike', label: 'Spike' },
     { id: 'fuzzy', label: 'Fuzzy' },
-    { id: 'direct_stepped', label: 'Direct Stepped' }
+    { id: 'direct_stepped', label: 'Direct Stepped' },
 ];
 
 window.EASY_DESCRIPTORS = [
-    { "id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "beat phase", "speed": 0.2, "react": 0.8, "hold_type": "none", "rel_center": 0.498 },
-    { "id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "bass", "speed": 0.1, "react": 0.25, "hold_type": "none", "rel_center": 0.498 },
-    { "id": "snap_phrase", "label": "Snap Phrase", "behavior": "stochastic", "source": "mids", "speed": 0.5, "react": 0.45, "hold_type": "beat", "rel_center": 0.498 },
+    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "beat phase", "speed": 1, "react": 0.8, "hold_type": "none", "rel_center": 0.498},
+    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "volume", "speed": 1, "react": 0.25, "hold_type": "none", "rel_center": 0.498},
+    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "stochastic", "source": "impact", "speed": 1, "react": 0.45, "hold_type": "bar", "rel_center": 0.498},
     { "id": "rapid_climb", "label": "Rapid Climb", "behavior": "direct", "source": "impact", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
     { "id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5 },
-    { "id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "mids", "speed": 0.3, "react": 0.15, "hold_type": "beat", "rel_center": 0.498 },
-    { "id": "kick_drum_step", "label": "kick drum step", "behavior": "direct", "source": "kick", "speed": 0, "react": 0.45, "hold_type": "beat", "rel_center": 0.004 },
-    { "id": "hi_hat", "label": "hi hat", "behavior": "direct", "source": "cymbal", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
-    { "id": "random_bar_hold", "label": "Random Bar Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "bar", "rel_center": 0.5 },
-    { "id": "random_beat_hold", "label": "Random Beat Hold", "behavior": "stochastic", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "beat", "rel_center": 0.5 },
-    { "id": "beat_jump", "label": "Beat Jump", "behavior": "direct", "source": "beat phase", "speed": 0.2, "react": 0.4, "hold_type": "none", "rel_center": 0.502 },
-    { "id": "direct_hold", "label": "Direct and Hold", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.2, "hold_type": "beat", "rel_center": 0.502 },
-    { "id": "hi_hit", "label": "Hi Hit", "behavior": "saw", "source": "highs", "speed": 0.2, "react": 0.65, "hold_type": "none", "rel_center": 0.498 },
-    { "id": "fuzzy_mids", "label": "Fuzzy Mids", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "none", "rel_center": 0.502 },
-    { "id": "new_trigger_state", "label": "New Trigger State", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498 },
-    { "id": "smoother_fuzzy", "label": "Smoother fuzzy", "behavior": "fuzzy", "source": "mids", "speed": 0.1, "react": 0.1, "hold_type": "beat", "rel_center": 0.502 },
-    { "id": "kick_spike", "label": "Kick spike", "behavior": "saw", "source": "kick", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498 },
-    { "id": "beat", "label": "beat", "behavior": "beat phase", "source": "volume", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498 },
-    { "id": "spiky_mid", "label": "spiky mid", "behavior": "spike", "source": "mids", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "mids", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "kick_drum_step", "label": "Kick Drum Step", "behavior": "square", "source": "kick", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "hi_hat", "label": "Hi Hat", "behavior": "spike", "source": "cymbal", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "random_bar_hold", "label": "Random Bar Hold", "behavior": "stochastic", "source": "volume", "speed": 1, "react": 1, "hold_type": "bar", "rel_center": 0.502},
+    {"id": "random_beat_hold", "label": "Random Beat Hold", "behavior": "stochastic", "source": "volume", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.502},
+    {"id": "beat_jump", "label": "Beat Jump", "behavior": "direct", "source": "beat phase", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.502},
+    {"id": "direct_hold", "label": "Direct and Hold", "behavior": "direct", "source": "volume", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.502},
+    {"id": "hi_hit", "label": "Hi Hit", "behavior": "sine", "source": "highs_h", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_mids", "label": "Fuzzy Mids", "behavior": "fuzzy", "source": "bin 4", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.502},
+    {"id": "smoother_fuzzy", "label": "Smoother Fuzzy", "behavior": "fuzzy", "source": "bin 4", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.502},
+    { "id": "kick_spike", "label": "Kick Spike", "behavior": "spike", "source": "kick", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498 },
+    {"id": "beat", "label": "Beat Phase Ramp", "behavior": "beat phase", "source": "beat phase", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "spiky_mid", "label": "Spiky Mid", "behavior": "spike", "source": "mids", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     { "id": "kick_hit", "label": "Kick Hit (Direct)", "behavior": "direct", "source": "kick", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
     { "id": "snare_hit", "label": "Snare Hit (Direct)", "behavior": "direct", "source": "snare", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
     { "id": "cymbal_hit", "label": "Cymbal Hit (Direct)", "behavior": "direct", "source": "cymbal", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
     { "id": "beat_hit", "label": "Beat Hit (Binary)", "behavior": "direct", "source": "beat", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
-    {"id": "volume_direct", "label": "Volume direct", "behavior": "direct", "source": "volume", "speed": 0.5, "react": 0.5, "hold_type": "none", "rel_center": 0.498},
+    {"id": "volume_direct", "label": "Volume Direct", "behavior": "direct", "source": "volume", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "stepped_highs", "label": "Stepped Highs", "behavior": "square", "source": "highs", "speed": 1, "react": 1, "hold_type": "bar", "rel_center": 0.502},
+    {"id": "volume_stepped", "label": "Volume stepped", "behavior": "noise", "source": "volume", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "jittery_sine", "label": "jittery sine", "behavior": "noise", "source": "mids_h", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_bass", "label": "fuzzy bass", "behavior": "fuzzy", "source": "bin 0", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_high", "label": "fuzzy high", "behavior": "fuzzy", "source": "highs_h", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_0", "label": "Fuzzy 0", "behavior": "fuzzy", "source": "bin 0", "speed": 1, "react": 0.8, "hold_type": "none", "rel_center": 0.498},
+    {"id": "direct_4", "label": "direct 4", "behavior": "direct", "source": "bin 4", "speed": 1, "react": 0.8, "hold_type": "none", "rel_center": 0.498}
     // PREMADE_ANCHOR
 ];
 
@@ -177,12 +183,12 @@ window.SOURCES = [
     { id: 'kick', label: 'Kick' },
     { id: 'snare', label: 'Snare' },
     { id: 'cymbal', label: 'Cymbal' },
-    { id: 'beat', label: 'Beat (Binary)' }
+    {"id": "beat", "label": "Beat Phase Ramp", "behavior": "beat phase", "source": "beat phase", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
 ];
 
 window.HOLD_TYPES = [
     { id: 'none', label: 'None' },
-    { id: 'beat', label: 'Beat' },
+    {"id": "beat", "label": "Beat Phase Ramp", "behavior": "beat phase", "source": "beat phase", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
     { id: 'bar', label: 'Bar' },
     { id: '2 bar', label: '2 Bar' }
 ];
@@ -288,7 +294,7 @@ window.evaluateRouting = function () {
     window.LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
     LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
     window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-    window.APP_VERSION = "61260858";
+    window.APP_VERSION = "65261202";
 };
 
 // Evaluate routing parameters immediately
@@ -401,7 +407,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v61260858)");
+    console.log("✅ RaveBox Core Ready (v65261202)");
 }
 
 // Kick off sync immediately
@@ -580,7 +586,7 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function () {
         if (sel) {
             const current = sel.value;
             const stageDrop = document.getElementById('pres-add-stage-fix');
-            const isSpecialized = (id === 'pres-add-global-func') && stageDrop && ['system', 'visualdmx', 'calibrated'].includes(stageDrop.value);
+            const isSpecialized = (id === 'pres-add-global-func') && stageDrop && ['visualdmx', 'calibrated'].includes(stageDrop.value);
 
             if (isSpecialized) return; // Don't wipe specialized lists (Rate, Intensity, etc)
 
@@ -596,7 +602,6 @@ var updateUniqueFunctions = window.updateUniqueFunctions = function () {
         const options = (window.db.stage || []).map(inst => `<option value="${inst.id}">FIXTURE: ${inst.id}</option>`).join('');
         stageDrop.innerHTML = '<option value="global">ALL FIXTURES (Global)</option>' +
             '<option value="visualdmx">VISUALIZER (VisualDMX)</option>' +
-            '<option value="system">SYSTEM (Engine Control)</option>' +
             options;
         if (current) stageDrop.value = current;
     }
@@ -737,7 +742,7 @@ window.togglePresetEditor = function (show) {
     }
 };
 
-window.APP_VERSION = "61260858";
+window.APP_VERSION = "65261202";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---

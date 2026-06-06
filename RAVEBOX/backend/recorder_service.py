@@ -37,6 +37,7 @@ class Recorder:
         self.dmx_log = []
         self.monitored_addresses = []
         self.last_dmx_log_time = 0 # Throttling for 1Hz logging
+        self.last_beat_log_time = 0 # Beat dedup guard
         
     def start(self, name=None, addresses=None, roles=None, samplerate=44100, video_enabled=True):
         if self.is_recording:
@@ -176,7 +177,7 @@ class Recorder:
                 "vl": round(audio_state.get("vol", 0.0), 3),
                 "vb": audio_state.get("vibe", "mid"),
                 "tr": audio_state.get("transient", "steady"),
-                "bt": bool(audio_state.get("beat", False)),
+                "bt": bool(audio_state.get("beat", False)) and (now - self.last_beat_log_time > 0.100),
                 "bp": round(audio_state.get("bass_p", 0.0), 3),
                 "mp": round(audio_state.get("mid_p", 0.0), 3),
                 "hp": round(audio_state.get("high_p", 0.0), 3),
@@ -188,6 +189,10 @@ class Recorder:
         # Capture active presets for timeline visualization
         if active_presets:
             entry["p"] = active_presets
+        
+        # Update beat dedup timestamp
+        if audio_state and entry.get("a", {}).get("bt"):
+            self.last_beat_log_time = now
             
         self.dmx_log.append(entry)
 
