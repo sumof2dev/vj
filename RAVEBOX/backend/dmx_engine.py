@@ -1033,7 +1033,19 @@ class DMXEngine:
         fixture_cal = ch_def.get('calibration') or {} if ch_def else {}
         c_min = int(cal.get('min', fixture_cal.get('min', 0)))
         c_max = int(cal.get('max', fixture_cal.get('max', 255)))
-        c_center = int(cal.get('center', fixture_cal.get('center', (c_min + c_max) // 2)))
+
+        threshold_hold_val = mods.get('threshold_hold_value')
+        threshold_hold_value = None
+        if threshold_hold_val is not None and threshold_hold_val != '':
+            try:
+                threshold_hold_value = int(threshold_hold_val)
+            except ValueError:
+                pass
+
+        if threshold_hold_value is not None:
+            c_center = threshold_hold_value
+        else:
+            c_center = int(cal.get('center', fixture_cal.get('center', (c_min + c_max) // 2)))
 
         # Scale speed and react by the range span relative to 255
         range_span = float(c_max - c_min)
@@ -1123,14 +1135,6 @@ class DMXEngine:
         
         # Apply Threshold Gate
         threshold = float(mods.get('threshold', 0.0))
-        threshold_hold_active = bool(mods.get('threshold_hold_active', False))
-        threshold_hold_val = mods.get('threshold_hold_value')
-        threshold_hold_value = None
-        if threshold_hold_val is not None and threshold_hold_val != '':
-            try:
-                threshold_hold_value = int(threshold_hold_val)
-            except ValueError:
-                pass
         is_gated = False
         if E < threshold:
             E = 0.0
@@ -1250,7 +1254,7 @@ class DMXEngine:
         elif behavior == 'direct_stepped':
             y = (math.floor(E * 8) / 8 * 2.0) - 1.0
             
-        if is_gated and threshold_hold_active and threshold_hold_value is not None:
+        if (is_gated or E == 0.0) and threshold_hold_value is not None:
             final_dmx = threshold_hold_value
         else:
             if is_gated:

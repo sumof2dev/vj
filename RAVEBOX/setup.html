@@ -16,6 +16,11 @@
 <style>
     html, body {
         /* background-size handled in setup.css */
+        overflow: hidden !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        position: fixed !important;
+        width: 100% !important;
     }
     .sidebar-title { display: flex !important; flex-direction: column !important; line-height: 1.0 !important; width: 100% !important; margin-left: 5px; }
     .sidebar-title .brand { font-weight: 900 !important; letter-spacing: -1px !important; text-transform: uppercase !important; color: #fff !important; display: flex !important; align-items: baseline !important; font-size: 1.2rem !important; }
@@ -48,7 +53,7 @@
             </div>
             <div class="sidebar-title">
                 <div class="brand">RAVE<span>BOX</span></div>
-                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v65261202</span></div>
+                <div class="subtitle">SETUP <span style="font-size: 8px; opacity: 0.5;">VJ Manager v67261325</span></div>
             </div>
         </div>
 
@@ -407,65 +412,7 @@
         <h2>Tune & Engine</h2>
         <p style="color:var(--text-dim)">Live laboratory and live tuning.</p>
 
-        <details class="engine-accordion" open>
-            <summary>Record and Analyze</summary>
-            <div class="accordion-content">
-<div class="test-hub-header-sticky">
-            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-                <div style="display:flex; align-items:center; gap:12px;">
 
-                    <div id="rec-status" class="rec-status">
-                        <span class="rec-dot"></span> REC <span id="rec-timer" style="margin-left:8px; font-family:monospace;">00:00</span>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <button id="btn-mute-others" class="btn btn-sm" onclick="toggleMuteOthers()" 
-                            style="background:#222; border-color:#444; transition: all 0.2s;">Mute Others</button>
-                    <button id="btn-record" class="btn btn-sm" onclick="toggleRecording()" style="background:#222; border-color:#444;">Record</button>
-                    <button id="btn-pause-engine" class="btn btn-sm" onclick="toggleEnginePause()" style="background:#222; border-color:#444; transition: all 0.2s;">Pause</button>
-                    <button id="btn-toggle-feed" class="btn btn-sm" onclick="toggleTestFeed()">Live Feed: OFF</button>
-                    <button class="btn btn-sm" onclick="openAudioTimelineModal()" style="background:#222; border-color:#444;">Timeline</button>
-                    <button class="btn btn-sm" onclick="window.location.href='player.html'" style="background:#222; border-color:#444;">Player</button>
-                    <button class="btn btn-danger btn-sm" onclick="clearAllGlobalOverrides()">Release All</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="test-live-feed-container">
-            <div style="position:absolute; top:25px; left:25px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:4px; font-size:10px; color:var(--accent); z-index:10; border:1px solid var(--accent); backdrop-filter:blur(10px);">LIVE FEED</div>
-            <img id="test-live-feed-img" src="" alt="Camera Stream Disconnected">
-        </div>
-
-        <p style="color:var(--text-dim); margin-bottom:20px;">Real-time DMX tactile control with visual verification.
-        </p>
-
-        <!-- PRESET OVERRIDES (Removed, now shown in Universal HUD) -->
-
-        <!-- ENSEMBLE PICKER -->
-        <div class="test-controls-bar">
-                Available Fixtures
-                <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:10px; color:#666;">ADD BY FUNCTION:</span>
-                    <select id="test-function-picker" class="function-picker" onchange="updateTestFunctions(this.value)">
-                        <option value="">-- Add Role --</option>
-                    </select>
-                    <button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:#333;" onclick="clearTestFunctions()">Clear</button>
-                </div>
-            </div>
-            <div id="test-fixture-picker" class="test-fixture-picker">
-                <!-- Picks will be rendered here -->
-            </div>
-
-
-        <!-- ENSEMBLE STRIPS -->
-        <div id="test-ensemble-strips" style="margin-top: 10px;">
-            <div id="test-empty-state"
-                style="padding:40px; text-align:center; color:#444; border:2px dashed #222; border-radius:12px;">
-                Select fixtures above to watch and live adjust.
-            </div>
-        </div>
-            </div>
-        </details>
 
         <details class="engine-accordion" id="engine-characteristics-accordion" open>
             <summary>Characteristics</summary>

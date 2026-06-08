@@ -819,6 +819,13 @@ def audio_worker_thread():
     last_param_load = 0.0
     latency_offset = -0.150
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tuning_config', 'engine_params.json')
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                p = json.load(f)
+                latency_offset = p.get("latency_offset", -0.150)
+    except Exception as e:
+        print(f"⚠️ Failed to load initial latency_offset from params: {e}")
     
     while True:
         try:
@@ -838,14 +845,15 @@ def audio_worker_thread():
             # Feed the shadow tracker so it continuously learns organically
             shadow_analyzer.process(indata)
             
-            # Hot-reload latency_offset every 5 seconds
+            # Hot-reload latency_offset every 5 seconds if hot_reload is enabled
             now = time.time()
             if now - last_param_load > 5.0:
                 try:
                     if os.path.exists(config_path):
                         with open(config_path, 'r') as f:
                             p = json.load(f)
-                            latency_offset = p.get("latency_offset", -0.150)
+                            if p.get("hot_reload", False):
+                                latency_offset = p.get("latency_offset", -0.150)
                 except Exception as e:
                     print(f"⚠️ Failed to load latency_offset from params: {e}")
                 last_param_load = now

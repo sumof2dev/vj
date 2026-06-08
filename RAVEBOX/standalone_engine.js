@@ -24,9 +24,13 @@ function registerIframeWindow(win) {
 
 function broadcastToIframe(data) {
     try {
-        const frame = document.getElementById('viz-frame');
-        if (frame && frame.contentWindow && frame.contentWindow._broadcastToMocks) {
-            frame.contentWindow._broadcastToMocks(data);
+        if (window._broadcastToMocks) {
+            window._broadcastToMocks(data);
+        } else {
+            const frame = document.getElementById('viz-frame');
+            if (frame && frame.contentWindow && frame.contentWindow._broadcastToMocks) {
+                frame.contentWindow._broadcastToMocks(data);
+            }
         }
     } catch (e) {
         // Cross-origin or iframe not ready

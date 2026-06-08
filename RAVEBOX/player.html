@@ -93,7 +93,7 @@
                         Source: <span id="hostDisplay" style="color:#00f2ff; font-weight:bold;">Local</span>
                     </div>
                 </div>
-                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v65261202</span>
+                <span style="opacity: 0.3; margin-left:15px; font-size: 10px;">VJ Player v67261325</span>
             </div>
             <div class="playback-controls">
                 <select id="audio-source-select" style="background:#1a1a24; color:#fff; border:1px solid #444; border-radius:6px; padding:8px 12px; font-size:12px; font-weight:bold; cursor:pointer;" onchange="changeAudioSource(this.value)">
@@ -108,7 +108,6 @@
                 <button class="step-btn" title="Step Forward (1 Beat)" onclick="stepBeat(1)">⏭</button>
                 <button class="secondary" id="btn-undo-train" style="display:none;" onclick="undoCorrection()">↩️ Undo</button>
                 <button class="secondary" id="btn-save-train" style="background:#27ae60; display:none;" onclick="saveTraining()">💾 Save Training</button>
-                <button class="secondary" id="btn-auto-tune" style="background:#f39c12; color:#000;" onclick="openTuningModal()">⚙️ Auto-Tune</button>
                 <button class="secondary" id="btn-deep-audit" style="background:#8e44ad;" onclick="triggerDeepAudit()">🔍 Deep Audit</button>
                 <button class="secondary" onclick="openSessionBrowser()">📂 Browse</button>
                 <button class="secondary" onclick="window.location.href='/'">🏠 Home</button>
@@ -220,24 +219,7 @@
     </div>
 </div>
 
-<!-- Auto-Tune Modal -->
-<div id="tuning-modal" class="modal-overlay" onclick="closeTuningModal()">
-    <div class="modal" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h3 style="margin:0;">Auto-Tune Engine</h3>
-            <button onclick="closeTuningModal()" style="padding: 5px 10px; background:#333;">&times;</button>
-        </div>
-        <div class="modal-body" id="tuning-body">
-            <div id="tuning-status" style="margin-bottom:15px; color:#aaa; font-size:13px;">Click start to simulate parameters against the current training data.</div>
-            <button class="secondary" id="btn-run-tuning" style="background:#27ae60; width:100%; margin-bottom:15px;" onclick="startTuning()">▶ Start Parameter Sweep</button>
-            <div id="tuning-diff" style="font-family:monospace; font-size:12px; background:#111; padding:10px; border-radius:5px; margin-bottom:15px; display:none; max-height:200px; overflow-y:auto;"></div>
-            <button class="secondary" id="btn-apply-tuning" style="background:#00f2ff; color:#000; width:100%; display:none;" onclick="applyTuning()">Apply Optimal Settings</button>
-            <hr style="border-color:#333; margin: 15px 0;">
-            <h4 style="margin: 0 0 10px 0; color:#888;">Version History</h4>
-            <div id="tuning-history-list" style="max-height:150px; overflow-y:auto; border:1px solid #333; border-radius:5px; font-size:12px;"></div>
-        </div>
-    </div>
-</div>
+
 
 <script src="shared_setup.js"></script>
 
@@ -1716,154 +1698,6 @@
         }
         resizeCanvas();
     };
-
-    // --- Auto Tune Logic ---
-    let pendingTuningParams = null;
-    
-    function openTuningModal() {
-        document.getElementById('tuning-modal').style.display = 'flex';
-        loadTuningHistory();
-        document.getElementById('tuning-status').textContent = "Ready to tune session: " + currentSessionId;
-        document.getElementById('tuning-diff').style.display = 'none';
-        document.getElementById('btn-apply-tuning').style.display = 'none';
-        document.getElementById('btn-run-tuning').disabled = false;
-        document.getElementById('btn-run-tuning').textContent = "▶ Start Parameter Sweep";
-    }
-    
-    function closeTuningModal() {
-        document.getElementById('tuning-modal').style.display = 'none';
-    }
-    
-    async function startTuning() {
-        if (!currentSessionId) return;
-        
-        const btn = document.getElementById('btn-run-tuning');
-        const status = document.getElementById('tuning-status');
-        const diffBox = document.getElementById('tuning-diff');
-        
-        btn.disabled = true;
-        btn.textContent = "⏳ Tuning (Please wait ~5-30s)...";
-        status.textContent = "Running offline simulation sweep...";
-        diffBox.style.display = 'none';
-        document.getElementById('btn-apply-tuning').style.display = 'none';
-        pendingTuningParams = null;
-        
-        try {
-            const res = await fetch(`${P_API_BASE}/api/tuning/start?session=${currentSessionId}`, { method: 'POST' });
-            const data = await res.json();
-            
-            if (data.error) {
-                status.textContent = "Error: " + data.error;
-                btn.disabled = false;
-                btn.textContent = "▶ Start Parameter Sweep";
-                return;
-            }
-            
-            status.textContent = `Sweep Complete! Best F-Measure Score: ${(data.score * 100).toFixed(1)}%`;
-            
-            if (Object.keys(data.diff).length === 0) {
-                diffBox.innerHTML = "<div style='color:#888;'>No changes needed. Current parameters are optimal!</div>";
-                diffBox.style.display = 'block';
-            } else {
-                let html = "<div style='color:#00f2ff; margin-bottom:5px;'>Proposed Diff:</div>";
-                for (const [k, v] of Object.entries(data.diff)) {
-                    html += `<div style="margin-bottom:2px;"><span style="color:#aaa;">${k}:</span> <span style="color:#ff4757;">${v.old}</span> ➔ <span style="color:#2ed573;">${v.new}</span></div>`;
-                }
-                diffBox.innerHTML = html;
-                diffBox.style.display = 'block';
-                
-                // Fetch the full params from history to apply
-                loadTuningHistory();
-            }
-            
-        } catch (e) {
-            status.textContent = "Tuning failed: " + e;
-        } finally {
-            btn.disabled = false;
-            btn.textContent = "▶ Run Again";
-        }
-    }
-    
-    async function loadTuningHistory() {
-        try {
-            const res = await fetch(`${P_API_BASE}/api/tuning/history`);
-            const history = await res.json();
-            
-            const list = document.getElementById('tuning-history-list');
-            list.innerHTML = "";
-            
-            if (history.length === 0) {
-                list.innerHTML = "<div style='padding:10px; color:#888;'>No history available.</div>";
-                return;
-            }
-            
-            history.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.style.padding = "8px 10px";
-                div.style.borderBottom = "1px solid #333";
-                div.style.display = "flex";
-                div.style.justifyContent = "space-between";
-                div.style.alignItems = "center";
-                
-                const date = new Date(item.timestamp).toLocaleString();
-                const score = item.score ? `(Score: ${(item.score*100).toFixed(1)}%)` : '';
-                
-                div.innerHTML = `
-                    <div>
-                        <div style="color:#ddd;">${date} <span style="color:#aaa; font-size:10px;">${score}</span></div>
-                        <div style="color:#888; font-size:10px;">Session: ${item.session || 'Unknown'} | Changes: ${Object.keys(item.diff || {}).length}</div>
-                    </div>
-                    <button class="secondary" style="font-size:10px; padding:4px 8px; background:#333;" onclick='applyHistoryParams(${JSON.stringify(item.params)})'>Load</button>
-                `;
-                list.appendChild(div);
-                
-                if (index === 0 && document.getElementById('btn-run-tuning').textContent === "▶ Run Again") {
-                    pendingTuningParams = item.params;
-                    document.getElementById('btn-apply-tuning').style.display = 'block';
-                }
-            });
-            
-        } catch (e) {
-            console.error("Failed to load tuning history", e);
-        }
-    }
-    
-    function applyHistoryParams(params) {
-        pendingTuningParams = params;
-        document.getElementById('btn-apply-tuning').style.display = 'block';
-        document.getElementById('tuning-status').textContent = "Ready to apply historical parameters.";
-        let html = "<div style='color:#00f2ff; margin-bottom:5px;'>Selected Configuration:</div>";
-        for (const [k, v] of Object.entries(params)) {
-            html += `<div style="margin-bottom:2px;"><span style="color:#aaa;">${k}:</span> <span style="color:#2ed573;">${v}</span></div>`;
-        }
-        document.getElementById('tuning-diff').innerHTML = html;
-        document.getElementById('tuning-diff').style.display = 'block';
-    }
-    
-    async function applyTuning() {
-        if (!pendingTuningParams) return;
-        const btn = document.getElementById('btn-apply-tuning');
-        btn.textContent = "Applying...";
-        btn.disabled = true;
-        
-        try {
-            await fetch(`${P_API_BASE}/api/tuning/apply`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ params: pendingTuningParams })
-            });
-            
-            document.getElementById('tuning-status').textContent = "Configuration Applied Successfully!";
-            document.getElementById('tuning-status').style.color = "#2ed573";
-            setTimeout(() => closeTuningModal(), 1500);
-            
-        } catch (e) {
-            alert("Failed to apply configuration.");
-        } finally {
-            btn.textContent = "Apply Optimal Settings";
-            btn.disabled = false;
-        }
-    }
 </script>
 </body>
 </html>

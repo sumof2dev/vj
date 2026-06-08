@@ -108,6 +108,26 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_load_training(session)
             return
 
+        # API: Scan Visible Local Networks
+        if path == '/api/wifi/scan':
+            try:
+                # Terse tabular mode output filtering target fields to optimize transmission size
+                cmd = ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"]
+                scan = subprocess.run(cmd, capture_output=True, text=True)
+                networks = []
+                for line in scan.stdout.splitlines():
+                    parts = line.split(':')
+                    if len(parts) >= 2 and parts[0].strip():
+                        networks.append({
+                            "ssid": parts[0],
+                            "signal": parts[1],
+                            "security": parts[2] if len(parts) > 2 else "Open"
+                        })
+                self._send_json(networks)
+            except Exception as e:
+                self.send_error(500, str(e))
+            return
+
         # API: List Images
         if path == '/api/images/list' or path == '/api/images/list/':
             self._handle_list_images()
@@ -245,6 +265,46 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         # API: Save Training
         if path == '/api/training/save':
             self._handle_save_training()
+            return
+
+        # API: Authenticate New Wi-Fi Network
+        if path == '/api/wifi/connect':
+            length = int(self.headers['Content-Length'])
+            body = self.rfile.read(length)
+            try:
+                data = json.loads(body)
+                target_ssid = data.get('ssid')
+                target_password = data.get('password')
+                
+                if not target_ssid:
+                    self.send_error(400, "Missing SSID Target parameter")
+                    return
+                
+                self._send_json({"status": "received", "message": "Attempting network switch..."})
+                
+                # Execute association script out-of-band so server doesn't break prematurely
+                def join_network():
+                    time.sleep(1)
+                    print(f"🔄 Attempting link to venue SSID: {target_ssid}")
+                    
+                    # Take down the onboarding hotspot cleanly
+                    subprocess.run(["sudo", "nmcli", "connection", "down", "Hotspot"], capture_output=True)
+                    
+                    # Attempt connection to the local venue network
+                    connect_cmd = ["sudo", "nmcli", "device", "wifi", "connect", target_ssid, "password", target_password]
+                    result = subprocess.run(connect_cmd, capture_output=True, text=True)
+                    
+                    if result.returncode != 0:
+                        print(f"❌ Connection failed to {target_ssid}. Rolling back to Hotspot Mode!")
+                        # Emergency Rollback: Bring the configuration access point back online automatically
+                        subprocess.run(["sudo", "nmcli", "connection", "up", "Hotspot"], capture_output=True)
+                    else:
+                        print(f"✅ Node successfully joined venue network: {target_ssid}")
+                
+                import threading
+                threading.Thread(target=join_network, daemon=True).start()
+            except Exception as e:
+                self.send_error(500, str(e))
             return
 
         # API: Save Audit Results (received from minisforum CLI)
@@ -1260,10 +1320,12 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
              
              req = urllib.request.Request(url)
              with urllib.request.urlopen(req, timeout=5, context=ctx) as response:
+                 data = response.read()
                  self.send_response(200)
                  self.send_header('Content-Type', 'application/json')
+                 self.send_header('Content-Length', str(len(data)))
                  self.end_headers()
-                 self.wfile.write(response.read())
+                 self.wfile.write(data)
         except Exception as e:
              # Launcher not running — handle directly via process management
              from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs
@@ -1274,20 +1336,23 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
              if path in ['/status', '/api/status']:
                  self._direct_status()
              elif path in ['/start', '/api/start']:
+                 service = query.get('service', [None])[0]
                  use_node = query.get('node', ['false'])[0] == 'true'
-                 self._direct_action('start', use_node)
+                 self._direct_action('start', use_node, service)
              elif path in ['/stop', '/api/stop']:
+                 service = query.get('service', [None])[0]
                  use_node = query.get('node', ['false'])[0] == 'true'
-                 self._direct_action('stop', use_node)
+                 self._direct_action('stop', use_node, service)
              elif path in ['/restart', '/api/restart']:
+                 service = query.get('service', [None])[0]
                  use_node = query.get('node', ['false'])[0] == 'true'
-                 self._direct_action('restart', use_node)
+                 self._direct_action('restart', use_node, service)
              else:
                  print(f"❌ Proxy Error to {subpath}: {e}")
                  self.send_error(500, f"Launcher Proxy Error: {e}")
 
     def _direct_status(self):
-        """Return engine/node status by checking running processes directly."""
+        """Return status for all services by checking running processes directly."""
         import subprocess as sp
         def check_svc(pattern):
             try:
@@ -1300,11 +1365,17 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
 
         engine = check_svc('backend/main.py')
         node = check_svc('backend/dmx_node.py')
+        server = check_svc('server.py')
+        launcher = check_svc('launcher.py')
+        camera = check_svc('scripts/calibration_server.py')
         response = {
             "status": engine['status'],
             "active": engine['active'],
             "engine": engine,
-            "node": node
+            "node": node,
+            "server": server,
+            "launcher": launcher,
+            "camera": camera
         }
         payload = json.dumps(response).encode()
         self.send_response(200)
@@ -1312,11 +1383,28 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    def _direct_action(self, action, use_node=False):
-        """Start/stop/restart engine or node directly via process management."""
+    def _direct_action(self, action, use_node=False, service=None):
+        """Start/stop/restart any service directly via process management."""
         import subprocess as sp
         import time as _time
-        pattern = 'backend/dmx_node.py' if use_node else 'backend/main.py'
+        
+        pattern = None
+        if service:
+            if 'engine' in service:
+                pattern = 'backend/main.py'
+            elif 'node' in service:
+                pattern = 'backend/dmx_node.py'
+            elif 'camera' in service:
+                pattern = 'scripts/calibration_server.py'
+            elif 'server' in service:
+                pattern = 'server.py'
+            elif 'launcher' in service:
+                pattern = 'launcher.py'
+        
+        if not pattern:
+            pattern = 'backend/dmx_node.py' if use_node else 'backend/main.py'
+            
+        svc_name = service.replace('.service', '') if service else ("vj-node" if use_node else "vj-engine")
 
         try:
             if action in ['stop', 'restart']:
@@ -1325,7 +1413,7 @@ class ProductionHandler(http.server.SimpleHTTPRequestHandler):
             if action in ['start', 'restart']:
                 if action == 'restart':
                     _time.sleep(1.5)
-                log_file = os.path.join(BASE_DIR, 'logs', f'{"vj-node" if use_node else "vj-engine"}.service.log')
+                log_file = os.path.join(BASE_DIR, 'logs', f'{svc_name}.service.log')
                 os.makedirs(os.path.dirname(log_file), exist_ok=True)
                 python_cmd = None
                 for venv in ['venv_local', 'venv', '.venv']:

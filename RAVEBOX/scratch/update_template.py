@@ -1,0 +1,100 @@
+import json
+
+KNOWN_ROLES = [
+    'pos_x', 'pos_y', 'pos_x fine', 'pos_y fine', 'zoom', 'rot_z', 'rot_x', 'rot_y',
+    'color_solid', 'color_multi', 'pattern',
+    'beam_fx', 'grating', 'drawing', 'drawing_delay',
+    'strobe', 'generic', 'unassigned', 'dimmer',
+    'mode', 'clip', 'group', 'speed', 'gobo', 'effect'
+]
+
+EASY_DESCRIPTORS = [
+    {"id": "pulse_beat", "label": "Pulse with Beat", "behavior": "direct", "source": "beat phase", "speed": 1, "react": 0.8, "hold_type": "none", "rel_center": 0.498},
+    {"id": "smooth_drift", "label": "Smooth Drift", "behavior": "sine", "source": "volume", "speed": 1, "react": 0.25, "hold_type": "none", "rel_center": 0.498},
+    {"id": "snap_phrase", "label": "Snap Phrase", "behavior": "stochastic", "source": "impact", "speed": 1, "react": 0.45, "hold_type": "bar", "rel_center": 0.498},
+    { "id": "rapid_climb", "label": "Rapid Climb", "behavior": "direct", "source": "impact", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "static_hold", "label": "Hold Fixed Value", "behavior": "static", "value": 127, "rel_center": 0.5 },
+    {"id": "cycle_random", "label": "Random - On Beat", "behavior": "stochastic", "source": "mids", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "kick_drum_step", "label": "Kick Drum Step", "behavior": "square", "source": "kick", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "hi_hat", "label": "Hi Hat", "behavior": "spike", "source": "cymbal", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "random_bar_hold", "label": "Random Bar Hold", "behavior": "stochastic", "source": "volume", "speed": 1, "react": 1, "hold_type": "bar", "rel_center": 0.502},
+    {"id": "random_beat_hold", "label": "Random Beat Hold", "behavior": "stochastic", "source": "volume", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.502},
+    {"id": "beat_jump", "label": "Beat Jump", "behavior": "direct", "source": "beat phase", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.502},
+    {"id": "direct_hold", "label": "Direct and Hold", "behavior": "direct", "source": "volume", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.502},
+    {"id": "hi_hit", "label": "Hi Hit", "behavior": "sine", "source": "highs_h", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_mids", "label": "Fuzzy Mids", "behavior": "fuzzy", "source": "bin 4", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.502},
+    {"id": "smoother_fuzzy", "label": "Smoother Fuzzy", "behavior": "fuzzy", "source": "bin 4", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.502},
+    { "id": "kick_spike", "label": "Kick Spike", "behavior": "spike", "source": "kick", "speed": 1, "react": 0.85, "hold_type": "none", "rel_center": 0.498 },
+    {"id": "beat", "label": "Beat Phase Ramp", "behavior": "beat phase", "source": "beat phase", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "spiky_mid", "label": "Spiky Mid", "behavior": "spike", "source": "mids", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    { "id": "kick_hit", "label": "Kick Hit (Direct)", "behavior": "direct", "source": "kick", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "snare_hit", "label": "Snare Hit (Direct)", "behavior": "direct", "source": "snare", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "cymbal_hit", "label": "Cymbal Hit (Direct)", "behavior": "direct", "source": "cymbal", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    { "id": "beat_hit", "label": "Beat Hit (Binary)", "behavior": "direct", "source": "beat", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498 },
+    {"id": "volume_direct", "label": "Volume Direct", "behavior": "direct", "source": "volume", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "stepped_highs", "label": "Stepped Highs", "behavior": "square", "source": "highs", "speed": 1, "react": 1, "hold_type": "bar", "rel_center": 0.502},
+    {"id": "volume_stepped", "label": "Volume stepped", "behavior": "noise", "source": "volume", "speed": 1, "react": 1, "hold_type": "beat", "rel_center": 0.498},
+    {"id": "jittery_sine", "label": "jittery sine", "behavior": "noise", "source": "mids_h", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_bass", "label": "fuzzy bass", "behavior": "fuzzy", "source": "bin 0", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_high", "label": "fuzzy high", "behavior": "fuzzy", "source": "highs_h", "speed": 1, "react": 1, "hold_type": "none", "rel_center": 0.498},
+    {"id": "fuzzy_0", "label": "Fuzzy 0", "behavior": "fuzzy", "source": "bin 0", "speed": 1, "react": 0.8, "hold_type": "none", "rel_center": 0.498},
+    {"id": "direct_4", "label": "direct 4", "behavior": "direct", "source": "bin 4", "speed": 1, "react": 0.8, "hold_type": "none", "rel_center": 0.498}
+]
+
+with open('/home/sumof2/projects/RAVEBOX/fixtures/profiles/template.json', 'r') as f:
+    template = json.load(f)
+
+existing_roles = set(ch['role'] for ch in template['channels'])
+missing_roles = [r for r in KNOWN_ROLES if r not in existing_roles]
+
+print(f"Missing Roles: {missing_roles}")
+
+for role in missing_roles:
+    template['channels'].append({
+        "name": "New Function",
+        "role": role,
+        "default": 0
+    })
+
+# Gather existing easy_ids
+existing_easy_ids = set()
+for mapping_group in template.get('mappings', []):
+    for m in mapping_group:
+        if 'easy_id' in m:
+            existing_easy_ids.add(m['easy_id'])
+
+missing_descriptors = [d for d in EASY_DESCRIPTORS if d['id'] not in existing_easy_ids]
+
+print(f"Missing Behaviors (easy_ids): {[d['id'] for d in missing_descriptors]}")
+
+for d in missing_descriptors:
+    # Build a standard mapping object for it
+    mapping = {
+        "easy_id": d["id"],
+        "behavior": d.get("behavior", "direct"),
+        "vibe": "any",
+        "description": "Partitioned Range",
+        "source": d.get("source", "volume"),
+        "cal": {
+            "min": 0,
+            "max": 255,
+            "center": int(255 * d.get("rel_center", 0.5))
+        },
+        "modifiers": {
+            "speed": d.get("speed", 1),
+            "react": d.get("react", 1),
+            "gain": 1,
+            "threshold": 0,
+            "threshold_hold_active": False,
+            "threshold_hold_value": "",
+            "hold_type": d.get("hold_type", "none"),
+            "muted": False
+        },
+        "muted": False
+    }
+    template['mappings'].append([mapping])
+
+with open('/home/sumof2/projects/RAVEBOX/fixtures/profiles/template.json', 'w') as f:
+    json.dump(template, f, separators=(',', ':'))
+
+print("Updated template.json")

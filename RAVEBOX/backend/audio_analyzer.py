@@ -108,21 +108,23 @@ class AudioAnalyzer:
                 "eq_lowmid_mult": 0.7
             }
             
-    def hot_reload(self):
-        self.p = self._load_params()
-        self.flux_threshold_mult = self.p.get("flux_threshold_mult", 2.05)
-        self.flux_threshold_abs = self.p.get("flux_threshold_abs", 0.35)
-        
-        new_hpss_window = self.p.get("hpss_window", 7)
-        if new_hpss_window != self.hpss_window:
-            self.hpss_window = new_hpss_window
-            # Recreate history with new maxlen and preserve old items if possible
-            old_items = list(self.fft_history)
-            self.fft_history = collections.deque(maxlen=self.hpss_window)
-            for item in old_items[-self.hpss_window:]:
-                self.fft_history.append(item)
-                
-        self.hpss_freq_kernel = self.p.get("hpss_freq_kernel", 15)
+    def hot_reload(self, force=False):
+        p = self._load_params()
+        if p.get("hot_reload", False) or force:
+            self.p = p
+            self.flux_threshold_mult = self.p.get("flux_threshold_mult", 2.05)
+            self.flux_threshold_abs = self.p.get("flux_threshold_abs", 0.35)
+            
+            new_hpss_window = self.p.get("hpss_window", 7)
+            if new_hpss_window != self.hpss_window:
+                self.hpss_window = new_hpss_window
+                # Recreate history with new maxlen and preserve old items if possible
+                old_items = list(self.fft_history)
+                self.fft_history = collections.deque(maxlen=self.hpss_window)
+                for item in old_items[-self.hpss_window:]:
+                    self.fft_history.append(item)
+                    
+            self.hpss_freq_kernel = self.p.get("hpss_freq_kernel", 15)
 
     def get_signal_health(self):
         """Analyze raw peak history to detect environment-level issues (Spotify vol, ALSA)."""

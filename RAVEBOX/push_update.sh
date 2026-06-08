@@ -72,6 +72,7 @@ sshpass -p "$PI_PASS" rsync -avz --progress \
     --exclude='offline_audit_engine.py' \
     --exclude='song_database' \
     --exclude='models' \
+    --exclude='dev' \
     --exclude='scripts/acoustic_tokenization.py' \
     -e "ssh -o StrictHostKeyChecking=no" \
     ./ "$REMOTE_USER@$TARGET:$REMOTE_PATH/"

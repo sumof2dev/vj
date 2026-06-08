@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RaveBox Dev Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="setup.css">
+    <style>
+        /* Monospace utility overrides to enforce plain console UI */
+        body {
+            background-color: #0d0e12 !important;
+            color: #d1d5db !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .dev-scroll-container {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            overflow-y: auto !important;
+            padding: 24px;
+            box-sizing: border-box;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Courier New', Courier, monospace !important;
+            color: #ffffff !important;
+            letter-spacing: 0.5px;
+        }
+        p, label, span, td, th, select, option, textarea, button {
+            font-family: 'Courier New', Courier, monospace !important;
+        }
+        
+        .dev-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 20px;
+        }
+        @media(max-width: 900px) {
+            .dev-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .dev-panel {
+            background: #15171e;
+            border: 1px solid #2e3344;
+            padding: 20px;
+            border-radius: 4px;
+        }
+        
+        .panel-title {
+            margin-top: 0;
+            border-bottom: 1px solid #2e3344;
+            padding-bottom: 10px;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .service-list {
+            margin-top: 15px;
+        }
+        
+        .service-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed #2e3344;
+        }
+        .service-row:last-child {
+            border-bottom: none;
+        }
+        
+        .service-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .service-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .status-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 2px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .status-active {
+            background-color: #064e3b;
+            color: #34d399;
+            border: 1px solid #047857;
+        }
+        .status-inactive {
+            background-color: #7f1d1d;
+            color: #fca5a5;
+            border: 1px solid #b91c1c;
+        }
+        .status-unknown {
+            background-color: #374151;
+            color: #9ca3af;
+            border: 1px solid #4b5563;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .btn-dev {
+            background: #1f2937;
+            border: 1px solid #374151;
+            color: #e5e7eb;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        .btn-dev:hover {
+            background: #374151;
+            color: #ffffff;
+        }
+        .btn-dev-danger {
+            background: #450a0a;
+            border: 1px solid #7f1d1d;
+            color: #fca5a5;
+        }
+        .btn-dev-danger:hover {
+            background: #7f1d1d;
+            color: #ffffff;
+        }
+        .btn-dev-success {
+            background: #062f17;
+            border: 1px solid #064e3b;
+            color: #6ee7b7;
+        }
+        .btn-dev-success:hover {
+            background: #064e3b;
+            color: #ffffff;
+        }
+        
+        .editor-container {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        #params-editor {
+            width: 100%;
+            height: 350px;
+            background: #08090c;
+            color: #a7f3d0;
+            border: 1px solid #2e3344;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            padding: 12px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+        
+        #tab-test {
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            background: transparent !important;
+        }
+        
+        /* Relocated accordion styling resets */
+        .engine-accordion {
+            background: #15171e !important;
+            border: 1px solid #2e3344 !important;
+            border-radius: 4px !important;
+            overflow: hidden;
+        }
+        .engine-accordion summary {
+            background: #1c1f2b !important;
+            border-bottom: 1px solid #2e3344 !important;
+            color: #ffffff !important;
+            font-weight: bold;
+            padding: 12px 20px !important;
+            cursor: pointer;
+        }
+        .accordion-content {
+            padding: 20px !important;
+        }
+        
+        .test-hub-header-sticky {
+            position: static !important;
+            background: transparent !important;
+            padding: 0 0 16px 0 !important;
+            border-bottom: 1px dashed #2e3344 !important;
+            margin-bottom: 16px;
+        }
+        
+        .test-controls-bar {
+            background: #1c1f2b !important;
+            border: 1px solid #2e3344 !important;
+            border-radius: 4px;
+            padding: 10px 15px !important;
+            margin: 15px 0 10px 0 !important;
+        }
+        
+        .fixture-picker-pill {
+            background: #1f2937 !important;
+            border: 1px solid #374151 !important;
+            color: #d1d5db !important;
+            border-radius: 2px !important;
+            font-size: 11px !important;
+            padding: 4px 8px !important;
+        }
+        .fixture-picker-pill.active {
+            background: #047857 !important;
+            border-color: #34d399 !important;
+            color: #ffffff !important;
+        }
+        
+        .test-strip-card {
+            background: #1c1f2b !important;
+            border: 1px solid #2e3344 !important;
+            border-radius: 4px !important;
+            padding: 15px !important;
+            margin-bottom: 15px !important;
+        }
+        
+        .compact-slider-row {
+            background: #15171e !important;
+            border: 1px dashed #2e3344 !important;
+            border-radius: 2px !important;
+            padding: 6px 12px !important;
+        }
+        
+        .compact-slider-input {
+            accent-color: #34d399 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="dev-scroll-container">
+        <div class="dev-container">
+        <header style="margin-bottom: 24px; border-bottom: 1px solid #2e3344; padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 style="margin: 0; font-size: 24px;">RAVEBOX DEVELOPMENT PORTAL</h1>
+                <p style="margin: 6px 0 0 0; color: #9ca3af; font-size: 12px;">utilitarian system console & remote debugging</p>
+            </div>
+            <a href="setup.html" class="btn-dev" style="text-decoration: none; padding: 6px 12px;">← Setup Page</a>
+        </header>
+
+        <div class="dev-grid">
+            <!-- LEFT COLUMN: SERVICES & PARAMS -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <!-- SERVICES CONTROL PANEL -->
+                <div class="dev-panel">
+                    <h2 class="panel-title">
+                        <span>SERVICE DAEMON MANAGER</span>
+                        <button class="btn-dev" onclick="refreshServices()">Refresh</button>
+                    </h2>
+                    <div class="service-list">
+                        <div class="service-row">
+                            <div class="service-info">
+                                <span class="service-name">vj-server (HTTPS UI)</span>
+                                <span id="status-vj-server"></span>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn-dev btn-dev-success" onclick="controlService('start', 'vj-server')">Start</button>
+                                <button class="btn-dev btn-dev-danger" onclick="controlService('stop', 'vj-server')">Stop</button>
+                                <button class="btn-dev" onclick="controlService('restart', 'vj-server')">Restart</button>
+                            </div>
+                        </div>
+                        <div class="service-row">
+                            <div class="service-info">
+                                <span class="service-name">vj-launcher (Daemon Bridge)</span>
+                                <span id="status-vj-launcher"></span>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn-dev btn-dev-success" onclick="controlService('start', 'vj-launcher')">Start</button>
+                                <button class="btn-dev btn-dev-danger" onclick="controlService('stop', 'vj-launcher')">Stop</button>
+                                <button class="btn-dev" onclick="controlService('restart', 'vj-launcher')">Restart</button>
+                            </div>
+                        </div>
+                        <div class="service-row">
+                            <div class="service-info">
+                                <span class="service-name">vj-engine (DMX Engine)</span>
+                                <span id="status-vj-engine"></span>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn-dev btn-dev-success" onclick="controlService('start', 'vj-engine')">Start</button>
+                                <button class="btn-dev btn-dev-danger" onclick="controlService('stop', 'vj-engine')">Stop</button>
+                                <button class="btn-dev" onclick="controlService('restart', 'vj-engine')">Restart</button>
+                            </div>
+                        </div>
+                        <div class="service-row">
+                            <div class="service-info">
+                                <span class="service-name">vj-camera (Feed Streamer)</span>
+                                <span id="status-vj-camera"></span>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn-dev btn-dev-success" onclick="controlService('start', 'vj-camera')">Start</button>
+                                <button class="btn-dev btn-dev-danger" onclick="controlService('stop', 'vj-camera')">Stop</button>
+                                <button class="btn-dev" onclick="controlService('restart', 'vj-camera')">Restart</button>
+                            </div>
+                        </div>
+                        <div class="service-row">
+                            <div class="service-info">
+                                <span class="service-name">vj-node (DMX Output Node)</span>
+                                <span id="status-vj-node"></span>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn-dev btn-dev-success" onclick="controlService('start', 'vj-node')">Start</button>
+                                <button class="btn-dev btn-dev-danger" onclick="controlService('stop', 'vj-node')">Stop</button>
+                                <button class="btn-dev" onclick="controlService('restart', 'vj-node')">Restart</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PARAMETERS EDITOR -->
+                <div class="dev-panel">
+                    <h2 class="panel-title">ENGINE PARAMETERS EDITOR</h2>
+                    <div class="editor-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="toggle-container">
+                                <input type="checkbox" id="hot-reload-toggle" onchange="toggleHotReload(this.checked)">
+                                <label for="hot-reload-toggle" style="font-weight: bold; cursor: pointer; color: #f87171;">ENABLE ENGINE HOT RELOAD</label>
+                            </div>
+                            <span style="font-size: 11px; color: #9ca3af;">tuning_config/engine_params.json</span>
+                        </div>
+                        <textarea id="params-editor" spellcheck="false"></textarea>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-dev btn-dev-success" style="padding: 8px 16px; font-weight: bold;" onclick="saveParams()">Apply & Save Configuration</button>
+                            <button class="btn-dev" style="padding: 8px 16px;" onclick="loadParams()">Reset Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: RECORD AND ANALYZE -->
+            <div>
+                <div id="tab-test" class="tab-content">
+                    <details class="engine-accordion" open>
+                        <summary>Record and Analyze</summary>
+                        <div class="accordion-content">
+                            <div class="test-hub-header-sticky">
+                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                                    <div style="display:flex; align-items:center; gap:12px;">
+                                        <div id="rec-status" class="rec-status">
+                                            <span class="rec-dot"></span> REC <span id="rec-timer" style="margin-left:8px; font-family:monospace;">00:00</span>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; gap:8px;">
+                                        <button id="btn-mute-others" class="btn btn-sm" onclick="toggleMuteOthers()" 
+                                                style="background:#222; border-color:#444; transition: all 0.2s;">Mute Others</button>
+                                        <button id="btn-record" class="btn btn-sm" onclick="toggleRecording()" style="background:#222; border-color:#444;">Record</button>
+                                        <button id="btn-pause-engine" class="btn btn-sm" onclick="toggleEnginePause()" style="background:#222; border-color:#444; transition: all 0.2s;">Pause</button>
+                                        <button id="btn-toggle-feed" class="btn btn-sm" onclick="toggleTestFeed()">Live Feed: OFF</button>
+                                        <button class="btn btn-danger btn-sm" onclick="clearAllGlobalOverrides()">Release All</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="test-live-feed-container">
+                                <div style="position:absolute; top:25px; left:25px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:4px; font-size:10px; color:var(--accent); z-index:10; border:1px solid var(--accent); backdrop-filter:blur(10px);">LIVE FEED</div>
+                                <img id="test-live-feed-img" src="" alt="Camera Stream Disconnected">
+                            </div>
+
+                            <p style="color:var(--text-dim); margin-top:10px; margin-bottom:20px; font-size:12px;">Real-time DMX tactile control with visual verification.</p>
+
+                            <!-- ENSEMBLE PICKER -->
+                            <div class="test-controls-bar">
+                                Available Fixtures
+                                <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:10px; color:#666;">ADD BY FUNCTION:</span>
+                                    <select id="test-function-picker" class="function-picker" onchange="updateTestFunctions(this.value)">
+                                        <option value="">-- Add Role --</option>
+                                    </select>
+                                    <button class="btn btn-sm" style="font-size:9px; padding:2px 8px; background:#333;" onclick="clearTestFunctions()">Clear</button>
+                                </div>
+                            </div>
+                            <div id="test-fixture-picker" class="test-fixture-picker">
+                                <!-- Picks will be rendered here -->
+                            </div>
+
+                            <!-- ENSEMBLE STRIPS -->
+                            <div id="test-ensemble-strips" style="margin-top: 10px;">
+                                <div id="test-empty-state"
+                                    style="padding:40px; text-align:center; color:#444; border:2px dashed #222; border-radius:12px;">
+                                    Select fixtures above to watch and live adjust.
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Scripts setup and imports -->
+    <script>
+        // Global Safeguards
+        window.isOriginalCloud = window.isOriginalCloud || false;
+        window.host = window.host || null;
+        window.isCustomTunnel = window.isCustomTunnel || false;
+        window.LAUNCHER_API = window.LAUNCHER_API || "";
+        window.API_BASE = window.API_BASE || "";
+    </script>
+    <script>
+        // Unregister SW to prevent serving stale versions
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    console.log("🛠️ Unregistering SW...");
+                    registration.unregister();
+                }
+            });
+        }
+    </script>
+    
+    <script src="shared_setup.js"></script>
+    <script src="live_controller.js"></script>
+    <script src="profile_logic.js"></script>
+    <script src="ai_architect.js"></script>
+    <script src="stage_logic.js"></script>
+    
+    <script>
+        const services = ['vj-server', 'vj-launcher', 'vj-engine', 'vj-camera', 'vj-node'];
+        let currentParams = {};
+
+        async function refreshServices() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                services.forEach(svc => {
+                    const statusCell = document.getElementById(`status-${svc}`);
+                    if (!statusCell) return;
+                    const svcKey = svc.replace('vj-', '');
+                    const info = data[svcKey] || { status: 'unknown', active: false };
+                    
+                    let badgeClass = 'status-unknown';
+                    if (info.active) {
+                        badgeClass = 'status-active';
+                    } else if (info.status === 'inactive' || info.status === 'stopped') {
+                        badgeClass = 'status-inactive';
+                    }
+                    
+                    statusCell.innerHTML = `<span class="status-badge ${badgeClass}">${info.status}</span>`;
+                });
+            } catch (e) {
+                console.error("Failed to fetch services status:", e);
+                services.forEach(svc => {
+                    const statusCell = document.getElementById(`status-${svc}`);
+                    if (statusCell) {
+                        statusCell.innerHTML = `<span class="status-badge status-unknown">ERROR</span>`;
+                    }
+                });
+            }
+        }
+
+        async function controlService(action, serviceName) {
+            try {
+                const res = await fetch(`/api/${action}?service=${serviceName}`);
+                const data = await res.json();
+                console.log(`Service ${serviceName} control response:`, data);
+                setTimeout(refreshServices, 1000);
+            } catch (e) {
+                console.error(`Failed to control service ${serviceName}:`, e);
+            }
+        }
+
+        async function loadParams() {
+            try {
+                const res = await fetch('/tuning_config/engine_params.json');
+                const data = await res.json();
+                currentParams = data;
+                
+                document.getElementById('params-editor').value = JSON.stringify(data, null, 4);
+                document.getElementById('hot-reload-toggle').checked = !!data.hot_reload;
+            } catch (e) {
+                console.error("Failed to load engine_params.json:", e);
+                document.getElementById('params-editor').value = "/* Error loading engine_params.json */";
+            }
+        }
+
+        async function saveParams() {
+            const textarea = document.getElementById('params-editor');
+            try {
+                const updated = JSON.parse(textarea.value);
+                
+                // Keep toggle in sync
+                document.getElementById('hot-reload-toggle').checked = !!updated.hot_reload;
+                currentParams = updated;
+                
+                await sendParamsUpdate(updated);
+                alert("Parameters applied and saved successfully!");
+            } catch (e) {
+                alert("Invalid JSON format: " + e.message);
+            }
+        }
+
+        async function toggleHotReload(checked) {
+            try {
+                const parsed = JSON.parse(document.getElementById('params-editor').value);
+                parsed.hot_reload = checked;
+                document.getElementById('params-editor').value = JSON.stringify(parsed, null, 4);
+                currentParams = parsed;
+                await sendParamsUpdate(currentParams);
+            } catch (e) {
+                currentParams.hot_reload = checked;
+                await sendParamsUpdate(currentParams);
+            }
+        }
+
+        async function sendParamsUpdate(params) {
+            try {
+                const res = await fetch('/api/tuning/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ params: params })
+                });
+                const result = await res.json();
+                console.log("Params apply result:", result);
+            } catch (e) {
+                console.error("Failed to apply parameter updates:", e);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            if (typeof loadNodeIp === 'function') loadNodeIp();
+            if (typeof refreshUI === 'function') refreshUI();
+            
+            loadParams();
+            refreshServices();
+            
+            // Poll service statuses
+            setInterval(refreshServices, 5000);
+        });
+    </script>
+</body>
+</html>

@@ -608,6 +608,7 @@ var switchTab = window.switchTab || function() { };
             const container = document.getElementById('tab-test');
             if (!container) return;
             const stripsContainer = document.getElementById('test-ensemble-strips');
+            if (!stripsContainer) return;
             const emptyState = document.getElementById('test-empty-state');
             renderEnsemblePicker();
 
@@ -1429,59 +1430,6 @@ var switchTab = window.switchTab || function() { };
             };
         }
         connectWs();
-
-        // --- DIGITAL TWIN SIMULATION ASSETS ---
-        let simManifest = null;
-        let simImageCache = {}; // { filename: Image }
-        async function loadSimManifest() {
-            try {
-                const res = await fetch(`${BACKEND_ROOT}/backend/static/sim_manifest.json`);
-                if (res.ok) {
-                    simManifest = await res.json();
-                    console.log("📸 Sim Manifest Loaded:", simManifest);
-                }
-            } catch (e) { console.warn("Could not load sim manifest", e); }
-        }
-        loadSimManifest();
-
-        function getSimFrame(patVal, xRot, yRot, drawVal, drawingVal) {
-            if (!simManifest) return null;
-
-            // Priority 1: X/Y Rotation Deformation
-            // If either X or Y rotation is significantly active, show the captured deformation frame
-            const rotThreshold = 20;
-            if ((xRot > rotThreshold || yRot > rotThreshold) && simManifest.rot_deformations && simManifest.rot_deformations.length > 0) {
-                let best = null, minDist = 99999;
-                for (const r of simManifest.rot_deformations) {
-                    const dist = Math.abs(r.x - xRot) + Math.abs(r.y - yRot);
-                    if (dist < minDist) { minDist = dist; best = r; }
-                }
-                if (best) return best.file;
-            }
-
-            // Priority 2: Drawing Interaction Deformation (draw or drawing channel active)
-            const drawThreshold = 10;
-            if ((drawVal > drawThreshold || drawingVal > drawThreshold) && simManifest.draw_deformations && simManifest.draw_deformations.length > 0) {
-                let best = null, minDist = 99999;
-                for (const d of simManifest.draw_deformations) {
-                    const dist = Math.abs(d.draw - drawVal) + Math.abs(d.drawing - drawingVal);
-                    if (dist < minDist) { minDist = dist; best = d; }
-                }
-                if (best) return best.file;
-            }
-
-            // Priority 3: Pattern Scan (CH 4) - exact match
-            const p = simManifest.patterns[String(patVal)];
-            if (p) return p.file;
-
-            // Fallback: nearest pattern
-            let bestP = null, minDistP = 99999;
-            for (const key in simManifest.patterns) {
-                const dist = Math.abs(parseInt(key) - patVal);
-                if (dist < minDistP) { minDistP = dist; bestP = simManifest.patterns[key]; }
-            }
-            return bestP ? bestP.file : null;
-        }
 
         // Simulated/Live History removed
 

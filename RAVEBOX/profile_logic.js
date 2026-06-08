@@ -331,11 +331,6 @@ function renderVibeRuleHtml(chIdx, ruleIdx, rule, rulesCount) {
                     </div>
                     <span style="color:rgba(255,255,255,0.15); font-size:8px; margin:6px 1px 0;">–</span>
                     <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
-                        <span style="font-size:6px; color:var(--accent); letter-spacing:0.5px; text-transform:uppercase; opacity:0.7;">CTR</span>
-                        <input type="text" value="${rule.cal.center}" oninput="enforceDmxLimit(this); updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.center', parseInt(this.value))" style="background:rgba(0,242,255,0.05); border:none; border-bottom:1px solid var(--accent); color:var(--accent); width:60px; text-align:center; padding:1px 0; font-size:10px; font-weight:bold; border-radius:2px;">
-                    </div>
-                    <span style="color:rgba(255,255,255,0.15); font-size:8px; margin:6px 1px 0;">–</span>
-                    <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
                         <span style="font-size:6px; color:rgba(255,255,255,0.25); letter-spacing:0.5px; text-transform:uppercase;">MAX</span>
                         <input type="text" value="${rule.cal.max}" oninput="enforceDmxLimit(this); updateProfileMapping(${chIdx}, ${ruleIdx}, 'cal.max', parseInt(this.value))" style="background:none; border:none; border-bottom:1px solid rgba(255,255,255,0.1); color:#fff; width:60px; text-align:center; padding:1px 0; font-size:10px; font-weight:bold;">
                     </div>
@@ -679,7 +674,10 @@ function createNewProfile() {
 
 
 async function deleteProfile(id) {
-    if (!confirm("Delete this profile?")) return;
+    const isAssigned = (db.stage || []).some(s => s.profileId === id);
+    if (isAssigned) {
+        if (!confirm("This profile is currently assigned to one or more fixtures on stage. Delete it?")) return;
+    }
 
     const prof = db.profiles.find(p => p.id === id);
     if (prof && prof._fileName) {
@@ -1438,9 +1436,10 @@ function getFixtureRoles(fixtureId) {
                     const rCtr = (m.cal?.center !== undefined) ? m.cal.center : Math.floor((rMin + rMax) / 2);
                     const rGain = (m.modifiers && m.modifiers.gain !== undefined) ? m.modifiers.gain : 1.0;
                     const rMuted = (m.muted !== undefined) ? !!m.muted : (m.modifiers?.muted !== undefined ? !!m.modifiers.muted : false);
-                    return { min: rMin, center: rCtr, max: rMax, gain: rGain, muted: rMuted };
+                    const rDesc = m.description || '';
+                    return { min: rMin, center: rCtr, max: rMax, gain: rGain, muted: rMuted, description: rDesc };
                 });
-                if(ranges.length === 0) ranges = [{min:0, center:127, max:255, gain:1.0, muted:false}];
+                if(ranges.length === 0) ranges = [{min:0, center:127, max:255, gain:1.0, muted:false, description:''}];
                 
                 if (!window.vibeSplits) window.vibeSplits = {};
                 if (!window.vibeSplits[chIdx]) {
@@ -1502,19 +1501,24 @@ function getFixtureRoles(fixtureId) {
                     (isMuted ? '🔇' : '🔊') +
                     '</button>';
 
-                rangesHtml += '<div class="range-item" style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">' +
-                    '<div style="display:flex; align-items:center; width:22px; justify-content:center;">' + muteBtn + '</div>' +
-                    '<div style="display:flex; gap:8px; flex:1; align-items:center; transition:opacity 0.2s; ' + dimStyle + '">' +
-                        '<div style="display:flex; gap:4px; flex:1; justify-content:center; align-items:center;">' +
-                            '<input type="number" min="0" max="255" value="' + r.min + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'min\', this.value, this)" style="width:34px; background:rgba(45,212,191,0.05); color:#2dd4bf; border:1px solid #2dd4bf; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
-                            '<input type="number" min="0" max="255" value="' + (r.center !== undefined ? r.center : Math.floor((r.min + r.max) / 2)) + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'center\', this.value, this)" style="width:34px; background:rgba(14,165,233,0.05); color:#0ea5e9; border:1px solid #0ea5e9; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
-                            '<input type="number" min="0" max="255" value="' + r.max + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'max\', this.value, this)" style="width:34px; background:rgba(139,92,246,0.05); color:#8b5cf6; border:1px solid #8b5cf6; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
+                rangesHtml += '<div class="range-container" style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.03);">' +
+                    '<div class="range-item" style="display:flex; align-items:center; gap:8px;">' +
+                        '<div style="display:flex; align-items:center; width:22px; justify-content:center;">' + muteBtn + '</div>' +
+                        '<div style="display:flex; gap:8px; flex:1; align-items:center; transition:opacity 0.2s; ' + dimStyle + '">' +
+                            '<div style="display:flex; gap:4px; flex:1; justify-content:center; align-items:center;">' +
+                                '<input type="number" min="0" max="255" value="' + r.min + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'min\', this.value, this)" style="width:34px; background:rgba(45,212,191,0.05); color:#2dd4bf; border:1px solid #2dd4bf; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
+                                '<input type="number" min="0" max="255" value="' + r.max + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'max\', this.value, this)" style="width:34px; background:rgba(139,92,246,0.05); color:#8b5cf6; border:1px solid #8b5cf6; border-radius:4px; text-align:center; font-size:11px; padding:2px 0; font-weight:bold;">' +
+                            '</div>' +
+                            '<div style="display:flex; align-items:center; gap:4px; flex:1;">' +
+                                '<span style="font-size:7px; color:var(--accent); font-weight:bold;">GAIN</span>' +
+                                '<input type="range" min="0" max="1" step="0.05" value="' + (r.gain !== undefined ? r.gain : 1.0) + '" oninput="updateRange(' + chIdx + ', ' + rIdx + ', \'gain\', this.value, this)" style="flex:1; height:4px; accent-color:var(--accent);">' +
+                            '</div>' +
+                            '<button class="btn btn-sm btn-danger" onclick="removeRange(' + chIdx + ', ' + rIdx + ')" style="padding:2px 6px; font-size:10px; height:22px;">X</button>' +
                         '</div>' +
-                        '<div style="display:flex; align-items:center; gap:4px; flex:1;">' +
-                            '<span style="font-size:7px; color:var(--accent); font-weight:bold;">GAIN</span>' +
-                            '<input type="range" min="0" max="1" step="0.05" value="' + (r.gain !== undefined ? r.gain : 1.0) + '" oninput="updateRange(' + chIdx + ', ' + rIdx + ', \'gain\', this.value, this)" style="flex:1; height:4px; accent-color:var(--accent);">' +
-                        '</div>' +
-                        '<button class="btn btn-sm btn-danger" onclick="removeRange(' + chIdx + ', ' + rIdx + ')" style="padding:2px 6px; font-size:10px; height:22px;">X</button>' +
+                    '</div>' +
+                    '<div style="display:flex; align-items:center; gap:4px; margin-left:30px; ' + dimStyle + '">' +
+                        '<span style="font-size:8px; color:rgba(255,255,255,0.3); font-weight:bold; width:35px;">NOTES:</span>' +
+                        '<input type="text" value="' + (r.description || '') + '" onchange="updateRange(' + chIdx + ', ' + rIdx + ', \'description\', this.value, this)" style="flex:1; background:rgba(255,255,255,0.02); color:#fff; border:1px solid rgba(255,255,255,0.08); border-radius:4px; font-size:10px; padding:2px 6px; font-family:var(--font-sans);" placeholder="e.g. Laser Off">' +
                     '</div>' +
                 '</div>';
             });
@@ -1529,7 +1533,7 @@ function getFixtureRoles(fixtureId) {
                     '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); removeProfileChannel(' + chIdx + ')" style="background:transparent; border:1px solid #ff4757; color:#ff4757; flex-shrink: 0; font-weight: 900; font-size: 10px; padding: 4px 8px;">×</button>' +
                 '</div>' +
                 '<div class="channel-card-body">' +
-                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">' +
+                '<div style="display:' + ((!activeEasyId || activeEasyId === 'custom') ? 'grid' : 'none') + '; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">' +
                     '<div><div class="section-title">LOGIC</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'behavior\', this.value)">' + behaviorOptions + '</select></div>' +
                     '<div><div class="section-title">SOURCE</div><select class="logic-selector" onchange="updateChannelConfig(' + chIdx + ', \'source\', this.value)">' + sourceOptions + '</select></div>' +
                 '</div>' +
@@ -1546,13 +1550,11 @@ function getFixtureRoles(fixtureId) {
                         '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
                             '<label style="margin-bottom:0; font-size:10px; font-weight:800; color:var(--text-dim);">Threshold</label>' +
                             '<div style="display:flex; align-items:center; gap:6px;">' +
-                                '<label style="margin-bottom:0; display:flex; align-items:center; gap:4px; font-size:10px; cursor:pointer; font-weight:normal; text-transform:none; color:var(--text-dim);">' +
-                                    '<input type="checkbox" style="margin:0; width:12px; height:12px; vertical-align:middle; cursor:pointer;" ' + (conf.threshold_hold_active ? 'checked' : '') + ' onchange="updateChannelConfig(' + chIdx + ', \'threshold_hold_active\', this.checked)"> Hold gated DMX:' +
-                                '</label>' +
-                                '<input type="number" class="glass-input" style="width:50px; height:20px; font-size:10px; padding:2px 4px; margin:0; text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff;" min="0" max="255" value="' + (conf.threshold_hold_value !== undefined ? conf.threshold_hold_value : '') + '" placeholder="e.g. 0" onchange="updateChannelConfig(' + chIdx + ', \'threshold_hold_value\', this.value)">' +
+                                '<span style="font-size:10px; color:var(--text-dim);">Default:</span>' +
+                                '<input type="number" class="glass-input" style="width:50px; height:20px; font-size:10px; padding:2px 4px; margin:0; text-align:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#fff;" min="0" max="255" value="' + (conf.threshold_hold_value !== undefined ? conf.threshold_hold_value : '') + '" placeholder="e.g. 0" onchange="updateChannelConfig(' + chIdx + ', \'threshold_hold_value\', this.value); this.closest(\'.control-group\').querySelector(\'.slider-custom\').style.display = (this.value !== \'\') ? \'block\' : \'none\';">' +
                             '</div>' +
                         '</div>' +
-                        '<input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + (conf.threshold || 0) + '" onchange="updateChannelConfig(' + chIdx + ', \'threshold\', this.value)">' +
+                        '<input type="range" class="slider-custom" min="0" max="1" step="0.05" value="' + (conf.threshold || 0) + '" onchange="updateChannelConfig(' + chIdx + ', \'threshold\', this.value)" style="display:' + (conf.threshold_hold_value !== '' && conf.threshold_hold_value !== undefined && conf.threshold_hold_value !== null ? 'block' : 'none') + ';">' +
                     '</div>' +
                 '</div>' +
             '</div></div>';
@@ -1705,7 +1707,13 @@ function getFixtureRoles(fixtureId) {
             const r0 = (conf.ranges && conf.ranges[0]) || { min: 0, center: 127, max: 255 };
             const c_min = (r0.min !== undefined) ? parseInt(r0.min) : 0;
             const c_max = (r0.max !== undefined) ? parseInt(r0.max) : 255;
-            const c_center = (r0.center !== undefined) ? parseInt(r0.center) : Math.floor((c_min + c_max) / 2);
+            const threshold_hold_value = (conf.threshold_hold_value !== '' && conf.threshold_hold_value !== undefined) ? parseInt(conf.threshold_hold_value) : null;
+            let c_center;
+            if (threshold_hold_value !== null && !isNaN(threshold_hold_value)) {
+                c_center = threshold_hold_value;
+            } else {
+                c_center = (r0.center !== undefined) ? parseInt(r0.center) : Math.floor((c_min + c_max) / 2);
+            }
 
             // Scale speed and react by the range span relative to 255
             const range_span = c_max - c_min;
@@ -1773,8 +1781,8 @@ function getFixtureRoles(fixtureId) {
                 }
                 
                 let final_dmx;
-                if (is_gated && conf.threshold_hold_active && conf.threshold_hold_value !== '' && conf.threshold_hold_value !== undefined) {
-                    final_dmx = parseInt(conf.threshold_hold_value);
+                if ((is_gated || E === 0.0) && threshold_hold_value !== null && !isNaN(threshold_hold_value)) {
+                    final_dmx = threshold_hold_value;
                 } else {
                     if (is_gated) y = -1.0;
                     
@@ -1901,14 +1909,14 @@ function getFixtureRoles(fixtureId) {
     };
     
     window.addRange = function(chIdx) {
-        window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255, muted: false});
+        window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255, muted: false, description: ''});
         window.renderProfileMappings();
     };
     
     window.removeRange = function(chIdx, rIdx) {
         window.channelConfig[chIdx].ranges.splice(rIdx, 1);
         if(window.channelConfig[chIdx].ranges.length === 0) {
-            window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255, muted: false});
+            window.channelConfig[chIdx].ranges.push({min: 0, center: 127, max: 255, muted: false, description: ''});
         }
         window.renderProfileMappings();
     };
@@ -1942,22 +1950,10 @@ function getFixtureRoles(fixtureId) {
 
         if (field === 'min') {
             currentRange.min = val;
-            const boundsMin = Math.min(currentRange.min, currentRange.max);
-            const boundsMax = Math.max(currentRange.min, currentRange.max);
-            if (currentRange.center < boundsMin) {
-                currentRange.center = boundsMin;
-            } else if (currentRange.center > boundsMax) {
-                currentRange.center = boundsMax;
-            }
+            currentRange.center = Math.floor((currentRange.min + currentRange.max) / 2);
         } else if (field === 'max') {
             currentRange.max = val;
-            const boundsMin = Math.min(currentRange.min, currentRange.max);
-            const boundsMax = Math.max(currentRange.min, currentRange.max);
-            if (currentRange.center < boundsMin) {
-                currentRange.center = boundsMin;
-            } else if (currentRange.center > boundsMax) {
-                currentRange.center = boundsMax;
-            }
+            currentRange.center = Math.floor((currentRange.min + currentRange.max) / 2);
         } else if (field === 'center') {
             const boundsMin = Math.min(currentRange.min, currentRange.max);
             const boundsMax = Math.max(currentRange.min, currentRange.max);
@@ -1971,12 +1967,17 @@ function getFixtureRoles(fixtureId) {
             currentRange.gain = val;
         } else if (field === 'muted') {
             currentRange.muted = val;
+        } else if (field === 'description') {
+            currentRange.description = val;
         }
 
         // Update DOM elements if inputEl is provided
         if (inputEl && (field === 'min' || field === 'max' || field === 'center')) {
             const parent = inputEl.parentElement;
-            if (parent && parent.children.length === 3) {
+            if (parent && parent.children.length === 2) {
+                parent.children[0].value = currentRange.min;
+                parent.children[1].value = currentRange.max;
+            } else if (parent && parent.children.length === 3) {
                 parent.children[0].value = currentRange.min;
                 parent.children[1].value = currentRange.center;
                 parent.children[2].value = currentRange.max;
@@ -2012,7 +2013,10 @@ function getFixtureRoles(fixtureId) {
 
     window.updateChannelConfig = function(chIdx, field, val) {
         if(field === 'speed' || field === 'react' || field === 'threshold') val = parseFloat(val);
-        if(field === 'threshold_hold_value') val = val === '' ? '' : parseInt(val);
+        if(field === 'threshold_hold_value') {
+            val = val === '' ? '' : parseInt(val);
+            window.channelConfig[chIdx].threshold_hold_active = (val !== '');
+        }
         window.channelConfig[chIdx][field] = val;
         window.channelConfig[chIdx].easy_id = ''; // Clear easy_id on manual parameter adjustments
         window.compileProfileMappings();

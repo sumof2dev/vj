@@ -5,7 +5,8 @@
 <head>
     <meta charset="UTF-8">
     <title>AI Fixture Extractor | RaveBox</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="icon" href="/public/icon.png">
     <style>
         :root {
@@ -196,7 +197,7 @@
             border-radius: 8px;
             overflow: hidden;
             border: 1px solid var(--border);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             transition: all 0.3s;
         }
 
@@ -241,7 +242,7 @@
             align-items: center;
             justify-content: center;
             cursor: zoom-out;
-            box-shadow: 0 0 100px rgba(0,0,0,0.9);
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.9);
         }
 
         .example-image-container.expanded img {
@@ -742,7 +743,8 @@
                     </div>
                     <div>
                         <label style="font-size:7px; font-weight:900;">Fixture Type</label>
-                        <select id="ai-fixture-type" class="glass-select" style="padding:4px 8px; font-size:11px; height:24px;">
+                        <select id="ai-fixture-type" class="glass-select"
+                            style="padding:4px 8px; font-size:11px; height:24px;">
                             <option value="generic">Generic / Wash</option>
                             <option value="laser">Laser / Scanner</option>
                             <option value="moving_head">Moving Head</option>
@@ -768,8 +770,10 @@
                                     <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
                                 </svg>
                             </i>
-                            <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;">Upload image of DMX chart</div>
-                            <div style="font-size: 0.7rem; color: var(--text-dim);" id="file-label">from fixture user manual</div>
+                            <div style="font-size: 0.9rem; font-weight: 700; margin-bottom: 2px;">Upload image of DMX
+                                chart</div>
+                            <div style="font-size: 0.7rem; color: var(--text-dim);" id="file-label">from fixture user
+                                manual</div>
                         </div>
                         <div class="example-image-container" id="example-container" onclick="toggleExampleImage()">
                             <img src="/public/dmxchartexample.png" alt="DMX Chart Example">
@@ -784,7 +788,7 @@
                 <button id="btn-analyze" class="btn"
                     style="flex:1; display: none; background: var(--accent); color: white; padding: 10px; font-size: 1rem; font-weight: 800; border-radius: 8px; box-shadow: 0 4px 15px var(--accent-glow);"
                     onclick="analyzeFiles()">
-                    🚀 Extract
+                    Extract
                 </button>
                 <button id="btn-clear" class="btn btn-secondary"
                     style="flex:0.3; display: none; padding: 10px; font-size: 0.9rem; font-weight: 800; border-radius: 8px;"
@@ -799,7 +803,7 @@
                 <button id="btn-duplicate" class="btn btn-secondary"
                     style="flex:1; padding: 10px; font-size: 0.9rem; font-weight: 800; border-radius: 8px;"
                     onclick="openDuplicateSelector()">
-                    Duplicate Profile
+                    Duplicate Existing
                 </button>
             </div>
 
@@ -817,8 +821,8 @@
         <section id="step-loading" class="card loading-overlay">
             <div class="spinner"></div>
             <div style="font-weight: 800; font-size: 1.2rem; color: #fff;">Analyzing Channel Table...</div>
-            <div style="color: var(--text-dim); text-align: center; max-width: 300px;">Our Stage Lighting AI is
-                extracting your DMX functions. This usually takes 5-10 seconds.</div>
+            <div style="color: var(--text-dim); text-align: center; max-width: 300px;">RAVEBOX AI is
+                extracting your DMX functions. Please be patient.</div>
         </section>
 
         <!-- STEP 3: HAND-HOLDING RESULTS -->
@@ -919,12 +923,13 @@
         <div class="modal" onclick="event.stopPropagation()" style="max-width: 500px;">
             <div class="card-title">Duplicate Profile</div>
             <div class="card-subtitle">Select an existing profile to clone</div>
-            
-            <input type="text" id="prof-search" placeholder="Search profiles..." 
-                   style="margin-bottom: 15px; background: rgba(0,0,0,0.2); width: 100%; box-sizing: border-box;"
-                   oninput="filterDuplicates(this.value)">
-                   
-            <div id="duplicate-list" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+
+            <input type="text" id="prof-search" placeholder="Search profiles..."
+                style="margin-bottom: 15px; background: rgba(0,0,0,0.2); width: 100%; box-sizing: border-box;"
+                oninput="filterDuplicates(this.value)">
+
+            <div id="duplicate-list"
+                style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
                 <!-- Profiles populated here -->
             </div>
 
@@ -1008,21 +1013,248 @@
         };
 
 
-        window.generateFriendlyId = function(type, existingIds = []) {
-            const words = ['rave', 'box', 'cave', 'theone', 'beaver', 'slimy', 'hasty', 'baggage', 'rock', 'toy', 'tease', 'mildly', 'fat', 'twist', 'good', 'miami', 'grab', 'cash', 'money', 'bills', 'yeet', 'nocap', 'uhhuh', 'kiss', 'climb', 'drop', 'grandma', 'love', 'roses', 'cinch', 'knot', 'xray', 'rip', 'tit', 'wish', 'head', 'rash', 'play', 'unload', 'brave', 'daddy'];
-            const now = new Date();
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const dd = String(now.getDate()).padStart(2, '0');
-            const word = words[Math.floor(Math.random() * words.length)];
-            const baseId = `${mm}${dd}.${type}.${word}`;
-            
+        window.generateFriendlyId = function (type, existingIds = [], brand = 'generic', model = 'fixture') {
+            let b = brand.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_.-]/g, '');
+            let m = model.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_.-]/g, '');
+            if (!b) b = 'generic';
+            if (!m) m = 'fixture';
+
+            const baseId = `${b}.${m}`;
             let finalId = baseId;
             let counter = 1;
             while (existingIds.includes(finalId)) {
-                finalId = `${baseId}(${counter})`;
+                finalId = `${baseId}.${counter}`;
                 counter++;
             }
             return finalId;
+        };
+
+        const ROLE_BEHAVIOR_TEMPLATES = {
+            "zoom": {
+                "easy_id": "pulse_beat", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "beat phase",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 0.8, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "color_solid": {
+                "easy_id": "smooth_drift", "behavior": "sine", "vibe": "any", "description": "Partitioned Range", "source": "bass",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 0.25, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "pattern": {
+                "easy_id": "snap_phrase", "behavior": "stochastic", "vibe": "any", "description": "Partitioned Range", "source": "mids",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 0.45, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "beat", "muted": false },
+                "muted": false
+            },
+            "group": {
+                "easy_id": "static_hold", "behavior": "static", "vibe": "any", "description": "Partitioned Range", "source": "volume",
+                "cal": { "min": 0, "max": 255, "center": 128 },
+                "modifiers": { "speed": 0.5, "react": 0.5, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "effect": [
+                {
+                    "easy_id": "stepped_highs", "behavior": "square", "vibe": "any", "description": "Partitioned Range", "source": "highs",
+                    "cal": { "min": 0, "max": 255, "center": 128 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "bar", "muted": false },
+                    "muted": false
+                },
+                {
+                    "easy_id": "hi_hat", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "cymbal",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                },
+                {
+                    "easy_id": "hi_hit", "behavior": "saw", "vibe": "any", "description": "Partitioned Range", "source": "highs",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                },
+                {
+                    "easy_id": "spiky_mid", "behavior": "spike", "vibe": "any", "description": "Partitioned Range", "source": "mids",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                }
+            ],
+            "pos_x fine": {
+                "easy_id": "cycle_random", "behavior": "stochastic", "vibe": "any", "description": "Partitioned Range", "source": "mids",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "beat", "muted": false },
+                "muted": false
+            },
+            "pos_y": [
+                {
+                    "easy_id": "kick_drum_step", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "kick",
+                    "cal": { "min": 0, "max": 255, "center": 1 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "beat", "muted": false },
+                    "muted": false
+                },
+                {
+                    "easy_id": "fuzzy_high", "behavior": "fuzzy", "vibe": "any", "description": "Partitioned Range", "source": "highs_h",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                }
+            ],
+            "pos_x": {
+                "easy_id": "hi_hat", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "cymbal",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "color_multi": {
+                "easy_id": "random_bar_hold", "behavior": "stochastic", "vibe": "any", "description": "Partitioned Range", "source": "volume",
+                "cal": { "min": 0, "max": 255, "center": 128 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "bar", "muted": false },
+                "muted": false
+            },
+            "generic": {
+                "easy_id": "random_beat_hold", "behavior": "stochastic", "vibe": "any", "description": "Partitioned Range", "source": "volume",
+                "cal": { "min": 0, "max": 255, "center": 128 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "beat", "muted": false },
+                "muted": false
+            },
+            "speed": {
+                "easy_id": "beat_jump", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "beat phase",
+                "cal": { "min": 0, "max": 255, "center": 128 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "mode": [
+                {
+                    "easy_id": "direct_hold", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "volume",
+                    "cal": { "min": 0, "max": 255, "center": 128 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "beat", "muted": false },
+                    "muted": false
+                },
+                {
+                    "easy_id": "volume_stepped", "behavior": "noise", "vibe": "any", "description": "Partitioned Range", "source": "volume",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "beat", "muted": false },
+                    "muted": false
+                }
+            ],
+            "pos_y fine": {
+                "easy_id": "hi_hit", "behavior": "saw", "vibe": "any", "description": "Partitioned Range", "source": "highs",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "gobo": [
+                {
+                    "easy_id": "fuzzy_mids", "behavior": "fuzzy", "vibe": "any", "description": "Partitioned Range", "source": "mids",
+                    "cal": { "min": 0, "max": 255, "center": 128 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                },
+                {
+                    "easy_id": "fuzzy_0", "behavior": "fuzzy", "vibe": "any", "description": "Partitioned Range", "source": "bin 0",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 0.8, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                }
+            ],
+            "drawing": [
+                {
+                    "easy_id": "smoother_fuzzy", "behavior": "fuzzy", "vibe": "any", "description": "Partitioned Range", "source": "mids",
+                    "cal": { "min": 0, "max": 255, "center": 128 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "beat", "muted": false },
+                    "muted": false
+                },
+                {
+                    "easy_id": "rapid_climb", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "impact",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                }
+            ],
+            "beam_fx": {
+                "easy_id": "kick_spike", "behavior": "spike", "vibe": "any", "description": "Partitioned Range", "source": "kick",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 0.85, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "unassigned": {
+                "easy_id": "beat", "behavior": "beat phase", "vibe": "any", "description": "Partitioned Range", "source": "volume",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "rot_x": {
+                "easy_id": "spiky_mid", "behavior": "spike", "vibe": "any", "description": "Partitioned Range", "source": "mids",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "strobe": [
+                {
+                    "easy_id": "kick_hit", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "kick",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                },
+                {
+                    "easy_id": "beat_hit", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "beat",
+                    "cal": { "min": 0, "max": 255, "center": 127 },
+                    "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0.95, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                    "muted": false
+                }
+            ],
+            "rot_y": {
+                "easy_id": "snare_hit", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "snare",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "grating": {
+                "easy_id": "cymbal_hit", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "cymbal",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0.95, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "dimmer": {
+                "easy_id": "volume_direct", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "volume",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0.85, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "clip": {
+                "easy_id": "jittery_sine", "behavior": "noise", "vibe": "any", "description": "Partitioned Range", "source": "mids_h",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "rot_z": {
+                "easy_id": "fuzzy_bass", "behavior": "fuzzy", "vibe": "any", "description": "Partitioned Range", "source": "bin 0",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 1, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            },
+            "drawing_delay": {
+                "easy_id": "direct_4", "behavior": "direct", "vibe": "any", "description": "Partitioned Range", "source": "bin 4",
+                "cal": { "min": 0, "max": 255, "center": 127 },
+                "modifiers": { "speed": 1, "react": 0.8, "gain": 1, "threshold": 0, "threshold_hold_active": false, "threshold_hold_value": "", "hold_type": "none", "muted": false },
+                "muted": false
+            }
+        };
+
+        window.getTemplateMappingForRole = (role, rangeIndex) => {
+            let templateRule = ROLE_BEHAVIOR_TEMPLATES[role];
+            if (!templateRule) {
+                templateRule = ROLE_BEHAVIOR_TEMPLATES["generic"];
+            }
+
+            if (Array.isArray(templateRule)) {
+                // If there are multiple mapping options for this role, use rangeIndex modulo length
+                const selectedRule = templateRule[rangeIndex % templateRule.length];
+                return JSON.parse(JSON.stringify(selectedRule));
+            }
+
+            return JSON.parse(JSON.stringify(templateRule));
         };
 
         // Initialize UI
@@ -1036,12 +1268,14 @@
 
             // Populate existing fixtures
             const select = document.getElementById('existing-fixture-select');
-            db.fixtures.forEach(f => {
-                const opt = document.createElement('option');
-                opt.value = f.id;
-                opt.innerText = f.name;
-                select.appendChild(opt);
-            });
+            if (select) {
+                db.fixtures.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.innerText = f.name;
+                    select.appendChild(opt);
+                });
+            }
 
             // Check URL mode
             const urlParams = new URLSearchParams(window.location.search);
@@ -1213,7 +1447,7 @@
 
         // --- IMAGE EXTRACTION ENGINE ---
         window.analyzeFiles = async () => {
-            console.log("🚀 Starting AI Analysis...");
+            console.log("Starting AI Analysis...");
             const files = window.pendingFiles;
 
             if (files.length === 0) {
@@ -1234,54 +1468,41 @@
             const targetChCountVal = document.getElementById('ai-ch-count').value || "";
 
             setStep('loading');
-            console.log(`📦 Mode: Extraction. Images: ${files.length}`);
+            console.log(`Mode: Extraction. Images: ${files.length}`);
 
-            let limitText = targetChCountVal ? `STRICT EXTRACTION LIMIT: Only extract precisely ${targetChCountVal} channels. Ignore any data beyond this channel count.` : "Extract the full DMX table found in the images.";
+            let limitText = targetChCountVal ? `STRICT EXTRACTION LIMIT: Only extract precisely ${targetChCountVal} channels. Ignore any data beyond this channel count.` : "Extract the full DMX table.";
 
-            let systemPrompt = `You are the RaveBox Lighting AI. Your task is to extract DMX channel tables from MULTIPLE IMAGES and create a unified "Behavior Profile".
+            let systemPrompt = `You are the RaveBox Lighting AI. Your task is to extract DMX channel tables from MULTIPLE IMAGES.
+For each DMX channel:
+1. Identify the name of the channel.
+2. Determine the closest matching role from this function list:
+   pos_x, pos_y, pos_x fine, pos_y fine, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, dimmer, mode, clip, group, generic, speed, gobo, effect.
+   Note: The subrange description text (if present) should be ignored and MUST NOT influence the channel function determination. Focus on the channel name / main function header to determine the role.
+3. Extract all DMX value ranges (sub-ranges) for this channel (e.g. 0-255, or 0-10 Off, 11-255 Strobe).
+4. Set a reasonable default value (usually 0).
 
 ${limitText}
 
-3. MULTI-RANGE EXTRACTION (STRICT): For EACH channel, you MUST extract EVERY logical sub-range row found. Create a separate rule object for each range in the 'mappings' array. DO NOT summarize, collapse, or skip any rows. Accuracy is paramount.
-
-4. MECHANICAL CLASS mapping:
-   - "LINEAR": Fixed Angles, Angle Selection, Dimmer 0-100%, Patterns. 
-   - "INDEX": Select Gobo, Select Color Wheeler, Step Colors.
-   - "MACRO": Auto Programs, Hardware Macros, Dynamic Programs, Hardware Auto. 
-
-5. SEMANTIC DECODER (RaveBox Decoupled Paradigm):
-   For every rule, identify the [DRIVER] (source), [SHAPE] (behavior), and [MODIFIERS] (speed, react, hold_type).
-   - POS_X, PAN, POS_Y, TILT: [DRIVER: spectral flux, SHAPE: sine, SPEED: 0.5, REACT: 0.5, HOLD: none]. 
-   - ZOOM, FOCUS, IRIS: [DRIVER: bass, SHAPE: sine, SPEED: 0.1, REACT: 0.2, HOLD: none]. 
-   - STROBE, SHUTTER, DIMMER: [DRIVER: volume, SHAPE: saw, SPEED: 1.0, REACT: 0.9, HOLD: none].
-   - COLOR_MULTI, CHASES: [DRIVER: beat phase, SHAPE: square, SPEED: 0.1, REACT: 0.5, HOLD: beat].
-   - COLOR_SOLID, GOBO: [DRIVER: volume, SHAPE: noise, SPEED: 0.1, REACT: 0.1, HOLD: bar].
-
-6. CALIBRATION & MODIFIERS:
-   - Every rule MUST have a 'cal' object: {min: start, center: middle, max: end}.
-   - Every rule MUST have a 'modifiers' object: {speed: 0-1.0, react: 0-1.0, hold_type: "none/beat/bar/etc"}.
-   - VIBE: Default to "any". If a fixture has multiple heads or segments, spread "any 1", "any 2", and "any 3" across them to provide coordination variety.
-
-7. ROLE DICTIONARY:
-   pos_x, pos_y, pos_x fine, pos_y fine, zoom, rot_z, rot_x, rot_y, color_solid, color_multi, pattern, beam_fx, grating, drawing, drawing_delay, strobe, dimmer, mode, clip, group, generic, speed, gobo, effect.
-
-8. OUTPUT JSON SCHEMA:
+OUTPUT JSON SCHEMA:
 {
-  "id": "prof_generated", 
-  "name": "${brand} ${fixModel}", 
-  "question": "Optional clarifying question",
-  "channels": [ { "name": "Function", "role": "dimmer", "default": 0 } ],
-  "mappings": [ 
-     [ 
-       { 
-         "vibe": "any", 
-         "description": "Range Description", 
-         "source": "volume", 
-         "behavior": "sine", 
-         "cal": { "min": 0, "center": 127, "max": 255 },
-         "modifiers": { "speed": 0.5, "react": 0.5, "hold_type": "none" }
+  "id": "prof_generated",
+  "name": "${brand} ${fixModel}",
+  "question": "Optional clarifying question if the DMX chart is unclear or cut off",
+  "channels": [
+     {
+       "name": "Channel Name",
+       "role": "one of the roles above",
+       "default": 0
+     }
+  ],
+  "ranges": [
+     [
+       {
+         "min": 0,
+         "max": 255,
+         "description": "Description of this range (e.g. 'Strobe Slow to Fast' or 'Off')"
        }
-     ] 
+     ]
   ]
 }
 `;
@@ -1330,51 +1551,32 @@ ${limitText}
                                 required: ["name", "role", "default"]
                             }
                         },
-                        mappings: {
+                        ranges: {
                             type: "ARRAY",
                             items: {
                                 type: "ARRAY",
                                 items: {
                                     type: "OBJECT",
                                     properties: {
-                                        vibe: { type: "STRING" },
-                                        description: { type: "STRING" },
-                                        source: { type: "STRING" },
-                                        behavior: { type: "STRING" },
-                                        cal: {
-                                            type: "OBJECT",
-                                            properties: {
-                                                min: { type: "INTEGER" },
-                                                center: { type: "INTEGER" },
-                                                max: { type: "INTEGER" }
-                                            },
-                                            required: ["min", "center", "max"]
-                                        },
-                                        modifiers: {
-                                            type: "OBJECT",
-                                            properties: {
-                                                speed: { type: "NUMBER" },
-                                                react: { type: "NUMBER" },
-                                                hold_type: { type: "STRING" }
-                                            },
-                                            required: ["speed", "react", "hold_type"]
-                                        }
+                                        min: { type: "INTEGER" },
+                                        max: { type: "INTEGER" },
+                                        description: { type: "STRING" }
                                     },
-                                    required: ["vibe", "description", "source", "behavior", "cal", "modifiers"]
+                                    required: ["min", "max", "description"]
                                 }
                             }
                         }
                     },
-                    required: ["id", "name", "channels", "mappings"]
+                    required: ["id", "name", "channels", "ranges"]
                 };
 
                 console.log("📡 Calling Gemini API...");
-                const result = await model.generateContent({ 
-                    contents, 
-                    generationConfig: { 
+                const result = await model.generateContent({
+                    contents,
+                    generationConfig: {
                         responseMimeType: "application/json",
                         responseSchema: responseSchema
-                    } 
+                    }
                 });
                 const responseText = result.response.text();
                 console.log("🤖 AI RAW RESPONSE RECEIVED.");
@@ -1397,12 +1599,11 @@ ${limitText}
         }
 
         function processAIResponse(text) {
-            // NEW: Structured output mode returns valid JSON directly
             try {
                 const data = JSON.parse(text);
-                
+
                 // Check for clarifying question
-                if (data.question && (!data.mappings || data.mappings.length === 0)) {
+                if (data.question && (!data.channels || data.channels.length === 0)) {
                     console.log("❓ AI requested clarification:", data.question);
                     chatHistory.push({ role: 'model', parts: [{ text: data.question }] });
                     updateChatUI();
@@ -1410,76 +1611,82 @@ ${limitText}
                     return;
                 }
 
-                window.currentFixture = data; // Now a Profile object
+                const brand = document.getElementById('ai-brand').value.trim() || 'generic';
+                const model = document.getElementById('ai-model').value.trim() || 'fixture';
 
-                // Final verification
-                const ts = Date.now();
-                if (!window.currentFixture.mappings || !window.currentFixture.channels) throw new Error("Invalid schema");
+                window.currentFixture = {
+                    id: window.generateFriendlyId('p', db.profiles.map(p => p.id), brand, model),
+                    name: data.name || "Generated Fixture",
+                    channels: data.channels || []
+                };
 
-                // SCHEMA SYNCHRONIZATION: Ensure channels and mappings have the same length
+                // SCHEMA SYNCHRONIZATION: Ensure channels and ranges have the same length
                 const chLen = window.currentFixture.channels.length;
-                const mapLen = window.currentFixture.mappings.length;
-                
-                if (chLen < mapLen) {
-                    console.warn(`⚠️ AI returned ${mapLen} mappings but only ${chLen} channels. Padding channels...`);
-                    for (let i = chLen; i < mapLen; i++) {
-                        window.currentFixture.channels.push({ name: `Extra Channel ${i+1}`, role: 'generic', default: 0 });
+                if (!data.ranges) data.ranges = [];
+                const rangeLen = data.ranges.length;
+
+                if (chLen < rangeLen) {
+                    console.warn(`⚠️ AI returned ${rangeLen} ranges but only ${chLen} channels. Padding channels...`);
+                    for (let i = chLen; i < rangeLen; i++) {
+                        window.currentFixture.channels.push({ name: `Extra Channel ${i + 1}`, role: 'generic', default: 0 });
                     }
-                } else if (chLen > mapLen) {
-                    console.warn(`⚠️ AI returned ${chLen} channels but only ${mapLen} mappings. Padding mappings...`);
-                    for (let i = mapLen; i < chLen; i++) {
-                        window.currentFixture.mappings.push([{ 
-                            vibe: 'any', description: 'Default Range', source: 'volume', behavior: 'static', 
-                            cal: { min: 0, center: 127, max: 255 }, modifiers: { speed: 0.5, react: 0.5, hold_type: 'none' } 
-                        }]);
+                } else if (chLen > rangeLen) {
+                    console.warn(`⚠️ AI returned ${chLen} channels but only ${rangeLen} ranges. Padding ranges...`);
+                    for (let i = rangeLen; i < chLen; i++) {
+                        data.ranges.push([{ min: 0, max: 255, description: 'Default Range' }]);
                     }
                 }
 
                 if (!window.currentFixture.id || window.currentFixture.id === 'prof_generated') {
-                    window.currentFixture.id = window.generateFriendlyId('p', db.profiles.map(p => p.id));
+                    window.currentFixture.id = window.generateFriendlyId('p', db.profiles.map(p => p.id), brand, model);
                 }
 
-                window.currentFixture.mappings = window.currentFixture.mappings.map((rules, chIdx) => {
-                    const chRules = Array.isArray(rules) ? rules : [rules];
-                    const role = window.currentFixture.channels[chIdx]?.role || 'generic';
-                    
-                    // SORT BY MIN before hydration to ensure correct ordinal assignment
-                    const sorted = [...chRules].sort((a, b) => (parseInt(a.cal?.min) || 0) - (parseInt(b.cal?.min) || 0));
+                // Hydrate mappings strictly using template.json (via window.getTemplateMappingForRole)
+                window.currentFixture.mappings = window.currentFixture.channels.map((ch, chIdx) => {
+                    const chRanges = data.ranges[chIdx] || [{ min: 0, max: 255, description: "Default" }];
+                    const sortedRanges = [...chRanges].sort((a, b) => (parseInt(a.min) || 0) - (parseInt(b.min) || 0));
 
-                    return sorted.map((rule, rIdx) => {
-                        const min = parseInt(rule.cal?.min) || 0;
-                        const max = parseInt(rule.cal?.max) || 255;
-                        // Use Ordinal Logic (.0, .1, .2-4)
-                        const logic = window.determineBehavior(role, min, max, rIdx, sorted.length, chIdx);
+                    return sortedRanges.map((r, rIdx) => {
+                        const min = parseInt(r.min) || 0;
+                        const max = parseInt(r.max) || 255;
+                        const center = Math.floor((min + max) / 2);
 
-                        // HARDENED HYDRATION: Explicit cast and sanitation for all risky fields
-                        const hydratedRule = {
-                            ...rule,
-                            behavior: rule.behavior || logic.behavior,
-                            source: rule.source || logic.source,
-                            cal: {
-                                min: min,
-                                max: max,
-                                center: parseInt(rule.cal?.center) || Math.floor((min + max) / 2)
-                            },
-                            modifiers: {
-                                speed: parseFloat(rule.speed ?? logic.speed) || 0,
-                                react: 0.5,
-                                hold_type: rule.hold_type || 'none'
-                            }
-                        };
-
-                        if (isNaN(hydratedRule.modifiers.speed)) hydratedRule.modifiers.speed = parseFloat(logic.speed.toFixed(3));
-                        
-                        hydratedRule.vibe = 'any';
-
-                        return hydratedRule;
+                        const templateRule = window.getTemplateMappingForRole(ch.role, rIdx);
+                        if (templateRule) {
+                            return {
+                                ...templateRule,
+                                description: r.description || templateRule.description || "Range",
+                                cal: {
+                                    min: min,
+                                    center: center,
+                                    max: max
+                                }
+                            };
+                        } else {
+                            // Fallback if template is not loaded or has no rules for this role
+                            return {
+                                vibe: "any",
+                                description: r.description || "Range",
+                                source: "volume",
+                                behavior: "static",
+                                cal: {
+                                    min: min,
+                                    center: center,
+                                    max: max
+                                },
+                                modifiers: {
+                                    speed: 0.1,
+                                    react: 0.5,
+                                    hold_type: "none"
+                                }
+                            };
+                        }
                     });
                 });
 
                 window.sessionOverrides = {}; // Reset overrides for new extraction
                 renderResults(true);
-                setStep('results');
+                saveAndCalibrate();
             } catch (e) {
                 console.log("JSON Parse failed or explanation required:", e);
                 chatHistory.push({ role: 'model', parts: [{ text }] });
@@ -1502,7 +1709,7 @@ ${limitText}
 
             const ts = Date.now();
             window.currentFixture = {
-                id: window.generateFriendlyId('p', db.profiles.map(p => p.id)),
+                id: window.generateFriendlyId('p', db.profiles.map(p => p.id), brand, fixModel),
                 name: `${brand} ${fixModel}`,
                 channels: Array.from({ length: chCount }, (_, i) => ({
                     name: `Function ${i + 1}`,
@@ -1515,21 +1722,21 @@ ${limitText}
 
             window.sessionOverrides = {}; // Reset overrides
             renderResults(true);
-            setStep('results');
+            saveAndCalibrate();
         };
 
         window.openDuplicateSelector = () => {
             const list = document.getElementById('duplicate-list');
             const search = document.getElementById('prof-search');
             search.value = "";
-            
+
             const profiles = db.profiles || [];
             if (profiles.length === 0) {
                 list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-dim);">No profiles found. Create one first!</div>';
             } else {
                 renderDuplicateList(profiles);
             }
-            
+
             document.getElementById('duplicate-modal').style.display = 'flex';
         };
 
@@ -1558,9 +1765,11 @@ ${limitText}
             if (!original) return;
 
             const copy = JSON.parse(JSON.stringify(original));
-            copy.id = window.generateFriendlyId('p', db.profiles.map(p => p.id));
+            const brand = copy.brand || copy.name?.split(' ')[0] || 'generic';
+            const model = copy.model || copy.name?.split(' ').slice(1).join(' ') || 'copy';
+            copy.id = window.generateFriendlyId('p', db.profiles.map(p => p.id), brand, model);
             copy.name = (copy.name || "Unnamed Profile") + " (Copy)";
-            
+
             // Cleanup
             delete copy._fileName;
 
@@ -1568,7 +1777,7 @@ ${limitText}
             window.currentFixture = copy;
             window.sessionOverrides = {};
             renderResults(true);
-            setStep('results');
+            saveAndCalibrate();
             window.closeDuplicateSelector();
         };
 
@@ -1725,7 +1934,7 @@ ${limitText}
         window.determineBehavior = (role, min, max, index, total, chIdx) => {
             const fixType = document.getElementById('ai-fixture-type').value || 'generic';
             const range = max - min;
-            
+
             // 1. STATIC RULE: Pure point values are always static
             if (range < 1) return { behavior: 'static', source: 'volume', speed: 0 };
 
@@ -1773,32 +1982,36 @@ ${limitText}
 
             const existingMappings = window.currentFixture.mappings[idx];
             if (existingMappings && existingMappings.length > 0) {
-                // SORT BY MIN before applying ordinal logic
                 const sorted = [...existingMappings].sort((a, b) => (a.cal?.min || 0) - (b.cal?.min || 0));
-                
+
                 window.currentFixture.mappings[idx] = sorted.map((rule, rIdx) => {
-                    const logic = window.determineBehavior(newRole, rule.cal.min, rule.cal.max, rIdx, sorted.length, idx);
-                    return {
-                        ...rule,
-                        behavior: logic.behavior,
-                        source: logic.source,
-                        modifiers: { 
-                            ...rule.modifiers, 
-                            speed: parseFloat(logic.speed.toFixed(3))
-                        }
-                    };
+                    const templateRule = window.getTemplateMappingForRole(newRole, rIdx);
+                    if (templateRule) {
+                        return {
+                            ...templateRule,
+                            description: rule.description || templateRule.description || 'Range',
+                            cal: {
+                                min: rule.cal.min,
+                                max: rule.cal.max,
+                                center: rule.cal.center
+                            }
+                        };
+                    }
+                    return rule;
                 });
             } else {
-                // No existing mapping, create a smart default range (.0 logic)
-                const logic = window.determineBehavior(newRole, 0, 255, 0, 1, idx);
-                const newRule = {
+                // No existing mapping, create a smart default range
+                const templateRule = window.getTemplateMappingForRole(newRole, 0);
+                const newRule = templateRule ? {
+                    ...templateRule,
+                    cal: { min: 0, center: 127, max: 255 }
+                } : {
                     vibe: 'any',
-                    mechanical_class: 'linear',
                     description: template.name,
-                    behavior: logic.behavior,
-                    source: logic.source,
+                    source: 'volume',
+                    behavior: 'static',
                     cal: { min: 0, center: 127, max: 255 },
-                    modifiers: { speed: logic.speed, react: 0.5, hold_type: 'none' }
+                    modifiers: { speed: 0.1, react: 0.5, hold_type: 'none' }
                 };
                 window.currentFixture.mappings[idx] = [newRule];
             }
@@ -1830,43 +2043,42 @@ ${limitText}
 
         window.addRule = (chIdx) => {
             if (!window.currentFixture.mappings[chIdx]) window.currentFixture.mappings[chIdx] = [];
-            
+
             // Add a blank range
             window.currentFixture.mappings[chIdx].push({
                 vibe: 'any',
                 description: 'New Range',
-                mechanical_class: 'linear',
-                cal: { min: 0, center: 127, max: 255 },
-                modifiers: { speed: 0.1, react: 0.5, hold_type: 'none' }
+                cal: { min: 0, center: 127, max: 255 }
             });
 
-            // RE-APPLY ORDINAL LOGIC to the whole channel
+            // Re-apply template behavior logic to the whole channel based on role
             let rules = window.currentFixture.mappings[chIdx];
             const role = window.currentFixture.channels[chIdx].role || 'generic';
-            // Sort by min first
             const sorted = [...rules].sort((a, b) => (a.cal?.min || 0) - (b.cal?.min || 0));
-            
+
             window.currentFixture.mappings[chIdx] = sorted.map((rule, rIdx) => {
-                const logic = window.determineBehavior(role, rule.cal.min, rule.cal.max, rIdx, sorted.length, chIdx);
-                return {
-                    ...rule,
-                    behavior: logic.behavior,
-                    source: logic.source,
-                    vibe: 'any',
-                    modifiers: { 
-                        ...rule.modifiers, 
-                        speed: parseFloat(logic.speed.toFixed(3))
-                    }
-                };
+                const templateRule = window.getTemplateMappingForRole(role, rIdx);
+                if (templateRule) {
+                    return {
+                        ...templateRule,
+                        description: rule.description || templateRule.description || 'Range',
+                        cal: {
+                            min: rule.cal.min,
+                            max: rule.cal.max,
+                            center: rule.cal.center
+                        }
+                    };
+                }
+                return rule;
             });
-            
+
             renderResults();
         };
 
         window.deleteRule = (chIdx, ruleIdx) => {
             if (!confirm("Delete this range?")) return;
             window.currentFixture.mappings[chIdx].splice(ruleIdx, 1);
-            
+
             // Re-apply vibe logic with sync group
             const rules = window.currentFixture.mappings[chIdx];
             const syncNum = (chIdx % 3) + 1;
@@ -1877,7 +2089,7 @@ ${limitText}
                 const lastVibeOptions = ['high', 'high bass', 'high treble'];
                 rules[rules.length - 1].vibe = lastVibeOptions[chIdx % 3];
             }
-            
+
             renderResults();
         };
 
@@ -1910,6 +2122,57 @@ ${limitText}
             window.closeSettings();
             connectWS();
             window.updateModelLabel();
+        };
+
+        window.saveAndCalibrate = async () => {
+            const brand = document.getElementById('ai-brand').value.trim() || 'Generic';
+            const model = document.getElementById('ai-model').value.trim() || 'Fixture';
+            const name = (window.currentFixture && window.currentFixture.name) || `${brand} ${model}`;
+            if (window.currentFixture) {
+                window.currentFixture.name = name;
+            } else {
+                return;
+            }
+
+            const profId = window.currentFixture.id;
+            const testAddr = document.getElementById('test-addr') ? document.getElementById('test-addr').value : '1';
+
+            // 1. Save Locally
+            db.profiles = (db.profiles || []).filter(p => p.id !== profId);
+            db.profiles.push(window.currentFixture);
+            if (typeof window.saveDB === 'function') {
+                window.saveDB();
+            } else {
+                localStorage.setItem('ravebox_v2_db', JSON.stringify(db));
+            }
+
+            // 2. Save to Server
+            if (typeof window.saveProfileToServer === 'function') {
+                await window.saveProfileToServer(window.currentFixture);
+            } else {
+                try {
+                    const protocol = window.location.protocol;
+                    const host = localStorage.getItem('vj_backend_host') || window.location.hostname || 'localhost';
+                    const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && host !== 'localhost' && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+                    const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+                    const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+                    const apiHost = isCustomTunnel ? 'api-' + boxName : (host === 'ravebox.love' ? 'api.ravebox.love' : host);
+                    const port = (isOriginalCloud || isCustomTunnel) ? '' : ':8000';
+
+                    const apiBase = `${protocol}//${apiHost}${port}/api/fixtures/`;
+                    const profUrl = apiBase + `profiles/${profId}.json`;
+                    await fetch(profUrl, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(window.currentFixture)
+                    });
+                } catch (e) {
+                    console.warn("⚠️ Server save failed:", e);
+                }
+            }
+
+            // Redirect to profile editor in setup.html
+            window.location.href = `setup.html?tab=profile&id=${profId}`;
         };
 
         window.saveAndFinish = async () => {

@@ -8,11 +8,12 @@ This document defines the infrastructure and remote access strategies for the Ra
 
 RaveBox uses a single, subdomain-based routing architecture that supports two primary entry points depending on the user's location and network status.
 
-### Global Entry (GCS Hybrid)
+### Global Entry (GCS Hybrid with Ping-Redirect)
 - **Primary Entry Point**: `https://ravebox.love`
 - **Frontend**: Served via Google Cloud Storage (GCS) Global CDN.
-- **Workflow**: User enters a **Secret Code**. The UI dynamically pairs with the individual Pi backend via `{id}.ravebox.love`.
-- **Data Flow**: Library, profiles, presets, and live WebSocket data are pulled from and saved to the backend host.
+- **Workflow**: User enters a **Secret Code** (or it is loaded from browser storage). The UI automatically pings the backend tunnel API to verify connectivity.
+- **Tunnel Online (Redirect)**: If the backend is reachable, the browser seamlessly redirects to the dedicated tunnel subdomain (e.g., `https://{id}.ravebox.love/manager.html`). This ensures the user is served the exact local version of the UI directly from their hardware.
+- **Tunnel Offline (GCS Fallback)**: If the backend tunnel is offline, the redirect is aborted. The browser remains on the `ravebox.love` GCS frontend, ensuring the user can still access the cached UI and attempt recovery or offline operations.
 
 ### Direct Entry (Standalone / Local / Custom Tunnel)
 - **Primary Entry Point**: `https://{id}.ravebox.love` or **Local IP**.
@@ -88,3 +89,41 @@ The RaveBox stack is a delicate balance between legacy Python servers and modern
 
 ---
 *Technical Ref: NET-SYNC v1.4 / Infrastructure-Stability-Standard*
+
+---
+
+## 6. Headless SoftAP Onboarding
+
+To integrate headless SoftAP onboarding into the existing RaveBox file architecture, the system takes advantage of the default **NetworkManager** setup native to Raspberry Pi OS Bookworm.
+
+Since the Pi is completely headless and running a local web instance, your smartphone will scan a static WPA connection sticker physically attached to the machine. Once connected to the Pi's internal access point, your phone will directly pull an onboarding page from the internal production server (`server.py`) running on Port 8000.
+
+### The Physical Setup (Static QR Code)
+
+Since there is no external display, a static QR code sticker is placed directly onto the hardware chassis. The payload string inside the QR code matches the static network the Pi falls back onto when it loses connectivity:
+
+```text
+WIFI:S:RaveBox-Setup;T:WPA;P:RaveBoxParty123;;
+```
+
+Below this sticker, write a note instructing users:
+> *"Scan to connect, then open your mobile browser and navigate to **http://10.42.0.1:8000/wifi_setup.html***"
+> *(Note: `10.42.0.1` is the default NetworkManager `ipv4.method shared` local gateway).*
+
+### Workflow Mechanics
+
+1. **Boot Assessment**: The device executes `launcher.py` and waits for 30 seconds to observe if it can hook onto an open pipeline or any known home profile.
+2. **AP Failover**: If isolated, `nmcli` sets up a hotspot named `RaveBox-Setup`.
+3. **User Action**: The user scans the static frame sticker code using their smartphone to connect to the hotspot, opening a window pointing to `http://10.42.0.1:8000/wifi_setup.html`.
+4. **Credential Handshake**: The smartphone targets the local script interface (`/api/wifi/connect`) directly on the device. It terminates the hotspot and establishes authentication links over the primary interface.
+### The AP vs. Scan Limitation
+
+Due to driver limitations on the Raspberry Pi's wireless chip, active background scanning (`/api/wifi/scan`) may occasionally return an empty list if the interface is heavily broadcasting the access point beacon. In these cases, users may need to manually enter the SSID in future updates to the provisioning UI.
+
+### Hardening & Production Adjustments
+
+To make this modular configuration framework consumer-proof:
+
+1. **The Shell Watchdog Pattern**: The network connection script (`server.py`) explicitly uses an automated fallback mechanism. If the target Wi-Fi connection fails (e.g. incorrect password), the device safely rolls back to Hotspot mode automatically so the user is not permanently locked out.
+2. **Sudo Permissions**: The system user running `server.py` must have passwordless execution privileges for `/usr/bin/nmcli` configured in the system `/etc/sudoers` file. Otherwise, the OS will block the network transition commands.
+3. **Smart Device Re-discovery**: Once the node successfully transitions to the venue network, its local IP address will change dynamically. The smartphone will need to rely on the cloudflare tunnel (or a local mDNS lookup like `ravebox.local`) to re-establish a data link on the new network thread.

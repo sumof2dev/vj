@@ -27,19 +27,31 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed_path.path
 
         if path in ['/start', '/api/start']:
-            use_node = query.get('node', ['false'])[0] == 'true'
-            svc = 'vj-node.service' if use_node else 'vj-engine.service'
+            service = query.get('service', [None])[0]
+            if service:
+                svc = service if service.endswith('.service') else f"{service}.service"
+            else:
+                use_node = query.get('node', ['false'])[0] == 'true'
+                svc = 'vj-node.service' if use_node else 'vj-engine.service'
             self.run_systemd('start', svc)
         elif path in ['/stop', '/api/stop']:
-            use_node = query.get('node', ['false'])[0] == 'true'
-            svc = 'vj-node.service' if use_node else 'vj-engine.service'
+            service = query.get('service', [None])[0]
+            if service:
+                svc = service if service.endswith('.service') else f"{service}.service"
+            else:
+                use_node = query.get('node', ['false'])[0] == 'true'
+                svc = 'vj-node.service' if use_node else 'vj-engine.service'
             self.run_systemd('stop', svc)
         elif path in ['/restart', '/api/restart']:
-            use_node = query.get('node', ['false'])[0] == 'true'
-            svc = 'vj-node.service' if use_node else 'vj-engine.service'
+            service = query.get('service', [None])[0]
+            if service:
+                svc = service if service.endswith('.service') else f"{service}.service"
+            else:
+                use_node = query.get('node', ['false'])[0] == 'true'
+                svc = 'vj-node.service' if use_node else 'vj-engine.service'
             self.run_systemd('restart', svc)
         elif path in ['/status', '/api/status']:
-            # Return status for BOTH engine and node
+            # Return status for ALL services
             self.get_full_status()
         elif path in ['/camera/start', '/api/camera/start']:
             self.run_systemd('start', 'vj-camera.service')
@@ -96,17 +108,21 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
 
     def get_full_status(self):
-        """Returns the status of both engine and node services."""
+        """Returns the status of all services."""
         engine = self._get_svc_status('vj-engine.service')
         node = self._get_svc_status('vj-node.service')
+        server = self._get_svc_status('vj-server.service')
+        launcher = self._get_svc_status('vj-launcher.service')
+        camera = self._get_svc_status('vj-camera.service')
         
-        # Legacy compatibility: 'active' and 'status' reflect the primary engine
-        # but the UI will now look for 'node' specifically
         response = {
             "status": engine['status'],
             "active": engine['active'],
             "engine": engine,
-            "node": node
+            "node": node,
+            "server": server,
+            "launcher": launcher,
+            "camera": camera
         }
         
         payload = json.dumps(response).encode()
@@ -126,9 +142,13 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             if not is_active:
                 # Fallback check
                 if 'engine' in service:
-                    pattern = 'main.py'
+                    pattern = 'backend/main.py'
                 elif 'camera' in service:
                     pattern = 'scripts/calibration_server.py'
+                elif 'server' in service:
+                    pattern = 'server.py'
+                elif 'launcher' in service:
+                    pattern = 'launcher.py'
                 else:
                     pattern = 'backend/dmx_node.py'
 
@@ -149,9 +169,13 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
             is_svc_configured = os.path.exists(f'/etc/systemd/system/{service}')
 
             if 'engine' in service:
-                pattern = 'main.py'
+                pattern = 'backend/main.py'
             elif 'camera' in service:
                 pattern = 'scripts/calibration_server.py'
+            elif 'server' in service:
+                pattern = 'server.py'
+            elif 'launcher' in service:
+                pattern = 'launcher.py'
             else:
                 pattern = 'backend/dmx_node.py'
 
@@ -350,6 +374,33 @@ class LauncherHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         super().end_headers()
 
+import time
+import threading
+
+def run_wifi_provisioning_watchdog():
+    """Checks for active internet connectivity on boot. Falls back to SoftAP if offline."""
+    print("🐕 Wi-Fi Provisioning Watchdog initialized. Waiting 30s for autoconnect...")
+    time.sleep(30) # 30-second buffer is inferred as standard network interface discovery time
+    
+    try:
+        # Check overall system network connectivity state via NetworkManager
+        check = subprocess.run(['nmcli', '-t', 'networking', 'connectivity'], capture_output=True, text=True)
+        status = check.stdout.strip()
+        print(f"📡 Current Network Status: State=[{status}]")
+        
+        if status != 'full':
+            print("⚠️ Internet connection unreachable. Deploying Local Provisioning Hotspot...")
+            # Spin up the access point. NetworkManager defaults handling to 10.42.0.1 gateway
+            subprocess.run([
+                'sudo', 'nmcli', 'device', 'wifi', 'hotspot', 
+                'ifname', 'wlan0', 
+                'ssid', 'RaveBox-Setup', 
+                'password', 'RaveBoxParty123'
+            ], capture_output=True)
+            print("📶 Onboarding SoftAP Broadcast Active: SSID='RaveBox-Setup'")
+    except Exception as e:
+        print(f"❌ Provisioning Watchdog Error: {e}")
+
 if __name__ == '__main__':
     socketserver.ThreadingTCPServer.allow_reuse_address = True
     with socketserver.ThreadingTCPServer(("0.0.0.0", PORT), LauncherHandler) as httpd:
@@ -366,7 +417,12 @@ if __name__ == '__main__':
 
         print(f"🚀 Launcher Service running at port {PORT} ({protocol})")
         print(f"👉 Manager UI: {protocol}://localhost:8000/manager.html")
+        
+        # Kick off watchdog right before starting server loop
+        threading.Thread(target=run_wifi_provisioning_watchdog, daemon=True).start()
+        
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
             print("\n👋 Launcher stopped")
+

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaveBox — Network Provisioning</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #05050d;
+            --surface: rgba(22, 22, 26, 0.7);
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rajdhani', sans-serif; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .setup-card {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+        }
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.4; }
+        label { display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; color: var(--text-dim); }
+        select, input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            padding: 12px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            margin-bottom: 1.2rem;
+            transition: all 0.2s ease;
+        }
+        select:focus, input:focus { border-color: var(--primary); background: rgba(255, 255, 255, 0.08); }
+        .btn-connect {
+            width: 100%;
+            background: linear-gradient(45deg, var(--primary), #00ff66);
+            color: #05050d;
+            border: none;
+            padding: 14px;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-connect:hover { transform: translateY(-1px); filter: brightness(1.1); }
+        .network-item { display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+<div class="setup-card">
+    <h1>Connect RaveBox</h1>
+    <p>Select your domestic network configuration details to provision this hardware node client seamlessly.</p>
+    
+    <label for="networkSelect">Available Networks</label>
+    <select id="networkSelect">
+        <option value="">Scanning for targets...</option>
+    </select>
+    
+    <label for="passInput">Network Password</label>
+    <input type="password" id="passInput" placeholder="Enter Wi-Fi Password" autocomplete="off">
+    
+    <button class="btn-connect" onclick="submitProvisioning()">Provision Device</button>
+</div>
+
+<script>
+    async function performScan() {
+        try {
+            const res = await fetch('/api/wifi/scan');
+            const data = await res.json();
+            const select = document.getElementById('networkSelect');
+            select.innerHTML = '<option value="">-- Choose Network --</option>';
+            
+            // Filter unique names cleanly
+            const seen = new Set();
+            data.forEach(net => {
+                if(net.ssid && !seen.has(net.ssid)) {
+                    seen.add(net.ssid);
+                    const opt = document.createElement('option');
+                    opt.value = net.ssid;
+                    opt.textContent = `${net.ssid} (${net.signal}%)`;
+                    select.appendChild(opt);
+                }
+            });
+        } catch (e) {
+            console.error("Scan processing broken:", e);
+        }
+    }
+
+    async function submitProvisioning() {
+        const ssid = document.getElementById('networkSelect').value;
+        const password = document.getElementById('passInput').value;
+        
+        if(!ssid) return alert("Select a target network profile.");
+        
+        try {
+            const res = await fetch('/api/wifi/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ssid, password })
+            });
+            if(res.ok) {
+                alert("Credentials transmitted successfully! The device hotspot will close now to authenticate.");
+            }
+        } catch(e) {
+            alert("Payload transmission failure: " + e);
+        }
+    }
+
+    // Initialize network scanner execution block immediately
+    window.onload = performScan;
+</script>
+</body>
+</html>

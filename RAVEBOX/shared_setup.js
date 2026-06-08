@@ -14,18 +14,27 @@ window.enforceDmxLimit = function (el) {
     return val;
 };
 
-window.generateFriendlyId = function (type, existingIds = []) {
-    const words = ['rave', 'box', 'cave', 'theone', 'beaver', 'slimy', 'hasty', 'baggage', 'rock', 'toy', 'tease', 'mildly', 'fat', 'twist', 'good', 'miami', 'grab', 'cash', 'money', 'bills', 'yeet', 'nocap', 'uhhuh', 'kiss', 'climb', 'drop', 'grandma', 'love', 'roses', 'cinch', 'knot', 'xray', 'rip', 'tit', 'wish', 'head', 'rash', 'play', 'unload', 'brave', 'daddy'];
-    const now = new Date();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const word = words[Math.floor(Math.random() * words.length)];
-    const baseId = `${mm}${dd}.${type}.${word}`;
+window.generateFriendlyId = function (type, existingIds = [], brand = '', model = '') {
+    let baseId = '';
+    if (type === 'p' || brand || model) {
+        let b = (brand || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_.-]/g, '');
+        let m = (model || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_.-]/g, '');
+        if (!b) b = 'generic';
+        if (!m) m = 'fixture';
+        baseId = `${b}.${m}`;
+    } else {
+        const words = ['rave', 'box', 'cave', 'theone', 'beaver', 'slimy', 'hasty', 'baggage', 'rock', 'toy', 'tease', 'mildly', 'fat', 'twist', 'good', 'miami', 'grab', 'cash', 'money', 'bills', 'yeet', 'nocap', 'uhhuh', 'kiss', 'climb', 'drop', 'grandma', 'love', 'roses', 'cinch', 'knot', 'xray', 'rip', 'tit', 'wish', 'head', 'rash', 'play', 'unload', 'brave', 'daddy'];
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const word = words[Math.floor(Math.random() * words.length)];
+        baseId = `${mm}${dd}.${type}.${word}`;
+    }
 
     let finalId = baseId;
     let counter = 1;
     while (existingIds.includes(finalId)) {
-        finalId = `${baseId}(${counter})`;
+        finalId = `${baseId}.${counter}`;
         counter++;
     }
     return finalId;
@@ -228,6 +237,12 @@ window.evaluateRouting = function () {
 
     // Global redirect for hosted domain to local IP if a local backend is saved
     if (onHostedDomain && savedHost) {
+        const currentPath = window.location.pathname;
+        let page = currentPath.substring(currentPath.lastIndexOf('/') + 1);
+        if (!page || page === 'index.html') {
+            page = 'manager.html';
+        }
+
         if (savedHost.includes('.') || savedHost.includes(':') || savedHost === 'localhost') {
             let target = savedHost;
             if (!target.startsWith('http://') && !target.startsWith('https://')) {
@@ -236,14 +251,23 @@ window.evaluateRouting = function () {
             if (!target.includes(':', 6)) {
                 target = target + ':8000';
             }
-            const currentPath = window.location.pathname;
-            let page = currentPath.substring(currentPath.lastIndexOf('/') + 1);
-            if (!page || page === 'index.html') {
-                page = 'manager.html';
-            }
             const newUrl = target.replace(/\/+$/, '') + '/' + page + setupLocation.search + setupLocation.hash;
             console.log("Redirecting to local VJ host:", newUrl);
             window.location.href = newUrl;
+        } else {
+            // Cloudflare Tunnel routing with GCS fallback
+            const targetUrl = `https://${savedHost}.ravebox.love/${page}${setupLocation.search}${setupLocation.hash}`;
+            
+            fetch(`https://${savedHost}.ravebox.love/api/status`, { cache: 'no-store' })
+                .then(res => {
+                    if (res.ok) {
+                        console.log("Backend is online, redirecting to dedicated tunnel...");
+                        window.location.href = targetUrl;
+                    }
+                })
+                .catch(e => {
+                    console.log("Backend tunnel offline, staying on GCS fallback.", e);
+                });
         }
     }
 
@@ -294,7 +318,7 @@ window.evaluateRouting = function () {
     window.LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
     LAUNCHER_API = isLocalConnection ? API_BASE_ROOT : BACKEND_ROOT;
     window.API_BASE = (API_BASE_ROOT || "").replace(/\/+$/, '') + '/api/fixtures';
-    window.APP_VERSION = "65261202";
+    window.APP_VERSION = "67261325";
 };
 
 // Evaluate routing parameters immediately
@@ -407,7 +431,7 @@ async function initDatabaseSync() {
         setTimeout(() => overlay.classList.add('hidden'), 300); // Small delay for smoothness
     }
 
-    console.log("✅ RaveBox Core Ready (v65261202)");
+    console.log("✅ RaveBox Core Ready (v67261325)");
 }
 
 // Kick off sync immediately
@@ -742,7 +766,7 @@ window.togglePresetEditor = function (show) {
     }
 };
 
-window.APP_VERSION = "65261202";
+window.APP_VERSION = "67261325";
 
 
 // --- CORE ROUTING (BULLETPROOF) ---

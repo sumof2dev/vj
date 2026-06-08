@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fixture Calibration | RaveBox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <link rel="icon" href="/public/icon.png">
+    <style>
+        :root {
+            --bg: #050508;
+            --panel: rgba(20, 20, 27, 0.75);
+            --header: #1b1b22;
+            --border: rgba(255, 255, 255, 0.1);
+            --accent: #7c4dff;
+            --accent-rgb: 124, 77, 255;
+            --accent-glow: rgba(124, 77, 255, 0.4);
+            --accent-alt: #00ffcc;
+            --accent-alt-rgb: 0, 255, 204;
+            --text: #eee;
+            --text-dim: #a0a0a0;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --glass: blur(12px) saturate(180%);
+        }
+
+        body {
+            background: var(--bg);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(var(--accent-rgb), 0.15) 0, transparent 40%),
+                radial-gradient(at 100% 100%, rgba(var(--accent-alt-rgb), 0.1) 0, transparent 40%);
+            color: var(--text);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        header {
+            width: 100%;
+            padding: 15px 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: var(--glass);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            width: 90%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo .brand {
+            font-weight: 900;
+            font-size: 1.2rem;
+            letter-spacing: -1px;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .logo .brand span {
+            color: var(--accent);
+            margin-left: 2px;
+        }
+
+        .logo .subtitle {
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent-alt);
+            margin-top: 2px;
+        }
+
+        .btn {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px var(--accent-glow);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        main {
+            width: 90%;
+            max-width: 800px;
+            padding: 30px 0 100px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        /* --- WS STATUS BAR --- */
+        .ws-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px 20px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+    </style>
+</head>
+<body onload="boot()">
+
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="brand">Rave<span>Box</span></div>
+                <div class="subtitle">Calibration Engine</div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- PROFILE IDENTIFICATION CARD -->
+        <div class="card" style="padding: 18px 25px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div id="profile-name" style="font-weight: 800; font-size: 1.15rem; color: #fff;">Loading Profile...</div>
+                    <div id="profile-details" style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">Resolving structure...</div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; display: none;">
+                    <label style="font-size:0.7rem; font-weight:800; color:var(--text-dim); text-transform:uppercase; display:block;">Test Start Address</label>
+                    <input type="number" id="base-address" value="1" style="background:var(--bg); border:1px solid var(--border); color:#fff; padding:6px 10px; border-radius:6px; font-weight:700; width:60px; text-align:center; font-size:0.85rem;">
+                </div>
+            </div>
+        </div>
+
+        <!-- WEBSOCKET CONNECTIVITY STATUS BAR -->
+        <div class="ws-status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="ws-dot"></div>
+                <span id="ws-text">DMX Offline</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-dim);" id="ws-host-display">
+                Resolving smart tunnel link...
+            </div>
+        </div>
+
+        <!-- CALIBRATION REDIRECT DISPLAY CARD -->
+        <div class="card" style="text-align: center; padding: 45px 30px;">
+            <div style="font-size: 3rem; margin-bottom: 20px; color: var(--accent);">🛠️</div>
+            <div class="card-title" style="margin-bottom: 10px;">Calibration Service Panel</div>
+            <div class="card-subtitle" style="max-width: 500px; margin: 0 auto 25px auto; font-size: 0.9rem; line-height: 1.6;">
+                Real-time fixture calibration checks have been disabled. 
+                All AI results and new profiles now route directly to the Profile Editor for immediate testing and mapping.
+            </div>
+            <div>
+                <a id="editor-link" href="setup.html" class="btn" style="background: var(--accent-alt); color: #000; font-weight: 800; box-shadow: 0 4px 10px rgba(0, 255, 204, 0.3);">
+                    Go to Profile Editor
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS CODE FOR INITIAL DISPLAY AND REDIRECT -->
+    <script src="shared_setup.js"></script>
+    <script>
+        let profileId = null;
+        let startAddress = 1;
+        let currentFixture = null;
+        let ws = null;
+        let dmxConnected = false;
+        let isConnecting = false;
+
+        function parseQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            profileId = params.get('id');
+            startAddress = parseInt(params.get('addr')) || 1;
+            const baseAddrEl = document.getElementById('base-address');
+            if (baseAddrEl) baseAddrEl.value = startAddress;
+        }
+
+        async function boot() {
+            parseQueryParams();
+            if (!profileId) {
+                alert("No profile ID specified.");
+                window.location.href = "setup.html";
+                return;
+            }
+
+            // Load Local DB
+            let db = null;
+            try {
+                const dbStr = localStorage.getItem('ravebox_v2_db');
+                if (dbStr) db = JSON.parse(dbStr);
+            } catch(e) {
+                console.warn("Failed to load local DB", e);
+            }
+
+            if (db && db.profiles) {
+                currentFixture = db.profiles.find(p => p.id === profileId);
+            }
+
+            // Fallback: Fetch from server
+            if (!currentFixture) {
+                try {
+                    const protocol = window.location.protocol;
+                    const host = localStorage.getItem('vj_backend_host') || window.location.hostname || 'localhost';
+                    const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && host !== 'localhost' && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+                    const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+                    const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+                    const apiHost = isCustomTunnel ? 'api-' + boxName : (host === 'ravebox.love' ? 'api.ravebox.love' : host);
+                    const port = (isOriginalCloud || isCustomTunnel) ? '' : ':8000';
+
+                    const apiBase = `${protocol}//${apiHost}${port}/api/fixtures/`;
+                    const profUrl = apiBase + `profiles/${profileId}.json`;
+                    const resp = await fetch(profUrl);
+                    if (resp.ok) {
+                        currentFixture = await resp.json();
+                    }
+                } catch(e) {
+                    console.error("Server fetch error", e);
+                }
+            }
+
+            if (currentFixture) {
+                document.getElementById('profile-name').innerText = currentFixture.name || 'Unnamed Fixture';
+                document.getElementById('profile-details').innerText = `${currentFixture.brand || 'Generic'} | ${currentFixture.model || 'Model'} | ${currentFixture.channels ? currentFixture.channels.length : 0} Channels`;
+                document.getElementById('editor-link').href = `setup.html?tab=profile&id=${profileId}`;
+            } else {
+                document.getElementById('profile-name').innerText = 'Profile Not Found';
+                document.getElementById('profile-details').innerText = `ID: ${profileId}`;
+            }
+
+            connectWS();
+        }
+
+        function connectWS() {
+            if (ws || isConnecting) return;
+            isConnecting = true;
+
+            const host = localStorage.getItem('vj_backend_host') || window.location.hostname || 'localhost';
+            const savedPort = localStorage.getItem('vj_backend_port') || '8765';
+            const wsProtocol = (window.location.protocol === 'https:') ? 'wss' : 'ws';
+
+            const boxName = (host === 'ravebox') ? 'ravebox.love' : ((host && host !== 'localhost' && !host.includes('.') && !host.includes(':')) ? host + '.ravebox.love' : host);
+            const isOriginalCloud = (host === 'ravebox.love' || host === 'api.ravebox.love' || host === 'ravebox');
+            const isCustomTunnel = boxName.endsWith('.ravebox.love') && !isOriginalCloud;
+
+            let url = isOriginalCloud ? `${wsProtocol}://wss.ravebox.love` : 
+                      (window.isCustomTunnel ? `${wsProtocol}://${window.wsHost}` : 
+                      (window.isCustomSubdomain ? `${wsProtocol}://${window.location.host}` : 
+                      `${wsProtocol}://${window.host}:${savedPort}`));
+            
+            if ((window.isCustomTunnel || window.isCustomSubdomain) && !window.wsHost.startsWith('ws-')) {
+                url = url.replace(/\/+$/, '') + '/ws';
+            }
+
+            document.getElementById('ws-host-display').innerText = `Target: ${url}`;
+
+            try {
+                ws = new WebSocket(url);
+                ws.onopen = () => {
+                    dmxConnected = true;
+                    isConnecting = false;
+                    updateWSUI(true);
+                    console.log("✅ DMX Connected for calibration");
+                };
+                ws.onclose = () => {
+                    dmxConnected = false;
+                    isConnecting = false;
+                    updateWSUI(false);
+                    setTimeout(connectWS, 4000);
+                };
+                ws.onerror = (err) => {
+                    isConnecting = false;
+                    console.error("WS Error", err);
+                };
+                ws.onmessage = (e) => {};
+            } catch (e) {
+                isConnecting = false;
+                console.error("WS Connection Setup Error", e);
+            }
+        }
+
+        function updateWSUI(online) {
+            const dot = document.getElementById('ws-dot');
+            const text = document.getElementById('ws-text');
+            if (online) {
+                dot.className = "status-dot online";
+                text.innerText = "DMX Connected";
+            } else {
+                dot.className = "status-dot";
+                text.innerText = "DMX Offline";
+            }
+        }
+    </script>
+</body>
+</html>

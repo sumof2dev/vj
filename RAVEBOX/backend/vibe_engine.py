@@ -16,7 +16,7 @@ class VibeEngine:
         self.last_vibe_change = 0
         
         # Initialize parameters and smoothers
-        self.hot_reload()
+        self.hot_reload(force=True)
         
     def _load_params(self):
         try:
@@ -38,39 +38,40 @@ class VibeEngine:
                 "midHigh_ratio": 66
             }
         
-    def hot_reload(self):
-        old_splits = getattr(self, 'vibe_splits', None)
-        old_contrast_scale = getattr(self, 'contrast_scale', None)
-        
-        self.p = self._load_params()
-        
-        if old_splits is not None:
-            self.vibe_splits = old_splits
-        else:
-            self.vibe_splits = {"chillMid": self.p.get("chillMid_ratio", 33), "midHigh": self.p.get("midHigh_ratio", 66)}
+    def hot_reload(self, force=False):
+        p = self._load_params()
+        if p.get("hot_reload", False) or force:
+            self.p = p
+            old_splits = getattr(self, 'vibe_splits', None)
+            old_contrast_scale = getattr(self, 'contrast_scale', None)
             
-        if old_contrast_scale is not None:
-            self.contrast_scale = old_contrast_scale
-        else:
-            self.contrast_scale = self.p.get("contrast_scale", 0.18)
+            if old_splits is not None and not force:
+                self.vibe_splits = old_splits
+            else:
+                self.vibe_splits = {"chillMid": self.p.get("chillMid_ratio", 33), "midHigh": self.p.get("midHigh_ratio", 66)}
+                
+            if old_contrast_scale is not None and not force:
+                self.contrast_scale = old_contrast_scale
+            else:
+                self.contrast_scale = self.p.get("contrast_scale", 0.18)
+                
+            self.vibe_hysteresis = self.p.get("vibe_hysteresis", 5.0)
             
-        self.vibe_hysteresis = self.p.get("vibe_hysteresis", 5.0)
-        
-        # Smoothers
-        self.smooth_bass = 0.0
-        self.smooth_high = 0.0
-        self.smooth_flux = 0.0
-        self.smooth_vol = 0.0
+            # Smoothers
+            self.smooth_bass = 0.0
+            self.smooth_high = 0.0
+            self.smooth_flux = 0.0
+            self.smooth_vol = 0.0
 
-        # Harmonic-isolated smoothers for vibe + transient detection
-        self.smooth_vol_h = 0.0
-        self.smooth_bass_h = 0.0
+            # Harmonic-isolated smoothers for vibe + transient detection
+            self.smooth_vol_h = 0.0
+            self.smooth_bass_h = 0.0
 
-        # Relative Contrast Boost: context-aware vibe scoring
-        if not hasattr(self, 'trailing_baseline'):
-            self.trailing_baseline = 0.3       # Slow EMA of vol_h (~15s time constant)
-        if not hasattr(self, 'contrast_boost'):
-            self.contrast_boost = 0.0          # Current boost/penalty value (-1.0 to 1.0)
+            # Relative Contrast Boost: context-aware vibe scoring
+            if not hasattr(self, 'trailing_baseline'):
+                self.trailing_baseline = 0.3       # Slow EMA of vol_h (~15s time constant)
+            if not hasattr(self, 'contrast_boost'):
+                self.contrast_boost = 0.0          # Current boost/penalty value (-1.0 to 1.0)
 
         # Energy Trend Tracking (Build/Drop Detection)
         # History window (30s @ 60Hz = 1800 frames)

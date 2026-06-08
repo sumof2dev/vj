@@ -1,134 +1,324 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RaveBox Visualizer - Standalone Demo</title>
-    <style>
-        :root {
-            --bg: #050508;
-            --accent: #9d7cff;
-            --text: #ffffff;
-            --panel: rgba(20, 20, 27, 0.4);
-            --border: rgba(255, 255, 255, 0.1);
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RaveBox::Visualizer<|>DMX</title>
+  <style>
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 10s linear infinite;
+    }
+  </style>
+  <script>
+    // Standalone WebSocket Shim
+    // Patches WebSocket BEFORE the React bundle loads so all WS connections
+    // are intercepted and driven by the parent frame's standalone_engine.js
+    (function() {
+        var mockSockets = [];
+
+        function MockWebSocket(url) {
+            this.url = url;
+            this.readyState = 0;
+            this.binaryType = 'arraybuffer';
+            this.onopen = null;
+            this.onmessage = null;
+            this.onclose = null;
+            this.onerror = null;
+            mockSockets.push(this);
+
+            var self = this;
+            setTimeout(function() {
+                self.readyState = 1;
+                if (self.onopen) self.onopen({ type: 'open' });
+            }, 100);
         }
-        body {
-            margin: 0;
-            padding: 0;
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            height: 100dvh;
-            overscroll-behavior: none;
-            touch-action: none;
-        }
-        iframe {
-            width: 100vw;
-            height: 100vh;
-            height: 100dvh;
-            border: none;
-            display: block;
+        MockWebSocket.prototype.send = function() {};
+        MockWebSocket.prototype.close = function() {
+            this.readyState = 3;
+            var idx = mockSockets.indexOf(this);
+            if (idx !== -1) mockSockets.splice(idx, 1);
+        };
+        MockWebSocket.CONNECTING = 0;
+        MockWebSocket.OPEN = 1;
+        MockWebSocket.CLOSING = 2;
+        MockWebSocket.CLOSED = 3;
+
+        window.WebSocket = MockWebSocket;
+
+        window._mockSockets = mockSockets;
+        window._broadcastToMocks = function(data) {
+            // When an ArrayBuffer is passed from the parent frame, it belongs to
+            // the parent's realm. The React app checks `instanceof ArrayBuffer`
+            // using THIS frame's ArrayBuffer constructor, which fails cross-realm.
+            // Fix: copy into a local ArrayBuffer so instanceof succeeds.
+            var payload = data;
+            if (data && data.byteLength !== undefined && !(data instanceof ArrayBuffer)) {
+                var copy = new ArrayBuffer(data.byteLength);
+                new Uint8Array(copy).set(new Uint8Array(data));
+                payload = copy;
+            }
+            for (var i = 0; i < mockSockets.length; i++) {
+                if (mockSockets[i].onmessage) {
+                    mockSockets[i].onmessage({ data: payload });
+                }
+            }
+        };
+    })();
+
+    // Standalone Library System
+    // Default library loaded from GCS manifest, user additions stored in localStorage
+    (function() {
+        var GCS_BASE = 'https://storage.googleapis.com/ravebox';
+        var LS_KEY_SHADERS = 'vj_standalone_shaders';
+        var LS_KEY_IMAGES = 'vj_standalone_images';
+        var manifestCache = null;
+
+        function getLocalShaders() {
+            try { return JSON.parse(localStorage.getItem(LS_KEY_SHADERS) || '[]'); }
+            catch(e) { return []; }
         }
 
-        #source-selector {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10000;
-            width: 280px;
-            background: var(--panel);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        function getLocalImages() {
+            try { return JSON.parse(localStorage.getItem(LS_KEY_IMAGES) || '[]'); }
+            catch(e) { return []; }
         }
 
-        .brand {
-            font-weight: 900;
-            letter-spacing: -1px;
-            text-transform: uppercase;
-            font-size: 1.4rem;
-            margin-bottom: 8px;
-        }
-        .brand span { color: var(--accent); }
-
-        .btn {
-            background: rgba(255,255,255,0.05);
-            color: #fff;
-            border: 1px solid var(--border);
-            padding: 12px 20px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 700;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        .btn:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(255,255,255,0.2);
-            transform: translateY(-1px);
-        }
-        .btn-primary {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #000;
-        }
-        .btn-primary:hover {
-            filter: brightness(1.1);
-            box-shadow: 0 0 20px rgba(157, 124, 255, 0.4);
+        function saveLocalShader(item) {
+            var list = getLocalShaders();
+            list.unshift(item);
+            localStorage.setItem(LS_KEY_SHADERS, JSON.stringify(list));
         }
 
-    </style>
-    <script src="standalone_engine.js"></script>
+        function saveLocalImage(item) {
+            var list = getLocalImages();
+            list.unshift(item);
+            localStorage.setItem(LS_KEY_IMAGES, JSON.stringify(list));
+        }
+
+        function deleteLocalShader(file) {
+            var list = getLocalShaders().filter(function(s) { return s.file !== file; });
+            localStorage.setItem(LS_KEY_SHADERS, JSON.stringify(list));
+        }
+
+        function deleteLocalImage(name) {
+            var list = getLocalImages().filter(function(i) { return i.name !== name; });
+            localStorage.setItem(LS_KEY_IMAGES, JSON.stringify(list));
+        }
+
+        async function getManifest() {
+            if (manifestCache) return manifestCache;
+            try {
+                var res = await fetch(GCS_BASE + '/library_manifest.json');
+                if (res.ok) {
+                    manifestCache = await res.json();
+                    return manifestCache;
+                }
+            } catch(e) { console.warn('GCS manifest fetch failed:', e); }
+            return { base: [], tex: [] };
+        }
+
+        var realFetch = window.fetch;
+        window.fetch = async function(url, options) {
+            var urlStr = url.toString();
+            var method = (options && options.method) ? options.method.toUpperCase() : 'GET';
+
+            // GET /api/usergen/list — merge GCS base shaders + localStorage shaders
+            if (urlStr.includes('/api/usergen/list')) {
+                var manifest = await getManifest();
+                var gcsShaders = (manifest.base || []).map(function(s) {
+                    return {
+                        file: s.file,
+                        prompt: s.prompt,
+                        type: s.type || 'base',
+                        mtime: s.mtime,
+                        has_thumb: s.has_thumb || false,
+                        path: 'library'
+                    };
+                });
+                var localShaders = getLocalShaders();
+                var combined = localShaders.concat(gcsShaders);
+                return new Response(JSON.stringify(combined), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // GET /api/images/list — merge GCS textures + localStorage images
+            if (urlStr.includes('/api/images/list')) {
+                var manifest = await getManifest();
+                var gcsImages = (manifest.tex || []).map(function(t) {
+                    // Rewrite file path to point at GCS
+                    return {
+                        file: t.file,
+                        name: t.name,
+                        mtime: t.mtime
+                    };
+                });
+                var localImages = getLocalImages();
+                var combined = localImages.concat(gcsImages);
+                return new Response(JSON.stringify(combined), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // POST /api/usergen/save — save to localStorage
+            if (urlStr.includes('/api/usergen/save') && method === 'POST') {
+                try {
+                    var body = JSON.parse(await new Response(options.body).text());
+                    var ts = Date.now();
+                    var item = {
+                        file: 'local/vj_shader_' + ts + '.frag',
+                        prompt: body.prompt || 'Untitled',
+                        type: body.layer_type || 'base',
+                        mtime: ts / 1000,
+                        has_thumb: false,
+                        code: body.code,
+                        path: 'local'
+                    };
+                    saveLocalShader(item);
+                    return new Response(JSON.stringify({ status: 'ok', file: item.file }), {
+                        status: 200, headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch(e) {
+                    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+                }
+            }
+
+            // POST /api/images/save — save to localStorage (base64 data URL)
+            if (urlStr.includes('/api/images/save') && method === 'POST') {
+                try {
+                    var body = JSON.parse(await new Response(options.body).text());
+                    var ts = Date.now();
+                    var item = {
+                        file: body.image,
+                        name: 'vj_image_' + ts + '.png',
+                        mtime: ts / 1000
+                    };
+                    saveLocalImage(item);
+                    return new Response(JSON.stringify({ status: 'ok' }), {
+                        status: 200, headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch(e) {
+                    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+                }
+            }
+
+            // DELETE /api/usergen/delete — remove from localStorage
+            if (urlStr.includes('/api/usergen/delete') && method === 'DELETE') {
+                var match = urlStr.match(/file=([^&]+)/);
+                if (match) deleteLocalShader(decodeURIComponent(match[1]));
+                return new Response(JSON.stringify({ status: 'ok' }), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // DELETE /api/images/delete — remove from localStorage
+            if (urlStr.includes('/api/images/delete') && method === 'DELETE') {
+                var match = urlStr.match(/file=([^&]+)/);
+                if (match) deleteLocalImage(decodeURIComponent(match[1]));
+                return new Response(JSON.stringify({ status: 'ok' }), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // POST /api/usergen/thumbnail — no-op in standalone
+            if (urlStr.includes('/api/usergen/thumbnail')) {
+                return new Response(JSON.stringify({ status: 'ok' }), {
+                    status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // POST /api/usergen/rename — update in localStorage
+            if (urlStr.includes('/api/usergen/rename') && method === 'POST') {
+                try {
+                    var body = JSON.parse(await new Response(options.body).text());
+                    var list = getLocalShaders();
+                    for (var i = 0; i < list.length; i++) {
+                        if (list[i].file === body.file) {
+                            list[i].prompt = body.new_prompt;
+                            break;
+                        }
+                    }
+                    localStorage.setItem(LS_KEY_SHADERS, JSON.stringify(list));
+                    return new Response(JSON.stringify({ status: 'ok' }), {
+                        status: 200, headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch(e) {
+                    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+                }
+            }
+
+            // GET library/<file>.frag — serve from localStorage code or GCS
+            if (urlStr.includes('/library/') && urlStr.endsWith('.frag')) {
+                // Check localStorage first for local saves
+                var localShaders = getLocalShaders();
+                for (var i = 0; i < localShaders.length; i++) {
+                    if (urlStr.includes(localShaders[i].file) && localShaders[i].code) {
+                        return new Response(localShaders[i].code, {
+                            status: 200, headers: { 'Content-Type': 'text/plain' }
+                        });
+                    }
+                }
+                // Fall through to GCS for default shaders
+                var gcsUrl = GCS_BASE + urlStr.substring(urlStr.indexOf('/library'));
+                return realFetch(gcsUrl, options);
+            }
+
+            // GET library/images/* — redirect to GCS for default textures
+            // Catches both relative (/library/images/...) and absolute (https://host/library/images/...) URLs
+            if (urlStr.includes('/library/images/')) {
+                // Check if it's a localStorage data URL image first
+                var localImgs = getLocalImages();
+                for (var j = 0; j < localImgs.length; j++) {
+                    if (localImgs[j].name && urlStr.includes(localImgs[j].name) && localImgs[j].file && localImgs[j].file.startsWith('data:')) {
+                        return realFetch(localImgs[j].file, options);
+                    }
+                }
+                var gcsUrl = GCS_BASE + urlStr.substring(urlStr.indexOf('/library'));
+                return realFetch(gcsUrl, options);
+            }
+
+            return realFetch.apply(this, arguments);
+        };
+
+        // Expose for debugging
+        window._standaloneLib = {
+            getLocalShaders: getLocalShaders,
+            getLocalImages: getLocalImages,
+            getManifest: getManifest
+        };
+    })();
+  </script>
+  <script type="module" crossorigin src="./assets/index-DhrwU9Y-.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BAAoorxt.css">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body, div, span, button, input, select, textarea, p, h1, h2, h3, h4, h5, h6 {
+      font-family: 'Rajdhani', system-ui, sans-serif !important;
+    }
+    .rounded-2xl, .rounded-\[20px\], .rounded-xl, .rounded-lg, .rounded-md {
+      border-radius: 4px !important;
+    }
+    .bottom-6 > div {
+      transform: perspective(800px) rotateX(10deg) !important;
+      transform-origin: bottom center !important;
+      border-radius: 8px !important;
+    }
+  </style>
+  <script src="standalone_engine.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        startStandaloneEngine();
+    });
+  </script>
 </head>
+
 <body>
-    <iframe id="viz-frame" src="standalone_viz.html" allow="autoplay; microphone; display-capture"></iframe>
-
-    <div id="source-selector">
-        <div class="brand">RAVE<span>BOX</span></div>
-        <div style="font-size: 11px; opacity: 0.5; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Standalone Visualizer</div>
-        
-        <button class="btn btn-primary" onclick="startStandaloneEngine()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-            Microphone Input
-        </button>
-
-        <button id="btn-system" class="btn" onclick="setSystemAudio()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="15" x="2" y="3" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-            System / Tab Audio
-        </button>
-
-        <button id="btn-spotify" class="btn" onclick="window.location.href='index.html?show=ad&source=spotify'">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12a4 4 0 0 1 8 0"></path><path d="M9 15a3 3 0 0 1 6 0"></path></svg>
-            Spotify / Device Audio
-        </button>
-    </div>
-
-    <script>
-        // Source selector is visible by default. 
-        // engine_standalone.js will hide it once audio is initialized via setupAudioStream().
-        
-        // Mobile browsers generally don't support getDisplayMedia audio sharing.
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            const btn = document.getElementById('btn-system');
-            if (btn) btn.style.display = 'none';
-        }
-    </script>
+  <div id="root"></div>
 </body>
 
 </html>

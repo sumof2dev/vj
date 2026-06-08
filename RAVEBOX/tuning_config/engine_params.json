@@ -25,5 +25,6 @@
         "chill": 0.5,
         "mid": 1,
         "high": 1.5
-    }
+    },
+    "hot_reload": false
 }

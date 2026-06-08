@@ -34,7 +34,17 @@
                     }
                     window.location.href = target.replace(/\/+$/, '') + '/manager.html';
                 } else {
-                    window.location.href = `https://${savedHost}.ravebox.love/manager.html`;
+                    fetch(`https://${savedHost}.ravebox.love/api/status`, { cache: 'no-store' })
+                        .then(res => {
+                            if (res.ok) {
+                                window.location.href = `https://${savedHost}.ravebox.love/manager.html`;
+                            } else {
+                                window.location.href = '/manager.html';
+                            }
+                        })
+                        .catch(e => {
+                            window.location.href = '/manager.html';
+                        });
                 }
             }
         })();
@@ -362,7 +372,17 @@
                 }
                 window.location.href = target.replace(/\/+$/, '') + '/manager.html';
             } else {
-                window.location.href = `https://${val}.ravebox.love/manager.html`;
+                fetch(`https://${val}.ravebox.love/api/status`, { cache: 'no-store' })
+                    .then(res => {
+                        if (res.ok) {
+                            window.location.href = `https://${val}.ravebox.love/manager.html`;
+                        } else {
+                            window.location.href = '/manager.html';
+                        }
+                    })
+                    .catch(e => {
+                        window.location.href = '/manager.html';
+                    });
             }
         }
 

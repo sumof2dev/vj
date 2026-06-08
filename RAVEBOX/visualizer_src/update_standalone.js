@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const assetsDir = path.join(__dirname, '../assets');
-const standaloneHtmlPath = path.join(__dirname, '../standalone_viz.html');
+const standaloneHtmlPath = path.join(__dirname, '../standalone.html');
 
 try {
   const files = fs.readdirSync(assetsDir);
@@ -28,8 +28,8 @@ try {
   html = html.replace(cssRegex, `href="./assets/${cssFile}"`);
 
   fs.writeFileSync(standaloneHtmlPath, html);
-  console.log(`✅ Updated standalone_viz.html with assets: JS=${jsFile}, CSS=${cssFile}`);
+  console.log(`✅ Updated standalone.html with assets: JS=${jsFile}, CSS=${cssFile}`);
 } catch (error) {
-  console.error('❌ Failed to update standalone_viz.html:', error);
+  console.error('❌ Failed to update standalone.html:', error);
   process.exit(1);
 }
