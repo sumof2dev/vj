@@ -743,6 +743,10 @@ window.togglePresetEditor = function (show) {
 
     if (show === undefined) show = content.classList.contains('hidden');
 
+    // While editing, hide the saved presets list; user must Save or Cancel to return to it.
+    const savedCard = document.getElementById('saved-presets-card');
+    if (savedCard) savedCard.classList.toggle('hidden', !!show);
+
     if (show) {
         content.classList.remove('hidden');
         actionsTop.classList.remove('hidden');
