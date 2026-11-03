@@ -2,7 +2,7 @@ const isDev = self.location.hostname === 'localhost' ||
     self.location.hostname.includes('vj-') ||
     self.location.hostname.includes('.ravebox.love') ||
     self.location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/);
-const CACHE_NAME = 'ravebox-vj-1780863956'; // Bumping version
+const CACHE_NAME = 'ravebox-vj-1103261800'; // Bumped automatically by deploy.sh
 
 self.addEventListener('install', (event) => {
     // Cache each asset individually — skip any that fail (e.g. missing on GCS)
@@ -77,6 +77,20 @@ self.addEventListener('fetch', (event) => {
                     return caches.match('manager.html');
                 });
             })
+        );
+        return;
+    }
+
+    // App code (js/css/html): network first so deploys show up immediately, cache as offline fallback
+    if (/\.(js|css|html)$/.test(url.pathname)) {
+        event.respondWith(
+            fetch(event.request).then(response => {
+                if (response && response.ok) {
+                    const copy = response.clone();
+                    caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
+                }
+                return response;
+            }).catch(() => caches.match(event.request).then(r => r || new Response('Network error occurred', { status: 408, headers: { 'Content-Type': 'text/plain' } })))
         );
         return;
     }

@@ -15,6 +15,9 @@ echo "📅 Updating version timestamp to $VERSION_CODE..."
 # 1. Update window.APP_VERSION in shared_setup.js
 sed -i -E "s/(window\.APP_VERSION = \")[^\"]+(\";)/\1$VERSION_CODE\2/" shared_setup.js
 
+# 1b. Bump service worker cache name so clients drop stale cached assets
+sed -i -E "s/(const CACHE_NAME = 'ravebox-vj-)[0-9]+(')/\1$VERSION_CODE\2/" sw.js
+
 # 2. Update version strings in HTML files
 echo "📅 Updating version strings in HTML headers..."
 sed -i -E "s/(VJ Manager v)[0-9]+/\1$VERSION_CODE/g" setup.html manager.html
